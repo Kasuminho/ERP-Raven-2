@@ -1,0 +1,612 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlayerClass {
+  GUNSLINGER
+  BERSERKER
+  DESTROYER
+  DEATHBRINGER
+  ASSASSIN
+  DIVINE_CASTER
+  NIGHT_RANGER
+  VANGUARD
+  ELEMENTALIST
+  WARLORD
+}
+
+enum EventType {
+  LUNOS
+  RIGRETO
+  GARDRON
+  MELKAR
+  VARGAS
+  BELLAMONICA
+  SION
+  ISTERIA
+  NIDROK
+  MORGON
+  GUILD_DUNGEON
+  SATURDAY_EVENT
+  ABYSS_1
+  ABYSS_1_2
+  FLOUD
+  KRATERIUS
+  T3_ROTATION
+}
+
+enum EventStatus {
+  OPEN
+  ATTENDANCE_REGISTRATION
+  FINALIZED
+  CANCELLED
+}
+
+enum AuctionStatus {
+  OPEN
+  PENDING_REVIEW
+  FINISHED
+  CANCELLED
+  RELISTED
+}
+
+enum AuctionMode {
+  STANDARD
+  ALL_IN
+  STAFF_REVIEW
+}
+
+enum ItemTier {
+  T2
+  T3
+  T4
+  LEGENDARY
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  ACCESSORY
+  CELESTIAL_STONE
+}
+
+enum DKPTransactionType {
+  EVENT_REWARD
+  AUCTION_LOCK
+  AUCTION_REFUND
+  AUCTION_WIN
+  ADMIN_ADJUSTMENT
+}
+
+enum AnnouncementStatus {
+  ACTIVE
+  SENT
+  CANCELLED
+}
+
+enum ItemInterestStatus {
+  OPEN
+  CLOSED
+  VOTING
+  READY_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum CodexRequestStatus {
+  PENDING
+  SENT
+  CONFIRMED
+  NEEDS_RETRY
+  CANCELLED
+}
+
+enum ItemRequestUpdateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProgressCategory {
+  STELLAS_AMPLIFICATION
+  EQUIPMENT
+  RELICS
+  STIGMA
+  ITEM_COLLECTION
+  SKILLS
+  PARADISE_STONES
+  STATUS
+  DIMENSIONAL_RIFT
+  RUNES
+}
+
+enum ProgressReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String             @id @default(uuid())
+  discordId         String             @unique
+  discordUsername   String
+  avatar            String?
+  discordGuildId    String?
+  discordNickname   String?
+  discordRoles      Json?
+  preferredLocale   String             @default("pt")
+  lastDiscordSyncAt DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  players           Player[]
+  createdEvents     Event[]            @relation("EventCreatedBy")
+  dkpTransactions   DKPTransaction[]   @relation("DKPTransactionCreatedBy")
+  createdAuctions   Auction[]          @relation("AuctionCreatedBy")
+  announcements     Announcement[]     @relation("AnnouncementCreatedBy")
+  interestPosts     ItemInterestPost[] @relation("ItemInterestPostCreatedBy")
+  interestVotes     ItemInterestVote[] @relation("ItemInterestVoteVoter")
+  sentCodexRequests CodexRequest[]     @relation("CodexRequestSentBy")
+  reviewedProgress  PlayerProgress[]   @relation("PlayerProgressReviewedBy")
+  progressComments  PlayerProgressComment[]
+  auditLogs         AuditLog[]         @relation("AuditLogActor")
+
+  @@index([discordUsername])
+  @@index([discordGuildId])
+}
+
+model Player {
+  id                   String              @id @default(uuid())
+  userId               String
+  nickname             String              @unique
+  class                PlayerClass
+  dimensionalLayer     Int                 @db.SmallInt
+  combatPower          Int                 @default(0)
+  timezone             String?
+  attendancePercentage Float               @default(0)
+  isActive             Boolean             @default(true)
+  joinedAt             DateTime            @default(now())
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles                PlayerRole[]
+  attendances          EventAttendance[]
+  dkpTransactions      DKPTransaction[]
+  dkpLocks             DKPLock[]
+  auctionBids          AuctionBid[]
+  progressUpdates      PlayerProgress[]
+  itemInterests        ItemInterestEntry[]
+  codexRequests        CodexRequest[]
+  itemRequests         ItemRequest[]
+  dropHistories        DropHistory[]
+
+  @@index([userId])
+  @@index([class])
+  @@index([dimensionalLayer])
+  @@index([attendancePercentage])
+  @@index([isActive])
+}
+
+model PlayerProgress {
+  id                  String               @id @default(uuid())
+  playerId            String
+  category            ProgressCategory     @default(STATUS)
+  level               Int?
+  note                String?
+  imageUrl            String?
+  imageUrls           Json                 @default("[]")
+  reviewStatus        ProgressReviewStatus @default(NOT_REQUIRED)
+  requiresStaffReview Boolean              @default(false)
+  combatPower         Int?
+  dimensionalLayer    Int?                 @db.SmallInt
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewNote          String?
+  playerReadCommentsAt DateTime?
+  createdAt           DateTime             @default(now())
+  player              Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy          User?                @relation("PlayerProgressReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  comments            PlayerProgressComment[]
+
+  @@index([playerId, createdAt])
+  @@index([category])
+  @@index([reviewStatus])
+  @@index([reviewedById])
+}
+
+model PlayerProgressComment {
+  id          String         @id @default(uuid())
+  progressId  String
+  authorId    String
+  body        String
+  createdAt   DateTime       @default(now())
+  progress    PlayerProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([progressId, createdAt])
+  @@index([authorId])
+}
+
+model GuildRole {
+  id      String       @id @default(uuid())
+  name    String       @unique
+  players PlayerRole[]
+}
+
+model PlayerRole {
+  playerId String
+  roleId   String
+  player   Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  role     GuildRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([playerId, roleId])
+  @@index([roleId])
+}
+
+model Event {
+  id               String            @id @default(uuid())
+  name             String
+  type             EventType
+  status           EventStatus       @default(OPEN)
+  dkpReward        Int
+  startsAt         DateTime
+  finalizedAt      DateTime?
+  dkpDistributedAt DateTime?
+  createdById      String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  createdBy        User              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  attendances      EventAttendance[]
+
+  @@index([type])
+  @@index([status])
+  @@index([startsAt])
+  @@index([finalizedAt])
+  @@index([createdById])
+}
+
+model EventAttendance {
+  id        String   @id @default(uuid())
+  eventId   String
+  playerId  String
+  attended  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, playerId])
+  @@index([playerId])
+  @@index([attended])
+}
+
+model DKPTransaction {
+  id          String             @id @default(uuid())
+  playerId    String
+  amount      Int
+  type        DKPTransactionType
+  referenceId String?
+  createdById String
+  createdAt   DateTime           @default(now())
+  player      Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy   User               @relation("DKPTransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([playerId, type, referenceId])
+  @@index([playerId, createdAt])
+  @@index([type])
+  @@index([referenceId])
+  @@index([createdById])
+}
+
+model DKPLock {
+  id        String   @id @default(uuid())
+  playerId  String
+  auctionId String
+  amount    Int
+  released  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, auctionId])
+  @@index([auctionId])
+  @@index([released])
+}
+
+model Auction {
+  id                  String        @id @default(uuid())
+  itemCatalogId       String?
+  itemName            String
+  itemType            ItemType
+  itemTier            ItemTier
+  minimumBid          Int
+  auctionMode         AuctionMode
+  status              AuctionStatus @default(OPEN)
+  requiresStaffReview Boolean       @default(false)
+  endsAt              DateTime
+  reopensAt           DateTime?
+  createdById         String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  itemCatalog         ItemCatalog?  @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  createdBy           User          @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  bids                AuctionBid[]
+  dkpLocks            DKPLock[]
+  dropHistory         DropHistory?
+
+  @@index([itemCatalogId])
+  @@index([itemType])
+  @@index([itemTier])
+  @@index([auctionMode])
+  @@index([status])
+  @@index([endsAt])
+  @@index([reopensAt])
+  @@index([createdById])
+}
+
+model AuctionBid {
+  id        String   @id @default(uuid())
+  auctionId String
+  playerId  String
+  bidAmount Int
+  isValid   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, playerId])
+  @@index([auctionId, createdAt])
+  @@index([playerId])
+  @@index([isValid])
+}
+
+model EligibilityRule {
+  id                  String   @id @default(uuid())
+  itemTier            ItemTier
+  itemType            ItemType
+  minimumLayer        Int      @db.SmallInt
+  minimumDKP          Int
+  requiresStaffReview Boolean  @default(false)
+
+  @@unique([itemTier, itemType, minimumLayer])
+  @@index([itemType])
+  @@index([requiresStaffReview])
+}
+
+model ItemCatalog {
+  id              String             @id @default(uuid())
+  legacyId        Int?               @unique
+  kind            String
+  category        String
+  itemTier        ItemTier?
+  itemType        ItemType?
+  namePt          String
+  nameEn          String
+  nameEs          String?
+  typePt          String
+  typeEn          String
+  typeEs          String?
+  image1Url       String?
+  image2Url       String?
+  isActive        Boolean            @default(true)
+  legacyCreatedAt DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  itemRequests    ItemRequest[]
+  dropHistories   DropHistory[]
+  auctions        Auction[]
+  interestPosts   ItemInterestPost[]
+
+  @@index([nameEn, typeEn])
+  @@index([nameEs, typeEs])
+  @@index([kind])
+  @@index([category])
+  @@index([itemTier])
+  @@index([itemType])
+  @@index([isActive])
+}
+
+model ItemRequest {
+  id                String       @id @default(uuid())
+  legacyId          Int?         @unique
+  itemCatalogId     String?
+  playerId          String?
+  discordId         String
+  playerName        String
+  itemName          String
+  imageUrl          String?
+  totalQuantity     Int
+  remainingQuantity Int
+  rankPosition      Int
+  threadId          String?
+  threadChannelId   String?
+  warned3d          Boolean      @default(false)
+  warned4d          Boolean      @default(false)
+  updateProofImageUrl String?
+  updateProofNote   String?
+  updateProofStatus ItemRequestUpdateStatus?
+  updateProofSubmittedAt DateTime?
+  updateProofReviewedAt DateTime?
+  updateProofReviewedById String?
+  lastReminderStage String?
+  lastReminderAt    DateTime?
+  legacyCreatedAt   DateTime?
+  legacyUpdatedAt   DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  itemCatalog       ItemCatalog? @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  player            Player?      @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([itemCatalogId])
+  @@index([playerId])
+  @@index([discordId])
+  @@index([itemName])
+  @@index([rankPosition])
+  @@index([threadId])
+  @@index([lastReminderStage])
+  @@index([updateProofStatus])
+  @@index([updateProofSubmittedAt])
+}
+
+model DropHistory {
+  id                  String             @id @default(uuid())
+  legacyId            Int?               @unique
+  itemCatalogId       String?
+  auctionId           String?            @unique
+  itemInterestEntryId String?            @unique
+  playerId            String?
+  discordId           String?
+  nicknameIngame      String?
+  itemName            String?
+  threadId            String?
+  staffDiscordId      String?
+  proofImageUrl       String?
+  deliveredAt         DateTime?
+  createdAt           DateTime           @default(now())
+  itemCatalog         ItemCatalog?       @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  auction             Auction?           @relation(fields: [auctionId], references: [id], onDelete: SetNull)
+  itemInterestEntry   ItemInterestEntry? @relation(fields: [itemInterestEntryId], references: [id], onDelete: SetNull)
+  player              Player?            @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([itemCatalogId])
+  @@index([playerId])
+  @@index([itemInterestEntryId])
+  @@index([discordId])
+  @@index([itemName])
+  @@index([threadId])
+  @@index([deliveredAt])
+}
+
+model ItemInterestPost {
+  id            String              @id @default(uuid())
+  itemCatalogId String
+  mode          String              @default("PvE")
+  title         String
+  criteriaPt    String
+  criteriaEn    String
+  status        ItemInterestStatus  @default(OPEN)
+  votingRound   Int                 @default(1)
+  votingCandidateEntryIds Json      @default("[]")
+  selectedEntryId String?
+  deliveryEnabledAt DateTime?
+  closesAt      DateTime
+  closedAt      DateTime?
+  proofImageUrl String?
+  createdById   String
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  itemCatalog   ItemCatalog         @relation(fields: [itemCatalogId], references: [id], onDelete: Cascade)
+  createdBy     User                @relation("ItemInterestPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  entries       ItemInterestEntry[]
+  votes         ItemInterestVote[]
+
+  @@index([itemCatalogId])
+  @@index([status])
+  @@index([selectedEntryId])
+  @@index([closesAt])
+  @@index([createdById])
+}
+
+model ItemInterestEntry {
+  id          String           @id @default(uuid())
+  postId      String
+  playerId    String
+  note        String?
+  imageUrl    String?
+  createdAt   DateTime         @default(now())
+  post        ItemInterestPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  player      Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  dropHistory DropHistory?
+  votes       ItemInterestVote[]
+
+  @@unique([postId, playerId])
+  @@index([playerId])
+}
+
+model ItemInterestVote {
+  id        String            @id @default(uuid())
+  postId    String
+  entryId   String
+  voterId   String
+  round     Int               @default(1)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  post      ItemInterestPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  entry     ItemInterestEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  voter     User              @relation("ItemInterestVoteVoter", fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, voterId, round])
+  @@index([postId, round])
+  @@index([entryId])
+  @@index([voterId])
+}
+
+model CodexRequest {
+  id               String             @id @default(uuid())
+  playerId         String
+  imageUrl         String
+  note             String?
+  status           CodexRequestStatus @default(PENDING)
+  proofImageUrl    String?
+  sentById         String?
+  sentAt           DateTime?
+  confirmedAt      DateTime?
+  retryRequestedAt DateTime?
+  queuedAt         DateTime           @default(now())
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  player           Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  sentBy           User?              @relation("CodexRequestSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([playerId])
+  @@index([status])
+  @@index([queuedAt])
+  @@index([sentById])
+  @@index([createdAt])
+}
+
+model Announcement {
+  id             String             @id @default(uuid())
+  type           String
+  title          String
+  description    String?
+  channelId      String
+  mentionRoleId  String?
+  eventTime      DateTime
+  timezone       String             @default("America/Sao_Paulo")
+  status         AnnouncementStatus @default(ACTIVE)
+  warned4h       Boolean            @default(false)
+  warned1h       Boolean            @default(false)
+  warned30m      Boolean            @default(false)
+  warnedNow      Boolean            @default(false)
+  warnedDailyDay Int?
+  createdById    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      User?              @relation("AnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([eventTime])
+  @@index([channelId])
+  @@index([createdById])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}

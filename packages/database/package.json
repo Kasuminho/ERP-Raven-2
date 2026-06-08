@@ -1,0 +1,18 @@
+{
+  "name": "@guild/database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "migrate:legacy:items": "node scripts/migrate-legacy-sqlite-items.js",
+    "migrate:legacy:deliveries": "node scripts/migrate-legacy-deliveries.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.20.0"
+  }
+}

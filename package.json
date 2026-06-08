@@ -1,0 +1,25 @@
+{
+  "name": "erp-raven-2",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run -w @guild/api build && npm run -w @guild/web build",
+    "build:web": "npm run -w @guild/web build",
+    "start:dev": "npm run -w @guild/api start:dev",
+    "start:web": "npm run -w @guild/web dev",
+    "lint": "npm run -w @guild/api lint",
+    "test:smoke": "node scripts/smoke-test.js",
+    "discord:update": "node scripts/send-discord-update.js",
+    "prisma:generate": "npm run -w @guild/database prisma:generate",
+    "prisma:migrate:dev": "npm run -w @guild/database prisma:migrate:dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.59.4"
+  }
+}
