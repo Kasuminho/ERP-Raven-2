@@ -10,6 +10,7 @@ import { notifyToast } from '@/components/ui/toaster';
 import { useCloseItemInterest, useDeliverItemInterest, useItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
+import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
 import type { ItemInterestEntry, ItemInterestPost } from '@/types/api';
 
@@ -40,8 +41,31 @@ function voteSummary(post: ItemInterestPost, entry: ItemInterestEntry): string {
   return `${count}/${STAFF_VOTE_THRESHOLD}`;
 }
 
+function currentUserVoteEntryId(post: ItemInterestPost, userId?: string): string | undefined {
+  if (!userId) return undefined;
+
+  return (post.votes ?? []).find((vote) => vote.round === post.votingRound && vote.voterId === userId)?.entryId;
+}
+
+function sortedEntriesByVotes(post: ItemInterestPost): ItemInterestEntry[] {
+  const counts = currentRoundVotes(post);
+
+  return [...(post.entries ?? [])].sort((first, second) => {
+    const voteDiff = (counts.get(second.id) ?? 0) - (counts.get(first.id) ?? 0);
+
+    if (voteDiff !== 0) return voteDiff;
+
+    const layerDiff = (second.player?.dimensionalLayer ?? 0) - (first.player?.dimensionalLayer ?? 0);
+
+    if (layerDiff !== 0) return layerDiff;
+
+    return new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime();
+  });
+}
+
 export default function StaffInterestsPage() {
   const locale = useLocaleStore((state) => state.locale);
+  const userId = useAuthStore((state) => state.userId);
   const posts = useItemInterests();
   const closeInterest = useCloseItemInterest();
   const deliverInterest = useDeliverItemInterest();
@@ -50,6 +74,7 @@ export default function StaffInterestsPage() {
   const uploadImage = useUploadImage();
   const [proofs, setProofs] = useState<Record<string, string>>({});
   const [showResolved, setShowResolved] = useState(false);
+  const [votingEntryId, setVotingEntryId] = useState<string>();
 
   const postsToRender = useMemo(
     () => (posts.data ?? []).filter((post) => showResolved || !['DELIVERED', 'CANCELLED'].includes(post.status)),
@@ -73,6 +98,13 @@ export default function StaffInterestsPage() {
           const tiedIds = tieCandidateIds(post);
           const canStartTieBreak = post.status === 'VOTING' && tiedIds.length > 1;
           const restrictedCandidateIds = Array.isArray(post.votingCandidateEntryIds) ? post.votingCandidateEntryIds : [];
+          const voteCounts = currentRoundVotes(post);
+          const orderedEntries = sortedEntriesByVotes(post);
+          const currentVoteEntryId = currentUserVoteEntryId(post, userId);
+          const currentVoteEntry = orderedEntries.find((entry) => entry.id === currentVoteEntryId);
+          const totalRoundVotes = (post.votes ?? []).filter((vote) => vote.round === post.votingRound).length;
+          const leadingVotes = Math.max(0, ...voteCounts.values());
+          const remainingToDecision = Math.max(0, STAFF_VOTE_THRESHOLD - leadingVotes);
 
           return (
             <Card key={post.id}>
@@ -88,7 +120,32 @@ export default function StaffInterestsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">{post.entries?.length ?? 0} {t(locale, 'interestedPlayers')}</p>
+                <div className="grid gap-3 rounded-md border bg-background/35 p-3 text-sm md:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Interessados</p>
+                    <p className="text-lg font-semibold">{post.entries?.length ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Votos da rodada</p>
+                    <p className="text-lg font-semibold">{totalRoundVotes}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Para liberar entrega</p>
+                    <p className="text-lg font-semibold">
+                      {post.status === 'VOTING'
+                        ? remainingToDecision === 0 ? 'Maioria atingida' : `Faltam ${remainingToDecision}`
+                        : post.status === 'READY_FOR_DELIVERY' ? 'Liberado' : '-'}
+                    </p>
+                  </div>
+                </div>
+                {post.status === 'VOTING' && (
+                  <div className="rounded-md border border-primary/30 bg-primary/10 p-3 text-sm">
+                    <Vote className="mr-2 inline h-4 w-4 text-primary" />
+                    {currentVoteEntry
+                      ? <>Seu voto atual: <strong>{currentVoteEntry.player?.nickname}</strong>. Voce pode alterar o voto escolhendo outro candidato ate alguem bater {STAFF_VOTE_THRESHOLD} votos.</>
+                      : <>Voce ainda nao votou nesta rodada. O candidato com {STAFF_VOTE_THRESHOLD} votos fica liberado para entrega.</>}
+                  </div>
+                )}
                 {post.status === 'READY_FOR_DELIVERY' && selectedEntry && (
                   <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
                     <Trophy className="mr-2 inline h-4 w-4" />
@@ -96,17 +153,26 @@ export default function StaffInterestsPage() {
                   </div>
                 )}
                 <div className="grid gap-2 md:grid-cols-2">
-                  {(post.entries ?? []).map((entry) => {
+                  {orderedEntries.map((entry, index) => {
                     const printUrl = displayImageUrl(entry.imageUrl);
                     const isWinner = post.selectedEntryId === entry.id;
                     const isRestrictedOut = restrictedCandidateIds.length > 0 && !restrictedCandidateIds.includes(entry.id);
+                    const votes = voteCounts.get(entry.id) ?? 0;
+                    const missingVotes = Math.max(0, STAFF_VOTE_THRESHOLD - votes);
+                    const isCurrentVote = currentVoteEntryId === entry.id;
+                    const isVotingThisEntry = votingEntryId === entry.id && voteInterest.isPending;
+                    const voteButtonLabel = isVotingThisEntry
+                      ? currentVoteEntryId ? 'Alterando...' : 'Votando...'
+                      : isCurrentVote ? 'Votado' : currentVoteEntryId ? 'Alterar voto' : 'Votar';
 
                     return (
-                      <div key={entry.id} className={`rounded-md border bg-background/35 p-3 text-sm ${isWinner ? 'border-primary/70' : ''}`}>
+                      <div key={entry.id} className={`rounded-md border bg-background/35 p-3 text-sm ${isWinner ? 'border-primary/70' : isCurrentVote ? 'border-cyan-300/60' : ''}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
+                              <Badge tone={index === 0 && votes > 0 ? 'gold' : 'muted'}>#{index + 1}</Badge>
                               <span className="font-semibold">{entry.player?.nickname}</span>
+                              {isCurrentVote && <Badge tone="blue">Seu voto</Badge>}
                               {isWinner && <Badge tone="gold">Vencedor</Badge>}
                               {entry.dropHistory && <Badge tone="green">{t(locale, 'delivered')}</Badge>}
                               {isRestrictedOut && <Badge tone="muted">Fora do desempate</Badge>}
@@ -114,17 +180,31 @@ export default function StaffInterestsPage() {
                             <span className="block text-muted-foreground">
                               {t(locale, 'layer')} {entry.player?.dimensionalLayer} - {t(locale, 'attendance')} {entry.player?.attendancePercentage}%
                             </span>
-                            <span className="mt-1 block text-xs text-primary">Votos: {voteSummary(post, entry)}</span>
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-primary">Votos: {voteSummary(post, entry)}</span>
+                                <span className="text-muted-foreground">{missingVotes === 0 ? 'Maioria' : `Faltam ${missingVotes}`}</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (votes / STAFF_VOTE_THRESHOLD) * 100)}%` }} />
+                              </div>
+                            </div>
                           </div>
                           <Button
-                            variant="secondary"
-                            disabled={post.status !== 'VOTING' || isRestrictedOut || voteInterest.isPending}
-                            onClick={() => voteInterest.mutate(
-                              { postId: post.id, entryId: entry.id },
-                              { onSuccess: () => notifyToast({ title: 'Voto registrado.', tone: 'success' }) },
-                            )}
+                            variant={isCurrentVote ? 'secondary' : 'primary'}
+                            disabled={post.status !== 'VOTING' || isRestrictedOut || isCurrentVote || voteInterest.isPending}
+                            onClick={() => {
+                              setVotingEntryId(entry.id);
+                              voteInterest.mutate(
+                                { postId: post.id, entryId: entry.id },
+                                {
+                                  onSuccess: () => notifyToast({ title: currentVoteEntryId ? 'Voto alterado.' : 'Voto registrado.', tone: 'success' }),
+                                  onSettled: () => setVotingEntryId(undefined),
+                                },
+                              );
+                            }}
                           >
-                            <Vote className="h-4 w-4" /> Votar
+                            <Vote className="h-4 w-4" /> {voteButtonLabel}
                           </Button>
                         </div>
                         {entry.note && <p className="mt-2 text-muted-foreground">{entry.note}</p>}
