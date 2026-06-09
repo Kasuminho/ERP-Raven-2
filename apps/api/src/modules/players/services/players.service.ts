@@ -13,6 +13,19 @@ const multiImageProgressCategories = new Set<ProgressCategory>([
   ProgressCategory.SKILLS,
 ]);
 
+type AuditIdentity = {
+  discordId: string;
+  playerId?: string;
+  playerNickname?: string;
+  discordUsername?: string;
+  discordNickname?: string | null;
+  nicknameIngame?: string | null;
+  requestPlayerName?: string | null;
+  dropsCount: number;
+  requestsCount: number;
+  lastActivityAt?: Date | null;
+};
+
 @Injectable()
 export class PlayersService {
   constructor(
@@ -51,6 +64,87 @@ export class PlayersService {
         roles: { include: { role: true } },
       },
       orderBy: [{ isActive: 'desc' }, { nickname: 'asc' }],
+    });
+  }
+
+  async listAuditIdentities() {
+    const [players, drops, itemRequests] = await Promise.all([
+      this.listPlayers(),
+      this.repository.client.dropHistory.findMany({
+        where: { discordId: { not: null } },
+        select: {
+          discordId: true,
+          nicknameIngame: true,
+          deliveredAt: true,
+        },
+        orderBy: { deliveredAt: 'desc' },
+      }),
+      this.repository.client.itemRequest.findMany({
+        where: { discordId: { not: '' } },
+        select: {
+          discordId: true,
+          playerName: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+    ]);
+
+    const byDiscordId = new Map<string, AuditIdentity>();
+
+    const ensure = (discordId: string) => {
+      const trimmed = discordId.trim();
+      const existing = byDiscordId.get(trimmed);
+
+      if (existing) {
+        return existing;
+      }
+
+      const identity: AuditIdentity = {
+        discordId: trimmed,
+        dropsCount: 0,
+        requestsCount: 0,
+      };
+      byDiscordId.set(trimmed, identity);
+
+      return identity;
+    };
+
+    for (const player of players) {
+      const identity = ensure(player.user.discordId);
+      identity.playerId = player.id;
+      identity.playerNickname = player.nickname;
+      identity.discordUsername = player.user.discordUsername;
+      identity.discordNickname = player.user.discordNickname;
+    }
+
+    for (const drop of drops) {
+      if (!drop.discordId) continue;
+
+      const identity = ensure(drop.discordId);
+      identity.dropsCount += 1;
+      identity.nicknameIngame ??= drop.nicknameIngame;
+
+      if (drop.deliveredAt && (!identity.lastActivityAt || drop.deliveredAt > identity.lastActivityAt)) {
+        identity.lastActivityAt = drop.deliveredAt;
+      }
+    }
+
+    for (const request of itemRequests) {
+      const identity = ensure(request.discordId);
+      identity.requestsCount += 1;
+      identity.requestPlayerName ??= request.playerName;
+
+      if (!identity.lastActivityAt || request.updatedAt > identity.lastActivityAt) {
+        identity.lastActivityAt = request.updatedAt;
+      }
+    }
+
+    return [...byDiscordId.values()].sort((a, b) => {
+      if (a.playerId && !b.playerId) return -1;
+      if (!a.playerId && b.playerId) return 1;
+
+      return (b.lastActivityAt?.getTime() ?? 0) - (a.lastActivityAt?.getTime() ?? 0);
     });
   }
 
@@ -437,31 +531,55 @@ export class PlayersService {
     return this.getHistoryByPlayerAndDiscord(player.id, player.user.discordId);
   }
 
-  private async getHistoryByPlayerAndDiscord(playerId: string, discordId: string) {
+  async getStaffDiscordHistory(discordId: string) {
+    const normalizedDiscordId = discordId.trim();
+    const player = await this.repository.client.player.findFirst({
+      where: { user: { discordId: normalizedDiscordId } },
+      include: { user: true },
+    });
+
+    return this.getHistoryByPlayerAndDiscord(player?.id ?? null, normalizedDiscordId);
+  }
+
+  private async getHistoryByPlayerAndDiscord(playerId: string | null, discordId: string) {
+    const playerWhere = playerId ? { id: playerId } : { user: { discordId } };
+    const dropWhere: Prisma.DropHistoryWhereInput = playerId
+      ? { OR: [{ discordId }, { playerId }] }
+      : { discordId };
+    const progressWhere: Prisma.PlayerProgressWhereInput = playerId
+      ? { playerId }
+      : { player: { user: { discordId } } };
+    const requestWhere: Prisma.ItemRequestWhereInput = playerId
+      ? { OR: [{ discordId }, { playerId }] }
+      : { discordId };
+    const transactionWhere: Prisma.DKPTransactionWhereInput = playerId
+      ? { playerId }
+      : { player: { user: { discordId } } };
+
     const [player, drops, progress, itemRequests, transactions] = await Promise.all([
-      this.repository.client.player.findUnique({ where: { id: playerId }, include: { user: true } }),
+      this.repository.client.player.findFirst({ where: playerWhere, include: { user: true } }),
       this.repository.client.dropHistory.findMany({
-        where: { discordId },
+        where: dropWhere,
         include: { itemCatalog: true },
         orderBy: { deliveredAt: 'desc' },
       }),
       this.repository.client.playerProgress.findMany({
-        where: { playerId },
+        where: progressWhere,
         include: this.progressInclude(),
         orderBy: { createdAt: 'desc' },
       }),
       this.repository.client.itemRequest.findMany({
-        where: { discordId },
+        where: requestWhere,
         include: { itemCatalog: true },
         orderBy: [{ itemName: 'asc' }, { rankPosition: 'asc' }],
       }),
       this.repository.client.dKPTransaction.findMany({
-        where: { playerId },
+        where: transactionWhere,
         orderBy: { createdAt: 'desc' },
       }),
     ]);
 
-    return { player, drops, progress, itemRequests, transactions };
+    return { discordId, player, drops, progress, itemRequests, transactions };
   }
 
   private normalizeProgressCategory(category?: ProgressCategory): ProgressCategory {

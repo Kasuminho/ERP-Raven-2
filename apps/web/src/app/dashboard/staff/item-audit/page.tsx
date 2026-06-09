@@ -10,20 +10,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { usePlayerHistory, usePlayers } from '@/hooks/use-guild-api';
+import { useAuditIdentities, useDiscordHistory, usePlayerHistory } from '@/hooks/use-guild-api';
 import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { StaffPlayer } from '@/types/api';
+import type { AuditIdentity } from '@/types/api';
 
 function normalize(value?: string | null): string {
   return (value ?? '').toLowerCase().trim();
 }
 
-function playerLabel(player: StaffPlayer): string {
-  const discordName = player.user.discordNickname || player.user.discordUsername;
-  return `${player.nickname} - ${discordName} (${player.user.discordId})`;
+function identityKey(identity: AuditIdentity): string {
+  return identity.playerId ? `player:${identity.playerId}` : `discord:${identity.discordId}`;
+}
+
+function identityLabel(identity: AuditIdentity): string {
+  const name = identity.playerNickname || identity.nicknameIngame || identity.requestPlayerName || identity.discordUsername || 'Sem cadastro';
+  const discordName = identity.discordNickname || identity.discordUsername || identity.discordId;
+  const suffix = identity.playerId ? 'cadastrado' : 'legacy';
+
+  return `${name} - ${discordName} (${identity.discordId}) - ${suffix}`;
 }
 
 function StaffItemAuditContent() {
@@ -31,35 +38,63 @@ function StaffItemAuditContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialPlayerId = searchParams.get('playerId') ?? '';
-  const players = usePlayers();
+  const initialDiscordId = searchParams.get('discordId') ?? '';
+  const identities = useAuditIdentities();
   const [search, setSearch] = useState('');
-  const [selectedPlayerId, setSelectedPlayerId] = useState(initialPlayerId);
-  const history = usePlayerHistory(selectedPlayerId);
+  const [selectedKey, setSelectedKey] = useState(initialDiscordId ? `discord:${initialDiscordId}` : initialPlayerId ? `player:${initialPlayerId}` : '');
+  const selectedPlayerId = selectedKey.startsWith('player:') ? selectedKey.slice('player:'.length) : '';
+  const selectedDiscordId = selectedKey.startsWith('discord:') ? selectedKey.slice('discord:'.length) : '';
+  const playerHistory = usePlayerHistory(selectedPlayerId);
+  const discordHistory = useDiscordHistory(selectedDiscordId);
+  const history = selectedDiscordId ? discordHistory : playerHistory;
 
-  const filteredPlayers = useMemo(() => {
+  const filteredIdentities = useMemo(() => {
     const term = normalize(search);
 
-    return (players.data ?? []).filter((player) => {
+    return (identities.data ?? []).filter((identity) => {
       if (!term) return true;
 
       return [
-        player.nickname,
-        player.user.discordUsername,
-        player.user.discordNickname,
-        player.user.discordId,
+        identity.playerNickname,
+        identity.nicknameIngame,
+        identity.requestPlayerName,
+        identity.discordUsername,
+        identity.discordNickname,
+        identity.discordId,
       ].some((value) => normalize(value).includes(term));
     });
-  }, [players.data, search]);
+  }, [identities.data, search]);
 
-  const selectedPlayer = (players.data ?? []).find((player) => player.id === selectedPlayerId);
+  const selectedIdentity = (identities.data ?? []).find((identity) => identityKey(identity) === selectedKey);
+  const selectedPlayer = history.data?.player;
+  const currentDiscordId = history.data?.discordId || selectedIdentity?.discordId || selectedDiscordId || selectedPlayer?.user?.discordId;
   const drops = history.data?.drops ?? [];
   const requests = history.data?.itemRequests ?? [];
   const transactions = history.data?.transactions ?? [];
   const progress = history.data?.progress ?? [];
 
-  function selectPlayer(playerId: string) {
-    setSelectedPlayerId(playerId);
-    router.replace(playerId ? `/dashboard/staff/item-audit?playerId=${playerId}` : '/dashboard/staff/item-audit');
+  function selectIdentity(key: string) {
+    setSelectedKey(key);
+
+    if (!key) {
+      router.replace('/dashboard/staff/item-audit');
+      return;
+    }
+
+    if (key.startsWith('player:')) {
+      router.replace(`/dashboard/staff/item-audit?playerId=${key.slice('player:'.length)}`);
+      return;
+    }
+
+    router.replace(`/dashboard/staff/item-audit?discordId=${key.slice('discord:'.length)}`);
+  }
+
+  function auditTypedDiscordId() {
+    const discordId = search.trim();
+
+    if (!discordId) return;
+
+    selectIdentity(`discord:${discordId}`);
   }
 
   return (
@@ -69,7 +104,7 @@ function StaffItemAuditContent() {
           <p className="text-sm uppercase text-primary">Auditoria de loot</p>
           <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">Auditoria de itens por jogador</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Selecione um Discord/player para revisar entregas, pedidos, provas e registros antes de decidir votos ou aprovacoes.
+            Selecione um Discord/player cadastrado ou legado para revisar entregas, pedidos, provas e registros antes de decidir votos ou aprovacoes.
           </p>
         </div>
 
@@ -80,36 +115,47 @@ function StaffItemAuditContent() {
               Selecionar jogador
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
+          <CardContent className="grid gap-3 lg:grid-cols-[1fr_1.5fr_auto]">
             <Input
-              placeholder="Buscar por nick, Discord ID ou Discord username"
+              placeholder="Buscar por nick, Discord ID, username ou colar Discord ID"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <Select value={selectedPlayerId} onChange={(event) => selectPlayer(event.target.value)}>
-              <option value="">Selecione um jogador cadastrado</option>
-              {filteredPlayers.map((player) => (
-                <option key={player.id} value={player.id}>{playerLabel(player)}</option>
+            <Select value={selectedKey} onChange={(event) => selectIdentity(event.target.value)}>
+              <option value="">Selecione um jogador/Discord</option>
+              {filteredIdentities.map((identity) => (
+                <option key={identityKey(identity)} value={identityKey(identity)}>{identityLabel(identity)}</option>
               ))}
             </Select>
+            <button
+              type="button"
+              className="rounded-md border border-primary/50 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+              onClick={auditTypedDiscordId}
+            >
+              Auditar ID
+            </button>
           </CardContent>
         </Card>
 
-        {selectedPlayer ? (
+        {selectedKey ? (
           <>
             <div className="grid gap-3 md:grid-cols-4">
               <Card>
                 <CardContent className="space-y-1 p-4">
                   <p className="text-xs uppercase text-muted-foreground">Player</p>
-                  <p className="text-lg font-semibold">{selectedPlayer.nickname}</p>
-                  <p className="text-xs text-muted-foreground">{selectedPlayer.user.discordUsername} - {selectedPlayer.user.discordId}</p>
+                  <p className="text-lg font-semibold">
+                    {selectedPlayer?.nickname || selectedIdentity?.nicknameIngame || selectedIdentity?.requestPlayerName || 'Sem cadastro no site'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPlayer?.user?.discordUsername || selectedIdentity?.discordUsername || selectedIdentity?.discordNickname || 'Discord legacy'} - {currentDiscordId}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="space-y-1 p-4">
                   <p className="text-xs uppercase text-muted-foreground">{t(locale, 'class')}</p>
-                  <p className="text-lg font-semibold">{playerClassLabel(selectedPlayer.class, locale)}</p>
-                  <p className="text-xs text-muted-foreground">{t(locale, 'layer')} {selectedPlayer.dimensionalLayer}</p>
+                  <p className="text-lg font-semibold">{selectedPlayer ? playerClassLabel(selectedPlayer.class, locale) : 'Sem cadastro'}</p>
+                  <p className="text-xs text-muted-foreground">{selectedPlayer ? `${t(locale, 'layer')} ${selectedPlayer.dimensionalLayer}` : 'Somente logs importados'}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -256,13 +302,17 @@ function StaffItemAuditContent() {
             </Card>
 
             <div className="flex justify-end">
-              <Link className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold hover:border-primary" href={`/dashboard/staff/players/${selectedPlayer.id}`}>
-                Abrir dossie completo <ArrowUpRight className="h-4 w-4" />
-              </Link>
+              {selectedPlayer ? (
+                <Link className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold hover:border-primary" href={`/dashboard/staff/players/${selectedPlayer.id}`}>
+                  Abrir dossie completo <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <span className="rounded-md border border-dashed px-4 py-2 text-sm text-muted-foreground">Sem dossie: Discord ainda nao cadastrado</span>
+              )}
             </div>
           </>
         ) : (
-          <EmptyState title="Selecione um jogador">Use a busca acima para carregar a auditoria de drops e pedidos de um Discord.</EmptyState>
+          <EmptyState title="Selecione um jogador ou Discord">Use a busca acima para carregar a auditoria de drops e pedidos, mesmo de quem ainda nao se cadastrou.</EmptyState>
         )}
       </div>
     </AuthGuard>

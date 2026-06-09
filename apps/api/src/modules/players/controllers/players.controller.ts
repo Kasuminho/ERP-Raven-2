@@ -27,6 +27,20 @@ export class PlayersController {
     return this.service.listPlayers();
   }
 
+  @Get('audit/identities')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async listAuditIdentities() {
+    return this.service.listAuditIdentities();
+  }
+
+  @Get('audit/discord/:discordId/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async staffDiscordHistory(@Param('discordId') discordId: string) {
+    return this.service.getStaffDiscordHistory(discordId);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@Req() req: AuthRequest) {

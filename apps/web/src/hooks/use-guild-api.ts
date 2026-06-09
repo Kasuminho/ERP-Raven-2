@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditLog, CodexRequest, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, ProgressCategory, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, ProgressCategory, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -604,6 +604,13 @@ export function usePlayers() {
   });
 }
 
+export function useAuditIdentities() {
+  return useQuery({
+    queryKey: ['audit-identities'],
+    queryFn: async () => (await api.get<AuditIdentity[]>('/players/audit/identities')).data,
+  });
+}
+
 export function useAuditTimeline(targetType: string, targetId: string) {
   return useQuery({
     queryKey: ['audit-timeline', targetType, targetId],
@@ -617,6 +624,14 @@ export function usePlayerHistory(playerId: string) {
     queryKey: ['player-history', playerId],
     queryFn: async () => (await api.get<PlayerHistory>(`/players/${playerId}/history`)).data,
     enabled: Boolean(playerId),
+  });
+}
+
+export function useDiscordHistory(discordId: string) {
+  return useQuery({
+    queryKey: ['discord-history', discordId],
+    queryFn: async () => (await api.get<PlayerHistory>(`/players/audit/discord/${discordId}/history`)).data,
+    enabled: Boolean(discordId),
   });
 }
 

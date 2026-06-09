@@ -377,11 +377,25 @@ export type PlayerProgressComment = {
 };
 
 export type PlayerHistory = {
+  discordId?: string;
   player?: PlayerProfile & { user?: { discordId: string; discordUsername: string; preferredLocale?: string } };
   drops: DropHistory[];
   progress: PlayerProgress[];
   itemRequests: ItemRequest[];
   transactions?: Transaction[];
+};
+
+export type AuditIdentity = {
+  discordId: string;
+  playerId?: string;
+  playerNickname?: string;
+  discordUsername?: string;
+  discordNickname?: string;
+  nicknameIngame?: string;
+  requestPlayerName?: string;
+  dropsCount: number;
+  requestsCount: number;
+  lastActivityAt?: string;
 };
 
 export type StaffPlayer = PlayerProfile & {
