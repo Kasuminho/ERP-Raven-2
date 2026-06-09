@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Trophy, Vote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -161,6 +162,7 @@ export default function StaffInterestsPage() {
                     const missingVotes = Math.max(0, STAFF_VOTE_THRESHOLD - votes);
                     const isCurrentVote = currentVoteEntryId === entry.id;
                     const isVotingThisEntry = votingEntryId === entry.id && voteInterest.isPending;
+                    const auditHref = entry.player?.id ? `/dashboard/staff/item-audit?playerId=${entry.player.id}` : undefined;
                     const voteButtonLabel = isVotingThisEntry
                       ? currentVoteEntryId ? 'Alterando...' : 'Votando...'
                       : isCurrentVote ? 'Votado' : currentVoteEntryId ? 'Alterar voto' : 'Votar';
@@ -171,7 +173,13 @@ export default function StaffInterestsPage() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge tone={index === 0 && votes > 0 ? 'gold' : 'muted'}>#{index + 1}</Badge>
-                              <span className="font-semibold">{entry.player?.nickname}</span>
+                              {auditHref ? (
+                                <Link className="font-semibold text-primary underline-offset-4 hover:underline" href={auditHref}>
+                                  {entry.player?.nickname}
+                                </Link>
+                              ) : (
+                                <span className="font-semibold">{entry.player?.nickname}</span>
+                              )}
                               {isCurrentVote && <Badge tone="blue">Seu voto</Badge>}
                               {isWinner && <Badge tone="gold">Vencedor</Badge>}
                               {entry.dropHistory && <Badge tone="green">{t(locale, 'delivered')}</Badge>}

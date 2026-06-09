@@ -308,6 +308,10 @@ export type PlayerProfile = {
 
 export type DropHistory = {
   id: string;
+  itemCatalogId?: string;
+  auctionId?: string;
+  itemInterestEntryId?: string;
+  playerId?: string;
   discordId?: string;
   nicknameIngame?: string;
   itemName?: string;

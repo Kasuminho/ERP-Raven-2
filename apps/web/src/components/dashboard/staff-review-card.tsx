@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,9 @@ export function StaffReviewCard({
         </div>
         {top ? (
           <div className="rounded-md border bg-background/40 p-3 text-sm">
-            <p className="font-semibold">{top.nickname}</p>
+            <Link className="font-semibold text-primary underline-offset-4 hover:underline" href={`/dashboard/staff/item-audit?playerId=${top.playerId}`}>
+              {top.nickname}
+            </Link>
             <p className="text-muted-foreground">
               {t(locale, 'layer')} {top.dimensionalLayer} - {top.attendancePercentage}% {t(locale, 'attendance').toLowerCase()} - {top.availableDKP} DKP
             </p>
