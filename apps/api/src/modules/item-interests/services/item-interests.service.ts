@@ -226,34 +226,36 @@ export class ItemInterestsService {
   }
 
   async closePost(id: string, actorId: string): Promise<ItemInterestPost> {
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const post = await tx.itemInterestPost.findUnique({
-        where: { id },
-        include: { entries: true },
-      });
+    return this.closePostWithinTransaction(id, actorId, false);
+  }
 
-      if (!post) {
-        throw new NotFoundException(`Interest post ${id} was not found.`);
-      }
-
-      if (post.status !== ItemInterestStatus.OPEN) {
-        throw new BadRequestException('Only open interest posts can be closed for voting.');
-      }
-
-      return tx.itemInterestPost.update({
-        where: { id },
-        data: {
-          status: post.entries.length > 0 ? ItemInterestStatus.VOTING : ItemInterestStatus.CLOSED,
-          closedAt: new Date(),
-          votingRound: 1,
-          votingCandidateEntryIds: [],
-          selectedEntryId: null,
-          deliveryEnabledAt: null,
-        },
-      });
+  async closeExpiredPosts(): Promise<{ closed: number; voting: number; empty: number }> {
+    const expiredPosts = await this.prisma.itemInterestPost.findMany({
+      where: {
+        status: ItemInterestStatus.OPEN,
+        closesAt: { lte: new Date() },
+      },
+      select: { id: true },
+      orderBy: { closesAt: 'asc' },
+      take: 50,
     });
-    await this.audit('ITEM_INTEREST_POST_CLOSED', id, actorId, { entriesClosed: true });
-    return updated;
+
+    let voting = 0;
+    let empty = 0;
+
+    for (const post of expiredPosts) {
+      const updated = await this.closePostWithinTransaction(post.id, undefined, true);
+
+      if (updated.status === ItemInterestStatus.VOTING) {
+        voting += 1;
+      }
+
+      if (updated.status === ItemInterestStatus.CLOSED) {
+        empty += 1;
+      }
+    }
+
+    return { closed: voting + empty, voting, empty };
   }
 
   async vote(postId: string, entryId: string, voterId: string): Promise<ItemInterestDetails> {
@@ -595,6 +597,54 @@ export class ItemInterestsService {
     return item.kind.trim().toLowerCase() === 'skill' && !['heroic', 'legendary'].includes(item.category.trim().toLowerCase());
   }
 
+  private async closePostWithinTransaction(id: string, actorId: string | undefined, automatic: boolean): Promise<ItemInterestPost> {
+    return this.prisma.$transaction(async (tx) => {
+      const post = await tx.itemInterestPost.findUnique({
+        where: { id },
+        include: { entries: true },
+      });
+
+      if (!post) {
+        throw new NotFoundException(`Interest post ${id} was not found.`);
+      }
+
+      if (post.status !== ItemInterestStatus.OPEN) {
+        if (automatic) {
+          return post;
+        }
+
+        throw new BadRequestException('Only open interest posts can be closed for voting.');
+      }
+
+      if (automatic && post.closesAt > new Date()) {
+        return post;
+      }
+
+      const nextStatus = post.entries.length > 0 ? ItemInterestStatus.VOTING : ItemInterestStatus.CLOSED;
+      const updated = await tx.itemInterestPost.update({
+        where: { id },
+        data: {
+          status: nextStatus,
+          closedAt: new Date(),
+          votingRound: 1,
+          votingCandidateEntryIds: [],
+          selectedEntryId: null,
+          deliveryEnabledAt: null,
+        },
+      });
+
+      await this.auditWithinTransaction(tx, automatic ? 'ITEM_INTEREST_POST_AUTO_CLOSED' : 'ITEM_INTEREST_POST_CLOSED', id, actorId, {
+        automatic,
+        previousStatus: post.status,
+        nextStatus,
+        entriesCount: post.entries.length,
+        closesAt: post.closesAt.toISOString(),
+      });
+
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   private jsonStringArray(value: Prisma.JsonValue): string[] {
     return Array.isArray(value) ? value.filter((row): row is string => typeof row === 'string') : [];
   }
@@ -621,7 +671,7 @@ export class ItemInterestsService {
     tx: Prisma.TransactionClient,
     action: string,
     targetId: string,
-    actorId: string,
+    actorId: string | undefined,
     metadata: Prisma.InputJsonObject,
   ): Promise<void> {
     await this.auditService.logWithinTransaction({ actorId, action, targetType: 'ItemInterest', targetId, metadata }, tx);
