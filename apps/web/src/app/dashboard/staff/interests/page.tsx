@@ -42,6 +42,12 @@ function voteSummary(post: ItemInterestPost, entry: ItemInterestEntry): string {
   return `${count}/${STAFF_VOTE_THRESHOLD}`;
 }
 
+function voterNames(post: ItemInterestPost, entry: ItemInterestEntry): string[] {
+  return (entry.votes ?? [])
+    .filter((vote) => vote.round === post.votingRound)
+    .map((vote) => vote.voter?.discordNickname || vote.voter?.discordUsername || vote.voterId);
+}
+
 function currentUserVoteEntryId(post: ItemInterestPost, userId?: string): string | undefined {
   if (!userId) return undefined;
 
@@ -163,6 +169,7 @@ export default function StaffInterestsPage() {
                     const isCurrentVote = currentVoteEntryId === entry.id;
                     const isVotingThisEntry = votingEntryId === entry.id && voteInterest.isPending;
                     const auditHref = entry.player?.id ? `/dashboard/staff/item-audit?playerId=${entry.player.id}` : undefined;
+                    const voters = voterNames(post, entry);
                     const voteButtonLabel = isVotingThisEntry
                       ? currentVoteEntryId ? 'Alterando...' : 'Votando...'
                       : isCurrentVote ? 'Votado' : currentVoteEntryId ? 'Alterar voto' : 'Votar';
@@ -196,6 +203,9 @@ export default function StaffInterestsPage() {
                               <div className="h-2 overflow-hidden rounded-full bg-muted">
                                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (votes / STAFF_VOTE_THRESHOLD) * 100)}%` }} />
                               </div>
+                              <p className="text-xs text-muted-foreground">
+                                Votaram: {voters.length ? voters.join(', ') : 'ninguem ainda'}
+                              </p>
                             </div>
                           </div>
                           <Button

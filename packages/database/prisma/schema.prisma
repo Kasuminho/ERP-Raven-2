@@ -133,28 +133,29 @@ enum ProgressReviewStatus {
 }
 
 model User {
-  id                String             @id @default(uuid())
-  discordId         String             @unique
-  discordUsername   String
-  avatar            String?
-  discordGuildId    String?
-  discordNickname   String?
-  discordRoles      Json?
-  preferredLocale   String             @default("pt")
-  lastDiscordSyncAt DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  players           Player[]
-  createdEvents     Event[]            @relation("EventCreatedBy")
-  dkpTransactions   DKPTransaction[]   @relation("DKPTransactionCreatedBy")
-  createdAuctions   Auction[]          @relation("AuctionCreatedBy")
-  announcements     Announcement[]     @relation("AnnouncementCreatedBy")
-  interestPosts     ItemInterestPost[] @relation("ItemInterestPostCreatedBy")
-  interestVotes     ItemInterestVote[] @relation("ItemInterestVoteVoter")
-  sentCodexRequests CodexRequest[]     @relation("CodexRequestSentBy")
-  reviewedProgress  PlayerProgress[]   @relation("PlayerProgressReviewedBy")
-  progressComments  PlayerProgressComment[]
-  auditLogs         AuditLog[]         @relation("AuditLogActor")
+  id                 String                  @id @default(uuid())
+  discordId          String                  @unique
+  discordUsername    String
+  avatar             String?
+  discordGuildId     String?
+  discordNickname    String?
+  discordRoles       Json?
+  preferredLocale    String                  @default("pt")
+  lastDiscordSyncAt  DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  players            Player[]
+  createdEvents      Event[]                 @relation("EventCreatedBy")
+  dkpTransactions    DKPTransaction[]        @relation("DKPTransactionCreatedBy")
+  createdAuctions    Auction[]               @relation("AuctionCreatedBy")
+  announcements      Announcement[]          @relation("AnnouncementCreatedBy")
+  interestPosts      ItemInterestPost[]      @relation("ItemInterestPostCreatedBy")
+  interestVotes      ItemInterestVote[]      @relation("ItemInterestVoteVoter")
+  auctionReviewVotes AuctionReviewVote[]     @relation("AuctionReviewVoteVoter")
+  sentCodexRequests  CodexRequest[]          @relation("CodexRequestSentBy")
+  reviewedProgress   PlayerProgress[]        @relation("PlayerProgressReviewedBy")
+  progressComments   PlayerProgressComment[]
+  auditLogs          AuditLog[]              @relation("AuditLogActor")
 
   @@index([discordUsername])
   @@index([discordGuildId])
@@ -193,25 +194,25 @@ model Player {
 }
 
 model PlayerProgress {
-  id                  String               @id @default(uuid())
-  playerId            String
-  category            ProgressCategory     @default(STATUS)
-  level               Int?
-  note                String?
-  imageUrl            String?
-  imageUrls           Json                 @default("[]")
-  reviewStatus        ProgressReviewStatus @default(NOT_REQUIRED)
-  requiresStaffReview Boolean              @default(false)
-  combatPower         Int?
-  dimensionalLayer    Int?                 @db.SmallInt
-  reviewedById        String?
-  reviewedAt          DateTime?
-  reviewNote          String?
+  id                   String                  @id @default(uuid())
+  playerId             String
+  category             ProgressCategory        @default(STATUS)
+  level                Int?
+  note                 String?
+  imageUrl             String?
+  imageUrls            Json                    @default("[]")
+  reviewStatus         ProgressReviewStatus    @default(NOT_REQUIRED)
+  requiresStaffReview  Boolean                 @default(false)
+  combatPower          Int?
+  dimensionalLayer     Int?                    @db.SmallInt
+  reviewedById         String?
+  reviewedAt           DateTime?
+  reviewNote           String?
   playerReadCommentsAt DateTime?
-  createdAt           DateTime             @default(now())
-  player              Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  reviewedBy          User?                @relation("PlayerProgressReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  comments            PlayerProgressComment[]
+  createdAt            DateTime                @default(now())
+  player               Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy           User?                   @relation("PlayerProgressReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  comments             PlayerProgressComment[]
 
   @@index([playerId, createdAt])
   @@index([category])
@@ -220,13 +221,13 @@ model PlayerProgress {
 }
 
 model PlayerProgressComment {
-  id          String         @id @default(uuid())
-  progressId  String
-  authorId    String
-  body        String
-  createdAt   DateTime       @default(now())
-  progress    PlayerProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
-  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id         String         @id @default(uuid())
+  progressId String
+  authorId   String
+  body       String
+  createdAt  DateTime       @default(now())
+  progress   PlayerProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  author     User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([progressId, createdAt])
   @@index([authorId])
@@ -318,24 +319,25 @@ model DKPLock {
 }
 
 model Auction {
-  id                  String        @id @default(uuid())
+  id                  String              @id @default(uuid())
   itemCatalogId       String?
   itemName            String
   itemType            ItemType
   itemTier            ItemTier
   minimumBid          Int
   auctionMode         AuctionMode
-  status              AuctionStatus @default(OPEN)
-  requiresStaffReview Boolean       @default(false)
+  status              AuctionStatus       @default(OPEN)
+  requiresStaffReview Boolean             @default(false)
   endsAt              DateTime
   reopensAt           DateTime?
   createdById         String
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  itemCatalog         ItemCatalog?  @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
-  createdBy           User          @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  itemCatalog         ItemCatalog?        @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  createdBy           User                @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   bids                AuctionBid[]
   dkpLocks            DKPLock[]
+  reviewVotes         AuctionReviewVote[]
   dropHistory         DropHistory?
 
   @@index([itemCatalogId])
@@ -362,6 +364,24 @@ model AuctionBid {
   @@index([auctionId, createdAt])
   @@index([playerId])
   @@index([isValid])
+}
+
+model AuctionReviewVote {
+  id        String   @id @default(uuid())
+  auctionId String
+  voterId   String
+  action    String
+  playerId  String?
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  voter     User     @relation("AuctionReviewVoteVoter", fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, voterId])
+  @@index([auctionId, action])
+  @@index([playerId])
+  @@index([voterId])
 }
 
 model EligibilityRule {
@@ -411,35 +431,35 @@ model ItemCatalog {
 }
 
 model ItemRequest {
-  id                String       @id @default(uuid())
-  legacyId          Int?         @unique
-  itemCatalogId     String?
-  playerId          String?
-  discordId         String
-  playerName        String
-  itemName          String
-  imageUrl          String?
-  totalQuantity     Int
-  remainingQuantity Int
-  rankPosition      Int
-  threadId          String?
-  threadChannelId   String?
-  warned3d          Boolean      @default(false)
-  warned4d          Boolean      @default(false)
-  updateProofImageUrl String?
-  updateProofNote   String?
-  updateProofStatus ItemRequestUpdateStatus?
-  updateProofSubmittedAt DateTime?
-  updateProofReviewedAt DateTime?
+  id                      String                   @id @default(uuid())
+  legacyId                Int?                     @unique
+  itemCatalogId           String?
+  playerId                String?
+  discordId               String
+  playerName              String
+  itemName                String
+  imageUrl                String?
+  totalQuantity           Int
+  remainingQuantity       Int
+  rankPosition            Int
+  threadId                String?
+  threadChannelId         String?
+  warned3d                Boolean                  @default(false)
+  warned4d                Boolean                  @default(false)
+  updateProofImageUrl     String?
+  updateProofNote         String?
+  updateProofStatus       ItemRequestUpdateStatus?
+  updateProofSubmittedAt  DateTime?
+  updateProofReviewedAt   DateTime?
   updateProofReviewedById String?
-  lastReminderStage String?
-  lastReminderAt    DateTime?
-  legacyCreatedAt   DateTime?
-  legacyUpdatedAt   DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  itemCatalog       ItemCatalog? @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
-  player            Player?      @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  lastReminderStage       String?
+  lastReminderAt          DateTime?
+  legacyCreatedAt         DateTime?
+  legacyUpdatedAt         DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  itemCatalog             ItemCatalog?             @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  player                  Player?                  @relation(fields: [playerId], references: [id], onDelete: SetNull)
 
   @@index([itemCatalogId])
   @@index([playerId])
@@ -482,27 +502,27 @@ model DropHistory {
 }
 
 model ItemInterestPost {
-  id            String              @id @default(uuid())
-  itemCatalogId String
-  mode          String              @default("PvE")
-  title         String
-  criteriaPt    String
-  criteriaEn    String
-  status        ItemInterestStatus  @default(OPEN)
-  votingRound   Int                 @default(1)
-  votingCandidateEntryIds Json      @default("[]")
-  selectedEntryId String?
-  deliveryEnabledAt DateTime?
-  closesAt      DateTime
-  closedAt      DateTime?
-  proofImageUrl String?
-  createdById   String
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  itemCatalog   ItemCatalog         @relation(fields: [itemCatalogId], references: [id], onDelete: Cascade)
-  createdBy     User                @relation("ItemInterestPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  entries       ItemInterestEntry[]
-  votes         ItemInterestVote[]
+  id                      String              @id @default(uuid())
+  itemCatalogId           String
+  mode                    String              @default("PvE")
+  title                   String
+  criteriaPt              String
+  criteriaEn              String
+  status                  ItemInterestStatus  @default(OPEN)
+  votingRound             Int                 @default(1)
+  votingCandidateEntryIds Json                @default("[]")
+  selectedEntryId         String?
+  deliveryEnabledAt       DateTime?
+  closesAt                DateTime
+  closedAt                DateTime?
+  proofImageUrl           String?
+  createdById             String
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  itemCatalog             ItemCatalog         @relation(fields: [itemCatalogId], references: [id], onDelete: Cascade)
+  createdBy               User                @relation("ItemInterestPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  entries                 ItemInterestEntry[]
+  votes                   ItemInterestVote[]
 
   @@index([itemCatalogId])
   @@index([status])
@@ -512,14 +532,14 @@ model ItemInterestPost {
 }
 
 model ItemInterestEntry {
-  id          String           @id @default(uuid())
+  id          String             @id @default(uuid())
   postId      String
   playerId    String
   note        String?
   imageUrl    String?
-  createdAt   DateTime         @default(now())
-  post        ItemInterestPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  player      Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime           @default(now())
+  post        ItemInterestPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  player      Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
   dropHistory DropHistory?
   votes       ItemInterestVote[]
 

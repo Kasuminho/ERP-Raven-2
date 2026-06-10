@@ -39,7 +39,7 @@ export class StaffReviewController {
     @Param('auctionId') auctionId: string,
     @Body() dto: ApproveWinnerDto,
     @Req() req: StaffRequest,
-  ): Promise<Auction> {
+  ): Promise<Auction | StaffReviewDetails> {
     return this.service.approveAuctionWinner(auctionId, dto.playerId, req.user.userId);
   }
 
@@ -48,7 +48,7 @@ export class StaffReviewController {
     @Param('auctionId') auctionId: string,
     @Body() dto: RejectWinnerDto,
     @Req() req: StaffRequest,
-  ): Promise<Auction> {
+  ): Promise<Auction | StaffReviewDetails> {
     return this.service.rejectAuctionWinner(auctionId, dto.reason, req.user.userId);
   }
 

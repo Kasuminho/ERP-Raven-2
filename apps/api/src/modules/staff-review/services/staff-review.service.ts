@@ -20,6 +20,7 @@ export type StaffReviewDetails = StaffAuctionReviewDetails & {
 @Injectable()
 export class StaffReviewService {
   private readonly relistDelayDays = 7;
+  private readonly reviewVoteThreshold = 3;
 
   constructor(
     private readonly repository: StaffReviewRepository,
@@ -28,11 +29,51 @@ export class StaffReviewService {
     private readonly auditService: AuditService,
   ) {}
 
-  async approveAuctionWinner(auctionId: string, playerId: string, reviewerId: string): Promise<Auction> {
-    return this.approveWinner(auctionId, playerId, reviewerId, 'APPROVE_WINNER');
+  async approveAuctionWinner(auctionId: string, playerId: string, reviewerId: string): Promise<StaffReviewDetails | Auction> {
+    return this.repository.client.$transaction(
+      async (tx) => {
+        const auction = await this.requireAuction(auctionId, tx);
+        this.assertReviewable(auction);
+
+        await this.assertWinnerCandidateCanBeApproved(auctionId, playerId, tx);
+
+        await tx.auctionReviewVote.upsert({
+          where: { auctionId_voterId: { auctionId, voterId: reviewerId } },
+          create: {
+            auctionId,
+            voterId: reviewerId,
+            action: 'APPROVE',
+            playerId,
+          },
+          update: {
+            action: 'APPROVE',
+            playerId,
+            reason: null,
+          },
+        });
+
+        const approvalVotes = await tx.auctionReviewVote.count({
+          where: { auctionId, action: 'APPROVE', playerId },
+        });
+
+        await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_REVIEW_APPROVAL_VOTE', 'Auction', auctionId, {
+          auctionId,
+          playerId,
+          approvalVotes,
+          requiredVotes: this.reviewVoteThreshold,
+        });
+
+        if (approvalVotes >= this.reviewVoteThreshold) {
+          return this.approveWinnerWithinTransaction(auctionId, playerId, reviewerId, 'APPROVE_WINNER', undefined, tx);
+        }
+
+        return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
-  async rejectAuctionWinner(auctionId: string, reason: string, reviewerId: string): Promise<Auction> {
+  async rejectAuctionWinner(auctionId: string, reason: string, reviewerId: string): Promise<StaffReviewDetails | Auction> {
     this.assertReason(reason);
 
     return this.repository.client.$transaction(
@@ -40,23 +81,37 @@ export class StaffReviewService {
         const auction = await this.requireAuction(auctionId, tx);
         this.assertReviewable(auction);
 
-        const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
-        const relisted = await this.repository.updateAuction(
-          auctionId,
-          {
-            status: AuctionStatus.RELISTED,
-            reopensAt: this.addDays(new Date(), this.relistDelayDays),
+        await tx.auctionReviewVote.upsert({
+          where: { auctionId_voterId: { auctionId, voterId: reviewerId } },
+          create: {
+            auctionId,
+            voterId: reviewerId,
+            action: 'REJECT',
+            reason,
           },
-          tx,
-        );
-
-        await this.auditWithinTransaction(tx, reviewerId, 'REJECT_WINNER', 'Auction', auctionId, {
-          auctionId,
-          reason,
-          refundedLockIds: refundedLocks.map((lock) => lock.id),
+          update: {
+            action: 'REJECT',
+            playerId: null,
+            reason,
+          },
         });
 
-        return relisted;
+        const rejectionVotes = await tx.auctionReviewVote.count({
+          where: { auctionId, action: 'REJECT' },
+        });
+
+        await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_REVIEW_REJECTION_VOTE', 'Auction', auctionId, {
+          auctionId,
+          reason,
+          rejectionVotes,
+          requiredVotes: this.reviewVoteThreshold,
+        });
+
+        if (rejectionVotes >= this.reviewVoteThreshold) {
+          return this.rejectWinnerWithinTransaction(auctionId, reason, reviewerId, tx);
+        }
+
+        return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -229,10 +284,17 @@ export class StaffReviewService {
   }
 
   async getAuctionReviewDetails(auctionId: string): Promise<StaffReviewDetails> {
+    return this.getAuctionReviewDetailsWithinTransaction(auctionId);
+  }
+
+  private async getAuctionReviewDetailsWithinTransaction(
+    auctionId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<StaffReviewDetails> {
     const [details, ranking, timeline] = await Promise.all([
-      this.repository.findAuctionReviewDetails(auctionId),
+      this.repository.findAuctionReviewDetails(auctionId, tx),
       this.eligibilityService.rankAuctionCandidates(auctionId),
-      this.repository.findReviewTimeline(auctionId),
+      this.repository.findReviewTimeline(auctionId, tx),
     ]);
 
     if (!details) {
@@ -262,42 +324,89 @@ export class StaffReviewService {
         const auction = await this.requireAuction(auctionId, tx);
         this.assertReviewable(auction);
 
-        const eligibility = await this.eligibilityService.canApproveExistingBidWithinTransaction(playerId, auctionId, tx);
-
-        if (!eligibility.canBid) {
-          throw new IneligibleStaffApprovalException(playerId, auctionId);
-        }
-
-        const bid = await this.repository.findValidBid(auctionId, playerId, tx);
-
-        if (!bid) {
-          throw new InvalidStaffReviewActionException('Winner must have a valid bid.');
-        }
-
-        const lock = await this.repository.findActiveLock(auctionId, playerId, tx);
-
-        if (!lock) {
-          throw new InvalidStaffReviewActionException('Winner must have a valid active DKP lock.');
-        }
-
-        const consumed = await this.dkpService.consumeLockedDKPWithinTransaction(playerId, auctionId, tx);
-        const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx, playerId);
-        const finished = await this.repository.updateAuctionStatus(auctionId, AuctionStatus.FINISHED, tx);
-
-        await this.auditWithinTransaction(tx, reviewerId, action, 'Auction', auctionId, {
-          auctionId,
-          playerId,
-          bidId: bid.id,
-          reason,
-          consumedTransactionId: consumed.transaction.id,
-          consumedLockId: consumed.releasedLock.id,
-          refundedLockIds: refundedLocks.map((refundedLock) => refundedLock.id),
-        });
-
-        return finished;
+        return this.approveWinnerWithinTransaction(auctionId, playerId, reviewerId, action, reason, tx);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+  }
+
+  private async assertWinnerCandidateCanBeApproved(
+    auctionId: string,
+    playerId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const eligibility = await this.eligibilityService.canApproveExistingBidWithinTransaction(playerId, auctionId, tx);
+
+    if (!eligibility.canBid) {
+      throw new IneligibleStaffApprovalException(playerId, auctionId);
+    }
+
+    const bid = await this.repository.findValidBid(auctionId, playerId, tx);
+
+    if (!bid) {
+      throw new InvalidStaffReviewActionException('Winner must have a valid bid.');
+    }
+
+    const lock = await this.repository.findActiveLock(auctionId, playerId, tx);
+
+    if (!lock) {
+      throw new InvalidStaffReviewActionException('Winner must have a valid active DKP lock.');
+    }
+  }
+
+  private async approveWinnerWithinTransaction(
+    auctionId: string,
+    playerId: string,
+    reviewerId: string,
+    action: 'APPROVE_WINNER' | 'OVERRIDE_PRIORITY',
+    reason: string | undefined,
+    tx: Prisma.TransactionClient,
+  ): Promise<Auction> {
+    await this.assertWinnerCandidateCanBeApproved(auctionId, playerId, tx);
+
+    const bid = await this.repository.findValidBid(auctionId, playerId, tx);
+    const consumed = await this.dkpService.consumeLockedDKPWithinTransaction(playerId, auctionId, tx);
+    const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx, playerId);
+    const finished = await this.repository.updateAuctionStatus(auctionId, AuctionStatus.FINISHED, tx);
+
+    await this.auditWithinTransaction(tx, reviewerId, action, 'Auction', auctionId, {
+      auctionId,
+      playerId,
+      bidId: bid?.id,
+      reason,
+      approvalThreshold: this.reviewVoteThreshold,
+      consumedTransactionId: consumed.transaction.id,
+      consumedLockId: consumed.releasedLock.id,
+      refundedLockIds: refundedLocks.map((refundedLock) => refundedLock.id),
+    });
+
+    return finished;
+  }
+
+  private async rejectWinnerWithinTransaction(
+    auctionId: string,
+    reason: string,
+    reviewerId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<Auction> {
+    const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+    const relisted = await this.repository.updateAuction(
+      auctionId,
+      {
+        status: AuctionStatus.RELISTED,
+        reopensAt: this.addDays(new Date(), this.relistDelayDays),
+      },
+      tx,
+    );
+
+    await this.auditWithinTransaction(tx, reviewerId, 'REJECT_WINNER', 'Auction', auctionId, {
+      auctionId,
+      reason,
+      rejectionThreshold: this.reviewVoteThreshold,
+      refundedLockIds: refundedLocks.map((lock) => lock.id),
+    });
+
+    return relisted;
   }
 
   private async requireAuction(auctionId: string, tx: Prisma.TransactionClient): Promise<Auction> {

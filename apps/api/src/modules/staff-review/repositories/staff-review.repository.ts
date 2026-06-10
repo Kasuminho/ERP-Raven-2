@@ -13,6 +13,17 @@ export type StaffAuctionReviewDetails = Prisma.AuctionGetPayload<{
     };
     dkpLocks: true;
     createdBy: true;
+    reviewVotes: {
+      include: {
+        voter: {
+          select: {
+            id: true;
+            discordUsername: true;
+            discordNickname: true;
+          };
+        };
+      };
+    };
   };
 }>;
 
@@ -52,6 +63,18 @@ export class StaffReviewRepository {
         },
         dkpLocks: true,
         createdBy: true,
+        reviewVotes: {
+          include: {
+            voter: {
+              select: {
+                id: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'asc' },
+        },
       },
     });
   }

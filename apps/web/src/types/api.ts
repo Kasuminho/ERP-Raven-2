@@ -57,6 +57,23 @@ export type Auction = {
   endsAt: string;
   createdAt: string;
   itemCatalog?: ItemCatalog;
+  reviewVotes?: AuctionReviewVote[];
+};
+
+export type AuctionReviewVote = {
+  id: string;
+  auctionId: string;
+  voterId: string;
+  action: 'APPROVE' | 'REJECT' | string;
+  playerId?: string;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+  voter?: {
+    id: string;
+    discordUsername: string;
+    discordNickname?: string;
+  };
 };
 
 export type ItemCatalog = {

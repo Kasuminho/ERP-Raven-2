@@ -24,7 +24,7 @@ function ReviewItem({ auctionId }: { auctionId: string }) {
       return;
     }
 
-    rejectReview.mutate(reason, { onSuccess: () => notifyToast({ title: 'Review rejeitada.', tone: 'success' }) });
+    rejectReview.mutate(reason, { onSuccess: () => notifyToast({ title: 'Voto de rejeicao registrado.', tone: 'success' }) });
   }
 
   function invalidateBid(bidId: string) {
@@ -42,7 +42,7 @@ function ReviewItem({ auctionId }: { auctionId: string }) {
       auction={details.data}
       ranking={details.data.ranking}
       pending={approveWinner.isPending || rejectReview.isPending || removeBid.isPending}
-      onApprove={(playerId) => approveWinner.mutate(playerId, { onSuccess: () => notifyToast({ title: 'Vencedor aprovado.', tone: 'success' }) })}
+      onApprove={(playerId) => approveWinner.mutate(playerId, { onSuccess: () => notifyToast({ title: 'Voto de aprovacao registrado.', tone: 'success' }) })}
       onInvalidateBid={invalidateBid}
       onReject={reject}
     />
