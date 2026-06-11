@@ -8,6 +8,29 @@ export class DiscordWebhookQueueService {
   private readonly logger = new Logger(DiscordWebhookQueueService.name);
   private readonly minimumDelayMs = 1500;
   private readonly maxAttempts = 5;
+  private readonly dwarfWeekendCutoffUtc = new Date('2026-06-15T03:00:00.000Z');
+  private readonly dwarfWeekendNames = [
+    'Call baixa, loot alto',
+    'Pequeno contratempo',
+    'Lance a altura',
+    'Fiscal dos detalhes pequenos',
+    'Boss acima do meu nivel',
+    'Prioridade em tamanho compacto',
+    'DKP de bolso cheio',
+    'O menor atraso da raid',
+    'Pequeno no nome, gigante no webhook',
+    'Estrategia curta, dano longo',
+    'Altura baixa, moral alta',
+    'Nao e bug, e escala reduzida',
+    'Pequeno passo para o player',
+    'Grande drop em embalagem mini',
+    'A call ficou um pouco baixa',
+    'Mini raid leader, macro decisao',
+    'O detalhe que faltava',
+    'Pequeno spoiler de loot',
+    'Baixinho, mas logado',
+    'Aristolfo em modo compacto',
+  ];
   private queue: Promise<void> = Promise.resolve();
 
   async send(webhookUrl: string, payload: DiscordWebhookPayload): Promise<void> {
@@ -66,11 +89,19 @@ export class DiscordWebhookQueueService {
     const raw = payload as DiscordWebhookPayload & { allowedMentions?: unknown };
 
     return {
-      username: 'Aristolfo, vulgo Mario pro Anao',
+      username: this.getWebhookUsername(),
       ...raw,
       allowed_mentions: raw.allowedMentions,
       allowedMentions: undefined,
     };
+  }
+
+  private getWebhookUsername(): string {
+    if (new Date() >= this.dwarfWeekendCutoffUtc) {
+      return 'Aristolfo, o grande';
+    }
+
+    return this.dwarfWeekendNames[Math.floor(Math.random() * this.dwarfWeekendNames.length)];
   }
 
   private async getRetryAfterMs(response: Response): Promise<number> {
