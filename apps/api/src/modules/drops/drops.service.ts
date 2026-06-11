@@ -91,6 +91,159 @@ export class DropsService {
     });
   }
 
+  async getItemAuditSummaries(search?: string) {
+    const normalizedSearch = search?.trim();
+    const where: Prisma.DropHistoryWhereInput | undefined = normalizedSearch
+      ? {
+          OR: [
+            { itemName: { contains: normalizedSearch, mode: 'insensitive' } },
+            { itemCatalog: { namePt: { contains: normalizedSearch, mode: 'insensitive' } } },
+            { itemCatalog: { nameEn: { contains: normalizedSearch, mode: 'insensitive' } } },
+            { itemCatalog: { nameEs: { contains: normalizedSearch, mode: 'insensitive' } } },
+          ],
+        }
+      : undefined;
+
+    const drops = await this.prisma.dropHistory.findMany({
+      where,
+      include: {
+        itemCatalog: true,
+        player: {
+          include: {
+            user: {
+              select: {
+                discordId: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+      take: 2000,
+    });
+
+    const byItem = new Map<string, {
+      itemKey: string;
+      itemCatalogId?: string;
+      itemName: string;
+      namePt?: string;
+      nameEn?: string;
+      nameEs?: string | null;
+      itemTier?: string | null;
+      itemType?: string | null;
+      imageUrl?: string | null;
+      deliveredCount: number;
+      uniquePlayers: Set<string>;
+      lastDeliveredAt?: Date | null;
+      sources: Set<string>;
+    }>();
+
+    for (const drop of drops) {
+      const itemName = drop.itemCatalog?.namePt || drop.itemName || 'Item sem nome';
+      const itemKey = drop.itemCatalogId ?? `legacy:${itemName.toLowerCase()}`;
+      const current = byItem.get(itemKey) ?? {
+        itemKey,
+        itemCatalogId: drop.itemCatalogId ?? undefined,
+        itemName,
+        namePt: drop.itemCatalog?.namePt,
+        nameEn: drop.itemCatalog?.nameEn,
+        nameEs: drop.itemCatalog?.nameEs,
+        itemTier: drop.itemCatalog?.itemTier,
+        itemType: drop.itemCatalog?.itemType,
+        imageUrl: drop.itemCatalog?.image1Url || drop.itemCatalog?.image2Url,
+        deliveredCount: 0,
+        uniquePlayers: new Set<string>(),
+        lastDeliveredAt: drop.deliveredAt,
+        sources: new Set<string>(),
+      };
+
+      current.deliveredCount += 1;
+      current.uniquePlayers.add(drop.playerId ?? drop.discordId ?? drop.nicknameIngame ?? drop.id);
+      current.sources.add(drop.auctionId ? 'AUCTION' : drop.itemInterestEntryId ? 'INTEREST' : 'LEGACY_OR_REQUEST');
+
+      if (drop.deliveredAt && (!current.lastDeliveredAt || drop.deliveredAt > current.lastDeliveredAt)) {
+        current.lastDeliveredAt = drop.deliveredAt;
+      }
+
+      byItem.set(itemKey, current);
+    }
+
+    return [...byItem.values()]
+      .map((item) => ({
+        ...item,
+        uniquePlayers: item.uniquePlayers.size,
+        sources: [...item.sources],
+      }))
+      .sort((a, b) => {
+        const dateDiff = (b.lastDeliveredAt?.getTime() ?? 0) - (a.lastDeliveredAt?.getTime() ?? 0);
+        return dateDiff || b.deliveredCount - a.deliveredCount || a.itemName.localeCompare(b.itemName);
+      })
+      .slice(0, 300);
+  }
+
+  async getItemAuditDetails(query: { itemCatalogId?: string; itemName?: string }) {
+    const itemCatalogId = query.itemCatalogId?.trim();
+    const itemName = query.itemName?.trim();
+
+    if (!itemCatalogId && !itemName) {
+      throw new BadRequestException('itemCatalogId or itemName is required.');
+    }
+
+    const drops = await this.prisma.dropHistory.findMany({
+      where: itemCatalogId
+        ? { itemCatalogId }
+        : {
+            OR: [
+              { itemName: { equals: itemName, mode: 'insensitive' } },
+              { itemCatalog: { namePt: { equals: itemName, mode: 'insensitive' } } },
+              { itemCatalog: { nameEn: { equals: itemName, mode: 'insensitive' } } },
+              { itemCatalog: { nameEs: { equals: itemName, mode: 'insensitive' } } },
+            ],
+          },
+      include: {
+        itemCatalog: true,
+        player: {
+          include: {
+            user: {
+              select: {
+                discordId: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+        },
+        auction: true,
+        itemInterestEntry: {
+          include: {
+            post: true,
+          },
+        },
+      },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+    });
+
+    const staffIds = [...new Set(drops.map((drop) => drop.staffDiscordId).filter((id): id is string => Boolean(id)))];
+    const staffUsers = await this.prisma.user.findMany({
+      where: { id: { in: staffIds } },
+      select: {
+        id: true,
+        discordUsername: true,
+        discordNickname: true,
+      },
+    });
+    const staffById = new Map(staffUsers.map((user) => [user.id, user]));
+
+    return drops.map((drop) => ({
+      ...drop,
+      source: drop.auctionId ? 'AUCTION' : drop.itemInterestEntryId ? 'INTEREST' : 'LEGACY_OR_REQUEST',
+      staff: drop.staffDiscordId ? staffById.get(drop.staffDiscordId) ?? null : null,
+    }));
+  }
+
   async deliverAuctionDrop(auctionId: string, proofImageUrl: string | undefined, actorId: string) {
     if (!proofImageUrl?.trim()) {
       throw new BadRequestException('Proof image is required to deliver an auction drop.');

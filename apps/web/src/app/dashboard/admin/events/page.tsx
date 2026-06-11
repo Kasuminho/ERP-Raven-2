@@ -62,6 +62,8 @@ export default function AdminEventsPage() {
   const isFinalized = selectedEvent?.status === 'FINALIZED';
   const isCancelled = selectedEvent?.status === 'CANCELLED';
   const isClosed = isFinalized || isCancelled;
+  const absentCount = Math.max(0, activePlayers.length - presentPlayerIds.size);
+  const totalDkp = (selectedEvent?.dkpReward ?? 0) * presentPlayerIds.size;
 
   function create() {
     if (!name.trim() || !startsAt) return;
@@ -191,26 +193,46 @@ export default function AdminEventsPage() {
               {!selectedEventId ? (
                 <p className="text-sm text-muted-foreground">{t(locale, 'openEventAttendance')}</p>
               ) : (
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {activePlayers.map((player) => {
-                    const present = presentPlayerIds.has(player.id);
-                    return (
-                      <button
-                        key={player.id}
-                        disabled={isCancelled || registerAttendance.isPending || removeAttendance.isPending}
-                        onClick={() => toggleAttendance(player.id)}
-                        className={`rounded-md border p-3 text-left text-sm transition disabled:opacity-60 ${present ? 'border-emerald-400/50 bg-emerald-500/15' : 'bg-background/35 hover:border-primary'}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-semibold">{player.nickname}</p>
-                            <p className="text-xs text-muted-foreground">{playerClassLabel(player.class, locale)} - {t(locale, 'layer')} {player.dimensionalLayer}</p>
+                <div className="space-y-4">
+                  <div className="grid gap-2 rounded-md border bg-background/35 p-3 text-sm sm:grid-cols-4">
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">DKP por pessoa</p>
+                      <p className="text-lg font-semibold">{selectedEvent?.dkpReward ?? 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">DKP total</p>
+                      <p className="text-lg font-semibold">{totalDkp}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Presentes</p>
+                      <p className="text-lg font-semibold">{presentPlayerIds.size}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Faltantes</p>
+                      <p className="text-lg font-semibold">{absentCount}</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    {activePlayers.map((player) => {
+                      const present = presentPlayerIds.has(player.id);
+                      return (
+                        <button
+                          key={player.id}
+                          disabled={isCancelled || registerAttendance.isPending || removeAttendance.isPending}
+                          onClick={() => toggleAttendance(player.id)}
+                          className={`rounded-md border p-3 text-left text-sm transition disabled:opacity-60 ${present ? 'border-emerald-400/50 bg-emerald-500/15' : 'bg-background/35 hover:border-primary'}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold">{player.nickname}</p>
+                              <p className="text-xs text-muted-foreground">{playerClassLabel(player.class, locale)} - {t(locale, 'layer')} {player.dimensionalLayer}</p>
+                            </div>
+                            <Badge tone={present ? 'green' : 'muted'}>{present ? t(locale, 'present') : t(locale, 'absent')}</Badge>
                           </div>
-                          <Badge tone={present ? 'green' : 'muted'}>{present ? t(locale, 'present') : t(locale, 'absent')}</Badge>
-                        </div>
-                      </button>
-                    );
-                  })}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -66,7 +66,7 @@ export class DiscordWebhookQueueService {
     const raw = payload as DiscordWebhookPayload & { allowedMentions?: unknown };
 
     return {
-      username: 'Aristolfo, o grande',
+      username: 'Aristolfo, um pouco maior que o anao',
       ...raw,
       allowed_mentions: raw.allowedMentions,
       allowedMentions: undefined,

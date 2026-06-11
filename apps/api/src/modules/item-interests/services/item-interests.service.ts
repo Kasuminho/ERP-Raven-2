@@ -39,6 +39,13 @@ export type ItemInterestDetails = ItemInterestPost & {
         discordNickname: string | null;
       };
     }>;
+    lootStats?: {
+      queueDays: number;
+      totalDrops: number;
+      sameItemDrops: number;
+      sameTypeDrops: number;
+      lastDropAt: Date | null;
+    };
   }>;
   votes: Array<{
     id: string;
@@ -78,11 +85,13 @@ export class ItemInterestsService {
   ) {}
 
   async listPosts(status?: ItemInterestStatus): Promise<ItemInterestDetails[]> {
-    return this.prisma.itemInterestPost.findMany({
+    const posts = await this.prisma.itemInterestPost.findMany({
       where: status ? { status } : undefined,
       include: this.includeDetails(),
       orderBy: [{ status: 'asc' }, { closesAt: 'asc' }],
     });
+
+    return this.enrichLootStats(posts);
   }
 
   async getPost(id: string): Promise<ItemInterestDetails> {
@@ -95,7 +104,7 @@ export class ItemInterestsService {
       throw new NotFoundException(`Interest post ${id} was not found.`);
     }
 
-    return post;
+    return (await this.enrichLootStats([post]))[0];
   }
 
   async createPost(data: CreateItemInterestPostDto, actorId: string): Promise<ItemInterestPost> {
@@ -571,6 +580,69 @@ export class ItemInterestsService {
         },
       },
     };
+  }
+
+  private async enrichLootStats(posts: ItemInterestDetails[]): Promise<ItemInterestDetails[]> {
+    const playerIds = [...new Set(posts.flatMap((post) => post.entries.map((entry) => entry.playerId)))];
+    const itemCatalogIds = [...new Set(posts.map((post) => post.itemCatalogId))];
+
+    if (playerIds.length === 0) {
+      return posts;
+    }
+
+    const drops = await this.prisma.dropHistory.findMany({
+      where: {
+        playerId: { in: playerIds },
+      },
+      include: {
+        itemCatalog: {
+          select: {
+            id: true,
+            kind: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+      take: 5000,
+    });
+    const itemCatalogs = await this.prisma.itemCatalog.findMany({
+      where: { id: { in: itemCatalogIds } },
+      select: {
+        id: true,
+        kind: true,
+        category: true,
+      },
+    });
+    const itemsById = new Map(itemCatalogs.map((item) => [item.id, item]));
+
+    return posts.map((post) => {
+      const item = itemsById.get(post.itemCatalogId);
+
+      return {
+        ...post,
+        entries: post.entries.map((entry) => {
+          const playerDrops = drops.filter((drop) => drop.playerId === entry.playerId);
+          const sameItemDrops = playerDrops.filter((drop) => drop.itemCatalogId === post.itemCatalogId).length;
+          const sameTypeDrops = item
+            ? playerDrops.filter((drop) => drop.itemCatalog?.kind === item.kind && drop.itemCatalog?.category === item.category).length
+            : 0;
+          const lastDropAt = playerDrops[0]?.deliveredAt ?? playerDrops[0]?.createdAt ?? null;
+          const queueDays = Math.max(0, Math.floor((Date.now() - entry.createdAt.getTime()) / 86_400_000));
+
+          return {
+            ...entry,
+            lootStats: {
+              queueDays,
+              totalDrops: playerDrops.length,
+              sameItemDrops,
+              sameTypeDrops,
+              lastDropAt,
+            },
+          };
+        }),
+      };
+    });
   }
 
   private async notifyCreatedPost(post: ItemInterestPost, item: ItemCatalog, mode: string, actorId: string): Promise<void> {

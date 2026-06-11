@@ -7,10 +7,10 @@ function discordTimestamp(date: Date, style: 'F' | 'R' = 'F'): string {
 
 export function buildAttendanceStartedEmbed(eventName: string, startsAt: Date): EmbedBuilder {
   return new EmbedBuilder()
-    .setTitle(`Presenca aberta / Attendance Open: ${eventName}`)
+    .setTitle(`Presenca aberta: ${eventName}`)
     .setDescription(blocks(
-      'Presenca aberta no dashboard.',
-      'Attendance registration is now open on the dashboard.',
+      'Staff abriu a chamada. Quem foi, vai ganhar DKP. Quem nao foi, vai ganhar aquela saudade amarga.',
+      'Attendance is open. If you showed up, Staff will mark it and DKP will land.',
     ))
     .addFields({ name: 'Inicio / Starts', value: `${discordTimestamp(startsAt, 'F')}\n${discordTimestamp(startsAt, 'R')}`, inline: false })
     .setColor(0xf2c94c)
@@ -25,10 +25,10 @@ export function buildEventFinalizedEmbed(data: {
   absentCount: number;
 }): EmbedBuilder {
   return new EmbedBuilder()
-    .setTitle(`Evento finalizado / Event Finalized: ${data.eventName}`)
+    .setTitle(`Evento fechado: ${data.eventName}`)
     .setDescription(blocks(
-      'DKP distribuido com base na presenca registrada pela Staff.',
-      'DKP distributed based on the attendance confirmed by Staff.',
+      'DKP caiu na conta de quem colou. A planilha chorou, mas a guild ficou mais forte.',
+      'DKP was paid to everyone marked present. Clean attendance, clean rewards.',
     ))
     .addFields(
       { name: 'DKP por pessoa / DKP per person', value: String(data.rewardPerPlayer), inline: true },

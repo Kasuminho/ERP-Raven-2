@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, ProgressCategory, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -72,6 +72,14 @@ export function useStaffDkpPlayers(search?: string) {
     queryKey: ['dkp-staff-players', search ?? ''],
     queryFn: async () => (await api.get<StaffDkpPlayerRow[]>('/dkp/staff/players', { params: search ? { search } : undefined })).data,
     refetchInterval: 30_000,
+  });
+}
+
+export function useDkpEconomy() {
+  return useQuery({
+    queryKey: ['dkp-economy'],
+    queryFn: async () => (await api.get<DkpEconomySummary>('/dkp/staff/economy')).data,
+    refetchInterval: 60_000,
   });
 }
 
@@ -568,6 +576,22 @@ export function useDeliveredDrops() {
   });
 }
 
+export function useItemAuditSummaries(search?: string) {
+  return useQuery({
+    queryKey: ['drops', 'audit-items', search ?? ''],
+    queryFn: async () => (await api.get<ItemAuditSummary[]>('/drops/audit/items', { params: search ? { search } : undefined })).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useItemAuditDetails(params: { itemCatalogId?: string; itemName?: string }) {
+  return useQuery({
+    queryKey: ['drops', 'audit-item', params.itemCatalogId ?? '', params.itemName ?? ''],
+    queryFn: async () => (await api.get<ItemAuditDrop[]>('/drops/audit/item', { params })).data,
+    enabled: Boolean(params.itemCatalogId || params.itemName),
+  });
+}
+
 export function useMyDrops() {
   return useQuery({
     queryKey: ['my-drops'],
@@ -632,6 +656,28 @@ export function useDiscordHistory(discordId: string) {
     queryKey: ['discord-history', discordId],
     queryFn: async () => (await api.get<PlayerHistory>(`/players/audit/discord/${discordId}/history`)).data,
     enabled: Boolean(discordId),
+  });
+}
+
+export function usePlayerStaffNotes(playerId: string) {
+  return useQuery({
+    queryKey: ['player-staff-notes', playerId],
+    queryFn: async () => (await api.get<PlayerStaffNote[]>(`/players/${playerId}/staff-notes`)).data,
+    enabled: Boolean(playerId),
+  });
+}
+
+export function useCreatePlayerStaffNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { playerId: string; severity: 'INFO' | 'WARNING' | 'STRIKE'; body: string }) =>
+      (await api.post<PlayerStaffNote>(`/players/${data.playerId}/staff-notes`, { severity: data.severity, body: data.body })).data,
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player-staff-notes', variables.playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['player-history', variables.playerId] }),
+      ]);
+    },
   });
 }
 

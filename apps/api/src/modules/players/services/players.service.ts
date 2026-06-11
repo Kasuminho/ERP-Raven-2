@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PlayerClass, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
+import { PlayerClass, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { PlayersRepository } from '../repositories/players.repository';
 
@@ -539,6 +539,94 @@ export class PlayersService {
     });
 
     return this.getHistoryByPlayerAndDiscord(player?.id ?? null, normalizedDiscordId);
+  }
+
+  async listStaffNotes(playerId: string) {
+    const player = await this.repository.client.player.findUnique({
+      where: { id: playerId },
+      select: { id: true },
+    });
+
+    if (!player) {
+      throw new NotFoundException('Player not found.');
+    }
+
+    return this.repository.client.playerStaffNote.findMany({
+      where: { playerId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            discordUsername: true,
+            discordNickname: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  }
+
+  async createStaffNote(
+    playerId: string,
+    authorId: string,
+    data: { severity?: PlayerStaffNoteSeverity; body?: string },
+  ) {
+    const body = data.body?.trim();
+
+    if (!body) {
+      throw new BadRequestException('Staff note body is required.');
+    }
+
+    const severity = data.severity && Object.values(PlayerStaffNoteSeverity).includes(data.severity)
+      ? data.severity
+      : PlayerStaffNoteSeverity.INFO;
+
+    const note = await this.repository.client.$transaction(async (tx) => {
+      const player = await tx.player.findUnique({
+        where: { id: playerId },
+        select: { id: true },
+      });
+
+      if (!player) {
+        throw new NotFoundException('Player not found.');
+      }
+
+      const created = await tx.playerStaffNote.create({
+        data: {
+          player: { connect: { id: playerId } },
+          author: { connect: { id: authorId } },
+          severity,
+          body,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              discordUsername: true,
+              discordNickname: true,
+            },
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: authorId,
+          action: 'PLAYER_STAFF_NOTE_CREATED',
+          targetType: 'Player',
+          targetId: playerId,
+          metadata: {
+            noteId: created.id,
+            severity,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
+      return created;
+    });
+
+    return note;
   }
 
   private async getHistoryByPlayerAndDiscord(playerId: string | null, discordId: string) {

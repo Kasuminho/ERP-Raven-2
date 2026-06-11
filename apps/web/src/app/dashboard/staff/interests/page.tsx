@@ -195,6 +195,14 @@ export default function StaffInterestsPage() {
                             <span className="block text-muted-foreground">
                               {t(locale, 'layer')} {entry.player?.dimensionalLayer} - {t(locale, 'attendance')} {entry.player?.attendancePercentage}%
                             </span>
+                            {entry.lootStats && (
+                              <div className="mt-2 grid gap-1 rounded-md border border-border/70 bg-background/40 p-2 text-xs text-muted-foreground sm:grid-cols-2">
+                                <span>Fila: {entry.lootStats.queueDays} dia(s)</span>
+                                <span>Ultimo drop: {entry.lootStats.lastDropAt ? new Date(entry.lootStats.lastDropAt).toLocaleDateString() : 'sem registro'}</span>
+                                <span>Mesmo item: {entry.lootStats.sameItemDrops}</span>
+                                <span>Mesmo tipo: {entry.lootStats.sameTypeDrops}</span>
+                              </div>
+                            )}
                             <div className="mt-2 space-y-1">
                               <div className="flex items-center justify-between text-xs">
                                 <span className="text-primary">Votos: {voteSummary(post, entry)}</span>

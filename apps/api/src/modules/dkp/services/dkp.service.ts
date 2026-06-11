@@ -38,6 +38,21 @@ export type StaffDkpPlayerRow = DkpLeaderboardRow & {
   dimensionalLayer: number;
 };
 
+export type DkpEconomySummary = {
+  generatedAt: Date;
+  activePlayers: number;
+  totalPositiveDkp: number;
+  totalNegativeDkp: number;
+  netDkp: number;
+  totalLockedDkp: number;
+  eventRewardDkp: number;
+  auctionSpentDkp: number;
+  adminAdjustmentDkp: number;
+  topBalances: DkpLeaderboardRow[];
+  topEarners: Array<{ playerId: string; nickname: string; amount: number }>;
+  topSpenders: Array<{ playerId: string; nickname: string; amount: number }>;
+};
+
 @Injectable()
 export class DkpService {
   constructor(
@@ -141,6 +156,78 @@ export class DkpService {
     }));
 
     return rows.sort((a, b) => b.total - a.total || a.nickname.localeCompare(b.nickname));
+  }
+
+  async getEconomySummary(): Promise<DkpEconomySummary> {
+    const [activePlayers, positive, negative, locks, eventRewards, auctionWins, adminAdjustments, transactions, topBalances] = await Promise.all([
+      this.repository.client.player.count({ where: { isActive: true } }),
+      this.repository.client.dKPTransaction.aggregate({
+        where: { amount: { gt: 0 } },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPTransaction.aggregate({
+        where: { amount: { lt: 0 } },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPLock.aggregate({
+        where: { released: false },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPTransaction.aggregate({
+        where: { type: DKPTransactionType.EVENT_REWARD },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPTransaction.aggregate({
+        where: { type: DKPTransactionType.AUCTION_WIN },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPTransaction.aggregate({
+        where: { type: DKPTransactionType.ADMIN_ADJUSTMENT },
+        _sum: { amount: true },
+      }),
+      this.repository.client.dKPTransaction.findMany({
+        include: {
+          player: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5000,
+      }),
+      this.getLeaderboard(10),
+    ]);
+
+    const earned = new Map<string, { playerId: string; nickname: string; amount: number }>();
+    const spent = new Map<string, { playerId: string; nickname: string; amount: number }>();
+
+    for (const transaction of transactions) {
+      const target = transaction.amount >= 0 ? earned : spent;
+      const current = target.get(transaction.playerId) ?? {
+        playerId: transaction.playerId,
+        nickname: transaction.player.nickname,
+        amount: 0,
+      };
+      current.amount += Math.abs(transaction.amount);
+      target.set(transaction.playerId, current);
+    }
+
+    return {
+      generatedAt: new Date(),
+      activePlayers,
+      totalPositiveDkp: positive._sum.amount ?? 0,
+      totalNegativeDkp: Math.abs(negative._sum.amount ?? 0),
+      netDkp: (positive._sum.amount ?? 0) + (negative._sum.amount ?? 0),
+      totalLockedDkp: locks._sum.amount ?? 0,
+      eventRewardDkp: eventRewards._sum.amount ?? 0,
+      auctionSpentDkp: Math.abs(auctionWins._sum.amount ?? 0),
+      adminAdjustmentDkp: adminAdjustments._sum.amount ?? 0,
+      topBalances,
+      topEarners: [...earned.values()].sort((a, b) => b.amount - a.amount).slice(0, 10),
+      topSpenders: [...spent.values()].sort((a, b) => b.amount - a.amount).slice(0, 10),
+    };
   }
 
   async calculateAvailableDKPWithinTransaction(

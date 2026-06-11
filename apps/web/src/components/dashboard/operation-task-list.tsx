@@ -91,18 +91,43 @@ export function OperationTaskList({
   emptyText: string;
 }) {
   const locale = useLocaleStore((state) => state.locale);
+  const orderedTasks = [...tasks].sort((first, second) => {
+    const weight = { high: 0, medium: 1, low: 2 };
+    const priorityDiff = weight[first.priority] - weight[second.priority];
+
+    if (priorityDiff !== 0) return priorityDiff;
+
+    return new Date(first.createdAt ?? 0).getTime() - new Date(second.createdAt ?? 0).getTime();
+  });
+  const totals = orderedTasks.reduce(
+    (acc, task) => {
+      acc[task.priority] += 1;
+      return acc;
+    },
+    { high: 0, medium: 0, low: 0 },
+  );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>{title}</CardTitle>
+          {orderedTasks.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <Badge tone="red">{t(locale, 'high')} {totals.high}</Badge>
+              <Badge tone="gold">{t(locale, 'medium')} {totals.medium}</Badge>
+              <Badge tone="blue">{t(locale, 'low')} {totals.low}</Badge>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {tasks.length === 0 ? (
+        {orderedTasks.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyText}</p>
-        ) : tasks.map((task) => {
+        ) : orderedTasks.map((task) => {
           const Icon = priorityIcon[task.priority];
           const localizedTask = localizeTask(task, locale);
+          const ageLabel = task.createdAt ? formatTaskDate(locale, task.createdAt) : undefined;
           return (
             <div key={`${task.type}-${task.id}`} className="rounded-md border bg-background/35 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -113,6 +138,11 @@ export function OperationTaskList({
                     <Badge tone={priorityTone[task.priority]}>{t(locale, task.priority)}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{localizedTask.description}</p>
+                  {ageLabel && (
+                    <p className="text-xs text-muted-foreground">
+                      {locale === 'pt' ? 'Aberto desde' : locale === 'es' ? 'Abierto desde' : 'Open since'}: {ageLabel}
+                    </p>
+                  )}
                 </div>
                 <Link href={task.href}>
                   <Button variant="secondary" className="h-8 px-3">

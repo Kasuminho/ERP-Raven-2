@@ -158,6 +158,13 @@ export type ItemInterestEntry = {
     id: string;
     deliveredAt?: string;
   } | null;
+  lootStats?: {
+    queueDays: number;
+    totalDrops: number;
+    sameItemDrops: number;
+    sameTypeDrops: number;
+    lastDropAt?: string | null;
+  };
   player?: {
     id: string;
     nickname: string;
@@ -310,6 +317,72 @@ export type StaffDkpPlayerRow = DkpLeaderboardRow & {
   discordUsername: string;
   class: PlayerClass;
   dimensionalLayer: number;
+};
+
+export type DkpEconomySummary = {
+  generatedAt: string;
+  activePlayers: number;
+  totalPositiveDkp: number;
+  totalNegativeDkp: number;
+  netDkp: number;
+  totalLockedDkp: number;
+  eventRewardDkp: number;
+  auctionSpentDkp: number;
+  adminAdjustmentDkp: number;
+  topBalances: DkpLeaderboardRow[];
+  topEarners: Array<{ playerId: string; nickname: string; amount: number }>;
+  topSpenders: Array<{ playerId: string; nickname: string; amount: number }>;
+};
+
+export type ItemAuditSummary = {
+  itemKey: string;
+  itemCatalogId?: string;
+  itemName: string;
+  namePt?: string;
+  nameEn?: string;
+  nameEs?: string;
+  itemTier?: ItemTier;
+  itemType?: ItemType;
+  imageUrl?: string;
+  deliveredCount: number;
+  uniquePlayers: number;
+  lastDeliveredAt?: string;
+  sources: string[];
+};
+
+export type ItemAuditDrop = DropHistory & {
+  source: 'AUCTION' | 'INTEREST' | 'LEGACY_OR_REQUEST';
+  player?: PlayerProfile & {
+    user?: {
+      discordId: string;
+      discordUsername: string;
+      discordNickname?: string;
+    };
+  };
+  staff?: {
+    id: string;
+    discordUsername: string;
+    discordNickname?: string;
+  } | null;
+  itemInterestEntry?: {
+    id: string;
+    post?: ItemInterestPost;
+  } | null;
+};
+
+export type PlayerStaffNote = {
+  id: string;
+  playerId: string;
+  authorId: string;
+  severity: 'INFO' | 'WARNING' | 'STRIKE';
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  author?: {
+    id: string;
+    discordUsername: string;
+    discordNickname?: string;
+  };
 };
 
 export type PlayerProfile = {

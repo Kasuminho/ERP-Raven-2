@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, BellRing, CalendarCheck, ClipboardList, Coins, Gem, HandHeart, PackageCheck, PackagePlus, ScrollText, ShieldAlert, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, BellRing, CalendarCheck, ClipboardList, Coins, Gem, HandHeart, PackageCheck, PackagePlus, ScrollText, ShieldAlert, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -21,7 +21,9 @@ type StaffTool = {
 const tools: StaffTool[] = [
   { href: '/dashboard/staff/players', titleKey: 'players', descriptionKey: 'staffPlayersDescription', icon: UsersRound },
   { href: '/dashboard/staff/item-audit', titleKey: 'auditTimeline', descriptionKey: 'staffDropsDescription', icon: ClipboardList },
+  { href: '/dashboard/staff/item-audit/items', titleKey: 'items', descriptionKey: 'staffDropsDescription', icon: ClipboardList },
   { href: '/dashboard/staff/dkp', titleKey: 'dkp', descriptionKey: 'staffDkpDescription', icon: Coins },
+  { href: '/dashboard/staff/economy', titleKey: 'dkpLedger', descriptionKey: 'staffDkpDescription', icon: BarChart3 },
   { href: '/dashboard/staff/reviews', titleKey: 'reviews', descriptionKey: 'staffReviewsDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/deliveries', titleKey: 'delivered', descriptionKey: 'staffDeliveriesDescription', icon: PackageCheck },
   { href: '/dashboard/admin/events', titleKey: 'events', descriptionKey: 'staffEventsDescription', icon: CalendarCheck },

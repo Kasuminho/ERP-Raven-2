@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { blocks } from './discord-formatting';
 
 export type AnnouncementEmbedData = {
   stageLabel: string;
@@ -55,15 +56,15 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData): EmbedBuilde
   const embed = new EmbedBuilder()
     .setTitle(data.stageLabel)
     .setColor(0xf2c94c)
+    .setDescription(data.description?.trim() || blocks(
+      'Aviso da guild no ar. Se isso te envolve, bota no calendario antes que o tempo passe por cima.',
+      'Guild announcement is live. If this involves you, put it on the calendar before time wins.',
+    ))
     .addFields(
       { name: data.type, value: `**${data.title}**`, inline: false },
       { name: 'Horario', value: `${discordTimestamp(data.eventTime, 'F')}\n${discordTimestamp(data.eventTime, 'R')}`, inline: false },
     )
     .setTimestamp(new Date());
-
-  if (data.description?.trim()) {
-    embed.setDescription(data.description.trim());
-  }
 
   return embed;
 }
@@ -72,6 +73,10 @@ export function buildRequestReminderEmbed(data: RequestReminderEmbedData): Embed
   return new EmbedBuilder()
     .setTitle(data.title)
     .setColor(0xeb5757)
+    .setDescription(blocks(
+      'Fila parada nao dropa item. Atualiza pelo site e deixa a Staff trabalhar feliz.',
+      'A frozen queue does not deliver loot. Update it on the website so Staff can keep the line moving.',
+    ))
     .addFields(
       { name: 'Player', value: data.playerName, inline: true },
       { name: 'Item', value: data.itemName, inline: true },
@@ -84,9 +89,12 @@ export function buildRequestReminderEmbed(data: RequestReminderEmbedData): Embed
 
 export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Interesse aberto / Interest Open: ${data.title}`)
+    .setTitle(`Interesse aberto: ${data.title}`)
     .setColor(0x27ae60)
-    .setDescription('Declare interesse pelo site e anexe 1 print seguindo o padrao do item.\nDeclare interest on the website and attach 1 screenshot following the item rules.')
+    .setDescription(blocks(
+      'Loot disponivel. Se esse item faz sentido pro seu personagem, declara interesse no site e anexa 1 print no padrao. Sem print, sem magia.',
+      'Loot is available. If this item fits your character, declare interest on the website and attach 1 proper screenshot.',
+    ))
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
       { name: 'Modo / Mode', value: data.mode, inline: true },
@@ -106,8 +114,12 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
 
 export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbedData): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Interesse entregue / Interest Delivered: ${data.title}`)
+    .setTitle(`Interesse entregue: ${data.title}`)
     .setColor(0xf2c94c)
+    .setDescription(blocks(
+      'Entrega registrada. O loot saiu da fila e foi parar onde tinha que parar.',
+      'Delivery logged. The loot left the queue and reached its new owner.',
+    ))
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
       { name: 'Recebedor(es) / Recipient(s)', value: data.playerNames.join('\n') || 'Player', inline: false },
@@ -126,9 +138,12 @@ export function buildItemInterestSkillBatchEmbed(data: ItemInterestSkillBatchEmb
   const extra = data.count > data.sampleTitles.length ? `\n... e mais ${data.count - data.sampleTitles.length}` : '';
 
   return new EmbedBuilder()
-    .setTitle('Skills abertas para interesse / Skills Open for Interest')
+    .setTitle('Skills abertas para interesse')
     .setColor(0x27ae60)
-    .setDescription('A Staff abriu varias skills para declaracao de interesse.\nStaff opened multiple skills for interest declaration.')
+    .setDescription(blocks(
+      'A Staff abriu um pacote de skills no site. Entra la, confere com calma e declara interesse no que presta pro seu personagem.',
+      'Staff opened a skill batch on the website. Check it calmly and declare interest only where it actually helps your character.',
+    ))
     .addFields(
       { name: 'Quantidade / Count', value: String(data.count), inline: true },
       { name: 'Modo / Mode', value: data.mode, inline: true },

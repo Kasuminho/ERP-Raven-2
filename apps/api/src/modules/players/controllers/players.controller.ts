@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { PlayerClass, ProgressCategory } from '@prisma/client';
+import { PlayerClass, PlayerStaffNoteSeverity, ProgressCategory } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -138,5 +138,23 @@ export class PlayersController {
   @Roles('STAFF', 'ADMIN')
   async staffPlayerHistory(@Param('playerId') playerId: string) {
     return this.service.getStaffPlayerHistory(playerId);
+  }
+
+  @Get(':playerId/staff-notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async staffNotes(@Param('playerId') playerId: string) {
+    return this.service.listStaffNotes(playerId);
+  }
+
+  @Post(':playerId/staff-notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async createStaffNote(
+    @Param('playerId') playerId: string,
+    @Req() req: AuthRequest,
+    @Body() dto: { severity?: PlayerStaffNoteSeverity; body?: string },
+  ) {
+    return this.service.createStaffNote(playerId, req.user.userId, dto);
   }
 }

@@ -19,11 +19,11 @@ function isDiscordImageUrl(url?: string): url is string {
 
 export function buildAuctionCreatedEmbed(data: AuctionEmbedData): EmbedBuilder {
   return new EmbedBuilder()
-    .setTitle(`Leilao criado / Auction Created: ${data.itemName}`)
+    .setTitle(`Leilao aberto: ${data.itemName}`)
     .setColor(0x2f80ed)
     .setDescription(blocks(
-      'Um novo leilao foi aberto no dashboard.',
-      'A new auction is open on the dashboard.',
+      'Loot na mesa. Confere elegibilidade, DKP e pensa antes de apertar o botao, porque lance travado nao volta ate acabar.',
+      'Loot is on the table. Check eligibility and DKP before bidding, because locked DKP stays locked until the auction ends.',
     ))
     .addFields(
       { name: 'Tier', value: data.itemTier, inline: true },
@@ -40,10 +40,10 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData): EmbedBuilder {
 
 export function buildAuctionWinnerEmbed(itemName: string, playerName: string, proofImageUrl?: string): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Vencedor do leilao / Auction Winner: ${itemName}`)
+    .setTitle(`Vencedor definido: ${itemName}`)
     .setDescription(blocks(
-      `${playerName} venceu o leilao e o drop foi registrado.`,
-      `${playerName} won the auction and the drop delivery was logged.`,
+      `${playerName} levou essa. DKP consumido, registro feito, sem historia triste depois.`,
+      `${playerName} won this one. DKP consumed, delivery trail logged, clean ending.`,
     ))
     .setColor(0x27ae60)
     .setTimestamp(new Date());
@@ -57,10 +57,10 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
 
 export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Drop entregue / Drop Delivered: ${itemName}`)
+    .setTitle(`Drop entregue: ${itemName}`)
     .setDescription(blocks(
-      `Entrega registrada para ${playerName}.`,
-      `Delivery registered for ${playerName}.`,
+      `Entrega registrada para ${playerName}. Pode guardar o print, porque aqui tem memoria.`,
+      `Delivery registered for ${playerName}. Proof is logged for the record.`,
     ))
     .setColor(0xf2c94c)
     .setTimestamp(new Date());

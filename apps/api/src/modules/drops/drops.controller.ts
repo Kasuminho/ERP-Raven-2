@@ -29,6 +29,20 @@ export class DropsController {
     return this.service.getPendingAuctionDeliveries({ page: Number(page), limit: Number(limit) });
   }
 
+  @Get('audit/items')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async itemAuditSummaries(@Query('search') search?: string) {
+    return this.service.getItemAuditSummaries(search);
+  }
+
+  @Get('audit/item')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async itemAuditDetails(@Query('itemCatalogId') itemCatalogId?: string, @Query('itemName') itemName?: string) {
+    return this.service.getItemAuditDetails({ itemCatalogId, itemName });
+  }
+
   @Post('auction/:auctionId/deliver')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')

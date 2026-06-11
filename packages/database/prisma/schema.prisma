@@ -132,6 +132,12 @@ enum ProgressReviewStatus {
   REJECTED
 }
 
+enum PlayerStaffNoteSeverity {
+  INFO
+  WARNING
+  STRIKE
+}
+
 model User {
   id                 String                  @id @default(uuid())
   discordId          String                  @unique
@@ -155,6 +161,7 @@ model User {
   sentCodexRequests  CodexRequest[]          @relation("CodexRequestSentBy")
   reviewedProgress   PlayerProgress[]        @relation("PlayerProgressReviewedBy")
   progressComments   PlayerProgressComment[]
+  staffNotes         PlayerStaffNote[]        @relation("PlayerStaffNoteAuthor")
   auditLogs          AuditLog[]              @relation("AuditLogActor")
 
   @@index([discordUsername])
@@ -181,6 +188,7 @@ model Player {
   dkpLocks             DKPLock[]
   auctionBids          AuctionBid[]
   progressUpdates      PlayerProgress[]
+  staffNotes           PlayerStaffNote[]
   itemInterests        ItemInterestEntry[]
   codexRequests        CodexRequest[]
   itemRequests         ItemRequest[]
@@ -191,6 +199,22 @@ model Player {
   @@index([dimensionalLayer])
   @@index([attendancePercentage])
   @@index([isActive])
+}
+
+model PlayerStaffNote {
+  id        String                  @id @default(uuid())
+  playerId  String
+  authorId  String
+  severity  PlayerStaffNoteSeverity @default(INFO)
+  body      String
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  player    Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  author    User                    @relation("PlayerStaffNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([playerId, createdAt])
+  @@index([authorId])
+  @@index([severity])
 }
 
 model PlayerProgress {

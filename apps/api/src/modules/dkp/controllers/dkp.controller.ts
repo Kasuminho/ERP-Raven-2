@@ -4,7 +4,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { CreateDkpTransactionDto, LockDkpDto, UnlockDkpDto } from '../dto';
-import { DkpLeaderboardRow, DkpService, StaffDkpPlayerRow } from '../services/dkp.service';
+import { DkpEconomySummary, DkpLeaderboardRow, DkpService, StaffDkpPlayerRow } from '../services/dkp.service';
 
 type AuthRequest = { user?: { userId?: string } };
 
@@ -28,6 +28,13 @@ export class DkpController {
   @Roles('STAFF', 'ADMIN')
   async staffPlayers(@Query('search') search?: string): Promise<StaffDkpPlayerRow[]> {
     return this.service.getStaffPlayerRows(search);
+  }
+
+  @Get('staff/economy')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async economy(): Promise<DkpEconomySummary> {
+    return this.service.getEconomySummary();
   }
 
   @Get(':playerId/total')

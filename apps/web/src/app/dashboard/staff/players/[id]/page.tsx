@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuditTimeline, useCommentProgress, usePlayerHistory } from '@/hooks/use-guild-api';
+import { useAuditTimeline, useCommentProgress, useCreatePlayerStaffNote, usePlayerHistory, usePlayerStaffNotes } from '@/hooks/use-guild-api';
 import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -20,7 +20,11 @@ export default function StaffPlayerHistoryPage() {
   const player = history.data?.player;
   const locale = useLocaleStore((state) => state.locale);
   const commentProgress = useCommentProgress();
+  const staffNotes = usePlayerStaffNotes(params.id);
+  const createStaffNote = useCreatePlayerStaffNote();
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [noteBody, setNoteBody] = useState('');
+  const [noteSeverity, setNoteSeverity] = useState<'INFO' | 'WARNING' | 'STRIKE'>('INFO');
 
   return (
     <AuthGuard roles={['STAFF', 'ADMIN']}>
@@ -61,6 +65,57 @@ export default function StaffPlayerHistoryPage() {
             </CardContent>
           </Card>
         </div>
+        <Card>
+          <CardHeader><CardTitle>Notas internas da Staff</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-[160px_1fr_auto]">
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={noteSeverity}
+                onChange={(event) => setNoteSeverity(event.target.value as 'INFO' | 'WARNING' | 'STRIKE')}
+              >
+                <option value="INFO">Info</option>
+                <option value="WARNING">Aviso</option>
+                <option value="STRIKE">Strike</option>
+              </select>
+              <Input
+                placeholder="Registro interno, motivo, combinados ou alerta para futuras decisoes..."
+                value={noteBody}
+                onChange={(event) => setNoteBody(event.target.value)}
+              />
+              <Button
+                disabled={createStaffNote.isPending || !noteBody.trim()}
+                onClick={() => createStaffNote.mutate(
+                  { playerId: params.id, severity: noteSeverity, body: noteBody },
+                  {
+                    onSuccess: () => {
+                      setNoteBody('');
+                      notifyToast({ title: 'Nota interna registrada.', tone: 'success' });
+                    },
+                  },
+                )}
+              >
+                Registrar
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {(staffNotes.data ?? []).map((note) => (
+                <div key={note.id} className="rounded-md border bg-background/35 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge tone={note.severity === 'STRIKE' ? 'red' : note.severity === 'WARNING' ? 'gold' : 'blue'}>{note.severity}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {note.author?.discordNickname || note.author?.discordUsername || 'Staff'} - {new Date(note.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap">{note.body}</p>
+                </div>
+              ))}
+              {!staffNotes.isLoading && (staffNotes.data ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma nota interna registrada para este player.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
         <div className="grid gap-6 xl:grid-cols-2">
           <Card>
             <CardHeader><CardTitle>{t(locale, 'drops')}</CardTitle></CardHeader>
