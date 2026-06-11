@@ -19,7 +19,7 @@ export class AttendanceService {
     [EventType.LUNOS]: 20,
     [EventType.RIGRETO]: 20,
     [EventType.GARDRON]: 20,
-    [EventType.MELKAR]: 20,
+    [EventType.MELKAR]: 100,
     [EventType.VARGAS]: 20,
     [EventType.BELLAMONICA]: 20,
     [EventType.SION]: 20,
