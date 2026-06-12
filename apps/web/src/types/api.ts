@@ -227,7 +227,7 @@ export type CodexRequest = {
 export type DaoshiCashReceipt = {
   id: string;
   playerId: string;
-  proofImageUrl: string;
+  proofImageUrl?: string;
   purchaseCents: number;
   approvedCents?: number;
   purchaseDate: string;
@@ -552,6 +552,11 @@ export type PlayerHistory = {
   progress: PlayerProgress[];
   itemRequests: ItemRequest[];
   transactions?: Transaction[];
+  daoshiReceipts?: DaoshiCashReceipt[];
+  codexRequests?: CodexRequest[];
+  auctionBids?: AuctionBid[];
+  attendances?: Array<{ id: string; attended: boolean; createdAt: string; event: EventRecord }>;
+  timeline?: Array<{ id: string; type: string; title: string; description: string; createdAt: string }>;
 };
 
 export type AuditIdentity = {
@@ -657,5 +662,33 @@ export type StaffHealthSummary = {
     label: string;
     ready: boolean;
     detail: string;
+  }>;
+};
+
+export type StaffDayViewSummary = {
+  generatedAt: string;
+  todaysAnnouncements: number;
+  openEvents: number;
+  pendingStaffVotes: number;
+  pendingDeliveries: number;
+  pendingProgressReviews: number;
+  urgentTasks: OperationTask[];
+};
+
+export type SeasonMonthlySummary = {
+  month: string;
+  dkpEarned: number;
+  dkpSpent: number;
+  attendanceEvents: number;
+  dropsDelivered: number;
+  daoshiApprovedCents: number;
+  itemRequestsDelivered: number;
+  topPlayers: Array<{
+    playerId: string;
+    nickname: string;
+    dkpDelta: number;
+    attendanceCount: number;
+    dropsCount: number;
+    daoshiApprovedCents: number;
   }>;
 };

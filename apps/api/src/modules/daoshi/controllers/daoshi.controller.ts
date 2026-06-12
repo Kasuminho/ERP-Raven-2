@@ -3,7 +3,7 @@ import { DaoshiCashReceipt, DaoshiReceiptStatus, DaoshiRaffle } from '@prisma/cl
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CreateDaoshiReceiptDto, ReviewDaoshiReceiptDto } from '../dto';
+import { CreateDaoshiReceiptDto, CreateManualDaoshiReceiptDto, ReviewDaoshiReceiptDto } from '../dto';
 import { DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiReceiptDetails, DaoshiService } from '../services/daoshi.service';
 
 type AuthRequest = {
@@ -47,6 +47,16 @@ export class DaoshiController {
   @Roles('STAFF', 'ADMIN')
   async staffSummary(@Query('month') month?: string): Promise<DaoshiMonthlySummary> {
     return this.service.getMonthlySummary(month);
+  }
+
+  @Post('staff/receipts/manual')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async createManualReceipt(
+    @Body() dto: CreateManualDaoshiReceiptDto,
+    @Req() req: AuthRequest,
+  ): Promise<DaoshiCashReceipt> {
+    return this.service.createManualReceipt(req.user.userId, dto);
   }
 
   @Post('staff/receipts/:id/approve')

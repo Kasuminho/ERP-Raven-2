@@ -1,15 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, ExternalLink, Gift, XCircle } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Gift, HandCoins, XCircle } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useApproveDaoshiReceipt, useRejectDaoshiReceipt, useRunDaoshiRaffle, useStaffDaoshiReceipts, useStaffDaoshiSummary } from '@/hooks/use-guild-api';
+import { useApproveDaoshiReceipt, useCreateManualDaoshiReceipt, usePlayers, useRejectDaoshiReceipt, useRunDaoshiRaffle, useStaffDaoshiReceipts, useStaffDaoshiSummary } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import type { DaoshiReceiptStatus } from '@/types/api';
 
@@ -35,7 +36,10 @@ export default function StaffDaoshiPage() {
   const approve = useApproveDaoshiReceipt();
   const reject = useRejectDaoshiReceipt();
   const runRaffle = useRunDaoshiRaffle();
+  const players = usePlayers();
+  const createManual = useCreateManualDaoshiReceipt();
   const [review, setReview] = useState<Record<string, { amount: string; note: string }>>({});
+  const [manual, setManual] = useState({ playerId: '', amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
   const winner = useMemo(
     () => summary.data?.entries.find((entry) => entry.playerId === summary.data?.raffle?.winnerPlayerId),
     [summary.data],
@@ -137,6 +141,37 @@ export default function StaffDaoshiPage() {
           </Card>
         </div>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><HandCoins className="h-5 w-5 text-primary" /> Lancamento manual sem comprovante</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 xl:grid-cols-[1.2fr_0.5fr_0.5fr_1fr_auto]">
+            <Select value={manual.playerId} onChange={(event) => setManual((current) => ({ ...current, playerId: event.target.value }))}>
+              <option value="">Selecione o player</option>
+              {(players.data ?? []).map((player) => (
+                <option key={player.id} value={player.id}>{player.nickname} - {player.user.discordUsername}</option>
+              ))}
+            </Select>
+            <Input type="number" min="0" step="0.01" placeholder="Valor R$" value={manual.amount} onChange={(event) => setManual((current) => ({ ...current, amount: event.target.value }))} />
+            <Input type="date" value={manual.date} onChange={(event) => setManual((current) => ({ ...current, date: event.target.value }))} />
+            <Input placeholder="Motivo / extrato Daoshi" value={manual.note} onChange={(event) => setManual((current) => ({ ...current, note: event.target.value }))} />
+            <Button
+              disabled={createManual.isPending || !manual.playerId || !Number(manual.amount)}
+              onClick={() => createManual.mutate(
+                { playerId: manual.playerId, purchaseAmount: Number(manual.amount), purchaseDate: `${manual.date}T12:00:00.000Z`, reviewNote: manual.note || undefined },
+                {
+                  onSuccess: () => {
+                    notifyToast({ title: 'Lancamento manual aprovado.', tone: 'success' });
+                    setManual({ playerId: '', amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
+                  },
+                },
+              )}
+            >
+              Lancar
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="space-y-3">
           <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">Comprovantes</h2>
           {(receipts.data ?? []).map((receipt) => {
@@ -145,7 +180,13 @@ export default function StaffDaoshiPage() {
             return (
               <Card key={receipt.id}>
                 <CardContent className="grid gap-4 p-4 xl:grid-cols-[160px_1fr_360px]">
-                  <img className="aspect-video w-full rounded-md border object-cover xl:aspect-square" src={displayImageUrl(receipt.proofImageUrl)} alt="Comprovante Daoshi" />
+                  {receipt.proofImageUrl ? (
+                    <img className="aspect-video w-full rounded-md border object-cover xl:aspect-square" src={displayImageUrl(receipt.proofImageUrl)} alt="Comprovante Daoshi" />
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center rounded-md border border-dashed bg-background/35 text-center text-xs text-muted-foreground xl:aspect-square">
+                      Lancamento manual sem print
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={statusTone[receipt.status]}>{receipt.status}</Badge>
@@ -158,14 +199,16 @@ export default function StaffDaoshiPage() {
                     {receipt.approvedCents ? <p className="text-primary">Aprovado: <strong>{money(receipt.approvedCents)}</strong></p> : null}
                     {receipt.playerNote ? <p className="text-sm text-muted-foreground">Player: {receipt.playerNote}</p> : null}
                     {receipt.reviewNote ? <p className="text-sm text-muted-foreground">Staff: {receipt.reviewNote}</p> : null}
-                    <a
-                      href={receipt.proofImageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border bg-secondary px-3 py-2 text-sm font-semibold transition hover:bg-muted"
-                    >
-                      <ExternalLink className="h-4 w-4" /> Abrir comprovante
-                    </a>
+                    {receipt.proofImageUrl && (
+                      <a
+                        href={receipt.proofImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border bg-secondary px-3 py-2 text-sm font-semibold transition hover:bg-muted"
+                      >
+                        <ExternalLink className="h-4 w-4" /> Abrir comprovante
+                      </a>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Input

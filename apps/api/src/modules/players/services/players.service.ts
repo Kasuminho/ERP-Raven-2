@@ -644,7 +644,7 @@ export class PlayersService {
       ? { playerId }
       : { player: { user: { discordId } } };
 
-    const [player, drops, progress, itemRequests, transactions] = await Promise.all([
+    const [player, drops, progress, itemRequests, transactions, daoshiReceipts, codexRequests, auctionBids, attendances] = await Promise.all([
       this.repository.client.player.findFirst({ where: playerWhere, include: { user: true } }),
       this.repository.client.dropHistory.findMany({
         where: dropWhere,
@@ -665,9 +665,80 @@ export class PlayersService {
         where: transactionWhere,
         orderBy: { createdAt: 'desc' },
       }),
+      playerId
+        ? this.repository.client.daoshiCashReceipt.findMany({ where: { playerId }, orderBy: { createdAt: 'desc' } })
+        : [],
+      playerId
+        ? this.repository.client.codexRequest.findMany({ where: { playerId }, orderBy: { createdAt: 'desc' } })
+        : [],
+      playerId
+        ? this.repository.client.auctionBid.findMany({ where: { playerId }, include: { auction: true }, orderBy: { createdAt: 'desc' } })
+        : [],
+      playerId
+        ? this.repository.client.eventAttendance.findMany({ where: { playerId }, include: { event: true }, orderBy: { createdAt: 'desc' } })
+        : [],
     ]);
 
-    return { discordId, player, drops, progress, itemRequests, transactions };
+    const timeline = [
+      ...drops.map((row) => ({
+        id: row.id,
+        type: 'DROP_DELIVERED',
+        title: row.itemName ?? row.itemCatalog?.namePt ?? 'Drop entregue',
+        description: 'Drop registrado no historico do jogador.',
+        createdAt: row.deliveredAt ?? row.createdAt,
+      })),
+      ...progress.map((row) => ({
+        id: row.id,
+        type: 'PROGRESS',
+        title: row.category,
+        description: row.note ?? row.reviewStatus,
+        createdAt: row.createdAt,
+      })),
+      ...itemRequests.map((row) => ({
+        id: row.id,
+        type: 'ITEM_REQUEST',
+        title: row.itemName,
+        description: `Rank #${row.rankPosition} - falta ${row.remainingQuantity}/${row.totalQuantity}.`,
+        createdAt: row.updatedAt,
+      })),
+      ...transactions.map((row) => ({
+        id: row.id,
+        type: 'DKP',
+        title: row.type,
+        description: `${row.amount} DKP`,
+        createdAt: row.createdAt,
+      })),
+      ...daoshiReceipts.map((row) => ({
+        id: row.id,
+        type: 'DAOSHI',
+        title: `Daoshi ${row.status}`,
+        description: `${(row.approvedCents ?? row.purchaseCents) / 100} BRL`,
+        createdAt: row.reviewedAt ?? row.createdAt,
+      })),
+      ...codexRequests.map((row) => ({
+        id: row.id,
+        type: 'CODEX',
+        title: `Codex ${row.status}`,
+        description: row.note ?? 'Request de codex',
+        createdAt: row.updatedAt,
+      })),
+      ...auctionBids.map((row) => ({
+        id: row.id,
+        type: 'AUCTION_BID',
+        title: row.auction.itemName,
+        description: `${row.bidAmount} DKP - ${row.auction.status}`,
+        createdAt: row.createdAt,
+      })),
+      ...attendances.map((row) => ({
+        id: row.id,
+        type: 'ATTENDANCE',
+        title: row.event.name,
+        description: row.attended ? 'Presente' : 'Ausente',
+        createdAt: row.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return { discordId, player, drops, progress, itemRequests, transactions, daoshiReceipts, codexRequests, auctionBids, attendances, timeline };
   }
 
   private normalizeProgressCategory(category?: ProgressCategory): ProgressCategory {

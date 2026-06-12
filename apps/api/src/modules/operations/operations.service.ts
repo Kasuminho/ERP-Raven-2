@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
+import { SeasonMonthlySummary, StaffDayViewSummary } from './operations.types';
 
 type PriorityThreshold = {
   mediumAfterMs: number;
@@ -372,6 +373,112 @@ export class OperationsService {
           detail: 'Cron interno do Nest habilitado no modulo Automation.',
         },
       ],
+    };
+  }
+
+  async getStaffDayView(): Promise<StaffDayViewSummary> {
+    const staff = await this.getStaffSummary();
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const [todaysAnnouncements, openEvents, pendingProgressReviews] = await Promise.all([
+      this.prisma.announcement.count({
+        where: { status: AnnouncementStatus.ACTIVE, eventTime: { gte: start, lt: end } },
+      }),
+      this.prisma.event.count({
+        where: { status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] }, startsAt: { gte: start, lt: end } },
+      }),
+      this.prisma.playerProgress.count({ where: { reviewStatus: ProgressReviewStatus.PENDING } }),
+    ]);
+
+    return {
+      generatedAt: now,
+      todaysAnnouncements,
+      openEvents,
+      pendingStaffVotes: staff.counts.reviews + staff.counts.interests,
+      pendingDeliveries: staff.counts.deliveries,
+      pendingProgressReviews,
+      urgentTasks: staff.tasks.filter((task) => task.priority !== 'low').slice(0, 10),
+    };
+  }
+
+  async getSeasonSummary(month = new Date().toISOString().slice(0, 7)): Promise<SeasonMonthlySummary> {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      month = new Date().toISOString().slice(0, 7);
+    }
+
+    const [year, monthIndex] = month.split('-').map(Number);
+    const start = new Date(Date.UTC(year, monthIndex - 1, 1));
+    const end = new Date(Date.UTC(year, monthIndex, 1));
+
+    const [transactions, attendances, drops, daoshiReceipts, itemRequestsDelivered] = await Promise.all([
+      this.prisma.dKPTransaction.findMany({
+        where: { createdAt: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.eventAttendance.findMany({
+        where: { attended: true, event: { status: EventStatus.FINALIZED, finalizedAt: { gte: start, lt: end } } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.dropHistory.findMany({
+        where: { deliveredAt: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.daoshiCashReceipt.findMany({
+        where: { status: 'APPROVED', purchaseDate: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.itemRequest.count({
+        where: { remainingQuantity: 0, updatedAt: { gte: start, lt: end } },
+      }),
+    ]);
+
+    const byPlayer = new Map<string, { playerId: string; nickname: string; dkpDelta: number; attendanceCount: number; dropsCount: number; daoshiApprovedCents: number }>();
+    const ensure = (player?: { id: string; nickname: string } | null) => {
+      if (!player) return null;
+      const current = byPlayer.get(player.id) ?? {
+        playerId: player.id,
+        nickname: player.nickname,
+        dkpDelta: 0,
+        attendanceCount: 0,
+        dropsCount: 0,
+        daoshiApprovedCents: 0,
+      };
+      byPlayer.set(player.id, current);
+      return current;
+    };
+
+    for (const transaction of transactions) {
+      const row = ensure(transaction.player);
+      if (row) row.dkpDelta += transaction.amount;
+    }
+    for (const attendance of attendances) {
+      const row = ensure(attendance.player);
+      if (row) row.attendanceCount += 1;
+    }
+    for (const drop of drops) {
+      const row = ensure(drop.player);
+      if (row) row.dropsCount += 1;
+    }
+    for (const receipt of daoshiReceipts) {
+      const row = ensure(receipt.player);
+      if (row) row.daoshiApprovedCents += receipt.approvedCents ?? 0;
+    }
+
+    return {
+      month,
+      dkpEarned: transactions.filter((row) => row.amount > 0).reduce((sum, row) => sum + row.amount, 0),
+      dkpSpent: Math.abs(transactions.filter((row) => row.amount < 0).reduce((sum, row) => sum + row.amount, 0)),
+      attendanceEvents: new Set(attendances.map((row) => row.eventId)).size,
+      dropsDelivered: drops.length,
+      daoshiApprovedCents: daoshiReceipts.reduce((sum, row) => sum + (row.approvedCents ?? 0), 0),
+      itemRequestsDelivered,
+      topPlayers: [...byPlayer.values()]
+        .sort((a, b) => (b.dkpDelta + b.attendanceCount * 50 + b.dropsCount * 25 + b.daoshiApprovedCents / 1000) - (a.dkpDelta + a.attendanceCount * 50 + a.dropsCount * 25 + a.daoshiApprovedCents / 1000))
+        .slice(0, 15),
     };
   }
 

@@ -629,7 +629,7 @@ model CodexRequest {
 model DaoshiCashReceipt {
   id              String              @id @default(uuid())
   playerId        String
-  proofImageUrl   String
+  proofImageUrl   String?
   purchaseCents   Int
   approvedCents   Int?
   purchaseDate    DateTime

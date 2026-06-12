@@ -3,7 +3,7 @@ import { PrismaService } from '@database/prisma.service';
 import { DaoshiCashReceipt, DaoshiReceiptStatus, DaoshiRaffle, Prisma } from '@prisma/client';
 import { randomInt } from 'node:crypto';
 import { AuditService } from '../../audit/services/audit.service';
-import { CreateDaoshiReceiptDto, ReviewDaoshiReceiptDto } from '../dto';
+import { CreateDaoshiReceiptDto, CreateManualDaoshiReceiptDto, ReviewDaoshiReceiptDto } from '../dto';
 
 const COUPON_CENTS = 20_000;
 const MONTHLY_TARGET_CENTS = 1_000_000;
@@ -115,6 +115,47 @@ export class DaoshiService {
     await this.audit('DAOSHI_RECEIPT_CREATED', created.id, userId, {
       playerId: player.id,
       purchaseCents,
+      purchaseDate: purchaseDate.toISOString(),
+    });
+
+    return created;
+  }
+
+  async createManualReceipt(actorId: string, data: CreateManualDaoshiReceiptDto): Promise<DaoshiCashReceipt> {
+    const playerId = data.playerId?.trim();
+    const purchaseDate = new Date(data.purchaseDate);
+    const approvedCents = this.amountToCents(data.purchaseAmount);
+
+    if (!playerId) {
+      throw new BadRequestException('playerId is required.');
+    }
+
+    if (Number.isNaN(purchaseDate.getTime())) {
+      throw new BadRequestException('purchaseDate must be a valid date.');
+    }
+
+    const player = await this.prisma.player.findUnique({ where: { id: playerId }, select: { id: true } });
+
+    if (!player) {
+      throw new NotFoundException(`Player ${playerId} was not found.`);
+    }
+
+    const created = await this.prisma.daoshiCashReceipt.create({
+      data: {
+        playerId,
+        purchaseCents: approvedCents,
+        approvedCents,
+        purchaseDate,
+        status: DaoshiReceiptStatus.APPROVED,
+        reviewedById: actorId,
+        reviewedAt: new Date(),
+        reviewNote: data.reviewNote?.trim() || 'Lancamento manual da Staff sem comprovante.',
+      },
+    });
+
+    await this.audit('DAOSHI_MANUAL_RECEIPT_CREATED', created.id, actorId, {
+      playerId,
+      approvedCents,
       purchaseDate: purchaseDate.toISOString(),
     });
 

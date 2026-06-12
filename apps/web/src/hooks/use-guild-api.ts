@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -48,6 +48,22 @@ export function useStaffOperations() {
     queryKey: ['operations', 'staff'],
     queryFn: async () => (await api.get<StaffOperationsSummary>('/operations/staff')).data,
     refetchInterval: 30_000,
+  });
+}
+
+export function useStaffDayView() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'day-view'],
+    queryFn: async () => (await api.get<StaffDayViewSummary>('/operations/staff/day-view')).data,
+    refetchInterval: 20_000,
+  });
+}
+
+export function useSeasonSummary(month?: string) {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'season', month ?? 'current'],
+    queryFn: async () => (await api.get<SeasonMonthlySummary>('/operations/staff/season', { params: month ? { month } : undefined })).data,
+    refetchInterval: 60_000,
   });
 }
 
@@ -482,6 +498,20 @@ export function useCreateDaoshiReceipt() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['daoshi'] }),
+      ]);
+    },
+  });
+}
+
+export function useCreateManualDaoshiReceipt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { playerId: string; purchaseAmount: number; purchaseDate: string; reviewNote?: string }) =>
+      (await api.post<DaoshiCashReceipt>('/daoshi/staff/receipts/manual', data)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['daoshi'] }),
+        queryClient.invalidateQueries({ queryKey: ['operations'] }),
       ]);
     },
   });

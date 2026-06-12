@@ -3,7 +3,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OperationsService } from './operations.service';
-import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary } from './operations.types';
+import { PlayerOperationsSummary, SeasonMonthlySummary, StaffDayViewSummary, StaffHealthSummary, StaffOperationsSummary } from './operations.types';
 
 type AuthRequest = { user: { userId: string } };
 
@@ -31,6 +31,20 @@ export class OperationsController {
     return this.service.getStaffHealth();
   }
 
+  @Get('staff/day-view')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async dayView(): Promise<StaffDayViewSummary> {
+    return this.service.getStaffDayView();
+  }
+
+  @Get('staff/season')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async season(@Query('month') month?: string): Promise<SeasonMonthlySummary> {
+    return this.service.getSeasonSummary(month);
+  }
+
   @Get('staff/audit')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
@@ -38,4 +52,3 @@ export class OperationsController {
     return this.service.getRecentAudit(Number(limit) || 25);
   }
 }
-

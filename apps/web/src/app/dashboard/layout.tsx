@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
-import { BookOpenCheck, CalendarCheck, ClipboardList, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, ShieldAlert, UserRound } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, ShieldAlert, UserRound } from 'lucide-react';
 import { ProfileLocaleSync } from '@/components/dashboard/profile-locale-sync';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,13 @@ type NavLabel = Parameters<typeof t>[1];
 
 const nav: Array<{ href: string; label: NavLabel; icon: ComponentType<{ className?: string }> }> = [
   { href: '/dashboard', label: 'command', icon: LayoutDashboard },
+  { href: '/dashboard/onboarding', label: 'onboarding', icon: Compass },
   { href: '/dashboard/auctions', label: 'auctions', icon: Gavel },
   { href: '/dashboard/interests', label: 'interests', icon: HandHeart },
   { href: '/dashboard/item-requests', label: 'requests', icon: ClipboardList },
   { href: '/dashboard/codex', label: 'codex', icon: BookOpenCheck },
   { href: '/dashboard/daoshi', label: 'daoshi', icon: HandCoins },
+  { href: '/dashboard/timeline', label: 'timeline', icon: Clock3 },
   { href: '/dashboard/drops', label: 'drops', icon: Gem },
   { href: '/dashboard/attendance', label: 'attendance', icon: CalendarCheck },
   { href: '/dashboard/profile', label: 'profile', icon: UserRound },

@@ -48,3 +48,31 @@ export type StaffHealthSummary = {
   generatedAt: Date;
   checks: StaffHealthCheck[];
 };
+
+export type StaffDayViewSummary = {
+  generatedAt: Date;
+  todaysAnnouncements: number;
+  openEvents: number;
+  pendingStaffVotes: number;
+  pendingDeliveries: number;
+  pendingProgressReviews: number;
+  urgentTasks: OperationTask[];
+};
+
+export type SeasonMonthlySummary = {
+  month: string;
+  dkpEarned: number;
+  dkpSpent: number;
+  attendanceEvents: number;
+  dropsDelivered: number;
+  daoshiApprovedCents: number;
+  itemRequestsDelivered: number;
+  topPlayers: Array<{
+    playerId: string;
+    nickname: string;
+    dkpDelta: number;
+    attendanceCount: number;
+    dropsCount: number;
+    daoshiApprovedCents: number;
+  }>;
+};
