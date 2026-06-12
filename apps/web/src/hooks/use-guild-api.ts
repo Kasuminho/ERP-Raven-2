@@ -135,6 +135,7 @@ export function useCreateItem() {
       typePt: string;
       typeEn: string;
       typeEs?: string;
+      preferredClasses?: PlayerClass[];
       image1Url?: string;
       image2Url?: string;
       createdById?: string;
@@ -158,6 +159,7 @@ export function useUpdateItem() {
       typePt?: string;
       typeEn?: string;
       typeEs?: string;
+      preferredClasses?: PlayerClass[];
       image1Url?: string;
       image2Url?: string;
       isActive?: boolean;

@@ -436,6 +436,7 @@ model ItemCatalog {
   typePt          String
   typeEn          String
   typeEs          String?
+  preferredClasses PlayerClass[]       @default([])
   image1Url       String?
   image2Url       String?
   isActive        Boolean            @default(true)

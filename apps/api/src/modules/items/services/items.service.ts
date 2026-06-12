@@ -32,6 +32,7 @@ export class ItemsService {
       typePt: data.typePt.trim(),
       typeEn: data.typeEn.trim(),
       typeEs: data.typeEs?.trim() || undefined,
+      preferredClasses: data.preferredClasses ?? [],
       image1Url: this.normalizeOptionalUrl(data.image1Url),
       image2Url: this.normalizeOptionalUrl(data.image2Url),
       isActive: true,
@@ -48,6 +49,7 @@ export class ItemsService {
         namePt: item.namePt,
         nameEn: item.nameEn,
         nameEs: item.nameEs,
+        preferredClasses: item.preferredClasses,
         image1Url: item.image1Url,
         image2Url: item.image2Url,
       },
@@ -95,6 +97,7 @@ export class ItemsService {
       typePt: data.typePt ?? existing.typePt,
       typeEn: data.typeEn ?? existing.typeEn,
       typeEs: data.typeEs ?? existing.typeEs ?? undefined,
+      preferredClasses: data.preferredClasses ?? existing.preferredClasses,
       image1Url: data.image1Url ?? existing.image1Url ?? undefined,
       image2Url: data.image2Url ?? existing.image2Url ?? undefined,
     };
@@ -112,6 +115,7 @@ export class ItemsService {
       typePt: next.typePt.trim(),
       typeEn: next.typeEn.trim(),
       typeEs: next.typeEs?.trim() || undefined,
+      preferredClasses: next.preferredClasses,
       image1Url: this.normalizeOptionalUrl(next.image1Url),
       image2Url: this.normalizeOptionalUrl(next.image2Url),
       isActive: data.isActive,
@@ -131,6 +135,7 @@ export class ItemsService {
           namePt: existing.namePt,
           nameEn: existing.nameEn,
           nameEs: existing.nameEs,
+          preferredClasses: existing.preferredClasses,
         },
         next: {
           kind: updated.kind,
@@ -140,6 +145,7 @@ export class ItemsService {
           namePt: updated.namePt,
           nameEn: updated.nameEn,
           nameEs: updated.nameEs,
+          preferredClasses: updated.preferredClasses,
         },
       },
     });

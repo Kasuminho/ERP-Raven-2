@@ -1,4 +1,4 @@
-import { ItemTier, ItemType } from '@prisma/client';
+import { ItemTier, ItemType, PlayerClass } from '@prisma/client';
 
 export class UpdateItemDto {
   kind?: string;
@@ -11,6 +11,7 @@ export class UpdateItemDto {
   typePt?: string;
   typeEn?: string;
   typeEs?: string;
+  preferredClasses?: PlayerClass[];
   image1Url?: string;
   image2Url?: string;
   isActive?: boolean;

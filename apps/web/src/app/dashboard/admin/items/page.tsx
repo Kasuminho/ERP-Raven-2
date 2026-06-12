@@ -11,14 +11,26 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
 import { useCreateBulkItemInterests, useCreateItem, useCreateItemAuctions, useCreateItemInterest, useItems, useUpdateItem, useUploadImage } from '@/hooks/use-guild-api';
-import { itemName, itemTypeName } from '@/lib/game-labels';
+import { itemName, itemTypeName, playerClassLabel } from '@/lib/game-labels';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { ItemCatalog, ItemTier, ItemType } from '@/types/api';
+import type { ItemCatalog, ItemTier, ItemType, PlayerClass } from '@/types/api';
 
 const tiers: ItemTier[] = ['T2', 'T3', 'T4', 'LEGENDARY'];
 const itemTypes: ItemType[] = ['WEAPON', 'ARMOR', 'ACCESSORY', 'CELESTIAL_STONE'];
+const playerClasses: PlayerClass[] = [
+  'ASSASSIN',
+  'NIGHT_RANGER',
+  'DESTROYER',
+  'GUNSLINGER',
+  'BERSERKER',
+  'VANGUARD',
+  'ELEMENTALIST',
+  'DEATHBRINGER',
+  'DIVINE_CASTER',
+  'WARLORD',
+];
 const kinds = ['equipment', 'skill', 'material', 'request'];
 const categories = ['rare', 'heroic', 'legendary', 'relic', 'blueprint', 'creature'];
 
@@ -40,6 +52,7 @@ type ItemForm = {
   typePt: string;
   typeEn: string;
   typeEs: string;
+  preferredClasses: PlayerClass[];
   image1Url: string;
   image2Url: string;
   isActive?: boolean;
@@ -64,6 +77,7 @@ export default function AdminItemsPage() {
     typePt: '',
     typeEn: '',
     typeEs: '',
+    preferredClasses: [],
     image1Url: '',
     image2Url: '',
   });
@@ -161,6 +175,7 @@ export default function AdminItemsPage() {
             typePt: '',
             typeEn: '',
             typeEs: '',
+            preferredClasses: [],
             image1Url: '',
             image2Url: '',
           });
@@ -190,6 +205,7 @@ export default function AdminItemsPage() {
         typePt: item.typePt,
         typeEn: item.typeEn,
         typeEs: item.typeEs ?? '',
+        preferredClasses: item.preferredClasses ?? [],
         image1Url: item.image1Url ?? '',
         image2Url: item.image2Url ?? '',
         isActive: item.isActive,
@@ -201,6 +217,24 @@ export default function AdminItemsPage() {
     setEditForms((current) => {
       const itemForm = current[itemId];
       return itemForm ? { ...current, [itemId]: { ...itemForm, [key]: value } } : current;
+    });
+  }
+
+  function togglePreferredClass(target: 'create' | string, playerClass: PlayerClass) {
+    const toggle = (values: PlayerClass[]) => (
+      values.includes(playerClass)
+        ? values.filter((value) => value !== playerClass)
+        : [...values, playerClass]
+    );
+
+    if (target === 'create') {
+      setForm((current) => ({ ...current, preferredClasses: toggle(current.preferredClasses) }));
+      return;
+    }
+
+    setEditForms((current) => {
+      const itemForm = current[target];
+      return itemForm ? { ...current, [target]: { ...itemForm, preferredClasses: toggle(itemForm.preferredClasses) } } : current;
     });
   }
 
@@ -335,6 +369,25 @@ export default function AdminItemsPage() {
           <Select value={form.itemType} onChange={(event) => update('itemType', event.target.value as ItemType)}>
             {itemTypes.map((type) => <option key={type}>{type}</option>)}
           </Select>
+          <div className="space-y-2 rounded-md border bg-background/35 p-3 lg:col-span-4">
+            <p className="text-sm font-semibold">Classes preferenciais para arma</p>
+            <div className="flex flex-wrap gap-2">
+              {playerClasses.map((playerClass) => (
+                <button
+                  key={playerClass}
+                  type="button"
+                  onClick={() => togglePreferredClass('create', playerClass)}
+                  className={`rounded-md border px-3 py-2 text-sm transition ${
+                    form.preferredClasses.includes(playerClass)
+                      ? 'border-primary bg-primary/20 text-primary'
+                      : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {playerClassLabel(playerClass, locale)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-2 rounded-md border bg-background/35 p-3">
             <p className="text-sm font-semibold">Imagem PT / print 1</p>
             <FileUploadButton label={t(locale, 'attachImage')} onFileSelect={(files) => uploadCreateImage('image1Url', files?.[0])} />
@@ -490,6 +543,25 @@ export default function AdminItemsPage() {
                         <Input value={editForm.typeEn} onChange={(event) => updateEdit(item.id, 'typeEn', event.target.value)} />
                         <Input value={editForm.typeEs} onChange={(event) => updateEdit(item.id, 'typeEs', event.target.value)} />
                       </div>
+                      <div className="space-y-2 rounded-md border bg-background/35 p-3">
+                        <p className="text-sm font-semibold">Classes preferenciais para arma</p>
+                        <div className="flex flex-wrap gap-2">
+                          {playerClasses.map((playerClass) => (
+                            <button
+                              key={playerClass}
+                              type="button"
+                              onClick={() => togglePreferredClass(item.id, playerClass)}
+                              className={`rounded-md border px-3 py-2 text-sm transition ${
+                                editForm.preferredClasses.includes(playerClass)
+                                  ? 'border-primary bg-primary/20 text-primary'
+                                  : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              {playerClassLabel(playerClass, locale)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="grid gap-2 md:grid-cols-2">
                         <FileUploadButton label={t(locale, 'attachImage')} onFileSelect={(files) => uploadEditImage(item.id, 'image1Url', files?.[0])} />
                         <FileUploadButton label={t(locale, 'attachImage')} onFileSelect={(files) => uploadEditImage(item.id, 'image2Url', files?.[0])} />
@@ -521,6 +593,11 @@ export default function AdminItemsPage() {
                         </div>
                         <p className="text-sm text-muted-foreground">{item.nameEn}</p>
                         <p className="text-xs text-muted-foreground">{item.kind} - {item.category} - {itemTypeName(item, locale)}</p>
+                        {item.preferredClasses?.length > 0 && (
+                          <p className="mt-1 text-xs text-primary">
+                            Bonus: {item.preferredClasses.map((playerClass) => playerClassLabel(playerClass, locale)).join(', ')}
+                          </p>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {operationMode === 'auction' ? (

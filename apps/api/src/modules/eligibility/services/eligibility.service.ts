@@ -220,7 +220,7 @@ export class EligibilityService {
           player.dimensionalLayer,
           player.attendancePercentage,
           availableDKP,
-          this.getClassPriorityBonus(player, auction),
+          await this.getClassPriorityBonus(player, auction, tx),
         ),
         dimensionalLayer: player.dimensionalLayer,
         attendancePercentage: player.attendancePercentage,
@@ -345,7 +345,7 @@ export class EligibilityService {
         player.dimensionalLayer,
         player.attendancePercentage,
         bidAmount ?? availableDKP,
-        this.getClassPriorityBonus(player, auction),
+        await this.getClassPriorityBonus(player, auction, client),
       ),
       eligibilityStatus: eligibility.eligibilityStatus,
       eligibilityReason: eligibility.eligibilityReason,
@@ -531,20 +531,37 @@ export class EligibilityService {
     return { compatible: true, reason: 'Class compatibility rules are prepared for future item metadata.' };
   }
 
-  private getClassPriorityBonus(
+  private async getClassPriorityBonus(
     player: Pick<Player, 'class'>,
-    auction: Pick<Auction, 'itemType' | 'itemName'>,
-  ): number {
+    auction: Pick<Auction, 'itemType' | 'itemName' | 'itemCatalogId'>,
+    client: Prisma.TransactionClient,
+  ): Promise<number> {
     if (auction.itemType !== ItemType.WEAPON) {
       return 0;
+    }
+
+    if (auction.itemCatalogId) {
+      const item = await client.itemCatalog.findUnique({
+        where: { id: auction.itemCatalogId },
+        select: { preferredClasses: true },
+      });
+
+      if (item?.preferredClasses.length) {
+        return item.preferredClasses.includes(player.class) ? this.priorityScoreConfig.classPriorityBonus : 0;
+      }
     }
 
     const itemName = this.normalizeText(auction.itemName);
     const keywords = this.weaponClassKeywords[player.class] ?? [];
 
-    return keywords.some((keyword) => itemName.includes(this.normalizeText(keyword)))
+    return keywords.some((keyword) => this.hasWeaponKeyword(itemName, keyword))
       ? this.priorityScoreConfig.classPriorityBonus
       : 0;
+  }
+
+  private hasWeaponKeyword(normalizedText: string, keyword: string): boolean {
+    const normalizedKeyword = this.normalizeText(keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^a-z0-9])${normalizedKeyword}($|[^a-z0-9])`, 'i').test(normalizedText);
   }
 
   private normalizeText(value: string): string {

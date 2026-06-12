@@ -89,6 +89,7 @@ export type ItemCatalog = {
   typePt: string;
   typeEn: string;
   typeEs?: string;
+  preferredClasses: PlayerClass[];
   image1Url?: string;
   image2Url?: string;
   isActive: boolean;
