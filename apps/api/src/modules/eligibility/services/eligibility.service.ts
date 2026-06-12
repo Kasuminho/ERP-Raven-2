@@ -45,16 +45,16 @@ export class EligibilityService {
   };
 
   private readonly weaponClassKeywords: Record<PlayerClass, string[]> = {
-    [PlayerClass.GUNSLINGER]: ['gun', 'guns', 'pistol', 'rifle', 'firearm', 'pistola'],
-    [PlayerClass.BERSERKER]: ['greatsword', 'two-handed sword', 'berserker', 'espadao', 'espada de duas'],
-    [PlayerClass.DESTROYER]: ['hammer', 'mace', 'axe', 'destroyer', 'martelo', 'maca', 'machado'],
-    [PlayerClass.DEATHBRINGER]: ['scythe', 'deathbringer', 'foice'],
-    [PlayerClass.ASSASSIN]: ['dagger', 'daggers', 'assassin', 'adaga', 'adagas'],
-    [PlayerClass.DIVINE_CASTER]: ['staff', 'scepter', 'divine', 'caster', 'cajado', 'cetro'],
-    [PlayerClass.NIGHT_RANGER]: ['bow', 'longbow', 'ranger', 'arco'],
-    [PlayerClass.VANGUARD]: ['shield', 'spear', 'vanguard', 'escudo', 'lanca'],
-    [PlayerClass.ELEMENTALIST]: ['orb', 'wand', 'elementalist', 'elemental', 'orbe', 'varinha'],
-    [PlayerClass.WARLORD]: ['polearm', 'halberd', 'glaive', 'warlord', 'alabarda', 'lance'],
+    [PlayerClass.ASSASSIN]: ['adagas', 'daggers'],
+    [PlayerClass.NIGHT_RANGER]: ['arco', 'bow'],
+    [PlayerClass.DESTROYER]: ['besta', 'crossbow'],
+    [PlayerClass.GUNSLINGER]: ['pistolas', 'handgun'],
+    [PlayerClass.BERSERKER]: ['grande espada', 'greatsword'],
+    [PlayerClass.VANGUARD]: ['lamina de egide', 'aegisblade'],
+    [PlayerClass.ELEMENTALIST]: ['esfera elemental', 'elemental sphere'],
+    [PlayerClass.DEATHBRINGER]: ['varinha magica', 'hexing wand'],
+    [PlayerClass.DIVINE_CASTER]: ['cajado', 'staff'],
+    [PlayerClass.WARLORD]: [],
   };
 
   constructor(
