@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditLog, Auction, AuctionStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { AuctionsService } from '../../auctions/services/auctions.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { EligibilityService } from '../../eligibility/services/eligibility.service';
 import {
@@ -24,6 +25,7 @@ export class StaffReviewService {
 
   constructor(
     private readonly repository: StaffReviewRepository,
+    private readonly auctionsService: AuctionsService,
     private readonly dkpService: DkpService,
     private readonly eligibilityService: EligibilityService,
     private readonly auditService: AuditService,
@@ -159,6 +161,22 @@ export class StaffReviewService {
         }
 
         await this.repository.invalidateBid(bidId, tx);
+
+        const remainingValidBids = await tx.auctionBid.count({
+          where: {
+            auctionId,
+            isValid: true,
+          },
+        });
+
+        if (remainingValidBids === 0) {
+          await this.auctionsService.expandLayerOrRelistAfterEmptyBidsWithinTransaction(
+            auctionId,
+            tx,
+            reviewerId,
+            reason,
+          );
+        }
 
         await this.auditWithinTransaction(tx, reviewerId, 'REMOVE_BID', 'AuctionBid', bidId, {
           auctionId,

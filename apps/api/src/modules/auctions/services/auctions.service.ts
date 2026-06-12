@@ -18,6 +18,7 @@ type AuctionRules = {
   minimumBid: number;
   auctionMode: AuctionMode;
   requiresStaffReview: boolean;
+  minimumLayer: number;
 };
 
 export type AuctionFinalizationResult = {
@@ -59,6 +60,7 @@ export class AuctionsService {
       minimumBid: rules.minimumBid,
       auctionMode: rules.auctionMode,
       requiresStaffReview: rules.requiresStaffReview,
+      minimumLayer: rules.minimumLayer,
       endsAt: this.getNextBrtAuctionEnd(),
       createdBy: { connect: { id: data.createdById } },
     });
@@ -136,6 +138,17 @@ export class AuctionsService {
         }
 
         const validBids = await this.repository.findValidBidsWithPlayers(auctionId, tx);
+        const expanded = await this.expandLayerIfNeededWithinTransaction(
+          auction,
+          validBids,
+          tx,
+          undefined,
+          'Auction expired without a valid bid from the current minimum layer.',
+        );
+
+        if (expanded) {
+          return expanded;
+        }
 
         if (validBids.length === 0) {
           const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
@@ -307,6 +320,49 @@ export class AuctionsService {
     return this.repository.findBids(auctionId);
   }
 
+  async expandLayerOrRelistAfterEmptyBidsWithinTransaction(
+    auctionId: string,
+    tx: Prisma.TransactionClient,
+    actorId?: string,
+    reason = 'No valid bids remain for the current auction layer.',
+  ): Promise<Auction> {
+    const auction = await this.requireAuction(auctionId, tx);
+    const validBids = await this.repository.findValidBidsWithPlayers(auctionId, tx);
+    const expanded = await this.expandLayerIfNeededWithinTransaction(auction, validBids, tx, actorId, reason);
+
+    if (expanded) {
+      return expanded.auction;
+    }
+
+    if (validBids.length > 0) {
+      return auction;
+    }
+
+    await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+
+    const relisted = await this.repository.update(
+      auctionId,
+      {
+        status: AuctionStatus.RELISTED,
+        reopensAt: this.addDays(new Date(), this.relistDelayDays),
+      },
+      tx,
+    );
+
+    await this.auditService.logWithinTransaction({
+      actorId,
+      action: 'AUCTION_EMPTY_BIDS_RELISTED',
+      targetType: 'Auction',
+      targetId: auctionId,
+      metadata: {
+        reason,
+        reopensAt: relisted.reopensAt?.toISOString(),
+      },
+    }, tx);
+
+    return relisted;
+  }
+
   private async validateBidWithinTransaction(
     playerId: string,
     auctionId: string,
@@ -461,21 +517,25 @@ export class AuctionsService {
         minimumBid: 650,
         auctionMode: AuctionMode.STANDARD,
         requiresStaffReview: false,
+        minimumLayer: 1,
       },
       [ItemTier.T3]: {
         minimumBid: 800,
         auctionMode: AuctionMode.STANDARD,
         requiresStaffReview: false,
+        minimumLayer: 1,
       },
       [ItemTier.T4]: {
         minimumBid: 900,
         auctionMode: AuctionMode.ALL_IN,
         requiresStaffReview: true,
+        minimumLayer: 4,
       },
       [ItemTier.LEGENDARY]: {
         minimumBid: 0,
         auctionMode: AuctionMode.ALL_IN,
         requiresStaffReview: true,
+        minimumLayer: 5,
       },
     };
 
@@ -501,6 +561,63 @@ export class AuctionsService {
 
   private addDays(date: Date, days: number): Date {
     return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  private async expandLayerIfNeededWithinTransaction(
+    auction: Auction,
+    validBids: Array<AuctionBid & { player: { dimensionalLayer: number } }>,
+    tx: Prisma.TransactionClient,
+    actorId?: string,
+    reason?: string,
+  ): Promise<AuctionFinalizationResult | null> {
+    if (auction.itemTier !== ItemTier.T4) {
+      return null;
+    }
+
+    const currentMinimumLayer = auction.minimumLayer ?? 4;
+
+    if (currentMinimumLayer <= 1) {
+      return null;
+    }
+
+    const hasBidAtCurrentLayer = validBids.some((bid) => bid.player.dimensionalLayer >= currentMinimumLayer);
+
+    if (hasBidAtCurrentLayer) {
+      return null;
+    }
+
+    const nextMinimumLayer = currentMinimumLayer - 1;
+    const expanded = await this.repository.update(
+      auction.id,
+      {
+        status: AuctionStatus.OPEN,
+        minimumLayer: nextMinimumLayer,
+        endsAt: this.addDays(auction.endsAt, 1),
+        reopensAt: null,
+      },
+      tx,
+    );
+
+    await this.auditService.logWithinTransaction({
+      actorId,
+      action: 'AUCTION_LAYER_EXPANDED',
+      targetType: 'Auction',
+      targetId: auction.id,
+      metadata: {
+        itemTier: auction.itemTier,
+        previousMinimumLayer: currentMinimumLayer,
+        nextMinimumLayer,
+        previousEndsAt: auction.endsAt.toISOString(),
+        nextEndsAt: expanded.endsAt.toISOString(),
+        reason,
+      },
+    }, tx);
+
+    return {
+      auction: expanded,
+      candidates: [],
+      refundedLockIds: [],
+    };
   }
 
   private async audit(

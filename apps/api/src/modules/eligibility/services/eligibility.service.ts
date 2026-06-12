@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Auction, ItemTier, ItemType, Player, Prisma } from '@prisma/client';
+import { Auction, ItemTier, ItemType, Player, PlayerClass, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import {
@@ -27,6 +27,7 @@ type PriorityScoreConfig = {
   layerWeight: number;
   attendanceWeight: number;
   availableDkpWeight: number;
+  classPriorityBonus: number;
 };
 
 type ClassCompatibilityResult = {
@@ -40,6 +41,20 @@ export class EligibilityService {
     layerWeight: 100,
     attendanceWeight: 5,
     availableDkpWeight: 0.25,
+    classPriorityBonus: 10000,
+  };
+
+  private readonly weaponClassKeywords: Record<PlayerClass, string[]> = {
+    [PlayerClass.GUNSLINGER]: ['gun', 'guns', 'pistol', 'rifle', 'firearm', 'pistola'],
+    [PlayerClass.BERSERKER]: ['greatsword', 'two-handed sword', 'berserker', 'espadao', 'espada de duas'],
+    [PlayerClass.DESTROYER]: ['hammer', 'mace', 'axe', 'destroyer', 'martelo', 'maca', 'machado'],
+    [PlayerClass.DEATHBRINGER]: ['scythe', 'deathbringer', 'foice'],
+    [PlayerClass.ASSASSIN]: ['dagger', 'daggers', 'assassin', 'adaga', 'adagas'],
+    [PlayerClass.DIVINE_CASTER]: ['staff', 'scepter', 'divine', 'caster', 'cajado', 'cetro'],
+    [PlayerClass.NIGHT_RANGER]: ['bow', 'longbow', 'ranger', 'arco'],
+    [PlayerClass.VANGUARD]: ['shield', 'spear', 'vanguard', 'escudo', 'lanca'],
+    [PlayerClass.ELEMENTALIST]: ['orb', 'wand', 'elementalist', 'elemental', 'orbe', 'varinha'],
+    [PlayerClass.WARLORD]: ['polearm', 'halberd', 'glaive', 'warlord', 'alabarda', 'lance'],
   };
 
   constructor(
@@ -195,13 +210,18 @@ export class EligibilityService {
 
   async calculatePriorityScore(playerId: string, auctionId: string): Promise<PriorityResponseDto> {
     return this.repository.client.$transaction(async (tx) => {
-      const { player } = await this.getAuctionAndPlayer(playerId, auctionId, tx);
+      const { auction, player } = await this.getAuctionAndPlayer(playerId, auctionId, tx);
       const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(playerId, tx);
 
       return {
         playerId,
         auctionId,
-        priorityScore: this.score(player.dimensionalLayer, player.attendancePercentage, availableDKP),
+        priorityScore: this.score(
+          player.dimensionalLayer,
+          player.attendancePercentage,
+          availableDKP,
+          this.getClassPriorityBonus(player, auction),
+        ),
         dimensionalLayer: player.dimensionalLayer,
         attendancePercentage: player.attendancePercentage,
         availableDKP,
@@ -321,7 +341,12 @@ export class EligibilityService {
       availableDKP,
       bidId,
       bidAmount,
-      priorityScore: this.score(player.dimensionalLayer, player.attendancePercentage, bidAmount ?? availableDKP),
+      priorityScore: this.score(
+        player.dimensionalLayer,
+        player.attendancePercentage,
+        bidAmount ?? availableDKP,
+        this.getClassPriorityBonus(player, auction),
+      ),
       eligibilityStatus: eligibility.eligibilityStatus,
       eligibilityReason: eligibility.eligibilityReason,
     };
@@ -405,7 +430,7 @@ export class EligibilityService {
       return baseRules;
     }
 
-    const effectiveLayer = await this.getProgressiveMinimumLayer(auction, baseRules, client);
+    const effectiveLayer = auction.minimumLayer ?? await this.getProgressiveMinimumLayer(auction, baseRules, client);
 
     return {
       ...baseRules,
@@ -416,10 +441,10 @@ export class EligibilityService {
   private getBaseRules(auction: Auction): EligibilityRuleConfig {
     if (auction.itemTier === ItemTier.T4 && auction.itemType === ItemType.WEAPON) {
       return {
-        minimumLayer: 1,
+        minimumLayer: 4,
         minimumDKP: 900,
         requiresStaffReview: true,
-        progressiveLayerFallback: false,
+        progressiveLayerFallback: true,
         classCompatibilityRequired: true,
         automaticWinnerAllowed: false,
       };
@@ -506,11 +531,35 @@ export class EligibilityService {
     return { compatible: true, reason: 'Class compatibility rules are prepared for future item metadata.' };
   }
 
-  private score(dimensionalLayer: number, attendancePercentage: number, dkpFactor: number): number {
+  private getClassPriorityBonus(
+    player: Pick<Player, 'class'>,
+    auction: Pick<Auction, 'itemType' | 'itemName'>,
+  ): number {
+    if (auction.itemType !== ItemType.WEAPON) {
+      return 0;
+    }
+
+    const itemName = this.normalizeText(auction.itemName);
+    const keywords = this.weaponClassKeywords[player.class] ?? [];
+
+    return keywords.some((keyword) => itemName.includes(this.normalizeText(keyword)))
+      ? this.priorityScoreConfig.classPriorityBonus
+      : 0;
+  }
+
+  private normalizeText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase();
+  }
+
+  private score(dimensionalLayer: number, attendancePercentage: number, dkpFactor: number, bonus = 0): number {
     return (
       dimensionalLayer * this.priorityScoreConfig.layerWeight
       + attendancePercentage * this.priorityScoreConfig.attendanceWeight
       + dkpFactor * this.priorityScoreConfig.availableDkpWeight
+      + bonus
     );
   }
 

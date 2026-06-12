@@ -352,6 +352,7 @@ model Auction {
   auctionMode         AuctionMode
   status              AuctionStatus       @default(OPEN)
   requiresStaffReview Boolean             @default(false)
+  minimumLayer        Int?                @db.SmallInt
   endsAt              DateTime
   reopensAt           DateTime?
   createdById         String
@@ -369,6 +370,7 @@ model Auction {
   @@index([itemTier])
   @@index([auctionMode])
   @@index([status])
+  @@index([minimumLayer])
   @@index([endsAt])
   @@index([reopensAt])
   @@index([createdById])

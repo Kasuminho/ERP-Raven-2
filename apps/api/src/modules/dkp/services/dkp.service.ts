@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DKPLock, DKPTransaction, DKPTransactionType, Prisma } from '@prisma/client';
+import { AuctionMode, AuctionStatus, DKPLock, DKPTransaction, DKPTransactionType, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { CreateDkpTransactionDto } from '../dto';
 import {
@@ -269,7 +269,7 @@ export class DkpService {
       throw new InsufficientDkpException(data.playerId);
     }
 
-    return this.repository.createTransaction(
+    const transaction = await this.repository.createTransaction(
       {
         player: { connect: { id: data.playerId } },
         amount: data.amount,
@@ -279,6 +279,12 @@ export class DkpService {
       },
       client,
     );
+
+    if (data.amount > 0) {
+      await this.syncOpenAllInLocksWithinTransaction(data.playerId, client, transaction.id);
+    }
+
+    return transaction;
   }
 
   async lockDKP(playerId: string, auctionId: string, amount: number): Promise<DKPLock> {
@@ -501,6 +507,67 @@ export class DkpService {
       locked,
       available: total - locked,
     };
+  }
+
+  private async syncOpenAllInLocksWithinTransaction(
+    playerId: string,
+    client: Prisma.TransactionClient,
+    transactionId: string,
+  ): Promise<void> {
+    const locks = await client.dKPLock.findMany({
+      where: {
+        playerId,
+        released: false,
+        auction: {
+          auctionMode: AuctionMode.ALL_IN,
+          status: AuctionStatus.OPEN,
+        },
+      },
+      include: {
+        auction: {
+          select: {
+            id: true,
+            itemName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    for (const lock of locks) {
+      const snapshot = await this.getSnapshot(playerId, client);
+
+      if (snapshot.available <= 0) {
+        return;
+      }
+
+      const nextAmount = lock.amount + snapshot.available;
+      await this.repository.updateLockAmount(lock.id, nextAmount, client);
+      await client.auctionBid.updateMany({
+        where: {
+          auctionId: lock.auctionId,
+          playerId,
+          isValid: true,
+        },
+        data: {
+          bidAmount: nextAmount,
+        },
+      });
+
+      await this.auditService.logWithinTransaction({
+        action: 'DKP_ALL_IN_BID_AUTO_INCREASED',
+        targetType: 'DKPLock',
+        targetId: lock.id,
+        metadata: {
+          playerId,
+          auctionId: lock.auctionId,
+          auctionName: lock.auction.itemName,
+          transactionId,
+          previousAmount: lock.amount,
+          nextAmount,
+        },
+      }, client);
+    }
   }
 
   private assertValidTransaction(data: CreateDkpTransactionDto): void {
