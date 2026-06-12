@@ -359,7 +359,7 @@ export class ItemRequestsService {
   }
 
   async dropRank(id: string, actorId?: string): Promise<void> {
-    await this.repository.client.$transaction(async (tx) => {
+    const promoted = await this.repository.client.$transaction(async (tx) => {
       const request = await this.repository.findById(id, tx);
 
       if (!request) {
@@ -371,24 +371,62 @@ export class ItemRequestsService {
       });
 
       if (!below) {
-        return;
+        return null;
       }
 
       const now = new Date();
+      const resetToD3 = new Date(now.getTime() - 3 * 86_400_000);
+
       await tx.itemRequest.update({
         where: { id: below.id },
-        data: { rankPosition: request.rankPosition, legacyUpdatedAt: now, warned3d: false, warned4d: false, lastReminderStage: null, lastReminderAt: null },
+        data: { rankPosition: request.rankPosition },
       });
       await tx.itemRequest.update({
         where: { id: request.id },
-        data: { rankPosition: request.rankPosition + 1, legacyUpdatedAt: now, warned3d: false, warned4d: false, lastReminderStage: null, lastReminderAt: null },
+        data: { rankPosition: request.rankPosition + 1 },
+      });
+      const reset = await tx.itemRequest.updateMany({
+        where: { itemName: request.itemName },
+        data: {
+          legacyUpdatedAt: resetToD3,
+          warned3d: true,
+          warned4d: false,
+          lastReminderStage: '3d',
+          lastReminderAt: now,
+        },
       });
       await this.auditWithinTransaction(tx, 'ITEM_REQUEST_RANK_DROPPED', id, actorId, {
         itemName: request.itemName,
+        playerName: request.playerName,
         from: request.rankPosition,
         to: request.rankPosition + 1,
+        promotedRequestId: below.id,
+        promotedPlayerName: below.playerName,
+        resetCount: reset.count,
+        resetToD3: resetToD3.toISOString(),
       });
+
+      return {
+        requestId: below.id,
+        discordId: below.discordId,
+        playerName: below.playerName,
+        itemName: below.itemName,
+        rankPosition: request.rankPosition,
+      };
     });
+
+    if (promoted) {
+      await this.notifications.notifyItemRequestReminder({
+        ...promoted,
+        stage: '3d',
+        daysIdle: 3,
+      });
+      await this.notifications.notifyStaffItemRequestReminder({
+        ...promoted,
+        stage: '3d',
+        daysIdle: 3,
+      });
+    }
   }
 
   async processStaleRequests(now = new Date()): Promise<{ warned3d: number; warned4d: number; dropped: number }> {
