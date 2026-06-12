@@ -1,5 +1,6 @@
 export type RequestableItemDefinition = {
   key: string;
+  aliases?: string[];
   namePt: string;
   nameEn: string;
   nameEs: string;
@@ -101,7 +102,8 @@ export const requestableItems: RequestableItemDefinition[] = [
     typeEs: 'Plano Heroico',
   },
   {
-    key: 'heroic skill book blueprint fragment',
+    key: 'heroic skill crafting blueprint fragment',
+    aliases: ['heroic skill book blueprint fragment'],
     namePt: 'Fragmento de Projeto de Criação de Livro de Habilidades Heroico',
     nameEn: 'Heroic Skill Book Blueprint Fragment',
     nameEs: 'Fragmento de Plano de Creación de Libro de habilidades Heroica',
@@ -142,5 +144,32 @@ export const requestableItems: RequestableItemDefinition[] = [
   },
 ];
 
-export const requestableItemKeys = new Set(requestableItems.map((item) => item.key));
+type RequestableCatalogLike = {
+  category: string;
+  namePt: string;
+  nameEn: string;
+  nameEs?: string | null;
+};
+
+const normalizeRequestableKey = (value?: string | null): string => value?.trim().toLowerCase() ?? '';
+
+const requestableItemLookup = new Map<string, RequestableItemDefinition>();
+
+for (const item of requestableItems) {
+  const keys = [item.key, item.namePt, item.nameEn, item.nameEs, ...(item.aliases ?? [])];
+
+  for (const key of keys) {
+    requestableItemLookup.set(`${item.category}:${normalizeRequestableKey(key)}`, item);
+  }
+}
+
+export function getRequestableCatalogKey(item: RequestableCatalogLike): string {
+  const match = [item.nameEn, item.namePt, item.nameEs]
+    .map((name) => requestableItemLookup.get(`${item.category}:${normalizeRequestableKey(name)}`))
+    .find(Boolean);
+
+  return match?.key ?? normalizeRequestableKey(item.nameEn);
+}
+
+export const requestableItemKeys = new Set(requestableItems.flatMap((item) => [item.key, ...(item.aliases ?? [])]));
 export const requestableItemCategories = new Set(requestableItems.map((item) => item.category));

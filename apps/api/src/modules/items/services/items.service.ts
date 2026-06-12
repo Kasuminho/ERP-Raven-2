@@ -4,7 +4,7 @@ import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
 import { CreateItemAuctionsDto, CreateItemDto, UpdateItemDto } from '../dto';
 import { ItemsRepository } from '../repositories/items.repository';
-import { requestableItems } from '../requestable-items';
+import { getRequestableCatalogKey, requestableItems } from '../requestable-items';
 
 @Injectable()
 export class ItemsService {
@@ -66,7 +66,7 @@ export class ItemsService {
     const uniqueItems = new Map<string, ItemCatalog>();
 
     for (const item of items) {
-      uniqueItems.set(item.nameEn.trim().toLowerCase(), item);
+      uniqueItems.set(getRequestableCatalogKey(item), item);
     }
 
     return Array.from(uniqueItems.values());

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ItemCatalog, ItemRequest, ItemRequestUpdateStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
-import { requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
+import { getRequestableCatalogKey, requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
 import { ImageStorageService } from '../../uploads/image-storage.service';
 import { ApproveItemRequestUpdateDto, CreateItemRequestDto, DeliverItemRequestDto, UpdateItemRequestProofDto } from '../dto';
 import { ItemRequestDetails, ItemRequestsRepository } from '../repositories/item-requests.repository';
@@ -517,7 +517,7 @@ export class ItemRequestsService {
   }
 
   private itemKey(item: ItemCatalog): string {
-    return item.nameEn.trim().toLowerCase();
+    return getRequestableCatalogKey(item);
   }
 
   private isRequestableCatalogItem(item: ItemCatalog): boolean {
