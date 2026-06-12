@@ -112,6 +112,12 @@ enum ItemRequestUpdateStatus {
   REJECTED
 }
 
+enum DaoshiReceiptStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ProgressCategory {
   STELLAS_AMPLIFICATION
   EQUIPMENT
@@ -162,6 +168,8 @@ model User {
   reviewedProgress   PlayerProgress[]        @relation("PlayerProgressReviewedBy")
   progressComments   PlayerProgressComment[]
   staffNotes         PlayerStaffNote[]        @relation("PlayerStaffNoteAuthor")
+  reviewedDaoshiReceipts DaoshiCashReceipt[]  @relation("DaoshiReceiptReviewedBy")
+  executedDaoshiRaffles  DaoshiRaffle[]       @relation("DaoshiRaffleExecutedBy")
   auditLogs          AuditLog[]              @relation("AuditLogActor")
 
   @@index([discordUsername])
@@ -192,6 +200,8 @@ model Player {
   itemInterests        ItemInterestEntry[]
   codexRequests        CodexRequest[]
   itemRequests         ItemRequest[]
+  daoshiCashReceipts   DaoshiCashReceipt[]
+  wonDaoshiRaffles     DaoshiRaffle[]
   dropHistories        DropHistory[]
 
   @@index([userId])
@@ -614,6 +624,51 @@ model CodexRequest {
   @@index([queuedAt])
   @@index([sentById])
   @@index([createdAt])
+}
+
+model DaoshiCashReceipt {
+  id              String              @id @default(uuid())
+  playerId        String
+  proofImageUrl   String
+  purchaseCents   Int
+  approvedCents   Int?
+  purchaseDate    DateTime
+  couponCode      String              @default("AACD")
+  status          DaoshiReceiptStatus @default(PENDING)
+  playerNote      String?
+  reviewNote      String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  player          Player              @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy      User?               @relation("DaoshiReceiptReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([playerId, purchaseDate])
+  @@index([status])
+  @@index([purchaseDate])
+  @@index([reviewedById])
+}
+
+model DaoshiRaffle {
+  id             String   @id @default(uuid())
+  month          String
+  prizeUsdCents  Int      @default(5000)
+  totalCents     Int
+  totalCoupons   Int
+  winnerPlayerId String?
+  winnerCoupon   Int?
+  entries        Json
+  executedById   String
+  executedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  winnerPlayer   Player?  @relation(fields: [winnerPlayerId], references: [id], onDelete: SetNull)
+  executedBy     User     @relation("DaoshiRaffleExecutedBy", fields: [executedById], references: [id], onDelete: Restrict)
+
+  @@unique([month])
+  @@index([winnerPlayerId])
+  @@index([executedById])
+  @@index([executedAt])
 }
 
 model Announcement {

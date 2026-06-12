@@ -198,6 +198,7 @@ export type ItemInterestPost = {
 };
 
 export type CodexRequestStatus = 'PENDING' | 'SENT' | 'CONFIRMED' | 'NEEDS_RETRY' | 'CANCELLED';
+export type DaoshiReceiptStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type CodexRequest = {
   id: string;
@@ -221,6 +222,83 @@ export type CodexRequest = {
       discordUsername: string;
     };
   };
+};
+
+export type DaoshiCashReceipt = {
+  id: string;
+  playerId: string;
+  proofImageUrl: string;
+  purchaseCents: number;
+  approvedCents?: number;
+  purchaseDate: string;
+  couponCode: string;
+  status: DaoshiReceiptStatus;
+  playerNote?: string;
+  reviewNote?: string;
+  reviewedById?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  player?: {
+    id: string;
+    nickname: string;
+    user: {
+      discordId: string;
+      discordUsername: string;
+      discordNickname?: string;
+    };
+  };
+  reviewedBy?: {
+    id: string;
+    discordUsername: string;
+    discordNickname?: string;
+  };
+};
+
+export type DaoshiMonthlyEntry = {
+  playerId: string;
+  nickname: string;
+  discordId: string;
+  approvedCents: number;
+  coupons: number;
+  couponStart: number;
+  couponEnd: number;
+};
+
+export type DaoshiRaffle = {
+  id: string;
+  month: string;
+  prizeUsdCents: number;
+  totalCents: number;
+  totalCoupons: number;
+  winnerPlayerId?: string;
+  winnerCoupon?: number;
+  entries: DaoshiMonthlyEntry[];
+  executedById: string;
+  executedAt: string;
+  createdAt: string;
+};
+
+export type DaoshiMonthlySummary = {
+  month: string;
+  targetCents: number;
+  prizeUsdCents: number;
+  totalApprovedCents: number;
+  totalCoupons: number;
+  raffleEnabled: boolean;
+  entries: DaoshiMonthlyEntry[];
+  raffle?: DaoshiRaffle;
+};
+
+export type DaoshiPlayerSummary = {
+  month: string;
+  targetCents: number;
+  prizeUsdCents: number;
+  totalApprovedCents: number;
+  guildProgressPercent: number;
+  raffleEnabled: boolean;
+  playerApprovedCents: number;
+  playerCoupons: number;
 };
 
 export type AuctionBid = {

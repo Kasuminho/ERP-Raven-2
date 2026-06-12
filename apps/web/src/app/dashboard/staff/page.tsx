@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, BarChart3, BellRing, CalendarCheck, ClipboardList, Coins, Gem, HandHeart, PackageCheck, PackagePlus, ScrollText, ShieldAlert, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, BellRing, CalendarCheck, ClipboardList, Coins, Gem, HandCoins, HandHeart, PackageCheck, PackagePlus, ScrollText, ShieldAlert, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -30,6 +30,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/admin/items', titleKey: 'items', descriptionKey: 'staffItemsDescription', icon: PackagePlus },
   { href: '/dashboard/staff/interests', titleKey: 'interests', descriptionKey: 'staffInterestsDescription', icon: HandHeart },
   { href: '/dashboard/staff/codex', titleKey: 'codex', descriptionKey: 'staffCodexDescription', icon: ScrollText },
+  { href: '/dashboard/staff/daoshi', titleKey: 'daoshi', descriptionKey: 'staffDaoshiDescription', icon: HandCoins },
   { href: '/dashboard/staff/progress', titleKey: 'progress', descriptionKey: 'staffProgressDescription', icon: Activity },
   { href: '/dashboard/admin/announcements', titleKey: 'announcements', descriptionKey: 'staffAnnouncementsDescription', icon: BellRing },
   { href: '/dashboard/staff/drops', titleKey: 'drops', descriptionKey: 'staffDropsDescription', icon: Gem },

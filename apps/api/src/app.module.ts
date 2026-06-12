@@ -23,6 +23,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { ItemInterestsModule } from './modules/item-interests/item-interests.module';
 import { CodexModule } from './modules/codex/codex.module';
 import { OperationsModule } from './modules/operations/operations.module';
+import { DaoshiModule } from './modules/daoshi/daoshi.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { OperationsModule } from './modules/operations/operations.module';
     ItemInterestsModule,
     CodexModule,
     OperationsModule,
+    DaoshiModule,
   ],
 })
 export class AppModule {}
