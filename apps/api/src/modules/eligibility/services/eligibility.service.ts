@@ -430,11 +430,9 @@ export class EligibilityService {
       return baseRules;
     }
 
-    const effectiveLayer = auction.minimumLayer ?? await this.getProgressiveMinimumLayer(auction, baseRules, client);
-
     return {
       ...baseRules,
-      minimumLayer: effectiveLayer,
+      minimumLayer: auction.minimumLayer ?? baseRules.minimumLayer,
     };
   }
 
