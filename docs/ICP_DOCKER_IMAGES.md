@@ -43,3 +43,5 @@ Route:
 4. Watchtower pulls the image, recreates `guild-api` and/or `guild-web`, and removes old image layers.
 
 If the GHCR packages are private, the ICP host needs Docker registry credentials for `ghcr.io`, or the packages must be made public.
+
+ICP's Docker daemon may reject old Docker API negotiation, so Watchtower is pinned with `DOCKER_API_VERSION=1.40`.

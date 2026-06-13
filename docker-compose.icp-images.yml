@@ -36,6 +36,7 @@ services:
     container_name: guild-watchtower
     restart: unless-stopped
     environment:
+      DOCKER_API_VERSION: '1.40'
       WATCHTOWER_LABEL_ENABLE: 'true'
       WATCHTOWER_CLEANUP: 'true'
       WATCHTOWER_INCLUDE_RESTARTING: 'true'
