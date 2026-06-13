@@ -2,8 +2,10 @@ node_modules
 dist
 .next
 .env
+.env.production
 coverage
 *.log
 *.db
+backups
 uploads
 apps/api/uploads
