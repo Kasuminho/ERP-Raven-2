@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run -w @guild/api build && npm run -w @guild/web build",
     "build:web": "npm run -w @guild/web build",
-    "start:api:prod": "npm run -w @guild/database prisma:generate && npm run -w @guild/api build && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && node apps/api/dist/apps/api/src/main.js",
+    "start:api:prod": "npm run -w @guild/database prisma:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && node -r ts-node/register -r tsconfig-paths/register apps/api/src/main.ts",
     "start:web:prod": "npm run -w @guild/web build && npm run -w @guild/web start",
     "start:dev": "npm run -w @guild/api start:dev",
     "start:web": "npm run -w @guild/web dev",
