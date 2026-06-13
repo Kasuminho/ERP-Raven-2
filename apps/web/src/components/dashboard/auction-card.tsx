@@ -14,12 +14,14 @@ export function AuctionCard({ auction }: { auction: Auction }) {
   const locale = useLocaleStore((state) => state.locale);
 
   return (
-    <Link href={`/dashboard/auctions/${auction.id}`}>
-      <Card className="h-full transition hover:border-primary/55 hover:bg-card">
+    <Link href={`/dashboard/auctions/${auction.id}`} className="block h-full">
+      <Card className="group h-full overflow-hidden transition hover:border-primary/55 hover:bg-card">
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <CardTitle className="line-clamp-2">{auction.itemName}</CardTitle>
-            <Gavel className="h-5 w-5 shrink-0 text-primary" />
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-primary/20 bg-primary/10 transition group-hover:bg-primary/20">
+              <Gavel className="h-4 w-4 text-primary" />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -27,7 +29,7 @@ export function AuctionCard({ auction }: { auction: Auction }) {
             <img
               src={displayImageUrl(auction.itemCatalog.image1Url)}
               alt={auction.itemName}
-              className="aspect-video w-full rounded-md border object-cover"
+              className="aspect-video w-full rounded-md border border-white/10 object-cover shadow-inner"
             />
           )}
           <div className="flex flex-wrap gap-2">
@@ -45,7 +47,7 @@ export function AuctionCard({ auction }: { auction: Auction }) {
               <p className="font-semibold">{auction.auctionMode}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-md border bg-background/40 p-3">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-background/45 p-3">
             <span className="text-sm text-muted-foreground">{t(locale, 'remainingTime')}</span>
             <CountdownTimer endsAt={auction.endsAt} />
           </div>

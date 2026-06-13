@@ -14,16 +14,18 @@ export function DKPCard({ total = 0, locked = 0, available = 0 }: { total?: numb
   ];
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle>{t(locale, 'dkpLedger')}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-md border bg-background/45 p-3">
-            <stat.icon className="mb-2 h-5 w-5 text-primary" />
+          <div key={stat.label} className="rounded-md border border-white/10 bg-background/48 p-3 shadow-inner transition hover:border-primary/25">
+            <div className="mb-3 grid h-9 w-9 place-items-center rounded-md border border-primary/20 bg-primary/10">
+              <stat.icon className="h-4 w-4 text-primary" />
+            </div>
             <p className="text-sm text-muted-foreground">{stat.label}</p>
-            <p className="text-xl font-bold">{stat.value}</p>
+            <p className="text-2xl font-bold leading-tight">{stat.value}</p>
           </div>
         ))}
       </CardContent>

@@ -49,11 +49,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-sm uppercase text-primary">{t(locale, 'guildCommand')}</p>
-        <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'todaysOperations')}</h1>
+      <section className="rounded-lg border border-primary/15 bg-card/55 p-4 shadow-rune backdrop-blur-xl sm:p-6">
+        <p className="page-kicker">{t(locale, 'guildCommand')}</p>
+        <h1 className="page-title mt-2">{t(locale, 'todaysOperations')}</h1>
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          {t(locale, 'guildOperationsDeck')}
+        </p>
       </section>
-      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         {dkp.isLoading ? <Skeleton className="h-32" /> : <DKPCard {...dkp.data} />}
         {attendance.isLoading ? <Skeleton className="h-32" /> : (
           <AttendanceCard percentage={attendance.data?.attendancePercentage} participated={attendance.data?.participatedEvents} eligible={attendance.data?.eligibleEvents} />
@@ -76,7 +79,12 @@ export default function DashboardPage() {
         emptyText={t(locale, 'myPendingTasksEmpty')}
       />
       <section className="space-y-3">
-        <h2 className="font-[var(--font-cinzel)] text-2xl">{t(locale, 'activeAuctions')}</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="page-kicker">{t(locale, 'auctions')}</p>
+            <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{t(locale, 'activeAuctions')}</h2>
+          </div>
+        </div>
         {auctions.data?.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {auctions.data.slice(0, 6).map((auction) => <AuctionCard key={auction.id} auction={auction} />)}
@@ -88,9 +96,9 @@ export default function DashboardPage() {
           <CardHeader><CardTitle>{t(locale, 'dkpRank')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {(leaderboard.data ?? []).map((row, index) => (
-              <div key={row.playerId} className="flex items-center justify-between rounded-md border bg-background/35 p-3 text-sm">
-                <span className="font-semibold">#{index + 1} {row.nickname}</span>
-                <span className="text-primary">{row.total} DKP</span>
+              <div key={row.playerId} className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-background/38 p-3 text-sm">
+                <span className="min-w-0 truncate font-semibold">#{index + 1} {row.nickname}</span>
+                <span className="shrink-0 text-primary">{row.total} DKP</span>
               </div>
             ))}
             {!leaderboard.isLoading && (leaderboard.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t(locale, 'noDkpYet')}</p>}
@@ -100,7 +108,7 @@ export default function DashboardPage() {
           <CardHeader><CardTitle>{t(locale, 'upcomingEvents')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
-              <div key={event.id} className="rounded-md border bg-background/35 p-3 text-sm">
+              <div key={event.id} className="rounded-md border border-white/10 bg-background/38 p-3 text-sm">
                 <p className="font-semibold">{event.name}</p>
                 <p className="text-xs text-muted-foreground">{event.type} - {new Date(event.startsAt).toLocaleString()}</p>
               </div>

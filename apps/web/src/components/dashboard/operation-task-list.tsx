@@ -108,7 +108,7 @@ export function OperationTaskList({
   );
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>{title}</CardTitle>
@@ -129,12 +129,14 @@ export function OperationTaskList({
           const localizedTask = localizeTask(task, locale);
           const ageLabel = task.createdAt ? formatTaskDate(locale, task.createdAt) : undefined;
           return (
-            <div key={`${task.type}-${task.id}`} className="rounded-md border bg-background/35 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <div key={`${task.type}-${task.id}`} className="rounded-md border border-white/10 bg-background/38 p-3 transition hover:border-primary/25">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                    <p className="font-semibold">{localizedTask.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="grid h-7 w-7 place-items-center rounded-md border border-primary/20 bg-primary/10">
+                      <Icon className="h-3.5 w-3.5 text-primary" />
+                    </span>
+                    <p className="font-semibold leading-snug">{localizedTask.title}</p>
                     <Badge tone={priorityTone[task.priority]}>{t(locale, task.priority)}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{localizedTask.description}</p>
@@ -145,7 +147,7 @@ export function OperationTaskList({
                   )}
                 </div>
                 <Link href={task.href}>
-                  <Button variant="secondary" className="h-8 px-3">
+                  <Button variant="secondary" className="w-full px-3 sm:w-auto">
                     {t(locale, 'open')} <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
