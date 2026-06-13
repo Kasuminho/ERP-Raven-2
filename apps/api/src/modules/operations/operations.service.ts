@@ -5,12 +5,23 @@ import {
   AuctionStatus,
   CodexRequestStatus,
   EventStatus,
+  ItemTier,
   ItemInterestStatus,
   ProgressReviewStatus,
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
 import { SeasonMonthlySummary, StaffDayViewSummary } from './operations.types';
+import {
+  DiscordTemplateSummary,
+  GuildRulesSummary,
+  LegacyAuditSummary,
+  LootFairnessSummary,
+  NoticeBoardItem,
+  OperationalHealthSummary,
+  PlayerComparisonSummary,
+  StaffMeetingSummary,
+} from './operations.types';
 
 type PriorityThreshold = {
   mediumAfterMs: number;
@@ -376,6 +387,128 @@ export class OperationsService {
     };
   }
 
+  async getNoticeBoard(userId: string): Promise<NoticeBoardItem[]> {
+    const summary = await this.getPlayerSummary(userId);
+    const player = await this.prisma.player.findFirst({ where: { userId, isActive: true }, select: { id: true } });
+    const now = new Date();
+    const soon = new Date(now.getTime() + 24 * HOURS);
+    const notices: NoticeBoardItem[] = [...summary.tasks.map((task) => ({ ...task }))];
+
+    const [endingAuctions, daoshiSummary] = await Promise.all([
+      this.prisma.auction.findMany({
+        where: { status: AuctionStatus.OPEN, endsAt: { gte: now, lte: soon } },
+        orderBy: { endsAt: 'asc' },
+        take: 6,
+      }),
+      player
+        ? this.prisma.daoshiCashReceipt.aggregate({
+            where: { playerId: player.id, status: 'PENDING' },
+            _count: true,
+          })
+        : Promise.resolve({ _count: 0 }),
+    ]);
+
+    for (const auction of endingAuctions) {
+      notices.push({
+        id: auction.id,
+        type: 'AUCTION_ENDING',
+        title: 'Leilao fechando em breve',
+        description: `${auction.itemName} fecha em ${auction.endsAt.toLocaleString('pt-BR')}.`,
+        href: `/dashboard/auctions/${auction.id}`,
+        priority: auction.endsAt.getTime() - now.getTime() < 4 * HOURS ? 'medium' : 'low',
+        createdAt: auction.createdAt,
+      });
+    }
+
+    if (daoshiSummary._count > 0) {
+      notices.push({
+        id: 'daoshi-pending',
+        type: 'DAOSHI_PENDING',
+        title: 'Comprovante Daoshi em analise',
+        description: `${daoshiSummary._count} comprovante(s) aguardando validacao da Staff.`,
+        href: '/dashboard/daoshi',
+        priority: 'low',
+        createdAt: now,
+      });
+    }
+
+    return this.sortTasks(notices).slice(0, 16);
+  }
+
+  getGuildRules(): GuildRulesSummary {
+    return {
+      sections: [
+        {
+          key: 'dkp',
+          title: 'DKP',
+          bullets: [
+            'DKP nunca fica salvo direto no player; saldo e calculado por transacoes e locks.',
+            'Bid em leilao cria lock, mas so consome DKP quando o vencedor e aprovado.',
+            'Perdedores recebem unlock/refund automatico do lock.',
+          ],
+        },
+        {
+          key: 'auctions',
+          title: 'Leiloes',
+          bullets: [
+            'T2 minimo 650, T3 minimo 800, T4 minimo 900.',
+            'T4 e Legendary usam ALL-IN e Staff Review.',
+            'T4 comeca camada 4+ e abre camada menor progressivamente se nao houver bid valido.',
+            'Armas priorizam classe compativel com bonus forte no score, sem bloquear o bid quando elegivel.',
+          ],
+        },
+        {
+          key: 'interests',
+          title: 'Interesses',
+          bullets: [
+            'Player declara interesse com print.',
+            'Staff vota antes de habilitar entrega.',
+            'Entrega gera historico e prova quando aplicavel.',
+          ],
+        },
+        {
+          key: 'attendance',
+          title: 'Presenca',
+          bullets: [
+            'Presenca e marcada pela Staff.',
+            'Eventos finalizados geram DKP automaticamente para presentes.',
+            'Eventos cancelados nao contam para presenca nem DKP.',
+          ],
+        },
+        {
+          key: 'daoshi',
+          title: 'Daoshi',
+          bullets: [
+            'Player envia comprovante, Staff aprova/corrige pelo extrato.',
+            'R$200 aprovados no mes geram 1 cupom.',
+            'Sorteio de $50 libera quando a guild bate R$10.000 no mes com cupom AACD.',
+          ],
+        },
+      ],
+    };
+  }
+
+  async getOperationalHealth(): Promise<OperationalHealthSummary> {
+    const base = await this.getStaffHealth();
+    const since = new Date(Date.now() - 24 * HOURS);
+    const [failures, latestFailure, latestAutomation, activeAnnouncements, pendingTasks] = await Promise.all([
+      this.prisma.auditLog.count({ where: { action: { contains: 'FAILED' }, createdAt: { gte: since } } }),
+      this.prisma.auditLog.findFirst({ where: { action: { contains: 'FAILED' } }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.auditLog.findFirst({ where: { action: { contains: 'AUTOMATION' } }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.announcement.count({ where: { status: AnnouncementStatus.ACTIVE } }),
+      this.getStaffSummary(),
+    ]);
+
+    return {
+      ...base,
+      discordFailures24h: failures,
+      latestAutomationAudit: latestAutomation?.createdAt ?? null,
+      latestDiscordFailure: latestFailure?.createdAt ?? null,
+      activeAnnouncements,
+      pendingQueueApproximation: pendingTasks.tasks.length,
+    };
+  }
+
   async getStaffDayView(): Promise<StaffDayViewSummary> {
     const staff = await this.getStaffSummary();
     const now = new Date();
@@ -479,6 +612,153 @@ export class OperationsService {
       topPlayers: [...byPlayer.values()]
         .sort((a, b) => (b.dkpDelta + b.attendanceCount * 50 + b.dropsCount * 25 + b.daoshiApprovedCents / 1000) - (a.dkpDelta + a.attendanceCount * 50 + a.dropsCount * 25 + a.daoshiApprovedCents / 1000))
         .slice(0, 15),
+    };
+  }
+
+  async getLootFairness(days = 30): Promise<LootFairnessSummary> {
+    const boundedDays = Math.min(Math.max(days, 7), 180);
+    const since = new Date(Date.now() - boundedDays * DAYS);
+    const [players, drops, transactions] = await Promise.all([
+      this.prisma.player.findMany({ where: { isActive: true }, select: { id: true, nickname: true, attendancePercentage: true } }),
+      this.prisma.dropHistory.findMany({
+        where: { deliveredAt: { gte: since } },
+        include: { itemCatalog: true },
+      }),
+      this.prisma.dKPTransaction.groupBy({
+        by: ['playerId'],
+        _sum: { amount: true },
+      }),
+    ]);
+    const dkpByPlayer = new Map(transactions.map((row) => [row.playerId, row._sum.amount ?? 0]));
+    const dropRows = new Map<string, { dropsCount: number; t4Drops: number; legendaryDrops: number; lastDropAt?: Date | null }>();
+
+    for (const drop of drops) {
+      if (!drop.playerId) continue;
+      const current = dropRows.get(drop.playerId) ?? { dropsCount: 0, t4Drops: 0, legendaryDrops: 0, lastDropAt: null };
+      current.dropsCount += 1;
+      if (drop.itemCatalog?.itemTier === ItemTier.T4) current.t4Drops += 1;
+      if (drop.itemCatalog?.itemTier === ItemTier.LEGENDARY) current.legendaryDrops += 1;
+      if (drop.deliveredAt && (!current.lastDropAt || drop.deliveredAt > current.lastDropAt)) current.lastDropAt = drop.deliveredAt;
+      dropRows.set(drop.playerId, current);
+    }
+
+    return {
+      days: boundedDays,
+      generatedAt: new Date(),
+      rows: players.map((player) => {
+        const row = dropRows.get(player.id) ?? { dropsCount: 0, t4Drops: 0, legendaryDrops: 0, lastDropAt: null };
+        return {
+          playerId: player.id,
+          nickname: player.nickname,
+          attendancePercentage: player.attendancePercentage,
+          currentDkp: dkpByPlayer.get(player.id) ?? 0,
+          ...row,
+        };
+      }).sort((a, b) => b.dropsCount - a.dropsCount || b.t4Drops - a.t4Drops || b.legendaryDrops - a.legendaryDrops || b.attendancePercentage - a.attendancePercentage),
+    };
+  }
+
+  async comparePlayers(playerIds: string[]): Promise<PlayerComparisonSummary> {
+    const ids = [...new Set(playerIds)].slice(0, 4);
+    if (ids.length === 0) return { players: [] };
+    const since30 = new Date(Date.now() - 30 * DAYS);
+    const since90 = new Date(Date.now() - 90 * DAYS);
+    const players = await this.prisma.player.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, nickname: true, class: true, dimensionalLayer: true, attendancePercentage: true, combatPower: true },
+    });
+
+    const rows = await Promise.all(players.map(async (player) => {
+      const [dkp, drops30d, drops90d, activeRequests, lastDrop] = await Promise.all([
+        this.prisma.dKPTransaction.aggregate({ where: { playerId: player.id }, _sum: { amount: true } }),
+        this.prisma.dropHistory.count({ where: { playerId: player.id, deliveredAt: { gte: since30 } } }),
+        this.prisma.dropHistory.count({ where: { playerId: player.id, deliveredAt: { gte: since90 } } }),
+        this.prisma.itemRequest.count({ where: { playerId: player.id, remainingQuantity: { gt: 0 } } }),
+        this.prisma.dropHistory.findFirst({ where: { playerId: player.id }, orderBy: { deliveredAt: 'desc' } }),
+      ]);
+      return {
+        playerId: player.id,
+        nickname: player.nickname,
+        class: player.class,
+        dimensionalLayer: player.dimensionalLayer,
+        attendancePercentage: player.attendancePercentage,
+        combatPower: player.combatPower,
+        currentDkp: dkp._sum.amount ?? 0,
+        drops30d,
+        drops90d,
+        activeRequests,
+        lastDropAt: lastDrop?.deliveredAt ?? null,
+      };
+    }));
+
+    return { players: rows };
+  }
+
+  async getStaffMeetingSummary(): Promise<StaffMeetingSummary> {
+    const [day, reviewAuctions, votingInterests, openEvents] = await Promise.all([
+      this.getStaffDayView(),
+      this.prisma.auction.findMany({
+        where: { status: AuctionStatus.PENDING_REVIEW },
+        select: { id: true, itemName: true, status: true, updatedAt: true },
+        orderBy: { updatedAt: 'asc' },
+        take: 10,
+      }),
+      this.prisma.itemInterestPost.findMany({
+        where: { status: { in: [ItemInterestStatus.VOTING, ItemInterestStatus.READY_FOR_DELIVERY, ItemInterestStatus.CLOSED] } },
+        select: { id: true, title: true, status: true, updatedAt: true, entries: { select: { id: true } } },
+        orderBy: { updatedAt: 'asc' },
+        take: 10,
+      }),
+      this.prisma.event.findMany({
+        where: { status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] } },
+        select: { id: true, name: true, type: true, startsAt: true, status: true },
+        orderBy: { startsAt: 'asc' },
+        take: 10,
+      }),
+    ]);
+
+    return {
+      ...day,
+      reviewAuctions,
+      votingInterests: votingInterests.map((post) => ({ ...post, entries: post.entries.length })),
+      openEventRows: openEvents,
+    };
+  }
+
+  async getLegacyAudit(): Promise<LegacyAuditSummary> {
+    const [unlinkedDrops, unlinkedRequests, itemsWithoutTier, itemsWithoutType, inactiveItems, recentUnlinkedDrops, recentUnlinkedRequests] = await Promise.all([
+      this.prisma.dropHistory.count({ where: { playerId: null } }),
+      this.prisma.itemRequest.count({ where: { playerId: null } }),
+      this.prisma.itemCatalog.count({ where: { itemTier: null } }),
+      this.prisma.itemCatalog.count({ where: { itemType: null } }),
+      this.prisma.itemCatalog.count({ where: { isActive: false } }),
+      this.prisma.dropHistory.findMany({
+        where: { playerId: null },
+        select: { id: true, discordId: true, nicknameIngame: true, itemName: true, deliveredAt: true },
+        orderBy: { deliveredAt: 'desc' },
+        take: 20,
+      }),
+      this.prisma.itemRequest.findMany({
+        where: { playerId: null },
+        select: { id: true, discordId: true, playerName: true, itemName: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 20,
+      }),
+    ]);
+
+    return { generatedAt: new Date(), unlinkedDrops, unlinkedRequests, itemsWithoutTier, itemsWithoutType, inactiveItems, recentUnlinkedDrops, recentUnlinkedRequests };
+  }
+
+  getDiscordTemplates(): DiscordTemplateSummary {
+    return {
+      templates: [
+        { key: 'auction_created', channel: 'leiloes', title: 'Leilao criado', preview: 'Item PT / EN, tier, minimo, modo e horario em Hammertime.' },
+        { key: 'interest_created', channel: 'interesses', title: 'Interesse aberto', preview: 'Item PT / EN, criterio PT/EN, fechamento e link do dashboard.' },
+        { key: 'drop_delivered', channel: 'drops-entregues', title: 'Drop entregue', preview: 'Quem recebeu, item entregue e prova quando existir.' },
+        { key: 'event_finalized', channel: 'presenca', title: 'Evento finalizado', preview: 'DKP por pessoa, total distribuido, presentes e faltantes.' },
+        { key: 'staff_review', channel: 'staff-review', title: 'Review pendente', preview: 'Leilao que precisa de voto/aprovacao da Staff.' },
+        { key: 'daoshi', channel: 'updates', title: 'Daoshi', preview: 'Regras do cupom AACD, comprovantes e sorteio mensal.' },
+      ],
     };
   }
 

@@ -665,6 +665,81 @@ export type StaffHealthSummary = {
   }>;
 };
 
+export type NoticeBoardItem = OperationTask;
+
+export type GuildRulesSummary = {
+  sections: Array<{
+    key: string;
+    title: string;
+    bullets: string[];
+  }>;
+};
+
+export type LootFairnessSummary = {
+  days: number;
+  generatedAt: string;
+  rows: Array<{
+    playerId: string;
+    nickname: string;
+    dropsCount: number;
+    t4Drops: number;
+    legendaryDrops: number;
+    attendancePercentage: number;
+    currentDkp: number;
+    lastDropAt?: string;
+  }>;
+};
+
+export type PlayerComparisonSummary = {
+  players: Array<{
+    playerId: string;
+    nickname: string;
+    class: PlayerClass;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    combatPower: number;
+    currentDkp: number;
+    drops30d: number;
+    drops90d: number;
+    activeRequests: number;
+    lastDropAt?: string;
+  }>;
+};
+
+export type StaffMeetingSummary = StaffDayViewSummary & {
+  reviewAuctions: Array<{ id: string; itemName: string; status: string; updatedAt: string }>;
+  votingInterests: Array<{ id: string; title: string; status: string; entries: number; updatedAt: string }>;
+  openEventRows: Array<{ id: string; name: string; type: string; startsAt: string; status: string }>;
+};
+
+export type LegacyAuditSummary = {
+  generatedAt: string;
+  unlinkedDrops: number;
+  unlinkedRequests: number;
+  itemsWithoutTier: number;
+  itemsWithoutType: number;
+  inactiveItems: number;
+  recentUnlinkedDrops: Array<{ id: string; discordId?: string; nicknameIngame?: string; itemName?: string; deliveredAt?: string }>;
+  recentUnlinkedRequests: Array<{ id: string; discordId: string; playerName: string; itemName: string; updatedAt: string }>;
+};
+
+export type DiscordTemplateSummary = {
+  templates: Array<{
+    key: string;
+    channel: string;
+    title: string;
+    preview: string;
+  }>;
+};
+
+export type OperationalHealthSummary = StaffHealthSummary & {
+  discordFailures24h: number;
+  latestAutomationAudit?: string;
+  latestDiscordFailure?: string;
+  activeAnnouncements: number;
+  pendingQueueApproximation: number;
+};
+
 export type StaffDayViewSummary = {
   generatedAt: string;
   todaysAnnouncements: number;

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -43,6 +43,22 @@ export function usePlayerOperations() {
   });
 }
 
+export function useNoticeBoard() {
+  return useQuery({
+    queryKey: ['operations', 'me', 'notices'],
+    queryFn: async () => (await api.get<NoticeBoardItem[]>('/operations/me/notices')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useGuildRules() {
+  return useQuery({
+    queryKey: ['operations', 'rules'],
+    queryFn: async () => (await api.get<GuildRulesSummary>('/operations/rules')).data,
+    staleTime: 10 * 60_000,
+  });
+}
+
 export function useStaffOperations() {
   return useQuery({
     queryKey: ['operations', 'staff'],
@@ -67,11 +83,59 @@ export function useSeasonSummary(month?: string) {
   });
 }
 
+export function useLootFairness(days = 30) {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'fairness', days],
+    queryFn: async () => (await api.get<LootFairnessSummary>('/operations/staff/fairness', { params: { days } })).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePlayerComparison(playerIds: string[]) {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'compare', playerIds.join(',')],
+    queryFn: async () => (await api.get<PlayerComparisonSummary>('/operations/staff/compare', { params: { playerIds: playerIds.join(',') } })).data,
+    enabled: playerIds.length > 0,
+  });
+}
+
+export function useStaffMeeting() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'meeting'],
+    queryFn: async () => (await api.get<StaffMeetingSummary>('/operations/staff/meeting')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useLegacyAudit() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'legacy-audit'],
+    queryFn: async () => (await api.get<LegacyAuditSummary>('/operations/staff/legacy-audit')).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useDiscordTemplates() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'discord-templates'],
+    queryFn: async () => (await api.get<DiscordTemplateSummary>('/operations/staff/discord-templates')).data,
+    staleTime: 10 * 60_000,
+  });
+}
+
 export function useStaffHealth() {
   return useQuery({
     queryKey: ['operations', 'staff-health'],
     queryFn: async () => (await api.get<StaffHealthSummary>('/operations/staff/health')).data,
     refetchInterval: 60_000,
+  });
+}
+
+export function useOperationalHealth() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'operational-health'],
+    queryFn: async () => (await api.get<OperationalHealthSummary>('/operations/staff/operational-health')).data,
+    refetchInterval: 30_000,
   });
 }
 

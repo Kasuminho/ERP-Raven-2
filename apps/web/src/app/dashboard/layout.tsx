@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
-import { BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, ShieldAlert, UserRound } from 'lucide-react';
+import { BellRing, BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, ScrollText, ShieldAlert, UserRound } from 'lucide-react';
 import { ProfileLocaleSync } from '@/components/dashboard/profile-locale-sync';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ type NavLabel = Parameters<typeof t>[1];
 
 const nav: Array<{ href: string; label: NavLabel; icon: ComponentType<{ className?: string }> }> = [
   { href: '/dashboard', label: 'command', icon: LayoutDashboard },
+  { href: '/dashboard/notices', label: 'notices', icon: BellRing },
+  { href: '/dashboard/rules', label: 'rules', icon: ScrollText },
   { href: '/dashboard/onboarding', label: 'onboarding', icon: Compass },
   { href: '/dashboard/auctions', label: 'auctions', icon: Gavel },
   { href: '/dashboard/interests', label: 'interests', icon: HandHeart },
