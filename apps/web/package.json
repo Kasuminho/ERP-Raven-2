@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 5173",
     "build": "next build",
+    "start:web:prod": "cd ../.. && npm run start:web:prod",
     "start": "next start -p 5173",
     "lint": "next lint"
   },
