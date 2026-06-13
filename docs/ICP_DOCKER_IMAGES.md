@@ -23,7 +23,10 @@ PUBLIC_APP_URL=https://app.guild-g3x.com.br
 CORS_ORIGIN=https://app.guild-g3x.com.br
 DISCORD_CALLBACK_URL=https://app.guild-g3x.com.br/api/v1/auth/discord/callback
 NEXT_PUBLIC_API_URL=https://app.guild-g3x.com.br/api/v1
+ICP_SHARED_NETWORK=icontainer-network-name
 ```
+
+Set `ICP_SHARED_NETWORK` to the exact Docker network used by the ICP PostgreSQL container. This keeps API/Web on the same internal network as Postgres and avoids falling back to external database access.
 
 ## OpenResty
 

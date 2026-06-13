@@ -12,6 +12,8 @@ services:
       PORT: 3000
     ports:
       - '127.0.0.1:${API_HOST_PORT:-3000}:3000'
+    networks:
+      - icontainer
 
   web:
     image: ghcr.io/kasuminho/erp-raven-2-web:latest
@@ -26,6 +28,8 @@ services:
       - '127.0.0.1:${WEB_HOST_PORT:-5173}:5173'
     depends_on:
       - api
+    networks:
+      - icontainer
 
   watchtower:
     image: containrrr/watchtower:latest
@@ -38,3 +42,8 @@ services:
       WATCHTOWER_POLL_INTERVAL: 300
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  icontainer:
+    external: true
+    name: ${ICP_SHARED_NETWORK:?ICP_SHARED_NETWORK is required}
