@@ -205,7 +205,7 @@ export class OperationsService {
     ] = await Promise.all([
       this.prisma.auction.findMany({ where: { status: AuctionStatus.PENDING_REVIEW }, orderBy: { updatedAt: 'asc' }, take: 8 }),
       this.prisma.codexRequest.findMany({
-        where: { status: { in: [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY, CodexRequestStatus.SENT] } },
+        where: { status: { in: [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY] } },
         include: { player: true },
         orderBy: [{ queuedAt: 'asc' }, { createdAt: 'asc' }],
         take: 10,

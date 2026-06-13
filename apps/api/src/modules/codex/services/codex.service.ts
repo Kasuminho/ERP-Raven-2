@@ -18,7 +18,8 @@ export type CodexRequestDetails = CodexRequest & {
 
 @Injectable()
 export class CodexService {
-  private readonly activeStatuses = [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY, CodexRequestStatus.SENT];
+  private readonly playerVisibleStatuses = [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY, CodexRequestStatus.SENT];
+  private readonly staffQueueStatuses = [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -30,13 +31,13 @@ export class CodexService {
     const player = await this.getPrimaryPlayer(userId);
     return this.list({
       playerId: player.id,
-      status: { in: this.activeStatuses },
+      status: { in: this.playerVisibleStatuses },
     });
   }
 
   async listForStaff(status?: CodexRequestStatus): Promise<CodexRequestDetails[]> {
     return this.list(status ? { status } : {
-      status: { in: this.activeStatuses },
+      status: { in: this.staffQueueStatuses },
     });
   }
 
