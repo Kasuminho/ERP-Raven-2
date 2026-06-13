@@ -26,7 +26,8 @@ export class AnnouncementsService {
       throw new BadRequestException('eventTime must be a future ISO date.');
     }
 
-    const channelId = data.channelId?.trim() || this.config.get<string>('discord.channels.announcements') || '';
+    const webhookUrl = this.config.get<string>('discord.webhooks.announcements') || '';
+    const channelId = data.channelId?.trim() || this.config.get<string>('discord.channels.announcements') || (webhookUrl ? 'webhook:announcements' : '');
 
     if (!channelId) {
       throw new BadRequestException('Announcement channel is required.');
