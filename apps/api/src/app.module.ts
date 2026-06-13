@@ -24,6 +24,7 @@ import { ItemInterestsModule } from './modules/item-interests/item-interests.mod
 import { CodexModule } from './modules/codex/codex.module';
 import { OperationsModule } from './modules/operations/operations.module';
 import { DaoshiModule } from './modules/daoshi/daoshi.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { DaoshiModule } from './modules/daoshi/daoshi.module';
     CodexModule,
     OperationsModule,
     DaoshiModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

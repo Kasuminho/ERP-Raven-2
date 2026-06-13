@@ -25,6 +25,6 @@ import { NotificationService } from './services/notification.service';
     NotificationService,
     RolesGuard,
   ],
-  exports: [DiscordSyncService, NotificationService, DiscordBotService],
+  exports: [DiscordSyncService, DiscordWebhookQueueService, NotificationService, DiscordBotService],
 })
 export class DiscordModule {}

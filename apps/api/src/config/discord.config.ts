@@ -26,5 +26,7 @@ export default registerAs('discord', () => ({
     interests: process.env.DISCORD_INTERESTS_WEBHOOK_URL ?? '',
     itemRequests: process.env.DISCORD_ITEM_REQUESTS_WEBHOOK_URL ?? '',
     staffRequests: process.env.DISCORD_STAFF_REQUESTS_WEBHOOK_URL ?? '',
+    updates: process.env.DISCORD_UPDATES_WEBHOOK_URL ?? '',
+    staffUpdates: process.env.DISCORD_STAFF_UPDATES_WEBHOOK_URL ?? '',
   },
 }));
