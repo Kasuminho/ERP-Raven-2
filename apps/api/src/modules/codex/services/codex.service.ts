@@ -29,10 +29,12 @@ export class CodexService {
 
   async listForCurrentUser(userId: string): Promise<CodexRequestDetails[]> {
     const player = await this.getPrimaryPlayer(userId);
-    return this.list({
+    const requests = await this.list({
       playerId: player.id,
       status: { in: this.playerVisibleStatuses },
     });
+
+    return this.sortPlayerVisibleRequests(requests);
   }
 
   async listForStaff(status?: CodexRequestStatus): Promise<CodexRequestDetails[]> {
@@ -155,6 +157,28 @@ export class CodexService {
       },
       orderBy: [{ queuedAt: 'asc' }, { createdAt: 'asc' }],
     });
+  }
+
+  private sortPlayerVisibleRequests(requests: CodexRequestDetails[]): CodexRequestDetails[] {
+    return [...requests].sort((left, right) => {
+      const leftIsSent = left.status === CodexRequestStatus.SENT;
+      const rightIsSent = right.status === CodexRequestStatus.SENT;
+
+      if (leftIsSent !== rightIsSent) {
+        return leftIsSent ? -1 : 1;
+      }
+
+      if (leftIsSent && rightIsSent) {
+        return this.dateTime(right.sentAt ?? right.updatedAt) - this.dateTime(left.sentAt ?? left.updatedAt);
+      }
+
+      return this.dateTime(left.queuedAt) - this.dateTime(right.queuedAt)
+        || this.dateTime(left.createdAt) - this.dateTime(right.createdAt);
+    });
+  }
+
+  private dateTime(value: Date | string): number {
+    return new Date(value).getTime();
   }
 
   private async getOwnedRequest(id: string, userId: string): Promise<CodexRequest> {
