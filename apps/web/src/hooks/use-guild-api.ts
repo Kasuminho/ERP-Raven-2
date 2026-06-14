@@ -926,8 +926,18 @@ export function useRequestBidCancellation(auctionId: string) {
         queryClient.invalidateQueries({ queryKey: ['dkp-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
         queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] }),
+        queryClient.invalidateQueries({ queryKey: ['my-bid-cancellation', auctionId] }),
       ]);
     },
+  });
+}
+
+export function useMyBidCancellation(auctionId: string) {
+  return useQuery({
+    queryKey: ['my-bid-cancellation', auctionId],
+    queryFn: async () => (await api.get<AuctionBidCancellationRequest | null>(`/auctions/${auctionId}/bid-cancellation/me`)).data,
+    enabled: Boolean(auctionId),
+    refetchInterval: 30_000,
   });
 }
 

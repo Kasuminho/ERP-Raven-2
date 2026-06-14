@@ -83,6 +83,14 @@ export default function StaffReviewsPage() {
           <p className="text-sm uppercase text-primary">{t(locale, 'governance')}</p>
           <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'staffReview')}</h1>
         </div>
+        {bidCancellations.isError ? (
+          <Card className="border-destructive/40 bg-destructive/10">
+            <CardContent className="pt-6">
+              <p className="font-semibold">{t(locale, 'bidCancellationLoadFailed')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t(locale, 'bidCancellationLoadFailedHelp')}</p>
+            </CardContent>
+          </Card>
+        ) : null}
         {bidCancellations.data?.length ? (
           <Card>
             <CardHeader>

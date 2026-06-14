@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { Auction, AuctionBid } from '@prisma/client';
+import { Auction, AuctionBid, AuctionBidCancellationRequest } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -38,6 +38,15 @@ export class AuctionsController {
     @Req() req: AuthRequest,
   ): Promise<BidCancellationRequestResult> {
     return this.service.requestBidCancellationForUser(req.user?.userId ?? '', auctionId, dto.reason);
+  }
+
+  @Get(':id/bid-cancellation/me')
+  @UseGuards(JwtAuthGuard)
+  async myBidCancellation(
+    @Param('id') auctionId: string,
+    @Req() req: AuthRequest,
+  ): Promise<AuctionBidCancellationRequest | null> {
+    return this.service.getUserBidCancellation(req.user?.userId ?? '', auctionId);
   }
 
   @Post(':id/finalize')

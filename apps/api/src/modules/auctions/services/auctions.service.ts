@@ -164,6 +164,15 @@ export class AuctionsService {
           throw new InvalidBidException('No active bid was found for this auction.');
         }
 
+        const existingForBid = await tx.auctionBidCancellationRequest.findFirst({
+          where: { bidId: bid.id },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (existingForBid?.status === AuctionBidCancellationStatus.PENDING) {
+          return { request: existingForBid, autoApproved: false };
+        }
+
         const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
         const recentCancellation = await tx.auctionBidCancellationRequest.findFirst({
           where: {
@@ -175,17 +184,6 @@ export class AuctionsService {
 
         if (recentCancellation) {
           throw new InvalidBidException('Only one bid cancellation is allowed every 30 days.');
-        }
-
-        const pendingForBid = await tx.auctionBidCancellationRequest.findFirst({
-          where: {
-            bidId: bid.id,
-            status: AuctionBidCancellationStatus.PENDING,
-          },
-        });
-
-        if (pendingForBid) {
-          throw new InvalidBidException('This bid already has a pending cancellation request.');
         }
 
         const isAutoApproved = Date.now() - bid.createdAt.getTime() <= 30 * 60_000;
@@ -254,6 +252,36 @@ export class AuctionsService {
     );
 
     return result;
+  }
+
+  async getUserBidCancellation(
+    userId: string,
+    auctionId: string,
+  ): Promise<AuctionBidCancellationRequest | null> {
+    const player = await this.repository.client.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      return null;
+    }
+
+    const bid = await this.repository.findBidByPlayerAndAuction(player.id, auctionId);
+
+    if (!bid) {
+      return null;
+    }
+
+    return this.repository.client.auctionBidCancellationRequest.findFirst({
+      where: {
+        auctionId,
+        playerId: player.id,
+        bidId: bid.id,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async validateBid(playerId: string, auctionId: string, amount?: number): Promise<{ bidAmount: number }> {

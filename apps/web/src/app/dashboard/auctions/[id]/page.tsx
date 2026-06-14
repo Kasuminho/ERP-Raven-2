@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
+import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, useMyBidCancellation, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
@@ -25,6 +25,7 @@ export default function AuctionDetailPage() {
   const ranking = useAuctionRanking(id);
   const placeBid = usePlaceBid(id);
   const requestBidCancellation = useRequestBidCancellation(id);
+  const myBidCancellation = useMyBidCancellation(id);
   const finalizeAuction = useFinalizeAuction(id);
   const canManageAuctions = useAuthStore((state) => state.hasRole(['STAFF', 'ADMIN']));
   const locale = useLocaleStore((state) => state.locale);
@@ -49,6 +50,10 @@ export default function AuctionDetailPage() {
       onSuccess: (response) => notifyToast({
         title: response.autoApproved ? t(locale, 'bidCancellationAutoApproved') : t(locale, 'bidCancellationRequested'),
         tone: 'success',
+      }),
+      onError: () => notifyToast({
+        title: t(locale, 'bidCancellationFailed'),
+        tone: 'error',
       }),
     });
   }
@@ -115,7 +120,18 @@ export default function AuctionDetailPage() {
                   pending={placeBid.isPending}
                   onBid={(data) => placeBid.mutate(data, { onSuccess: () => notifyToast({ title: t(locale, existingBid ? 'increaseBid' : 'placeBid'), tone: 'success' }) })}
                 />
-                {existingBid?.isValid && auction.data.auctionMode === 'ALL_IN' ? (
+                {myBidCancellation.data ? (
+                  <div className="rounded-lg border border-primary/25 bg-primary/10 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold">{t(locale, 'bidCancellationStatus')}</p>
+                      <Badge tone={myBidCancellation.data.status === 'PENDING' ? 'gold' : myBidCancellation.data.status === 'APPROVED' ? 'green' : 'red'}>
+                        {t(locale, `bidCancellation${myBidCancellation.data.status}`)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{myBidCancellation.data.reason}</p>
+                  </div>
+                ) : null}
+                {existingBid?.isValid && auction.data.auctionMode === 'ALL_IN' && myBidCancellation.data?.status !== 'PENDING' ? (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
                     <p className="text-sm text-muted-foreground">{t(locale, 'confirmBidCancellationRule')}</p>
                     <Button
