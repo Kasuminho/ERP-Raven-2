@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Auction, AuctionBid, AuctionMode, AuctionStatus, ItemTier, Prisma } from '@prisma/client';
+import { Auction, AuctionBid, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionMode, AuctionStatus, ItemTier, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { NotificationService } from '../../discord/services/notification.service';
@@ -26,6 +26,11 @@ export type AuctionFinalizationResult = {
   winner?: AuctionBid;
   candidates?: RankingResponseDto[];
   refundedLockIds: string[];
+};
+
+export type BidCancellationRequestResult = {
+  request: AuctionBidCancellationRequest;
+  autoApproved: boolean;
 };
 
 type BidPlacementResult = {
@@ -118,6 +123,137 @@ export class AuctionsService {
     }
 
     return this.placeBid(player.id, auctionId, amount);
+  }
+
+  async requestBidCancellationForUser(
+    userId: string,
+    auctionId: string,
+    reason: string,
+  ): Promise<BidCancellationRequestResult> {
+    const normalizedReason = reason?.trim();
+
+    if (!normalizedReason) {
+      throw new BadRequestException('Cancellation reason is required.');
+    }
+
+    const player = await this.repository.client.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      throw new NotFoundException('Authenticated user does not have an active player profile.');
+    }
+
+    const result = await this.repository.client.$transaction(
+      async (tx) => {
+        const auction = await this.requireAuction(auctionId, tx);
+
+        if (auction.status !== AuctionStatus.OPEN && auction.status !== AuctionStatus.PENDING_REVIEW) {
+          throw new InvalidAuctionStateException(`Bid cancellation is not available for auction status ${auction.status}.`);
+        }
+
+        if (auction.auctionMode !== AuctionMode.ALL_IN) {
+          throw new InvalidBidException('Only ALL IN auction bids can be cancelled by player request.');
+        }
+
+        const bid = await this.repository.findBidByPlayerAndAuction(player.id, auctionId, tx);
+
+        if (!bid || !bid.isValid) {
+          throw new InvalidBidException('No active bid was found for this auction.');
+        }
+
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
+        const recentCancellation = await tx.auctionBidCancellationRequest.findFirst({
+          where: {
+            playerId: player.id,
+            createdAt: { gte: thirtyDaysAgo },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (recentCancellation) {
+          throw new InvalidBidException('Only one bid cancellation is allowed every 30 days.');
+        }
+
+        const pendingForBid = await tx.auctionBidCancellationRequest.findFirst({
+          where: {
+            bidId: bid.id,
+            status: AuctionBidCancellationStatus.PENDING,
+          },
+        });
+
+        if (pendingForBid) {
+          throw new InvalidBidException('This bid already has a pending cancellation request.');
+        }
+
+        const isAutoApproved = Date.now() - bid.createdAt.getTime() <= 30 * 60_000;
+        const request = await tx.auctionBidCancellationRequest.create({
+          data: {
+            auctionId,
+            bidId: bid.id,
+            playerId: player.id,
+            reason: normalizedReason,
+            status: isAutoApproved ? AuctionBidCancellationStatus.APPROVED : AuctionBidCancellationStatus.PENDING,
+            reviewedAt: isAutoApproved ? new Date() : undefined,
+            reviewNote: isAutoApproved ? 'Auto-approved within 30 minutes of bid placement.' : undefined,
+          },
+        });
+
+        let releasedLockId: string | undefined;
+
+        if (isAutoApproved) {
+          const lock = await tx.dKPLock.findFirst({
+            where: {
+              auctionId,
+              playerId: player.id,
+              released: false,
+            },
+          });
+
+          if (lock) {
+            await tx.dKPLock.update({
+              where: { id: lock.id },
+              data: { released: true },
+            });
+            releasedLockId = lock.id;
+          }
+
+          await tx.auctionBid.update({
+            where: { id: bid.id },
+            data: { isValid: false },
+          });
+
+          await this.expandLayerOrRelistAfterEmptyBidsWithinTransaction(
+            auctionId,
+            tx,
+            userId,
+            'Auto-approved player bid cancellation removed the last valid bid.',
+          );
+        }
+
+        await this.auditService.logWithinTransaction({
+          actorId: userId,
+          action: isAutoApproved ? 'AUCTION_BID_CANCELLATION_AUTO_APPROVED' : 'AUCTION_BID_CANCELLATION_REQUESTED',
+          targetType: 'AuctionBidCancellationRequest',
+          targetId: request.id,
+          metadata: {
+            auctionId,
+            bidId: bid.id,
+            playerId: player.id,
+            reason: normalizedReason,
+            autoApproved: isAutoApproved,
+            releasedLockId,
+          },
+        }, tx);
+
+        return { request, autoApproved: isAutoApproved };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    return result;
   }
 
   async validateBid(playerId: string, auctionId: string, amount?: number): Promise<{ bidAmount: number }> {

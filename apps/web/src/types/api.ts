@@ -310,6 +310,29 @@ export type AuctionBid = {
   createdAt: string;
 };
 
+export type AuctionBidCancellationRequest = {
+  id: string;
+  auctionId: string;
+  bidId: string;
+  playerId: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedById?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  auction?: Pick<Auction, 'id' | 'itemName' | 'status' | 'auctionMode' | 'endsAt'>;
+  bid?: Pick<AuctionBid, 'id' | 'bidAmount' | 'isValid' | 'createdAt'>;
+  player?: Pick<PlayerProfile, 'id' | 'nickname' | 'dimensionalLayer'> & {
+    user?: {
+      discordId: string;
+      discordUsername: string;
+      discordNickname?: string;
+    };
+  };
+};
+
 export type EligibilityRow = {
   playerId: string;
   nickname: string;

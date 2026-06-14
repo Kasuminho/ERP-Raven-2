@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, usePlaceBid, usePlayerId } from '@/hooks/use-guild-api';
+import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
@@ -24,6 +24,7 @@ export default function AuctionDetailPage() {
   const eligibility = useEligibility(playerId, id);
   const ranking = useAuctionRanking(id);
   const placeBid = usePlaceBid(id);
+  const requestBidCancellation = useRequestBidCancellation(id);
   const finalizeAuction = useFinalizeAuction(id);
   const canManageAuctions = useAuthStore((state) => state.hasRole(['STAFF', 'ADMIN']));
   const locale = useLocaleStore((state) => state.locale);
@@ -35,6 +36,21 @@ export default function AuctionDetailPage() {
   function closeAuctionEarly() {
     if (!window.confirm(t(locale, 'closeAuctionConfirm'))) return;
     finalizeAuction.mutate(undefined, { onSuccess: () => notifyToast({ title: 'Leilao enviado para finalizacao.', tone: 'success' }) });
+  }
+
+  function requestCancellation() {
+    const reason = window.prompt(t(locale, 'bidCancellationReasonPrompt'));
+
+    if (!reason?.trim()) {
+      return;
+    }
+
+    requestBidCancellation.mutate(reason, {
+      onSuccess: (response) => notifyToast({
+        title: response.autoApproved ? t(locale, 'bidCancellationAutoApproved') : t(locale, 'bidCancellationRequested'),
+        tone: 'success',
+      }),
+    });
   }
 
   return (
@@ -91,13 +107,29 @@ export default function AuctionDetailPage() {
             </div>
             <p className="text-sm text-muted-foreground">{eligibility.data?.eligibilityReason}</p>
             {auction.data.status === 'OPEN' && (
-              <BidModal
-                auction={auction.data}
-                existingBidAmount={existingBid?.bidAmount}
-                playerId={playerId}
-                pending={placeBid.isPending}
-                onBid={(data) => placeBid.mutate(data, { onSuccess: () => notifyToast({ title: t(locale, existingBid ? 'increaseBid' : 'placeBid'), tone: 'success' }) })}
-              />
+              <div className="space-y-3">
+                <BidModal
+                  auction={auction.data}
+                  existingBidAmount={existingBid?.isValid ? existingBid.bidAmount : undefined}
+                  playerId={playerId}
+                  pending={placeBid.isPending}
+                  onBid={(data) => placeBid.mutate(data, { onSuccess: () => notifyToast({ title: t(locale, existingBid ? 'increaseBid' : 'placeBid'), tone: 'success' }) })}
+                />
+                {existingBid?.isValid && auction.data.auctionMode === 'ALL_IN' ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+                    <p className="text-sm text-muted-foreground">{t(locale, 'confirmBidCancellationRule')}</p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-3"
+                      disabled={requestBidCancellation.isPending}
+                      onClick={requestCancellation}
+                    >
+                      {t(locale, 'requestBidCancellation')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             )}
           </CardContent>
         </Card>

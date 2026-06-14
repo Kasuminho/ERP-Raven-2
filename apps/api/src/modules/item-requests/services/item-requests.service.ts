@@ -303,14 +303,25 @@ export class ItemRequestsService {
       const nextRemaining = request.remainingQuantity - quantity;
 
       if (nextRemaining > 0) {
-        await this.repository.update(id, { remainingQuantity: nextRemaining }, tx);
+        await this.repository.update(
+          id,
+          {
+            remainingQuantity: nextRemaining,
+            legacyUpdatedAt: new Date(),
+            warned3d: false,
+            warned4d: false,
+            lastReminderStage: null,
+            lastReminderAt: null,
+          },
+          tx,
+        );
         await this.createDropHistory(request, quantity, actorId, tx);
         await this.auditWithinTransaction(tx, 'ITEM_REQUEST_DELIVERED_PARTIAL', id, actorId, {
           quantity,
           remainingQuantity: nextRemaining,
           reason: data.reason,
         });
-        return { delivered: quantity, completed: false };
+        return { delivered: quantity, completed: false, promotedReminder: null };
       }
 
       await this.repository.delete(id, tx);
@@ -318,13 +329,14 @@ export class ItemRequestsService {
       completedUpdateProofUrl = request.updateProofImageUrl ?? undefined;
       await this.createDropHistory(request, quantity, actorId, tx);
       await this.reorderRanks(request.itemName, tx);
+      const promotedReminder = await this.resetQueueAfterCompletedDelivery(request.itemName, actorId, tx);
       await this.auditWithinTransaction(tx, 'ITEM_REQUEST_DELIVERED_COMPLETE', id, actorId, {
         quantity,
         itemName: request.itemName,
         reason: data.reason,
       });
 
-      return { delivered: quantity, completed: true };
+      return { delivered: quantity, completed: true, promotedReminder };
     });
 
     if (result.completed) {
@@ -332,7 +344,28 @@ export class ItemRequestsService {
       await this.deleteStoredImage(completedUpdateProofUrl);
     }
 
-    return result;
+    if (result.promotedReminder) {
+      await this.notifications.notifyItemRequestReminder({
+        requestId: result.promotedReminder.requestId,
+        discordId: result.promotedReminder.discordId,
+        playerName: result.promotedReminder.playerName,
+        itemName: result.promotedReminder.itemName,
+        rankPosition: result.promotedReminder.rankPosition,
+        stage: '3d',
+        daysIdle: 3,
+      });
+      await this.notifications.notifyStaffItemRequestReminder({
+        requestId: result.promotedReminder.requestId,
+        discordId: result.promotedReminder.discordId,
+        playerName: result.promotedReminder.playerName,
+        itemName: result.promotedReminder.itemName,
+        rankPosition: result.promotedReminder.rankPosition,
+        stage: '3d',
+        daysIdle: 3,
+      });
+    }
+
+    return { delivered: result.delivered, completed: result.completed };
   }
 
   async deleteRequest(id: string, actorId?: string): Promise<void> {
@@ -552,6 +585,55 @@ export class ItemRequestsService {
         data: { rankPosition: index + 1 },
       });
     }
+  }
+
+  private async resetQueueAfterCompletedDelivery(
+    itemName: string,
+    actorId: string | undefined,
+    tx: Prisma.TransactionClient,
+  ): Promise<{
+    requestId: string;
+    discordId: string;
+    playerName: string;
+    itemName: string;
+    rankPosition: number;
+  } | null> {
+    const firstRequest = await tx.itemRequest.findFirst({
+      where: { itemName, rankPosition: 1 },
+      orderBy: [{ rankPosition: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    if (!firstRequest) {
+      return null;
+    }
+
+    const now = new Date();
+    const resetToD3 = new Date(now.getTime() - 3 * 86_400_000);
+    const reset = await tx.itemRequest.updateMany({
+      where: { itemName },
+      data: {
+        legacyUpdatedAt: resetToD3,
+        warned3d: true,
+        warned4d: false,
+        lastReminderStage: '3d',
+        lastReminderAt: now,
+      },
+    });
+
+    await this.auditWithinTransaction(tx, 'ITEM_REQUEST_QUEUE_RESET_AFTER_DELIVERY', firstRequest.id, actorId, {
+      itemName,
+      promotedPlayerName: firstRequest.playerName,
+      resetCount: reset.count,
+      resetToD3: resetToD3.toISOString(),
+    });
+
+    return {
+      requestId: firstRequest.id,
+      discordId: firstRequest.discordId,
+      playerName: firstRequest.playerName,
+      itemName: firstRequest.itemName,
+      rankPosition: firstRequest.rankPosition,
+    };
   }
 
   private itemKey(item: ItemCatalog): string {

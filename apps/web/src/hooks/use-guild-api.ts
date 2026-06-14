@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -912,6 +912,25 @@ export function usePlaceBid(auctionId: string) {
   });
 }
 
+export function useRequestBidCancellation(auctionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (reason: string) =>
+      (await api.post<{ request: AuctionBidCancellationRequest; autoApproved: boolean }>(`/auctions/${auctionId}/bid-cancellation`, { reason })).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auction', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction-bids', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction-ranking', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+        queryClient.invalidateQueries({ queryKey: ['dkp-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] }),
+      ]);
+    },
+  });
+}
+
 export function useFinalizeAuction(auctionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1060,6 +1079,14 @@ export function usePendingReviews() {
   });
 }
 
+export function usePendingBidCancellations() {
+  return useQuery({
+    queryKey: ['staff-bid-cancellations'],
+    queryFn: async () => (await api.get<AuctionBidCancellationRequest[]>('/staff/reviews/bid-cancellations')).data,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useStaffReviewDetails(auctionId: string) {
   return useQuery({
     queryKey: ['staff-review', auctionId],
@@ -1114,6 +1141,37 @@ export function useRemoveAuctionBid(auctionId: string) {
         queryClient.invalidateQueries({ queryKey: ['auctions'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
       ]);
+    },
+  });
+}
+
+export function useApproveBidCancellation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { requestId: string; note?: string }) =>
+      (await api.post<AuctionBidCancellationRequest>(`/staff/reviews/bid-cancellations/${data.requestId}/approve`, { note: data.note })).data,
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-reviews'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-review', data.auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction', data.auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction-bids', data.auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction-ranking', data.auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+        queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
+      ]);
+    },
+  });
+}
+
+export function useRejectBidCancellation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { requestId: string; note?: string }) =>
+      (await api.post<AuctionBidCancellationRequest>(`/staff/reviews/bid-cancellations/${data.requestId}/reject`, { note: data.note })).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] });
     },
   });
 }

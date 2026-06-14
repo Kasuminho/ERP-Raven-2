@@ -118,6 +118,12 @@ enum DaoshiReceiptStatus {
   REJECTED
 }
 
+enum AuctionBidCancellationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ProgressCategory {
   STELLAS_AMPLIFICATION
   EQUIPMENT
@@ -145,64 +151,66 @@ enum PlayerStaffNoteSeverity {
 }
 
 model User {
-  id                 String                  @id @default(uuid())
-  discordId          String                  @unique
-  discordUsername    String
-  avatar             String?
-  discordGuildId     String?
-  discordNickname    String?
-  discordRoles       Json?
-  preferredLocale    String                  @default("pt")
-  lastDiscordSyncAt  DateTime?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  players            Player[]
-  createdEvents      Event[]                 @relation("EventCreatedBy")
-  dkpTransactions    DKPTransaction[]        @relation("DKPTransactionCreatedBy")
-  createdAuctions    Auction[]               @relation("AuctionCreatedBy")
-  announcements      Announcement[]          @relation("AnnouncementCreatedBy")
-  interestPosts      ItemInterestPost[]      @relation("ItemInterestPostCreatedBy")
-  interestVotes      ItemInterestVote[]      @relation("ItemInterestVoteVoter")
-  auctionReviewVotes AuctionReviewVote[]     @relation("AuctionReviewVoteVoter")
-  sentCodexRequests  CodexRequest[]          @relation("CodexRequestSentBy")
-  reviewedProgress   PlayerProgress[]        @relation("PlayerProgressReviewedBy")
-  progressComments   PlayerProgressComment[]
-  staffNotes         PlayerStaffNote[]        @relation("PlayerStaffNoteAuthor")
-  reviewedDaoshiReceipts DaoshiCashReceipt[]  @relation("DaoshiReceiptReviewedBy")
-  executedDaoshiRaffles  DaoshiRaffle[]       @relation("DaoshiRaffleExecutedBy")
-  auditLogs          AuditLog[]              @relation("AuditLogActor")
+  id                       String                          @id @default(uuid())
+  discordId                String                          @unique
+  discordUsername          String
+  avatar                   String?
+  discordGuildId           String?
+  discordNickname          String?
+  discordRoles             Json?
+  preferredLocale          String                          @default("pt")
+  lastDiscordSyncAt        DateTime?
+  createdAt                DateTime                        @default(now())
+  updatedAt                DateTime                        @updatedAt
+  players                  Player[]
+  createdEvents            Event[]                         @relation("EventCreatedBy")
+  dkpTransactions          DKPTransaction[]                @relation("DKPTransactionCreatedBy")
+  createdAuctions          Auction[]                       @relation("AuctionCreatedBy")
+  announcements            Announcement[]                  @relation("AnnouncementCreatedBy")
+  interestPosts            ItemInterestPost[]              @relation("ItemInterestPostCreatedBy")
+  interestVotes            ItemInterestVote[]              @relation("ItemInterestVoteVoter")
+  auctionReviewVotes       AuctionReviewVote[]             @relation("AuctionReviewVoteVoter")
+  reviewedBidCancellations AuctionBidCancellationRequest[] @relation("AuctionBidCancellationReviewedBy")
+  sentCodexRequests        CodexRequest[]                  @relation("CodexRequestSentBy")
+  reviewedProgress         PlayerProgress[]                @relation("PlayerProgressReviewedBy")
+  progressComments         PlayerProgressComment[]
+  staffNotes               PlayerStaffNote[]               @relation("PlayerStaffNoteAuthor")
+  reviewedDaoshiReceipts   DaoshiCashReceipt[]             @relation("DaoshiReceiptReviewedBy")
+  executedDaoshiRaffles    DaoshiRaffle[]                  @relation("DaoshiRaffleExecutedBy")
+  auditLogs                AuditLog[]                      @relation("AuditLogActor")
 
   @@index([discordUsername])
   @@index([discordGuildId])
 }
 
 model Player {
-  id                   String              @id @default(uuid())
-  userId               String
-  nickname             String              @unique
-  class                PlayerClass
-  dimensionalLayer     Int                 @db.SmallInt
-  combatPower          Int                 @default(0)
-  timezone             String?
-  attendancePercentage Float               @default(0)
-  isActive             Boolean             @default(true)
-  joinedAt             DateTime            @default(now())
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roles                PlayerRole[]
-  attendances          EventAttendance[]
-  dkpTransactions      DKPTransaction[]
-  dkpLocks             DKPLock[]
-  auctionBids          AuctionBid[]
-  progressUpdates      PlayerProgress[]
-  staffNotes           PlayerStaffNote[]
-  itemInterests        ItemInterestEntry[]
-  codexRequests        CodexRequest[]
-  itemRequests         ItemRequest[]
-  daoshiCashReceipts   DaoshiCashReceipt[]
-  wonDaoshiRaffles     DaoshiRaffle[]
-  dropHistories        DropHistory[]
+  id                      String                          @id @default(uuid())
+  userId                  String
+  nickname                String                          @unique
+  class                   PlayerClass
+  dimensionalLayer        Int                             @db.SmallInt
+  combatPower             Int                             @default(0)
+  timezone                String?
+  attendancePercentage    Float                           @default(0)
+  isActive                Boolean                         @default(true)
+  joinedAt                DateTime                        @default(now())
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  user                    User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles                   PlayerRole[]
+  attendances             EventAttendance[]
+  dkpTransactions         DKPTransaction[]
+  dkpLocks                DKPLock[]
+  auctionBids             AuctionBid[]
+  progressUpdates         PlayerProgress[]
+  staffNotes              PlayerStaffNote[]
+  itemInterests           ItemInterestEntry[]
+  codexRequests           CodexRequest[]
+  itemRequests            ItemRequest[]
+  daoshiCashReceipts      DaoshiCashReceipt[]
+  wonDaoshiRaffles        DaoshiRaffle[]
+  dropHistories           DropHistory[]
+  bidCancellationRequests AuctionBidCancellationRequest[]
 
   @@index([userId])
   @@index([class])
@@ -353,27 +361,28 @@ model DKPLock {
 }
 
 model Auction {
-  id                  String              @id @default(uuid())
-  itemCatalogId       String?
-  itemName            String
-  itemType            ItemType
-  itemTier            ItemTier
-  minimumBid          Int
-  auctionMode         AuctionMode
-  status              AuctionStatus       @default(OPEN)
-  requiresStaffReview Boolean             @default(false)
-  minimumLayer        Int?                @db.SmallInt
-  endsAt              DateTime
-  reopensAt           DateTime?
-  createdById         String
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  itemCatalog         ItemCatalog?        @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
-  createdBy           User                @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  bids                AuctionBid[]
-  dkpLocks            DKPLock[]
-  reviewVotes         AuctionReviewVote[]
-  dropHistory         DropHistory?
+  id                      String                          @id @default(uuid())
+  itemCatalogId           String?
+  itemName                String
+  itemType                ItemType
+  itemTier                ItemTier
+  minimumBid              Int
+  auctionMode             AuctionMode
+  status                  AuctionStatus                   @default(OPEN)
+  requiresStaffReview     Boolean                         @default(false)
+  minimumLayer            Int?                            @db.SmallInt
+  endsAt                  DateTime
+  reopensAt               DateTime?
+  createdById             String
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  itemCatalog             ItemCatalog?                    @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  createdBy               User                            @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  bids                    AuctionBid[]
+  dkpLocks                DKPLock[]
+  reviewVotes             AuctionReviewVote[]
+  bidCancellationRequests AuctionBidCancellationRequest[]
+  dropHistory             DropHistory?
 
   @@index([itemCatalogId])
   @@index([itemType])
@@ -387,14 +396,15 @@ model Auction {
 }
 
 model AuctionBid {
-  id        String   @id @default(uuid())
-  auctionId String
-  playerId  String
-  bidAmount Int
-  isValid   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  id                   String                          @id @default(uuid())
+  auctionId            String
+  playerId             String
+  bidAmount            Int
+  isValid              Boolean                         @default(true)
+  createdAt            DateTime                        @default(now())
+  auction              Auction                         @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  player               Player                          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  cancellationRequests AuctionBidCancellationRequest[]
 
   @@unique([auctionId, playerId])
   @@index([auctionId, createdAt])
@@ -420,6 +430,30 @@ model AuctionReviewVote {
   @@index([voterId])
 }
 
+model AuctionBidCancellationRequest {
+  id           String                       @id @default(uuid())
+  auctionId    String
+  bidId        String
+  playerId     String
+  reason       String
+  status       AuctionBidCancellationStatus @default(PENDING)
+  reviewedById String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+  auction      Auction                      @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bid          AuctionBid                   @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  player       Player                       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy   User?                        @relation("AuctionBidCancellationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([auctionId])
+  @@index([bidId])
+  @@index([playerId, createdAt])
+  @@index([status, createdAt])
+  @@index([reviewedById])
+}
+
 model EligibilityRule {
   id                  String   @id @default(uuid())
   itemTier            ItemTier
@@ -434,29 +468,29 @@ model EligibilityRule {
 }
 
 model ItemCatalog {
-  id              String             @id @default(uuid())
-  legacyId        Int?               @unique
-  kind            String
-  category        String
-  itemTier        ItemTier?
-  itemType        ItemType?
-  namePt          String
-  nameEn          String
-  nameEs          String?
-  typePt          String
-  typeEn          String
-  typeEs          String?
-  preferredClasses PlayerClass[]       @default([])
-  image1Url       String?
-  image2Url       String?
-  isActive        Boolean            @default(true)
-  legacyCreatedAt DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  itemRequests    ItemRequest[]
-  dropHistories   DropHistory[]
-  auctions        Auction[]
-  interestPosts   ItemInterestPost[]
+  id               String             @id @default(uuid())
+  legacyId         Int?               @unique
+  kind             String
+  category         String
+  itemTier         ItemTier?
+  itemType         ItemType?
+  namePt           String
+  nameEn           String
+  nameEs           String?
+  typePt           String
+  typeEn           String
+  typeEs           String?
+  preferredClasses PlayerClass[]      @default([])
+  image1Url        String?
+  image2Url        String?
+  isActive         Boolean            @default(true)
+  legacyCreatedAt  DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  itemRequests     ItemRequest[]
+  dropHistories    DropHistory[]
+  auctions         Auction[]
+  interestPosts    ItemInterestPost[]
 
   @@index([nameEn, typeEn])
   @@index([nameEs, typeEs])
@@ -627,22 +661,22 @@ model CodexRequest {
 }
 
 model DaoshiCashReceipt {
-  id              String              @id @default(uuid())
-  playerId        String
-  proofImageUrl   String?
-  purchaseCents   Int
-  approvedCents   Int?
-  purchaseDate    DateTime
-  couponCode      String              @default("AACD")
-  status          DaoshiReceiptStatus @default(PENDING)
-  playerNote      String?
-  reviewNote      String?
-  reviewedById    String?
-  reviewedAt      DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  player          Player              @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  reviewedBy      User?               @relation("DaoshiReceiptReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id            String              @id @default(uuid())
+  playerId      String
+  proofImageUrl String?
+  purchaseCents Int
+  approvedCents Int?
+  purchaseDate  DateTime
+  couponCode    String              @default("AACD")
+  status        DaoshiReceiptStatus @default(PENDING)
+  playerNote    String?
+  reviewNote    String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  player        Player              @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy    User?               @relation("DaoshiReceiptReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([playerId, purchaseDate])
   @@index([status])

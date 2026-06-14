@@ -3,8 +3,8 @@ import { Auction, AuctionBid } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CreateAuctionDto, PlaceBidDto } from '../dto';
-import { AuctionFinalizationResult, AuctionsService } from '../services/auctions.service';
+import { CreateAuctionDto, PlaceBidDto, RequestBidCancellationDto } from '../dto';
+import { AuctionFinalizationResult, AuctionsService, BidCancellationRequestResult } from '../services/auctions.service';
 
 type AuthRequest = { user?: { userId?: string } };
 
@@ -28,6 +28,16 @@ export class AuctionsController {
   @UseGuards(JwtAuthGuard)
   async bid(@Param('id') auctionId: string, @Body() dto: PlaceBidDto, @Req() req: AuthRequest): Promise<AuctionBid> {
     return this.service.placeBidForUser(req.user?.userId ?? '', auctionId, dto.amount);
+  }
+
+  @Post(':id/bid-cancellation')
+  @UseGuards(JwtAuthGuard)
+  async requestBidCancellation(
+    @Param('id') auctionId: string,
+    @Body() dto: RequestBidCancellationDto,
+    @Req() req: AuthRequest,
+  ): Promise<BidCancellationRequestResult> {
+    return this.service.requestBidCancellationForUser(req.user?.userId ?? '', auctionId, dto.reason);
   }
 
   @Post(':id/finalize')

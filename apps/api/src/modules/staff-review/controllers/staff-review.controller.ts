@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { Auction } from '@prisma/client';
+import { Auction, AuctionBidCancellationRequest } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -8,9 +8,10 @@ import {
   OverridePriorityDto,
   RejectWinnerDto,
   RemoveBidDto,
+  ReviewBidCancellationDto,
   ReviewActionDto,
 } from '../dto';
-import { StaffReviewDetails, StaffReviewService } from '../services/staff-review.service';
+import { StaffBidCancellationRequest, StaffReviewDetails, StaffReviewService } from '../services/staff-review.service';
 
 type StaffRequest = {
   user: {
@@ -27,6 +28,29 @@ export class StaffReviewController {
   @Get()
   async pendingReviews(): Promise<Auction[]> {
     return this.service.getPendingReviews();
+  }
+
+  @Get('bid-cancellations')
+  async pendingBidCancellations(): Promise<StaffBidCancellationRequest[]> {
+    return this.service.getPendingBidCancellations();
+  }
+
+  @Post('bid-cancellations/:requestId/approve')
+  async approveBidCancellation(
+    @Param('requestId') requestId: string,
+    @Body() dto: ReviewBidCancellationDto,
+    @Req() req: StaffRequest,
+  ): Promise<AuctionBidCancellationRequest> {
+    return this.service.approveBidCancellation(requestId, req.user.userId, dto.note);
+  }
+
+  @Post('bid-cancellations/:requestId/reject')
+  async rejectBidCancellation(
+    @Param('requestId') requestId: string,
+    @Body() dto: ReviewBidCancellationDto,
+    @Req() req: StaffRequest,
+  ): Promise<AuctionBidCancellationRequest> {
+    return this.service.rejectBidCancellation(requestId, req.user.userId, dto.note);
   }
 
   @Get(':auctionId')

@@ -29,8 +29,27 @@ export function BidModal({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    const bidAmount = auction.auctionMode === 'ALL_IN' ? undefined : Number(amount);
+    const confirmation = auction.auctionMode === 'ALL_IN'
+      ? [
+          t(locale, 'confirmAllInBidTitle'),
+          '',
+          t(locale, 'confirmAllInBidRules'),
+          t(locale, 'confirmBidCancellationRule'),
+        ].join('\n')
+      : [
+          t(locale, existingBidAmount ? 'confirmBidIncreaseTitle' : 'confirmStandardBidTitle'),
+          '',
+          `${t(locale, 'bidAmount')}: ${bidAmount} DKP`,
+          t(locale, 'confirmStandardBidRules'),
+        ].join('\n');
+
+    if (!window.confirm(confirmation)) {
+      return;
+    }
+
     onBid({
-      amount: auction.auctionMode === 'ALL_IN' ? undefined : Number(amount),
+      amount: bidAmount,
     });
   }
 

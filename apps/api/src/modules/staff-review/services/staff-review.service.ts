@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditLog, Auction, AuctionStatus, Prisma } from '@prisma/client';
+import { AuditLog, Auction, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
 import { DkpService } from '../../dkp/services/dkp.service';
@@ -16,6 +16,26 @@ import { StaffAuctionReviewDetails, StaffReviewRepository } from '../repositorie
 export type StaffReviewDetails = StaffAuctionReviewDetails & {
   ranking: Awaited<ReturnType<EligibilityService['rankAuctionCandidates']>>;
   timeline: AuditLog[];
+};
+
+export type StaffBidCancellationRequest = AuctionBidCancellationRequest & {
+  auction: Pick<Auction, 'id' | 'itemName' | 'status' | 'auctionMode' | 'endsAt'>;
+  bid: {
+    id: string;
+    bidAmount: number;
+    isValid: boolean;
+    createdAt: Date;
+  };
+  player: {
+    id: string;
+    nickname: string;
+    dimensionalLayer: number;
+    user: {
+      discordId: string;
+      discordUsername: string;
+      discordNickname: string | null;
+    };
+  };
 };
 
 @Injectable()
@@ -299,6 +319,161 @@ export class StaffReviewService {
 
   async getPendingReviews(): Promise<Auction[]> {
     return this.repository.findPendingReviews();
+  }
+
+  async getPendingBidCancellations(): Promise<StaffBidCancellationRequest[]> {
+    return this.repository.client.auctionBidCancellationRequest.findMany({
+      where: { status: AuctionBidCancellationStatus.PENDING },
+      include: {
+        auction: {
+          select: {
+            id: true,
+            itemName: true,
+            status: true,
+            auctionMode: true,
+            endsAt: true,
+          },
+        },
+        bid: {
+          select: {
+            id: true,
+            bidAmount: true,
+            isValid: true,
+            createdAt: true,
+          },
+        },
+        player: {
+          select: {
+            id: true,
+            nickname: true,
+            dimensionalLayer: true,
+            user: {
+              select: {
+                discordId: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async approveBidCancellation(requestId: string, reviewerId: string, note?: string): Promise<AuctionBidCancellationRequest> {
+    return this.repository.client.$transaction(
+      async (tx) => {
+        const request = await tx.auctionBidCancellationRequest.findUnique({
+          where: { id: requestId },
+          include: {
+            auction: true,
+            bid: true,
+          },
+        });
+
+        if (!request) {
+          throw new InvalidStaffReviewActionException(`Bid cancellation request ${requestId} was not found.`);
+        }
+
+        if (request.status !== AuctionBidCancellationStatus.PENDING) {
+          throw new InvalidStaffReviewActionException(`Bid cancellation request ${requestId} is already ${request.status}.`);
+        }
+
+        if (request.auction.status !== AuctionStatus.OPEN && request.auction.status !== AuctionStatus.PENDING_REVIEW) {
+          throw new InvalidStaffReviewStateException(`Bid cannot be cancelled from auction status ${request.auction.status}.`);
+        }
+
+        if (!request.bid.isValid) {
+          throw new InvalidStaffReviewActionException(`Bid ${request.bidId} has already been invalidated.`);
+        }
+
+        const lock = await this.repository.findActiveLock(request.auctionId, request.playerId, tx);
+
+        if (lock) {
+          await tx.dKPLock.update({
+            where: { id: lock.id },
+            data: { released: true },
+          });
+        }
+
+        await this.repository.invalidateBid(request.bidId, tx);
+
+        const approved = await tx.auctionBidCancellationRequest.update({
+          where: { id: requestId },
+          data: {
+            status: AuctionBidCancellationStatus.APPROVED,
+            reviewedById: reviewerId,
+            reviewNote: note?.trim() || undefined,
+            reviewedAt: new Date(),
+          },
+        });
+
+        const remainingValidBids = await tx.auctionBid.count({
+          where: {
+            auctionId: request.auctionId,
+            isValid: true,
+          },
+        });
+
+        if (remainingValidBids === 0) {
+          await this.auctionsService.expandLayerOrRelistAfterEmptyBidsWithinTransaction(
+            request.auctionId,
+            tx,
+            reviewerId,
+            note?.trim() || request.reason,
+          );
+        }
+
+        await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_BID_CANCELLATION_APPROVED', 'AuctionBidCancellationRequest', requestId, {
+          auctionId: request.auctionId,
+          bidId: request.bidId,
+          playerId: request.playerId,
+          reason: request.reason,
+          note: note?.trim() || undefined,
+          releasedLockId: lock?.id,
+        });
+
+        return approved;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  async rejectBidCancellation(requestId: string, reviewerId: string, note?: string): Promise<AuctionBidCancellationRequest> {
+    return this.repository.client.$transaction(async (tx) => {
+      const request = await tx.auctionBidCancellationRequest.findUnique({
+        where: { id: requestId },
+      });
+
+      if (!request) {
+        throw new InvalidStaffReviewActionException(`Bid cancellation request ${requestId} was not found.`);
+      }
+
+      if (request.status !== AuctionBidCancellationStatus.PENDING) {
+        throw new InvalidStaffReviewActionException(`Bid cancellation request ${requestId} is already ${request.status}.`);
+      }
+
+      const rejected = await tx.auctionBidCancellationRequest.update({
+        where: { id: requestId },
+        data: {
+          status: AuctionBidCancellationStatus.REJECTED,
+          reviewedById: reviewerId,
+          reviewNote: note?.trim() || undefined,
+          reviewedAt: new Date(),
+        },
+      });
+
+      await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_BID_CANCELLATION_REJECTED', 'AuctionBidCancellationRequest', requestId, {
+        auctionId: request.auctionId,
+        bidId: request.bidId,
+        playerId: request.playerId,
+        reason: request.reason,
+        note: note?.trim() || undefined,
+      });
+
+      return rejected;
+    });
   }
 
   async getAuctionReviewDetails(auctionId: string): Promise<StaffReviewDetails> {
