@@ -14,8 +14,8 @@ export class ItemInterestsController {
   constructor(private readonly service: ItemInterestsService) {}
 
   @Get()
-  async list(@Query('status') status?: ItemInterestStatus): Promise<ItemInterestDetails[]> {
-    return this.service.listPosts(status);
+  async list(@Query('status') status: ItemInterestStatus | undefined, @Req() req: AuthRequest): Promise<ItemInterestDetails[]> {
+    return this.service.listPosts(status, req.user.userId);
   }
 
   @Get(':id')
@@ -40,6 +40,11 @@ export class ItemInterestsController {
   @Post(':id/declare')
   async declare(@Param('id') id: string, @Body() dto: DeclareItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestEntry> {
     return this.service.declareInterest(id, req.user.userId, dto);
+  }
+
+  @Post(':id/seen')
+  async markSeen(@Param('id') id: string, @Req() req: AuthRequest): Promise<{ seenAt: Date }> {
+    return this.service.markSeen(id, req.user.userId);
   }
 
   @Post(':id/close')

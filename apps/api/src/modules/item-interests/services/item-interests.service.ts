@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, Prisma } from '@prisma/client';
+import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemType, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
@@ -16,6 +16,7 @@ export type ItemInterestDetails = ItemInterestPost & {
     typePt: string;
     typeEn: string;
     typeEs: string | null;
+    itemType: ItemType | null;
     image1Url: string | null;
     image2Url: string | null;
   };
@@ -53,6 +54,11 @@ export type ItemInterestDetails = ItemInterestPost & {
     voterId: string;
     round: number;
   }>;
+  views?: Array<{
+    seenAt: Date;
+  }>;
+  viewerHasDeclared?: boolean;
+  viewerSeenAt?: Date | null;
 };
 
 const criteriaTexts: Record<string, { pt: string; en: string }> = {
@@ -84,14 +90,21 @@ export class ItemInterestsService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async listPosts(status?: ItemInterestStatus): Promise<ItemInterestDetails[]> {
+  async listPosts(status?: ItemInterestStatus, userId?: string): Promise<ItemInterestDetails[]> {
+    const viewerPlayer = userId
+      ? await this.prisma.player.findFirst({
+          where: { userId, isActive: true },
+          select: { id: true },
+          orderBy: { joinedAt: 'asc' },
+        })
+      : null;
     const posts = await this.prisma.itemInterestPost.findMany({
       where: status ? { status } : undefined,
-      include: this.includeDetails(),
+      include: this.includeDetails(viewerPlayer?.id),
       orderBy: [{ status: 'asc' }, { closesAt: 'asc' }],
     });
 
-    return this.enrichLootStats(posts);
+    return this.withViewerState(await this.enrichLootStats(posts), viewerPlayer?.id);
   }
 
   async getPost(id: string): Promise<ItemInterestDetails> {
@@ -232,6 +245,44 @@ export class ItemInterestsService {
       }
       throw error;
     });
+  }
+
+  async markSeen(postId: string, userId: string): Promise<{ seenAt: Date }> {
+    const player = await this.getPrimaryPlayer(userId, this.prisma);
+    const post = await this.prisma.itemInterestPost.findUnique({
+      where: { id: postId },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Interest post ${postId} was not found.`);
+    }
+
+    const view = await this.prisma.itemInterestView.upsert({
+      where: {
+        postId_playerId: {
+          postId,
+          playerId: player.id,
+        },
+      },
+      create: {
+        postId,
+        playerId: player.id,
+      },
+      update: {
+        seenAt: new Date(),
+      },
+      select: {
+        seenAt: true,
+      },
+    });
+
+    await this.audit('ITEM_INTEREST_MARKED_SEEN', postId, userId, {
+      playerId: player.id,
+      seenAt: view.seenAt.toISOString(),
+    });
+
+    return view;
   }
 
   async closePost(id: string, actorId: string): Promise<ItemInterestPost> {
@@ -510,7 +561,7 @@ export class ItemInterestsService {
     return namePt.trim().toLowerCase() === nameEn.trim().toLowerCase() ? namePt : `${namePt} / ${nameEn}`;
   }
 
-  private async getPrimaryPlayer(userId: string, tx: Prisma.TransactionClient): Promise<{ id: string }> {
+  private async getPrimaryPlayer(userId: string, tx: Prisma.TransactionClient | PrismaService): Promise<{ id: string }> {
     const player = await tx.player.findFirst({
       where: { userId, isActive: true },
       select: { id: true },
@@ -524,7 +575,7 @@ export class ItemInterestsService {
     return player;
   }
 
-  private includeDetails() {
+  private includeDetails(viewerPlayerId?: string) {
     return {
       itemCatalog: {
         select: {
@@ -537,6 +588,7 @@ export class ItemInterestsService {
           typePt: true,
           typeEn: true,
           typeEs: true,
+          itemType: true,
           image1Url: true,
           image2Url: true,
         },
@@ -579,7 +631,32 @@ export class ItemInterestsService {
           round: true,
         },
       },
+      views: viewerPlayerId
+        ? {
+            where: { playerId: viewerPlayerId },
+            select: { seenAt: true },
+          }
+        : {
+            where: { id: '__never__' },
+            select: { seenAt: true },
+          },
     };
+  }
+
+  private withViewerState(posts: ItemInterestDetails[], viewerPlayerId?: string): ItemInterestDetails[] {
+    if (!viewerPlayerId) {
+      return posts.map((post) => ({
+        ...post,
+        viewerHasDeclared: false,
+        viewerSeenAt: null,
+      }));
+    }
+
+    return posts.map((post) => ({
+      ...post,
+      viewerHasDeclared: post.entries.some((entry) => entry.playerId === viewerPlayerId),
+      viewerSeenAt: post.views?.[0]?.seenAt ?? null,
+    }));
   }
 
   private async enrichLootStats(posts: ItemInterestDetails[]): Promise<ItemInterestDetails[]> {

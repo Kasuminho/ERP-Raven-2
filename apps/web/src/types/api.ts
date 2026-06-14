@@ -192,9 +192,11 @@ export type ItemInterestPost = {
   proofImageUrl?: string;
   createdAt: string;
   updatedAt: string;
-  itemCatalog?: Pick<ItemCatalog, 'id' | 'kind' | 'category' | 'namePt' | 'nameEn' | 'nameEs' | 'typePt' | 'typeEn' | 'typeEs' | 'image1Url' | 'image2Url'>;
+  itemCatalog?: Pick<ItemCatalog, 'id' | 'kind' | 'category' | 'itemType' | 'namePt' | 'nameEn' | 'nameEs' | 'typePt' | 'typeEn' | 'typeEs' | 'image1Url' | 'image2Url'>;
   entries?: ItemInterestEntry[];
   votes?: ItemInterestVote[];
+  viewerHasDeclared?: boolean;
+  viewerSeenAt?: string | null;
 };
 
 export type CodexRequestStatus = 'PENDING' | 'SENT' | 'CONFIRMED' | 'NEEDS_RETRY' | 'CANCELLED';

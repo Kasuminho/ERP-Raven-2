@@ -431,6 +431,14 @@ export function useDeclareItemInterest() {
   });
 }
 
+export function useMarkItemInterestSeen() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => (await api.post<{ seenAt: string }>(`/item-interests/${postId}/seen`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+  });
+}
+
 export function useVoteItemInterest() {
   const queryClient = useQueryClient();
   return useMutation({

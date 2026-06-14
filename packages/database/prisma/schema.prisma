@@ -205,6 +205,7 @@ model Player {
   progressUpdates         PlayerProgress[]
   staffNotes              PlayerStaffNote[]
   itemInterests           ItemInterestEntry[]
+  itemInterestViews       ItemInterestView[]
   codexRequests           CodexRequest[]
   itemRequests            ItemRequest[]
   daoshiCashReceipts      DaoshiCashReceipt[]
@@ -594,12 +595,28 @@ model ItemInterestPost {
   createdBy               User                @relation("ItemInterestPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   entries                 ItemInterestEntry[]
   votes                   ItemInterestVote[]
+  views                   ItemInterestView[]
 
   @@index([itemCatalogId])
   @@index([status])
   @@index([selectedEntryId])
   @@index([closesAt])
   @@index([createdById])
+}
+
+model ItemInterestView {
+  id        String           @id @default(uuid())
+  postId    String
+  playerId  String
+  seenAt    DateTime         @default(now())
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  post      ItemInterestPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  player    Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, playerId])
+  @@index([playerId, seenAt])
+  @@index([postId])
 }
 
 model ItemInterestEntry {
