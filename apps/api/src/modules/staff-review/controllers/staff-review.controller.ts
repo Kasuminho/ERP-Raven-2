@@ -35,6 +35,11 @@ export class StaffReviewController {
     return this.service.getPendingBidCancellations();
   }
 
+  @Get('bid-cancellations/history')
+  async bidCancellationHistory(): Promise<StaffBidCancellationRequest[]> {
+    return this.service.getBidCancellationHistory();
+  }
+
   @Post('bid-cancellations/:requestId/approve')
   async approveBidCancellation(
     @Param('requestId') requestId: string,

@@ -926,6 +926,7 @@ export function useRequestBidCancellation(auctionId: string) {
         queryClient.invalidateQueries({ queryKey: ['dkp-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
         queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations-history'] }),
         queryClient.invalidateQueries({ queryKey: ['my-bid-cancellation', auctionId] }),
       ]);
     },
@@ -1097,6 +1098,14 @@ export function usePendingBidCancellations() {
   });
 }
 
+export function useBidCancellationHistory() {
+  return useQuery({
+    queryKey: ['staff-bid-cancellations-history'],
+    queryFn: async () => (await api.get<AuctionBidCancellationRequest[]>('/staff/reviews/bid-cancellations/history')).data,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useStaffReviewDetails(auctionId: string) {
   return useQuery({
     queryKey: ['staff-review', auctionId],
@@ -1163,6 +1172,7 @@ export function useApproveBidCancellation() {
     onSuccess: async (data) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations-history'] }),
         queryClient.invalidateQueries({ queryKey: ['staff-reviews'] }),
         queryClient.invalidateQueries({ queryKey: ['staff-review', data.auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auction', data.auctionId] }),
@@ -1182,6 +1192,7 @@ export function useRejectBidCancellation() {
       (await api.post<AuctionBidCancellationRequest>(`/staff/reviews/bid-cancellations/${data.requestId}/reject`, { note: data.note })).data,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations'] });
+      await queryClient.invalidateQueries({ queryKey: ['staff-bid-cancellations-history'] });
     },
   });
 }

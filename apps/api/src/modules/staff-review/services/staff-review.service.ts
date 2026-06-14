@@ -322,8 +322,16 @@ export class StaffReviewService {
   }
 
   async getPendingBidCancellations(): Promise<StaffBidCancellationRequest[]> {
+    return this.getBidCancellations(AuctionBidCancellationStatus.PENDING);
+  }
+
+  async getBidCancellationHistory(): Promise<StaffBidCancellationRequest[]> {
+    return this.getBidCancellations();
+  }
+
+  private async getBidCancellations(status?: AuctionBidCancellationStatus): Promise<StaffBidCancellationRequest[]> {
     return this.repository.client.auctionBidCancellationRequest.findMany({
-      where: { status: AuctionBidCancellationStatus.PENDING },
+      where: status ? { status } : undefined,
       include: {
         auction: {
           select: {
@@ -357,7 +365,8 @@ export class StaffReviewService {
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: status ? { createdAt: 'asc' } : { createdAt: 'desc' },
+      take: status ? undefined : 50,
     });
   }
 

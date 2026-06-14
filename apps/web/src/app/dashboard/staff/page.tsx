@@ -34,6 +34,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/dkp', titleKey: 'dkp', descriptionKey: 'staffDkpDescription', icon: Coins },
   { href: '/dashboard/staff/economy', titleKey: 'dkpLedger', descriptionKey: 'staffDkpDescription', icon: BarChart3 },
   { href: '/dashboard/staff/reviews', titleKey: 'reviews', descriptionKey: 'staffReviewsDescription', icon: ShieldAlert },
+  { href: '/dashboard/staff/bid-cancellations', titleKey: 'bidCancellations', descriptionKey: 'bidCancellationsShortDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/deliveries', titleKey: 'delivered', descriptionKey: 'staffDeliveriesDescription', icon: PackageCheck },
   { href: '/dashboard/admin/events', titleKey: 'events', descriptionKey: 'staffEventsDescription', icon: CalendarCheck },
   { href: '/dashboard/admin/items', titleKey: 'items', descriptionKey: 'staffItemsDescription', icon: PackagePlus },
