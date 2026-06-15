@@ -25,6 +25,8 @@ import { CodexModule } from './modules/codex/codex.module';
 import { OperationsModule } from './modules/operations/operations.module';
 import { DaoshiModule } from './modules/daoshi/daoshi.module';
 import { HealthModule } from './modules/health/health.module';
+import { BusinessRulesModule } from './modules/business-rules/business-rules.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { HealthModule } from './modules/health/health.module';
     AuctionsModule,
     EligibilityModule,
     AuditModule,
+    BusinessRulesModule,
+    NotificationsModule,
     StaffReviewModule,
     DiscordModule,
     AutomationModule,

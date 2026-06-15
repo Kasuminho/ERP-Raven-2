@@ -680,6 +680,29 @@ export type StaffOperationsSummary = {
   };
 };
 
+export type BusinessRule = {
+  id: string;
+  key: string;
+  category: string;
+  label: string;
+  description?: string | null;
+  value: unknown;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InternalNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href?: string | null;
+  metadata?: Record<string, unknown> | null;
+  readAt?: string | null;
+  createdAt: string;
+};
+
 export type StaffHealthSummary = {
   generatedAt: string;
   checks: Array<{
@@ -791,4 +814,9 @@ export type SeasonMonthlySummary = {
     dropsCount: number;
     daoshiApprovedCents: number;
   }>;
+};
+
+export type WeeklyGuildSummary = Omit<SeasonMonthlySummary, 'month'> & {
+  weekStart: string;
+  weekEnd: string;
 };

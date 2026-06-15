@@ -77,6 +77,11 @@ export type SeasonMonthlySummary = {
   }>;
 };
 
+export type WeeklyGuildSummary = Omit<SeasonMonthlySummary, 'month'> & {
+  weekStart: string;
+  weekEnd: string;
+};
+
 export type NoticeBoardItem = {
   id: string;
   type: string;

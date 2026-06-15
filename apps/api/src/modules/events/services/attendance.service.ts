@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DKPTransactionType, Event, EventStatus, EventType, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { AttendanceStatsResponseDto, CreateEventDto, PlayerAttendanceHistoryRowDto } from '../dto';
@@ -15,31 +16,12 @@ import { EventDetails, EventsRepository } from '../repositories/events.repositor
 
 @Injectable()
 export class AttendanceService {
-  private readonly rewardByEventType: Record<EventType, number> = {
-    [EventType.LUNOS]: 20,
-    [EventType.RIGRETO]: 20,
-    [EventType.GARDRON]: 20,
-    [EventType.MELKAR]: 100,
-    [EventType.VARGAS]: 20,
-    [EventType.BELLAMONICA]: 20,
-    [EventType.SION]: 20,
-    [EventType.ISTERIA]: 20,
-    [EventType.NIDROK]: 20,
-    [EventType.MORGON]: 20,
-    [EventType.GUILD_DUNGEON]: 30,
-    [EventType.SATURDAY_EVENT]: 40,
-    [EventType.ABYSS_1]: 10,
-    [EventType.ABYSS_1_2]: 35,
-    [EventType.FLOUD]: 40,
-    [EventType.KRATERIUS]: 40,
-    [EventType.T3_ROTATION]: 20,
-  };
-
   constructor(
     private readonly repository: EventsRepository,
     private readonly dkpService: DkpService,
     private readonly auditService: AuditService,
     private readonly notificationService: NotificationService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   async createEvent(data: CreateEventDto): Promise<Event> {
@@ -49,7 +31,7 @@ export class AttendanceService {
       throw new BadRequestException('Event name is required.');
     }
 
-    if (!data.type || !this.rewardByEventType[data.type]) {
+    if (!data.type || !Object.values(EventType).includes(data.type)) {
       throw new BadRequestException('Valid event type is required.');
     }
 
@@ -61,7 +43,7 @@ export class AttendanceService {
       throw new BadRequestException('Authenticated user is required to create an event.');
     }
 
-    const reward = this.getRewardForType(data.type);
+    const reward = await this.businessRules.getEventReward(data.type);
     const event = await this.repository.create({
       name: data.name.trim(),
       type: data.type,
@@ -531,10 +513,6 @@ export class AttendanceService {
     }
 
     return event;
-  }
-
-  private getRewardForType(type: EventType): number {
-    return this.rewardByEventType[type];
   }
 
   private getAttendanceAdjustmentReference(action: 'attendance-add' | 'attendance-remove', eventId: string, attendanceId: string): string {

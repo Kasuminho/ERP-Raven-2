@@ -17,6 +17,7 @@ import {
   StaffHealthSummary,
   StaffMeetingSummary,
   StaffOperationsSummary,
+  WeeklyGuildSummary,
 } from './operations.types';
 
 type AuthRequest = { user: { userId: string } };
@@ -74,6 +75,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async season(@Query('month') month?: string): Promise<SeasonMonthlySummary> {
     return this.service.getSeasonSummary(month);
+  }
+
+  @Get('staff/weekly')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async weekly(): Promise<WeeklyGuildSummary> {
+    return this.service.getWeeklySummary();
   }
 
   @Get('staff/fairness')

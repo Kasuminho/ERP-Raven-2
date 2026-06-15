@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuditIdentity, AuditLog, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, InternalNotification, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -51,6 +51,48 @@ export function useNoticeBoard() {
   });
 }
 
+export function useMyNotifications() {
+  return useQuery({
+    queryKey: ['notifications', 'me'],
+    queryFn: async () => (await api.get<InternalNotification[]>('/notifications/me')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useUnreadNotificationsCount() {
+  return useQuery({
+    queryKey: ['notifications', 'me', 'unread-count'],
+    queryFn: async () => (await api.get<{ count: number }>('/notifications/me/unread-count')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => (await api.post<InternalNotification>(`/notifications/${id}/read`)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'me'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'me', 'unread-count'] }),
+      ]);
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<{ count: number }>('/notifications/read-all')).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'me'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'me', 'unread-count'] }),
+      ]);
+    },
+  });
+}
+
 export function useGuildRules() {
   return useQuery({
     queryKey: ['operations', 'rules'],
@@ -80,6 +122,53 @@ export function useSeasonSummary(month?: string) {
     queryKey: ['operations', 'staff', 'season', month ?? 'current'],
     queryFn: async () => (await api.get<SeasonMonthlySummary>('/operations/staff/season', { params: month ? { month } : undefined })).data,
     refetchInterval: 60_000,
+  });
+}
+
+export function useWeeklySummary() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'weekly'],
+    queryFn: async () => (await api.get<WeeklyGuildSummary>('/operations/staff/weekly')).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useBusinessRules() {
+  return useQuery({
+    queryKey: ['business-rules'],
+    queryFn: async () => (await api.get<BusinessRule[]>('/business-rules')).data,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateBusinessRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { key: string; value: unknown }) =>
+      (await api.patch<BusinessRule>(`/business-rules/${data.key}`, { value: data.value })).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['business-rules'] }),
+        queryClient.invalidateQueries({ queryKey: ['operations'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+        queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+      ]);
+    },
+  });
+}
+
+export function useResetBusinessRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (key: string) => (await api.post<BusinessRule>(`/business-rules/${key}/reset`)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['business-rules'] }),
+        queryClient.invalidateQueries({ queryKey: ['operations'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+        queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+      ]);
+    },
   });
 }
 

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Auction, ItemTier, ItemType, Player, PlayerClass, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { BusinessRulesService } from '../../business-rules/business-rules.service';
+import { PriorityScoreRules } from '../../business-rules/business-rules.defaults';
 import { DkpService } from '../../dkp/services/dkp.service';
 import {
   EligibilityValidationResponseDto,
@@ -23,13 +25,6 @@ type EligibilityRuleConfig = {
   automaticWinnerAllowed: boolean;
 };
 
-type PriorityScoreConfig = {
-  layerWeight: number;
-  attendanceWeight: number;
-  availableDkpWeight: number;
-  classPriorityBonus: number;
-};
-
 type ClassCompatibilityResult = {
   compatible: boolean;
   reason: string;
@@ -37,13 +32,6 @@ type ClassCompatibilityResult = {
 
 @Injectable()
 export class EligibilityService {
-  private readonly priorityScoreConfig: PriorityScoreConfig = {
-    layerWeight: 100,
-    attendanceWeight: 5,
-    availableDkpWeight: 0.25,
-    classPriorityBonus: 10000,
-  };
-
   private readonly weaponClassKeywords: Record<PlayerClass, string[]> = {
     [PlayerClass.ASSASSIN]: ['adagas', 'daggers'],
     [PlayerClass.NIGHT_RANGER]: ['arco', 'bow'],
@@ -61,6 +49,7 @@ export class EligibilityService {
     private readonly repository: EligibilityRepository,
     private readonly dkpService: DkpService,
     private readonly auditService: AuditService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   health(): { module: string; ready: boolean } {
@@ -212,6 +201,7 @@ export class EligibilityService {
     return this.repository.client.$transaction(async (tx) => {
       const { auction, player } = await this.getAuctionAndPlayer(playerId, auctionId, tx);
       const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(playerId, tx);
+      const scoreConfig = await this.businessRules.getPriorityScoreRules();
 
       return {
         playerId,
@@ -220,7 +210,8 @@ export class EligibilityService {
           player.dimensionalLayer,
           player.attendancePercentage,
           availableDKP,
-          await this.getClassPriorityBonus(player, auction, tx),
+          await this.getClassPriorityBonus(player, auction, tx, scoreConfig),
+          scoreConfig,
         ),
         dimensionalLayer: player.dimensionalLayer,
         attendancePercentage: player.attendancePercentage,
@@ -332,6 +323,7 @@ export class EligibilityService {
   ): Promise<RankingResponseDto> {
     const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(player.id, client);
     const eligibility = await this.evaluatePlayer(player, auction, availableDKP, client);
+    const scoreConfig = await this.businessRules.getPriorityScoreRules();
 
     return {
       playerId: player.id,
@@ -345,7 +337,8 @@ export class EligibilityService {
         player.dimensionalLayer,
         player.attendancePercentage,
         bidAmount ?? availableDKP,
-        await this.getClassPriorityBonus(player, auction, client),
+        await this.getClassPriorityBonus(player, auction, client, scoreConfig),
+        scoreConfig,
       ),
       eligibilityStatus: eligibility.eligibilityStatus,
       eligibilityReason: eligibility.eligibilityReason,
@@ -424,7 +417,7 @@ export class EligibilityService {
   }
 
   private async getEffectiveRules(auction: Auction, client?: Prisma.TransactionClient): Promise<EligibilityRuleConfig> {
-    const baseRules = this.getBaseRules(auction);
+    const baseRules = await this.getBaseRules(auction);
 
     if (!baseRules.progressiveLayerFallback) {
       return baseRules;
@@ -436,44 +429,25 @@ export class EligibilityService {
     };
   }
 
-  private getBaseRules(auction: Auction): EligibilityRuleConfig {
-    if (auction.itemTier === ItemTier.T4 && auction.itemType === ItemType.WEAPON) {
-      return {
-        minimumLayer: 4,
-        minimumDKP: 900,
-        requiresStaffReview: true,
-        progressiveLayerFallback: true,
-        classCompatibilityRequired: true,
-        automaticWinnerAllowed: false,
-      };
-    }
+  private async getBaseRules(auction: Auction): Promise<EligibilityRuleConfig> {
+    const tierRule = await this.businessRules.getAuctionTierRule(auction.itemTier);
 
-    if (auction.itemTier === ItemTier.T4) {
+    if (auction.itemTier === ItemTier.T4 || auction.itemTier === ItemTier.LEGENDARY) {
       return {
-        minimumLayer: 4,
-        minimumDKP: auction.minimumBid,
-        requiresStaffReview: true,
-        progressiveLayerFallback: true,
-        classCompatibilityRequired: false,
-        automaticWinnerAllowed: false,
-      };
-    }
-
-    if (auction.itemTier === ItemTier.LEGENDARY) {
-      return {
-        minimumLayer: 5,
-        minimumDKP: Math.max(auction.minimumBid, 1),
-        requiresStaffReview: true,
+        minimumLayer: tierRule.minimumLayer,
+        minimumDKP: Math.max(auction.minimumBid, tierRule.minimumBid),
+        requiresStaffReview: tierRule.requiresStaffReview,
         progressiveLayerFallback: true,
         classCompatibilityRequired: auction.itemType === ItemType.WEAPON,
         automaticWinnerAllowed: false,
       };
+
     }
 
     return {
-      minimumLayer: 1,
-      minimumDKP: auction.minimumBid,
-      requiresStaffReview: false,
+      minimumLayer: tierRule.minimumLayer,
+      minimumDKP: Math.max(auction.minimumBid, tierRule.minimumBid),
+      requiresStaffReview: tierRule.requiresStaffReview,
       progressiveLayerFallback: false,
       classCompatibilityRequired: false,
       automaticWinnerAllowed: true,
@@ -533,6 +507,7 @@ export class EligibilityService {
     player: Pick<Player, 'class'>,
     auction: Pick<Auction, 'itemType' | 'itemName' | 'itemCatalogId'>,
     client: Prisma.TransactionClient,
+    scoreConfig: PriorityScoreRules,
   ): Promise<number> {
     if (auction.itemType !== ItemType.WEAPON) {
       return 0;
@@ -545,7 +520,7 @@ export class EligibilityService {
       });
 
       if (item?.preferredClasses.length) {
-        return item.preferredClasses.includes(player.class) ? this.priorityScoreConfig.classPriorityBonus : 0;
+        return item.preferredClasses.includes(player.class) ? scoreConfig.classPriorityBonus : 0;
       }
     }
 
@@ -553,7 +528,7 @@ export class EligibilityService {
     const keywords = this.weaponClassKeywords[player.class] ?? [];
 
     return keywords.some((keyword) => this.hasWeaponKeyword(itemName, keyword))
-      ? this.priorityScoreConfig.classPriorityBonus
+      ? scoreConfig.classPriorityBonus
       : 0;
   }
 
@@ -569,11 +544,17 @@ export class EligibilityService {
       .toLowerCase();
   }
 
-  private score(dimensionalLayer: number, attendancePercentage: number, dkpFactor: number, bonus = 0): number {
+  private score(
+    dimensionalLayer: number,
+    attendancePercentage: number,
+    dkpFactor: number,
+    bonus: number,
+    scoreConfig: PriorityScoreRules,
+  ): number {
     return (
-      dimensionalLayer * this.priorityScoreConfig.layerWeight
-      + attendancePercentage * this.priorityScoreConfig.attendanceWeight
-      + dkpFactor * this.priorityScoreConfig.availableDkpWeight
+      dimensionalLayer * scoreConfig.layerWeight
+      + attendancePercentage * scoreConfig.attendanceWeight
+      + dkpFactor * scoreConfig.bidDkpWeight
       + bonus
     );
   }

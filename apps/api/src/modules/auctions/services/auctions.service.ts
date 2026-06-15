@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Auction, AuctionBid, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionMode, AuctionStatus, ItemTier, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { RankingResponseDto } from '../../eligibility/dto';
@@ -49,6 +50,7 @@ export class AuctionsService {
     private readonly auditService: AuditService,
     private readonly notificationService: NotificationService,
     private readonly eligibilityService: EligibilityService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   health(): { module: string; ready: boolean } {
@@ -56,7 +58,7 @@ export class AuctionsService {
   }
 
   async createAuction(data: CreateAuctionDto): Promise<Auction> {
-    const rules = this.getRulesForTier(data.itemTier);
+    const rules = await this.businessRules.getAuctionTierRule(data.itemTier);
     const auction = await this.repository.create({
       itemCatalog: data.itemCatalogId ? { connect: { id: data.itemCatalogId } } : undefined,
       itemName: data.itemName,

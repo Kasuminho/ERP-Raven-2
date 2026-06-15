@@ -150,6 +150,11 @@ enum PlayerStaffNoteSeverity {
   STRIKE
 }
 
+enum NotificationAudience {
+  PLAYER
+  STAFF
+}
+
 model User {
   id                       String                          @id @default(uuid())
   discordId                String                          @unique
@@ -178,6 +183,8 @@ model User {
   reviewedDaoshiReceipts   DaoshiCashReceipt[]             @relation("DaoshiReceiptReviewedBy")
   executedDaoshiRaffles    DaoshiRaffle[]                  @relation("DaoshiRaffleExecutedBy")
   auditLogs                AuditLog[]                      @relation("AuditLogActor")
+  updatedBusinessRules     BusinessRule[]                  @relation("BusinessRuleUpdatedBy")
+  notifications            Notification[]
 
   @@index([discordUsername])
   @@index([discordGuildId])
@@ -212,12 +219,51 @@ model Player {
   wonDaoshiRaffles        DaoshiRaffle[]
   dropHistories           DropHistory[]
   bidCancellationRequests AuctionBidCancellationRequest[]
+  notifications           Notification[]
 
   @@index([userId])
   @@index([class])
   @@index([dimensionalLayer])
   @@index([attendancePercentage])
   @@index([isActive])
+}
+
+model BusinessRule {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  category    String
+  label       String
+  description String?
+  value       Json
+  isActive    Boolean  @default(true)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   User?    @relation("BusinessRuleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model Notification {
+  id        String               @id @default(uuid())
+  userId    String?
+  playerId  String?
+  audience  NotificationAudience @default(PLAYER)
+  type      String
+  title     String
+  body      String
+  href      String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+  user      User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player    Player?              @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([playerId, readAt, createdAt])
+  @@index([audience, readAt, createdAt])
+  @@index([type])
 }
 
 model PlayerStaffNote {

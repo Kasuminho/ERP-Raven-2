@@ -10,8 +10,9 @@ import {
   ProgressReviewStatus,
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
+import { BusinessRulesService } from '../business-rules/business-rules.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
-import { SeasonMonthlySummary, StaffDayViewSummary } from './operations.types';
+import { SeasonMonthlySummary, StaffDayViewSummary, WeeklyGuildSummary } from './operations.types';
 import {
   DiscordTemplateSummary,
   GuildRulesSummary,
@@ -31,17 +32,6 @@ type PriorityThreshold = {
 const HOURS = 60 * 60 * 1000;
 const DAYS = 24 * HOURS;
 
-const STAFF_PENDING_THRESHOLDS = {
-  auctionReview: { mediumAfterMs: 3 * DAYS, highAfterMs: 5 * DAYS },
-  auctionDropDelivery: { mediumAfterMs: 10 * HOURS, highAfterMs: 1 * DAYS },
-  codexPending: { mediumAfterMs: 15 * DAYS, highAfterMs: 25 * DAYS },
-  codexRetry: { mediumAfterMs: 20 * DAYS, highAfterMs: 30 * DAYS },
-  interestDelivery: { mediumAfterMs: 10 * HOURS, highAfterMs: 1 * DAYS },
-  progressReview: { mediumAfterMs: 2 * DAYS, highAfterMs: 3 * DAYS },
-  eventFinalization: { mediumAfterMs: 10 * HOURS, highAfterMs: 20 * HOURS },
-  itemRequest: { mediumAfterMs: 2 * DAYS, highAfterMs: 5 * DAYS },
-} satisfies Record<string, PriorityThreshold>;
-
 function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
   return request.itemCatalog?.category === 'creature';
 }
@@ -51,6 +41,7 @@ export class OperationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   async getPlayerSummary(userId: string): Promise<PlayerOperationsSummary> {
@@ -257,6 +248,7 @@ export class OperationsService {
       select: { auctionId: true },
     })).map((drop) => drop.auctionId).filter(Boolean));
     const pendingAuctionDeliveries = pendingDeliveries.filter((transaction) => transaction.referenceId && !deliveredAuctionIds.has(transaction.referenceId));
+    const thresholds = await this.businessRules.getStaffPendingThresholds();
 
     const tasks: OperationTask[] = [
       ...reviews.map((auction) => ({
@@ -265,7 +257,7 @@ export class OperationsService {
         title: 'Review de leilao',
         description: `${auction.itemName} precisa de aprovacao da Staff.`,
         href: '/dashboard/staff/reviews',
-        priority: this.priorityByAge(auction.updatedAt, STAFF_PENDING_THRESHOLDS.auctionReview),
+        priority: this.priorityByAge(auction.updatedAt, thresholds.auctionReview),
         createdAt: auction.updatedAt,
       })),
       ...codex.slice(0, 5).map((request) => ({
@@ -275,8 +267,8 @@ export class OperationsService {
         description: `${request.player.nickname} aguarda envio/confirmacao de codex.`,
         href: '/dashboard/staff/codex',
         priority: request.status === CodexRequestStatus.NEEDS_RETRY
-          ? this.priorityByAge(request.retryRequestedAt ?? request.updatedAt, STAFF_PENDING_THRESHOLDS.codexRetry)
-          : this.priorityByAge(request.queuedAt, STAFF_PENDING_THRESHOLDS.codexPending),
+          ? this.priorityByAge(request.retryRequestedAt ?? request.updatedAt, thresholds.codexRetry)
+          : this.priorityByAge(request.queuedAt, thresholds.codexPending),
         createdAt: request.status === CodexRequestStatus.NEEDS_RETRY ? request.retryRequestedAt ?? request.updatedAt : request.queuedAt,
       })),
       ...itemRequests.slice(0, 5).map((request) => ({
@@ -285,7 +277,7 @@ export class OperationsService {
         title: 'Item Request ativo',
         description: `${request.playerName} esta na fila de ${request.itemName}. Falta ${request.remainingQuantity}/${request.totalQuantity}.`,
         href: '/dashboard/staff/deliveries',
-        priority: this.priorityByAge(request.updatedAt, STAFF_PENDING_THRESHOLDS.itemRequest),
+        priority: this.priorityByAge(request.updatedAt, thresholds.itemRequest),
         createdAt: request.updatedAt,
       })),
       ...closedInterests.map((post) => ({
@@ -294,7 +286,7 @@ export class OperationsService {
         title: post.status === ItemInterestStatus.READY_FOR_DELIVERY ? 'Interesse pronto para entrega' : 'Interesse aguardando voto',
         description: `${post.title} tem ${post.entries.length} interessado(s). Status: ${post.status}.`,
         href: '/dashboard/staff/interests',
-        priority: this.priorityByAge(post.closedAt ?? post.updatedAt, STAFF_PENDING_THRESHOLDS.interestDelivery),
+        priority: this.priorityByAge(post.closedAt ?? post.updatedAt, thresholds.interestDelivery),
         createdAt: post.closedAt ?? post.updatedAt,
       })),
       ...pendingAuctionDeliveries.slice(0, 5).map((transaction) => ({
@@ -303,7 +295,7 @@ export class OperationsService {
         title: 'Entrega de leilao pendente',
         description: `${transaction.player.nickname} tem drop de leilao para registrar com prova.`,
         href: '/dashboard/staff/deliveries',
-        priority: this.priorityByAge(transaction.createdAt, STAFF_PENDING_THRESHOLDS.auctionDropDelivery),
+        priority: this.priorityByAge(transaction.createdAt, thresholds.auctionDropDelivery),
         createdAt: transaction.createdAt,
       })),
       ...progress.map((row) => ({
@@ -312,7 +304,7 @@ export class OperationsService {
         title: 'Validar progresso',
         description: `${row.player.nickname} enviou ${row.category} para aprovacao.`,
         href: '/dashboard/staff/progress',
-        priority: this.priorityByAge(row.createdAt, STAFF_PENDING_THRESHOLDS.progressReview),
+        priority: this.priorityByAge(row.createdAt, thresholds.progressReview),
         createdAt: row.createdAt,
       })),
       ...events.map((event) => ({
@@ -321,7 +313,7 @@ export class OperationsService {
         title: 'Evento aberto',
         description: `${event.name} precisa de presenca/finalizacao.`,
         href: '/dashboard/admin/events',
-        priority: this.priorityByAge(event.startsAt, STAFF_PENDING_THRESHOLDS.eventFinalization),
+        priority: this.priorityByAge(event.startsAt, thresholds.eventFinalization),
         createdAt: event.startsAt,
       })),
     ];
@@ -440,7 +432,13 @@ export class OperationsService {
     return this.sortTasks(notices).slice(0, 16);
   }
 
-  getGuildRules(): GuildRulesSummary {
+  async getGuildRules(): Promise<GuildRulesSummary> {
+    const [eventRewards, auctionRules, scoreRules] = await Promise.all([
+      this.businessRules.getEventRewards(),
+      this.businessRules.getAuctionTierRules(),
+      this.businessRules.getPriorityScoreRules(),
+    ]);
+
     return {
       sections: [
         {
@@ -456,10 +454,10 @@ export class OperationsService {
           key: 'auctions',
           title: 'Leiloes',
           bullets: [
-            'T2 minimo 650, T3 minimo 800, T4 minimo 900.',
-            'T4 e Legendary usam ALL-IN e Staff Review.',
-            'T4 comeca camada 4+ e abre camada menor progressivamente se nao houver bid valido.',
-            'Armas priorizam classe compativel com bonus forte no score, sem bloquear o bid quando elegivel.',
+            `T2 minimo ${auctionRules.T2.minimumBid}, T3 minimo ${auctionRules.T3.minimumBid}, T4 minimo ${auctionRules.T4.minimumBid}.`,
+            `T4 usa ${auctionRules.T4.auctionMode} e camada minima ${auctionRules.T4.minimumLayer}+. Legendary usa ${auctionRules.LEGENDARY.auctionMode} e camada minima ${auctionRules.LEGENDARY.minimumLayer}+.`,
+            'T4 abre camada menor progressivamente se o leilao fechar sem bid valido para a camada atual.',
+            `Score: camada x${scoreRules.layerWeight}, presenca x${scoreRules.attendanceWeight}, DKP bidado x${scoreRules.bidDkpWeight}, bonus de classe ${scoreRules.classPriorityBonus}.`,
           ],
         },
         {
@@ -478,6 +476,7 @@ export class OperationsService {
             'Presenca e marcada pela Staff.',
             'Eventos finalizados geram DKP automaticamente para presentes.',
             'Eventos cancelados nao contam para presenca nem DKP.',
+            `DKP atual por evento: ${Object.entries(eventRewards).map(([type, reward]) => `${type}=${reward}`).join(', ')}.`,
           ],
         },
         {
@@ -608,6 +607,99 @@ export class OperationsService {
 
     return {
       month,
+      dkpEarned: transactions.filter((row) => row.amount > 0).reduce((sum, row) => sum + row.amount, 0),
+      dkpSpent: Math.abs(transactions.filter((row) => row.amount < 0).reduce((sum, row) => sum + row.amount, 0)),
+      attendanceEvents: new Set(attendances.map((row) => row.eventId)).size,
+      dropsDelivered: drops.length,
+      daoshiApprovedCents: daoshiReceipts.reduce((sum, row) => sum + (row.approvedCents ?? 0), 0),
+      itemRequestsDelivered,
+      topPlayers: [...byPlayer.values()]
+        .sort((a, b) => (b.dkpDelta + b.attendanceCount * 50 + b.dropsCount * 25 + b.daoshiApprovedCents / 1000) - (a.dkpDelta + a.attendanceCount * 50 + a.dropsCount * 25 + a.daoshiApprovedCents / 1000))
+        .slice(0, 15),
+    };
+  }
+
+  async getWeeklySummary(): Promise<WeeklyGuildSummary> {
+    const now = new Date();
+    const day = now.getUTCDay();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day, 0, 0, 0, 0));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 7);
+    const summary = await this.getPeriodSummary(start, end);
+
+    return {
+      weekStart: start.toISOString(),
+      weekEnd: end.toISOString(),
+      ...summary,
+    };
+  }
+
+  private async getPeriodSummary(start: Date, end: Date): Promise<Omit<SeasonMonthlySummary, 'month'>> {
+    const [transactions, attendances, drops, daoshiReceipts, itemRequestsDelivered] = await Promise.all([
+      this.prisma.dKPTransaction.findMany({
+        where: { createdAt: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.eventAttendance.findMany({
+        where: { attended: true, event: { status: EventStatus.FINALIZED, finalizedAt: { gte: start, lt: end } } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.dropHistory.findMany({
+        where: { deliveredAt: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.daoshiCashReceipt.findMany({
+        where: { status: 'APPROVED', purchaseDate: { gte: start, lt: end } },
+        include: { player: { select: { id: true, nickname: true } } },
+      }),
+      this.prisma.itemRequest.count({
+        where: { remainingQuantity: 0, updatedAt: { gte: start, lt: end } },
+      }),
+    ]);
+
+    return this.composePeriodSummary(transactions, attendances, drops, daoshiReceipts, itemRequestsDelivered);
+  }
+
+  private composePeriodSummary(
+    transactions: Array<{ amount: number; player?: { id: string; nickname: string } | null }>,
+    attendances: Array<{ eventId: string; player?: { id: string; nickname: string } | null }>,
+    drops: Array<{ player?: { id: string; nickname: string } | null }>,
+    daoshiReceipts: Array<{ approvedCents?: number | null; player?: { id: string; nickname: string } | null }>,
+    itemRequestsDelivered: number,
+  ): Omit<SeasonMonthlySummary, 'month'> {
+    const byPlayer = new Map<string, { playerId: string; nickname: string; dkpDelta: number; attendanceCount: number; dropsCount: number; daoshiApprovedCents: number }>();
+    const ensure = (player?: { id: string; nickname: string } | null) => {
+      if (!player) return null;
+      const current = byPlayer.get(player.id) ?? {
+        playerId: player.id,
+        nickname: player.nickname,
+        dkpDelta: 0,
+        attendanceCount: 0,
+        dropsCount: 0,
+        daoshiApprovedCents: 0,
+      };
+      byPlayer.set(player.id, current);
+      return current;
+    };
+
+    for (const transaction of transactions) {
+      const row = ensure(transaction.player);
+      if (row) row.dkpDelta += transaction.amount;
+    }
+    for (const attendance of attendances) {
+      const row = ensure(attendance.player);
+      if (row) row.attendanceCount += 1;
+    }
+    for (const drop of drops) {
+      const row = ensure(drop.player);
+      if (row) row.dropsCount += 1;
+    }
+    for (const receipt of daoshiReceipts) {
+      const row = ensure(receipt.player);
+      if (row) row.daoshiApprovedCents += receipt.approvedCents ?? 0;
+    }
+
+    return {
       dkpEarned: transactions.filter((row) => row.amount > 0).reduce((sum, row) => sum + row.amount, 0),
       dkpSpent: Math.abs(transactions.filter((row) => row.amount < 0).reduce((sum, row) => sum + row.amount, 0)),
       attendanceEvents: new Set(attendances.map((row) => row.eventId)).size,
