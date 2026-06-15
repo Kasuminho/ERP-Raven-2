@@ -425,15 +425,6 @@ export class StaffReviewService {
           },
         });
 
-        if (remainingValidBids === 0) {
-          await this.auctionsService.expandLayerOrRelistAfterEmptyBidsWithinTransaction(
-            request.auctionId,
-            tx,
-            reviewerId,
-            note?.trim() || request.reason,
-          );
-        }
-
         await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_BID_CANCELLATION_APPROVED', 'AuctionBidCancellationRequest', requestId, {
           auctionId: request.auctionId,
           bidId: request.bidId,
@@ -441,6 +432,7 @@ export class StaffReviewService {
           reason: request.reason,
           note: note?.trim() || undefined,
           releasedLockId: lock?.id,
+          remainingValidBids,
         });
 
         return approved;

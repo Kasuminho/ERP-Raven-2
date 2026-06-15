@@ -222,14 +222,16 @@ export class AuctionsService {
             where: { id: bid.id },
             data: { isValid: false },
           });
-
-          await this.expandLayerOrRelistAfterEmptyBidsWithinTransaction(
-            auctionId,
-            tx,
-            userId,
-            'Auto-approved player bid cancellation removed the last valid bid.',
-          );
         }
+
+        const remainingValidBids = isAutoApproved
+          ? await tx.auctionBid.count({
+              where: {
+                auctionId,
+                isValid: true,
+              },
+            })
+          : undefined;
 
         await this.auditService.logWithinTransaction({
           actorId: userId,
@@ -243,6 +245,7 @@ export class AuctionsService {
             reason: normalizedReason,
             autoApproved: isAutoApproved,
             releasedLockId,
+            remainingValidBids,
           },
         }, tx);
 
