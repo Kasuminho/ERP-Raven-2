@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PlayerClass, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { PlayersRepository } from '../repositories/players.repository';
 
 const reviewRequiredCategories = new Set<ProgressCategory>([
@@ -31,6 +32,7 @@ export class PlayersService {
   constructor(
     private readonly repository: PlayersRepository,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   health(): { module: string; ready: boolean } {
@@ -314,7 +316,7 @@ export class PlayersService {
     const [progress, author] = await Promise.all([
       this.repository.client.playerProgress.findUnique({
         where: { id: progressId },
-        select: { id: true, playerId: true },
+        select: { id: true, playerId: true, category: true, player: { select: { nickname: true } } },
       }),
       this.repository.client.user.findUnique({
         where: { id: authorId },
@@ -366,6 +368,22 @@ export class PlayersService {
         commentId: comment.id,
       },
     });
+
+    if (isStaff && !isOwner) {
+      await this.notificationsService.createForPlayer({
+        playerId: progress.playerId,
+        type: 'PROGRESS_STAFF_COMMENT',
+        title: 'Staff comentou no seu progresso',
+        body: `Seu post de ${progress.category} recebeu um comentario da Staff.`,
+        href: '/dashboard/profile',
+        metadata: {
+          progressId,
+          category: progress.category,
+          playerName: progress.player.nickname,
+          commentId: comment.id,
+        },
+      });
+    }
 
     return comment;
   }

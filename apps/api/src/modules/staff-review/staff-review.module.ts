@@ -4,12 +4,13 @@ import { AuditModule } from '../audit/audit.module';
 import { AuctionsModule } from '../auctions/auctions.module';
 import { DkpModule } from '../dkp/dkp.module';
 import { EligibilityModule } from '../eligibility/eligibility.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { StaffReviewController } from './controllers/staff-review.controller';
 import { StaffReviewRepository } from './repositories/staff-review.repository';
 import { StaffReviewService } from './services/staff-review.service';
 
 @Module({
-  imports: [AuditModule, AuctionsModule, DkpModule, EligibilityModule],
+  imports: [AuditModule, AuctionsModule, DkpModule, EligibilityModule, NotificationsModule],
   controllers: [StaffReviewController],
   providers: [StaffReviewService, StaffReviewRepository, RolesGuard],
   exports: [StaffReviewService],

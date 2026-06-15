@@ -45,6 +45,13 @@ function isBossRequest(request: { itemCatalog?: { category?: string | null } | n
   return request.itemCatalog?.category === 'creature';
 }
 
+function smartQueueLabel(locale: ReturnType<typeof useLocaleStore.getState>['locale'], request: ItemRequest): { label: string; tone: 'green' | 'gold' | 'red' | 'blue' | 'muted' } {
+  if (isBossRequest(request)) return { label: t(locale, 'queueBossManual'), tone: 'blue' };
+  if (request.warned4d || request.warned3d) return { label: t(locale, 'queueBlockedByUpdate'), tone: 'red' };
+  if (request.rankPosition === 1) return { label: t(locale, 'queueNextLikely'), tone: 'gold' };
+  return { label: t(locale, 'queueNoUpdateNeeded'), tone: 'green' };
+}
+
 function groupRequestsByItem(requests: ItemRequest[] = []) {
   const groups = new Map<string, ItemRequest[]>();
 
@@ -255,6 +262,7 @@ function PlayerItemRequestsPanel() {
                     <p className="text-xs text-muted-foreground">
                       {t(locale, 'lastUpdate')}: {request.legacyUpdatedAt ? new Date(request.legacyUpdatedAt).toLocaleString() : new Date(request.updatedAt).toLocaleString()}
                     </p>
+                    <Badge tone={smartQueueLabel(locale, request).tone}>{smartQueueLabel(locale, request).label}</Badge>
                   </div>
                 ))}
               </div>

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CodexRequest, CodexRequestStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { ImageStorageService } from '../../uploads/image-storage.service';
 import { CreateCodexRequestDto, SendCodexRequestDto } from '../dto';
 
@@ -24,6 +25,7 @@ export class CodexService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
     private readonly imageStorage: ImageStorageService,
   ) {}
 
@@ -82,6 +84,17 @@ export class CodexService {
     await this.audit('CODEX_REQUEST_SENT', id, actorId, {
       playerId: request.playerId,
       proofImageUrl: updated.proofImageUrl,
+    });
+    await this.notificationsService.createForPlayer({
+      playerId: request.playerId,
+      type: 'CODEX_SENT',
+      title: 'Codex enviado',
+      body: 'A Staff marcou seu codex como enviado. Confirme se deu certo ou solicite retry se quebrou.',
+      href: '/dashboard/codex',
+      metadata: {
+        codexRequestId: id,
+        proofImageUrl: updated.proofImageUrl,
+      },
     });
 
     return updated;

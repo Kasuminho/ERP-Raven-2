@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ClipboardList, Search } from 'lucide-react';
+import { ClipboardList, Gavel, HandHeart, History, Search, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useItemAuditDetails, useItemAuditSummaries } from '@/hooks/use-guild-api';
+import { useItemAuditFull, useItemAuditSummaries } from '@/hooks/use-guild-api';
+import { t } from '@/lib/i18n';
+import { useLocaleStore } from '@/store/locale-store';
 import { displayImageUrl } from '@/lib/images';
 import type { ItemAuditSummary } from '@/types/api';
 
@@ -19,6 +21,7 @@ function itemLabel(item: ItemAuditSummary) {
 }
 
 export default function ItemAuditByItemPage() {
+  const locale = useLocaleStore((state) => state.locale);
   const [search, setSearch] = useState('');
   const summaries = useItemAuditSummaries(search);
   const [selected, setSelected] = useState<ItemAuditSummary | null>(null);
@@ -26,7 +29,8 @@ export default function ItemAuditByItemPage() {
     () => ({ itemCatalogId: selected?.itemCatalogId, itemName: selected?.itemCatalogId ? undefined : selected?.itemName }),
     [selected],
   );
-  const details = useItemAuditDetails(detailParams);
+  const details = useItemAuditFull(detailParams);
+  const audit = details.data;
 
   return (
     <div className="space-y-6">
@@ -89,7 +93,28 @@ export default function ItemAuditByItemPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {!selected && <p className="text-sm text-muted-foreground">Escolha um item na lista para abrir o log completo.</p>}
-            {selected && (details.data ?? []).map((drop) => (
+            {selected && (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-md border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">{t(locale, 'deliveryProofs')}</p>
+                  <p className="text-2xl font-bold">{audit?.drops.length ?? 0}</p>
+                </div>
+                <div className="rounded-md border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">{t(locale, 'auctionsRan')}</p>
+                  <p className="text-2xl font-bold">{audit?.auctions.length ?? 0}</p>
+                </div>
+                <div className="rounded-md border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">{t(locale, 'interestDeclarations')}</p>
+                  <p className="text-2xl font-bold">{audit?.interestPosts.reduce((sum, post) => sum + (post.entries?.length ?? 0), 0) ?? 0}</p>
+                </div>
+                <div className="rounded-md border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">{t(locale, 'auditLogs')}</p>
+                  <p className="text-2xl font-bold">{audit?.logs.length ?? 0}</p>
+                </div>
+              </div>
+            )}
+
+            {selected && (audit?.drops ?? []).map((drop) => (
               <div key={drop.id} className="rounded-md border bg-background/35 p-3 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -119,8 +144,64 @@ export default function ItemAuditByItemPage() {
                 )}
               </div>
             ))}
-            {selected && (details.data ?? []).length === 0 && (
+            {selected && (audit?.drops ?? []).length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma entrega encontrada para este item.</p>
+            )}
+            {selected && (audit?.auctions ?? []).length > 0 && (
+              <section className="space-y-2 pt-2">
+                <h3 className="flex items-center gap-2 font-semibold"><Gavel className="h-4 w-4 text-primary" /> {t(locale, 'auctionsRan')}</h3>
+                {audit?.auctions.map((auction) => (
+                  <div key={auction.id} className="rounded-md border bg-background/35 p-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <strong>{auction.itemName}</strong>
+                      <span className="flex flex-wrap gap-2">
+                        <Badge tone="gold">{auction.itemTier}</Badge>
+                        <Badge tone="blue">{auction.status}</Badge>
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{auction.bids?.length ?? 0} bid(s) - {new Date(auction.createdAt).toLocaleString()}</p>
+                  </div>
+                ))}
+              </section>
+            )}
+            {selected && (audit?.interestPosts ?? []).length > 0 && (
+              <section className="space-y-2 pt-2">
+                <h3 className="flex items-center gap-2 font-semibold"><HandHeart className="h-4 w-4 text-primary" /> {t(locale, 'interestDeclarations')}</h3>
+                {audit?.interestPosts.map((post) => (
+                  <div key={post.id} className="rounded-md border bg-background/35 p-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <strong>{post.title}</strong>
+                      <Badge tone="blue">{post.status}</Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{post.entries?.length ?? 0} interessado(s) - {post.votes?.length ?? 0} voto(s)</p>
+                  </div>
+                ))}
+              </section>
+            )}
+            {selected && (audit?.winners ?? []).length > 0 && (
+              <section className="space-y-2 pt-2">
+                <h3 className="flex items-center gap-2 font-semibold"><Trophy className="h-4 w-4 text-primary" /> Vencedores</h3>
+                {audit?.winners.map((winner) => (
+                  <div key={`${winner.auctionId}-${winner.player?.id ?? winner.deliveredAt}`} className="rounded-md border bg-background/35 p-3 text-sm">
+                    <p className="font-semibold">{winner.player?.nickname ?? 'Player nao vinculado'}</p>
+                    <p className="text-xs text-muted-foreground">{winner.auctionTitle} - {winner.deliveredAt ? new Date(winner.deliveredAt).toLocaleString() : 'sem entrega'}</p>
+                  </div>
+                ))}
+              </section>
+            )}
+            {selected && (audit?.logs ?? []).length > 0 && (
+              <section className="space-y-2 pt-2">
+                <h3 className="flex items-center gap-2 font-semibold"><History className="h-4 w-4 text-primary" /> {t(locale, 'auditLogs')}</h3>
+                {audit?.logs.slice(0, 25).map((log) => (
+                  <div key={log.id} className="rounded-md border bg-background/35 p-3 text-xs">
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <strong>{log.action}</strong>
+                      <span className="text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{log.targetType} - {log.actor?.discordNickname || log.actor?.discordUsername || 'sistema'}</p>
+                  </div>
+                ))}
+              </section>
             )}
           </CardContent>
         </Card>

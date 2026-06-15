@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -6,6 +6,7 @@ import { OperationsService } from './operations.service';
 import {
   DiscordTemplateSummary,
   GuildRulesSummary,
+  IntegritySummary,
   LegacyAuditSummary,
   LootFairnessSummary,
   NoticeBoardItem,
@@ -82,6 +83,20 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async weekly(): Promise<WeeklyGuildSummary> {
     return this.service.getWeeklySummary();
+  }
+
+  @Post('staff/weekly/post')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async postWeekly(): Promise<{ posted: boolean; summary: WeeklyGuildSummary }> {
+    return this.service.postWeeklySummary();
+  }
+
+  @Get('staff/integrity')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async integrity(): Promise<IntegritySummary> {
+    return this.service.getIntegritySummary();
   }
 
   @Get('staff/fairness')

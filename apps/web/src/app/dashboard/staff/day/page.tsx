@@ -57,6 +57,9 @@ export default function StaffDayPage() {
           <CardContent className="grid gap-3 md:grid-cols-3">
             {[
               ['Eventos', '/dashboard/admin/events'],
+              ['Anuncios', '/dashboard/admin/announcements'],
+              ['Itens', '/dashboard/admin/items'],
+              ['Leiloes', '/dashboard/auctions'],
               ['Revisoes', '/dashboard/staff/reviews'],
               ['Interesses', '/dashboard/staff/interests'],
               ['Entregas', '/dashboard/staff/deliveries'],

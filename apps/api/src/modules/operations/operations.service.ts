@@ -4,6 +4,7 @@ import {
   AnnouncementStatus,
   AuctionStatus,
   CodexRequestStatus,
+  DKPTransactionType,
   EventStatus,
   ItemTier,
   ItemInterestStatus,
@@ -11,7 +12,9 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { BusinessRulesService } from '../business-rules/business-rules.service';
+import { NotificationService } from '../discord/services/notification.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
+import { IntegrityIssue, IntegritySummary } from './operations.types';
 import { SeasonMonthlySummary, StaffDayViewSummary, WeeklyGuildSummary } from './operations.types';
 import {
   DiscordTemplateSummary,
@@ -42,6 +45,7 @@ export class OperationsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly businessRules: BusinessRulesService,
+    private readonly discordNotifications: NotificationService,
   ) {}
 
   async getPlayerSummary(userId: string): Promise<PlayerOperationsSummary> {
@@ -54,7 +58,7 @@ export class OperationsService {
       return { tasks: [], counts: { urgent: 0, bids: 0, requests: 0, codex: 0, interests: 0, progress: 0 } };
     }
 
-    const [requests, codexRequests, bids, openInterests, myInterestEntries, progress] = await Promise.all([
+    const [requests, codexRequests, bids, openInterests, myInterestEntries, progress, progressesWithComments] = await Promise.all([
       this.prisma.itemRequest.findMany({
         where: { playerId: player.id, remainingQuantity: { gt: 0 } },
         include: { itemCatalog: true },
@@ -93,6 +97,48 @@ export class OperationsService {
         where: { playerId: player.id, reviewStatus: ProgressReviewStatus.PENDING },
         orderBy: { createdAt: 'desc' },
         take: 5,
+      }),
+      this.prisma.playerProgress.findMany({
+        where: {
+          playerId: player.id,
+          comments: {
+            some: {
+              author: {
+                players: {
+                  some: {
+                    roles: {
+                      some: {
+                        role: { name: { in: ['STAFF', 'ADMIN'] } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          comments: {
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  discordNickname: true,
+                  discordUsername: true,
+                  players: {
+                    select: {
+                      roles: { select: { role: { select: { name: true } } } },
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
       }),
     ]);
 
@@ -175,6 +221,28 @@ export class OperationsService {
       });
     }
 
+    const unreadProgressComments = progressesWithComments.filter((row) => row.comments.some((comment) => {
+      const isStaffComment = comment.author.players.some((authorPlayer) => authorPlayer.roles.some((roleRow) => ['STAFF', 'ADMIN'].includes(roleRow.role.name)));
+      const wasRead = row.playerReadCommentsAt && comment.createdAt <= row.playerReadCommentsAt;
+      return isStaffComment && !wasRead;
+    }));
+
+    for (const row of unreadProgressComments.slice(0, 5)) {
+      tasks.push({
+        id: row.id,
+        type: 'PROGRESS_STAFF_COMMENT',
+        title: 'Comentario da Staff no progresso',
+        description: `${row.category} recebeu comentario da Staff. Veja antes de mandar nova atualizacao.`,
+        href: '/dashboard/profile',
+        priority: 'medium',
+        createdAt: row.comments[0]?.createdAt ?? row.createdAt,
+        metadata: {
+          category: row.category,
+          unreadComments: row.comments.length,
+        },
+      });
+    }
+
     return {
       tasks: this.sortTasks(tasks).slice(0, 12),
       counts: {
@@ -183,7 +251,7 @@ export class OperationsService {
         requests: requests.length,
         codex: codexRequests.length,
         interests: openInterests.filter((post) => !declaredInterestIds.has(post.id)).length,
-        progress: progress.length,
+        progress: progress.length + unreadProgressComments.length,
       },
     };
   }
@@ -513,6 +581,190 @@ export class OperationsService {
     };
   }
 
+  async getIntegritySummary(): Promise<IntegritySummary> {
+    const now = new Date();
+    const oldCodexDate = new Date(now.getTime() - 7 * DAYS);
+    const [
+      validBids,
+      activeLocks,
+      expiredOpenAuctions,
+      staleSentCodex,
+      finalizedEvents,
+      eventTransactions,
+      incompletePlayers,
+      codexImageDeleteFailures,
+    ] = await Promise.all([
+      this.prisma.auctionBid.findMany({
+        where: {
+          isValid: true,
+          auction: { status: { in: [AuctionStatus.OPEN, AuctionStatus.PENDING_REVIEW] } },
+        },
+        include: { auction: { select: { id: true, itemName: true, status: true } }, player: { select: { nickname: true } } },
+        take: 500,
+      }),
+      this.prisma.dKPLock.findMany({
+        where: {
+          released: false,
+          auction: { status: { in: [AuctionStatus.OPEN, AuctionStatus.PENDING_REVIEW] } },
+        },
+        include: { auction: { select: { id: true, itemName: true, status: true } }, player: { select: { nickname: true } } },
+        take: 500,
+      }),
+      this.prisma.auction.findMany({
+        where: { status: AuctionStatus.OPEN, endsAt: { lt: now } },
+        orderBy: { endsAt: 'asc' },
+        take: 50,
+      }),
+      this.prisma.codexRequest.findMany({
+        where: { status: CodexRequestStatus.SENT, sentAt: { lt: oldCodexDate } },
+        include: { player: { select: { nickname: true } } },
+        orderBy: { sentAt: 'asc' },
+        take: 50,
+      }),
+      this.prisma.event.findMany({
+        where: { status: EventStatus.FINALIZED },
+        select: { id: true, name: true, finalizedAt: true },
+        orderBy: { finalizedAt: 'desc' },
+        take: 200,
+      }),
+      this.prisma.dKPTransaction.findMany({
+        where: { type: DKPTransactionType.EVENT_REWARD, referenceId: { not: null } },
+        select: { referenceId: true },
+        take: 1000,
+      }),
+      this.prisma.player.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { nickname: { equals: '' } },
+            { dimensionalLayer: { lt: 1 } },
+          ],
+        },
+        select: { id: true, nickname: true, dimensionalLayer: true, userId: true },
+        take: 50,
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: 'CODEX_REQUEST_IMAGE_DELETE_FAILED',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+    ]);
+
+    const lockByBidKey = new Set(activeLocks.map((lock) => `${lock.auctionId}:${lock.playerId}`));
+    const bidByLockKey = new Set(validBids.map((bid) => `${bid.auctionId}:${bid.playerId}`));
+    const eventIdsWithTransactions = new Set(eventTransactions.map((transaction) => transaction.referenceId).filter(Boolean));
+    const issues: IntegrityIssue[] = [];
+
+    for (const bid of validBids.filter((bid) => !lockByBidKey.has(`${bid.auctionId}:${bid.playerId}`)).slice(0, 50)) {
+      issues.push({
+        id: `bid-lock-${bid.id}`,
+        type: 'BID_WITHOUT_LOCK',
+        severity: 'high',
+        title: 'Bid valido sem lock',
+        description: `${bid.player.nickname} tem bid valido em ${bid.auction.itemName}, mas sem DKP travado.`,
+        href: `/dashboard/auctions/${bid.auctionId}`,
+        createdAt: bid.createdAt,
+        metadata: { auctionId: bid.auctionId, playerId: bid.playerId, bidId: bid.id },
+      });
+    }
+
+    for (const lock of activeLocks.filter((lock) => !bidByLockKey.has(`${lock.auctionId}:${lock.playerId}`)).slice(0, 50)) {
+      issues.push({
+        id: `lock-bid-${lock.id}`,
+        type: 'LOCK_WITHOUT_BID',
+        severity: 'high',
+        title: 'Lock ativo sem bid valido',
+        description: `${lock.player.nickname} tem ${lock.amount} DKP travado em ${lock.auction.itemName}, mas sem bid valido.`,
+        href: `/dashboard/auctions/${lock.auctionId}`,
+        createdAt: lock.createdAt,
+        metadata: { auctionId: lock.auctionId, playerId: lock.playerId, lockId: lock.id },
+      });
+    }
+
+    for (const auction of expiredOpenAuctions) {
+      issues.push({
+        id: `expired-auction-${auction.id}`,
+        type: 'EXPIRED_OPEN_AUCTION',
+        severity: 'medium',
+        title: 'Leilao aberto vencido',
+        description: `${auction.itemName} passou do horario de fechamento e ainda esta OPEN.`,
+        href: `/dashboard/auctions/${auction.id}`,
+        createdAt: auction.endsAt,
+        metadata: { auctionId: auction.id, endsAt: auction.endsAt.toISOString() },
+      });
+    }
+
+    for (const request of staleSentCodex) {
+      issues.push({
+        id: `codex-sent-${request.id}`,
+        type: 'STALE_SENT_CODEX',
+        severity: 'medium',
+        title: 'Codex enviado sem confirmacao',
+        description: `${request.player.nickname} tem codex enviado ha mais de 7 dias sem confirmar ou pedir retry.`,
+        href: '/dashboard/staff/codex',
+        createdAt: request.sentAt ?? request.updatedAt,
+        metadata: { codexRequestId: request.id, playerId: request.playerId },
+      });
+    }
+
+    for (const event of finalizedEvents.filter((event) => !eventIdsWithTransactions.has(event.id)).slice(0, 50)) {
+      issues.push({
+        id: `event-dkp-${event.id}`,
+        type: 'FINALIZED_EVENT_WITHOUT_DKP',
+        severity: 'high',
+        title: 'Evento finalizado sem DKP',
+        description: `${event.name} esta finalizado, mas nao encontrei transacao EVENT_REWARD vinculada.`,
+        href: '/dashboard/admin/events',
+        createdAt: event.finalizedAt ?? undefined,
+        metadata: { eventId: event.id },
+      });
+    }
+
+    for (const player of incompletePlayers) {
+      issues.push({
+        id: `player-incomplete-${player.id}`,
+        type: 'INCOMPLETE_PLAYER_PROFILE',
+        severity: 'low',
+        title: 'Player com perfil incompleto',
+        description: `${player.nickname || player.id} precisa revisar dados operacionais do perfil.`,
+        href: `/dashboard/staff/item-audit?discordId=${player.userId ?? ''}`,
+        metadata: { playerId: player.id, dimensionalLayer: player.dimensionalLayer },
+      });
+    }
+
+    for (const log of codexImageDeleteFailures) {
+      issues.push({
+        id: `codex-image-${log.id}`,
+        type: 'CONFIRMED_CODEX_IMAGE_PRESENT',
+        severity: 'low',
+        title: 'Falha ao limpar imagem de codex',
+        description: 'Houve falha auditada ao tentar remover imagem/prova de codex no Google Drive.',
+        href: '/dashboard/staff/codex',
+        createdAt: log.createdAt,
+        metadata: { auditLogId: log.id, targetId: log.targetId, metadata: log.metadata },
+      });
+    }
+
+    const ordered = issues.sort((left, right) => {
+      const weight = { high: 0, medium: 1, low: 2 };
+      return weight[left.severity] - weight[right.severity]
+        || new Date(left.createdAt ?? 0).getTime() - new Date(right.createdAt ?? 0).getTime();
+    }).slice(0, 150);
+
+    return {
+      generatedAt: now,
+      counts: {
+        high: ordered.filter((issue) => issue.severity === 'high').length,
+        medium: ordered.filter((issue) => issue.severity === 'medium').length,
+        low: ordered.filter((issue) => issue.severity === 'low').length,
+        total: ordered.length,
+      },
+      issues: ordered,
+    };
+  }
+
   async getStaffDayView(): Promise<StaffDayViewSummary> {
     const staff = await this.getStaffSummary();
     const now = new Date();
@@ -632,6 +884,35 @@ export class OperationsService {
       weekEnd: end.toISOString(),
       ...summary,
     };
+  }
+
+  async postWeeklySummary(): Promise<{ posted: boolean; summary: WeeklyGuildSummary }> {
+    const summary = await this.getWeeklySummary();
+    const topPlayers = summary.topPlayers.slice(0, 5).map((player, index) => {
+      const score = player.dkpDelta + player.attendanceCount * 50 + player.dropsCount * 25 + player.daoshiApprovedCents / 1000;
+      return `${index + 1}. ${player.nickname} - score ${Math.round(score)} | DKP ${player.dkpDelta} | presencas ${player.attendanceCount} | drops ${player.dropsCount}`;
+    });
+    const staff = await this.getStaffSummary();
+    const message = [
+      '**Resumo semanal da guild**',
+      '',
+      `Periodo: ${new Date(summary.weekStart).toLocaleDateString('pt-BR')} ate ${new Date(summary.weekEnd).toLocaleDateString('pt-BR')}`,
+      `DKP distribuido: ${summary.dkpEarned}`,
+      `DKP gasto em leiloes/ajustes negativos: ${summary.dkpSpent}`,
+      `Eventos com presenca: ${summary.attendanceEvents}`,
+      `Drops entregues: ${summary.dropsDelivered}`,
+      `Pedidos finalizados: ${summary.itemRequestsDelivered}`,
+      `Daoshi aprovado: R$ ${(summary.daoshiApprovedCents / 100).toFixed(2)}`,
+      '',
+      '**Top da semana**',
+      topPlayers.length > 0 ? topPlayers.join('\n') : 'Sem movimentacao suficiente ainda.',
+      '',
+      '**Pendencias da Staff**',
+      `Reviews: ${staff.counts.reviews} | Entregas: ${staff.counts.deliveries} | Codex: ${staff.counts.codex} | Interesses: ${staff.counts.interests}`,
+    ].join('\n');
+
+    await this.discordNotifications.sendOperationalNotification('', message, 'weekly-guild-summary');
+    return { posted: true, summary };
   }
 
   private async getPeriodSummary(start: Date, end: Date): Promise<Omit<SeasonMonthlySummary, 'month'>> {

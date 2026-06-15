@@ -7,6 +7,7 @@ import { BellRing, BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass,
 import { ProfileLocaleSync } from '@/components/dashboard/profile-locale-sync';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Button } from '@/components/ui/button';
+import { useUnreadNotificationsCount } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
@@ -36,6 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const hasRole = useAuthStore((state) => state.hasRole);
   const locale = useLocaleStore((state) => state.locale);
   const isStaff = hasRole(['STAFF', 'ADMIN']);
+  const unreadNotifications = useUnreadNotificationsCount();
+  const unreadCount = unreadNotifications.data?.count ?? 0;
 
   return (
     <AuthGuard>
@@ -56,7 +59,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   pathname === item.href && 'border border-primary/20 bg-muted/90 text-foreground shadow-inner',
                 )}
               >
-                <item.icon className={cn('h-4 w-4 transition group-hover:text-primary', pathname === item.href && 'text-primary')} /> {t(locale, item.label)}
+                <item.icon className={cn('h-4 w-4 transition group-hover:text-primary', pathname === item.href && 'text-primary')} />
+                <span className="min-w-0 flex-1 truncate">{t(locale, item.label)}</span>
+                {item.href === '/dashboard/notices' && unreadCount > 0 && (
+                  <span className="rounded-full border border-primary/35 bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">{unreadCount}</span>
+                )}
               </Link>
             ))}
             {isStaff && (
@@ -95,7 +102,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             >
               <item.icon className="h-4 w-4" />
-              <span className="max-w-full truncate">{t(locale, item.label)}</span>
+              <span className="relative max-w-full truncate">
+                {t(locale, item.label)}
+                {item.href === '/dashboard/notices' && unreadCount > 0 && (
+                  <span className="absolute -right-2 -top-2 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </span>
             </Link>
           ))}
         </nav>

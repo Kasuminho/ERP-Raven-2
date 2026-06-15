@@ -25,10 +25,10 @@ export class NotificationsService {
     });
   }
 
-  async unreadCount(userId: string): Promise<{ unread: number }> {
+  async unreadCount(userId: string): Promise<{ count: number }> {
     const notifications = await this.listForUser(userId);
 
-    return { unread: notifications.filter((notification) => !notification.readAt).length };
+    return { count: notifications.filter((notification) => !notification.readAt).length };
   }
 
   async markRead(userId: string, notificationId: string): Promise<Notification> {

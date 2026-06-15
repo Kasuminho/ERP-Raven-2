@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAttendanceStats, useAuctions, useDkpLeaderboard, useDkpSummary, useEvents, useItemRequests, usePlayerId, usePlayerOperations } from '@/hooks/use-guild-api';
+import { useAttendanceStats, useAuctions, useDkpLeaderboard, useDkpSummary, useEvents, useItemRequests, useMyNotifications, usePlayerId, usePlayerOperations } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const leaderboard = useDkpLeaderboard();
   const itemRequests = useItemRequests();
   const operations = usePlayerOperations();
+  const notifications = useMyNotifications();
   const requestsNeedingUpdate = (itemRequests.data ?? []).filter((request) => !isBossRequest(request) && request.rankPosition === 1 && (request.warned3d || request.warned4d));
   const upcomingEvents = (events.data ?? [])
     .filter((event) => ['OPEN', 'ATTENDANCE_REGISTRATION'].includes(event.status) && new Date(event.startsAt).getTime() >= Date.now())
@@ -50,6 +51,21 @@ export default function DashboardPage() {
       tone: 'info',
     });
   }, [locale, requestsNeedingUpdate]);
+
+  useEffect(() => {
+    const unread = (notifications.data ?? []).filter((notification) => !notification.readAt);
+    if (unread.length === 0) return;
+
+    const key = `internal-notifications-toast-${unread.map((notification) => notification.id).sort().join('-')}`;
+    if (sessionStorage.getItem(key)) return;
+
+    sessionStorage.setItem(key, '1');
+    notifyToast({
+      title: t(locale, 'internalNotifications'),
+      description: `${unread.length} ${t(locale, 'unread')}`,
+      tone: 'info',
+    });
+  }, [locale, notifications.data]);
 
   return (
     <div className="space-y-6">

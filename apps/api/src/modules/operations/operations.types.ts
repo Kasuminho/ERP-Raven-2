@@ -82,6 +82,30 @@ export type WeeklyGuildSummary = Omit<SeasonMonthlySummary, 'month'> & {
   weekEnd: string;
 };
 
+export type IntegrityIssueSeverity = 'high' | 'medium' | 'low';
+
+export type IntegrityIssue = {
+  id: string;
+  type: string;
+  severity: IntegrityIssueSeverity;
+  title: string;
+  description: string;
+  href?: string;
+  createdAt?: Date | string;
+  metadata?: Record<string, unknown>;
+};
+
+export type IntegritySummary = {
+  generatedAt: Date;
+  counts: {
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  };
+  issues: IntegrityIssue[];
+};
+
 export type NoticeBoardItem = {
   id: string;
   type: string;

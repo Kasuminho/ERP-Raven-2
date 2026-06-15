@@ -244,6 +244,132 @@ export class DropsService {
     }));
   }
 
+  async getItemAuditFull(query: { itemCatalogId?: string; itemName?: string }) {
+    const itemCatalogId = query.itemCatalogId?.trim();
+    const itemName = query.itemName?.trim();
+
+    if (!itemCatalogId && !itemName) {
+      throw new BadRequestException('itemCatalogId or itemName is required.');
+    }
+
+    const itemWhere = itemCatalogId
+      ? { itemCatalogId }
+      : {
+          OR: [
+            { itemName: { equals: itemName, mode: 'insensitive' as const } },
+            { itemCatalog: { namePt: { equals: itemName, mode: 'insensitive' as const } } },
+            { itemCatalog: { nameEn: { equals: itemName, mode: 'insensitive' as const } } },
+            { itemCatalog: { nameEs: { equals: itemName, mode: 'insensitive' as const } } },
+          ],
+        };
+
+    const [drops, auctions, interestPosts] = await Promise.all([
+      this.getItemAuditDetails(query),
+      this.prisma.auction.findMany({
+        where: itemCatalogId
+          ? { itemCatalogId }
+          : {
+              OR: [
+                { itemName: { equals: itemName, mode: 'insensitive' } },
+                { itemCatalog: { namePt: { equals: itemName, mode: 'insensitive' } } },
+                { itemCatalog: { nameEn: { equals: itemName, mode: 'insensitive' } } },
+                { itemCatalog: { nameEs: { equals: itemName, mode: 'insensitive' } } },
+              ],
+            },
+        include: {
+          itemCatalog: true,
+          bids: {
+            include: { player: { select: { id: true, nickname: true, dimensionalLayer: true } } },
+            orderBy: { bidAmount: 'desc' },
+          },
+          dropHistory: { include: { player: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      this.prisma.itemInterestPost.findMany({
+        where: itemCatalogId
+          ? { itemCatalogId }
+          : {
+              OR: [
+                { title: { contains: itemName, mode: 'insensitive' } },
+                { itemCatalog: { namePt: { equals: itemName, mode: 'insensitive' } } },
+                { itemCatalog: { nameEn: { equals: itemName, mode: 'insensitive' } } },
+                { itemCatalog: { nameEs: { equals: itemName, mode: 'insensitive' } } },
+              ],
+            },
+        include: {
+          itemCatalog: true,
+          entries: {
+            include: {
+              player: { select: { id: true, nickname: true, dimensionalLayer: true } },
+              dropHistory: true,
+              votes: { include: { voter: { select: { id: true, discordUsername: true, discordNickname: true } } } },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+          votes: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+    ]);
+
+    const targetIds = [
+      ...drops.map((drop) => drop.id),
+      ...drops.map((drop) => drop.auctionId).filter((id): id is string => Boolean(id)),
+      ...drops.map((drop) => drop.itemInterestEntryId).filter((id): id is string => Boolean(id)),
+      ...auctions.map((auction) => auction.id),
+      ...auctions.flatMap((auction) => auction.bids.map((bid) => bid.id)),
+      ...interestPosts.map((post) => post.id),
+      ...interestPosts.flatMap((post) => post.entries.map((entry) => entry.id)),
+    ];
+
+    const logs = targetIds.length > 0
+      ? await this.prisma.auditLog.findMany({
+          where: { targetId: { in: [...new Set(targetIds)] } },
+          include: {
+            actor: {
+              select: {
+                id: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 300,
+        })
+      : [];
+
+    const winners = auctions
+      .filter((auction) => auction.dropHistory)
+      .map((auction) => ({
+        auctionId: auction.id,
+        itemName: auction.itemName,
+        playerId: auction.dropHistory?.playerId,
+        playerName: auction.dropHistory?.player?.nickname ?? auction.dropHistory?.nicknameIngame,
+        deliveredAt: auction.dropHistory?.deliveredAt,
+        proofImageUrl: auction.dropHistory?.proofImageUrl,
+      }));
+
+    return {
+      summary: {
+        deliveredCount: drops.length,
+        auctionsCount: auctions.length,
+        interestPostsCount: interestPosts.length,
+        winnersCount: winners.length,
+        logsCount: logs.length,
+      },
+      drops,
+      auctions,
+      interestPosts,
+      winners,
+      logs,
+      query: itemWhere,
+    };
+  }
+
   async deliverAuctionDrop(auctionId: string, proofImageUrl: string | undefined, actorId: string) {
     if (!proofImageUrl?.trim()) {
       throw new BadRequestException('Proof image is required to deliver an auction drop.');

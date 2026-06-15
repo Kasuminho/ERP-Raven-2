@@ -474,6 +474,23 @@ export type ItemAuditDrop = DropHistory & {
   } | null;
 };
 
+export type ItemAuditFull = {
+  summary: ItemAuditDrop[];
+  drops: ItemAuditDrop[];
+  auctions: Array<Auction & {
+    itemCatalog?: ItemCatalog;
+    bids?: AuctionBid[];
+    dropHistory?: DropHistory & { player?: PlayerProfile };
+  }>;
+  interestPosts: Array<ItemInterestPost & {
+    entries?: Array<{ id: string; player?: PlayerProfile; imageUrl?: string; status: string; createdAt: string }>;
+    votes?: Array<{ id: string; voter?: { discordUsername: string; discordNickname?: string }; targetPlayerId: string; createdAt: string }>;
+    dropHistory?: DropHistory[];
+  }>;
+  winners: Array<{ auctionId: string; auctionTitle: string; player?: PlayerProfile; deliveredAt?: string }>;
+  logs: AuditLog[];
+};
+
 export type PlayerStaffNote = {
   id: string;
   playerId: string;
@@ -678,6 +695,26 @@ export type StaffOperationsSummary = {
     events: number;
     announcements: number;
   };
+};
+
+export type IntegritySummary = {
+  generatedAt: string;
+  counts: {
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  };
+  issues: Array<{
+    id: string;
+    type: string;
+    severity: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    href?: string;
+    createdAt?: string;
+    metadata?: Record<string, unknown>;
+  }>;
 };
 
 export type BusinessRule = {

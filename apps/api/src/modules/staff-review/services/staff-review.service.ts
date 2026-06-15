@@ -4,6 +4,7 @@ import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { EligibilityService } from '../../eligibility/services/eligibility.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import {
   IneligibleStaffApprovalException,
   InvalidStaffReviewActionException,
@@ -49,6 +50,7 @@ export class StaffReviewService {
     private readonly dkpService: DkpService,
     private readonly eligibilityService: EligibilityService,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async approveAuctionWinner(auctionId: string, playerId: string, reviewerId: string): Promise<StaffReviewDetails | Auction> {
@@ -371,7 +373,7 @@ export class StaffReviewService {
   }
 
   async approveBidCancellation(requestId: string, reviewerId: string, note?: string): Promise<AuctionBidCancellationRequest> {
-    return this.repository.client.$transaction(
+    const approved = await this.repository.client.$transaction(
       async (tx) => {
         const request = await tx.auctionBidCancellationRequest.findUnique({
           where: { id: requestId },
@@ -439,10 +441,26 @@ export class StaffReviewService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+
+    await this.notificationsService.createForPlayer({
+      playerId: approved.playerId,
+      type: 'AUCTION_BID_CANCELLATION_APPROVED',
+      title: 'Cancelamento de bid aprovado',
+      body: 'A Staff aprovou seu pedido de cancelamento. O DKP travado foi liberado.',
+      href: `/dashboard/auctions/${approved.auctionId}`,
+      metadata: {
+        requestId,
+        bidId: approved.bidId,
+        auctionId: approved.auctionId,
+        reviewNote: approved.reviewNote,
+      },
+    });
+
+    return approved;
   }
 
   async rejectBidCancellation(requestId: string, reviewerId: string, note?: string): Promise<AuctionBidCancellationRequest> {
-    return this.repository.client.$transaction(async (tx) => {
+    const rejected = await this.repository.client.$transaction(async (tx) => {
       const request = await tx.auctionBidCancellationRequest.findUnique({
         where: { id: requestId },
       });
@@ -475,6 +493,22 @@ export class StaffReviewService {
 
       return rejected;
     });
+
+    await this.notificationsService.createForPlayer({
+      playerId: rejected.playerId,
+      type: 'AUCTION_BID_CANCELLATION_REJECTED',
+      title: 'Cancelamento de bid recusado',
+      body: 'A Staff recusou seu pedido de cancelamento. Seu bid continua ativo.',
+      href: `/dashboard/auctions/${rejected.auctionId}`,
+      metadata: {
+        requestId,
+        bidId: rejected.bidId,
+        auctionId: rejected.auctionId,
+        reviewNote: rejected.reviewNote,
+      },
+    });
+
+    return rejected;
   }
 
   async getAuctionReviewDetails(auctionId: string): Promise<StaffReviewDetails> {

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, InternalNotification, ItemAuditDrop, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -129,6 +129,24 @@ export function useWeeklySummary() {
   return useQuery({
     queryKey: ['operations', 'staff', 'weekly'],
     queryFn: async () => (await api.get<WeeklyGuildSummary>('/operations/staff/weekly')).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePostWeeklySummary() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<{ posted: boolean; summary: WeeklyGuildSummary }>('/operations/staff/weekly/post')).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['operations', 'staff', 'weekly'] });
+    },
+  });
+}
+
+export function useIntegritySummary() {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'integrity'],
+    queryFn: async () => (await api.get<IntegritySummary>('/operations/staff/integrity')).data,
     refetchInterval: 60_000,
   });
 }
@@ -858,6 +876,14 @@ export function useItemAuditDetails(params: { itemCatalogId?: string; itemName?:
   return useQuery({
     queryKey: ['drops', 'audit-item', params.itemCatalogId ?? '', params.itemName ?? ''],
     queryFn: async () => (await api.get<ItemAuditDrop[]>('/drops/audit/item', { params })).data,
+    enabled: Boolean(params.itemCatalogId || params.itemName),
+  });
+}
+
+export function useItemAuditFull(params: { itemCatalogId?: string; itemName?: string }) {
+  return useQuery({
+    queryKey: ['drops', 'audit-item-full', params.itemCatalogId ?? '', params.itemName ?? ''],
+    queryFn: async () => (await api.get<ItemAuditFull>('/drops/audit/item/full', { params })).data,
     enabled: Boolean(params.itemCatalogId || params.itemName),
   });
 }

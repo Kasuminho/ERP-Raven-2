@@ -76,6 +76,13 @@ function localizeTask(task: OperationTask, locale: Locale): { title: string; des
         description: `${category ? progressCategoryLabel(category as ProgressCategory, locale) : task.title} ${t(locale, 'taskProgressReviewHelp')}`,
       };
     }
+    case 'PROGRESS_STAFF_COMMENT': {
+      const category = metadataString(task, 'category');
+      return {
+        title: t(locale, 'taskProgressStaffComment'),
+        description: `${category ? progressCategoryLabel(category as ProgressCategory, locale) : task.title} ${t(locale, 'taskProgressStaffCommentHelp')}`,
+      };
+    }
     default:
       return { title: task.title, description: task.description };
   }

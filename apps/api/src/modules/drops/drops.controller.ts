@@ -43,6 +43,13 @@ export class DropsController {
     return this.service.getItemAuditDetails({ itemCatalogId, itemName });
   }
 
+  @Get('audit/item/full')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async itemAuditFull(@Query('itemCatalogId') itemCatalogId?: string, @Query('itemName') itemName?: string) {
+    return this.service.getItemAuditFull({ itemCatalogId, itemName });
+  }
+
   @Post('auction/:auctionId/deliver')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
