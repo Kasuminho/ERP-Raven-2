@@ -41,6 +41,10 @@ function categoryLabel(locale: ReturnType<typeof useLocaleStore.getState>['local
   return category ?? 'item';
 }
 
+function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
+  return request.itemCatalog?.category === 'creature';
+}
+
 function groupRequestsByItem(requests: ItemRequest[] = []) {
   const groups = new Map<string, ItemRequest[]>();
 
@@ -96,6 +100,7 @@ function PlayerItemRequestsPanel() {
   const groupedRankings = useMemo(() => groupRequestsByItem(rankings.data ?? []), [rankings.data]);
 
   function requestStatus(request: ItemRequest): { label: string; tone: 'green' | 'gold' | 'red' } {
+    if (isBossRequest(request)) return { label: t(locale, 'requestUpToDate'), tone: 'green' };
     if (request.updateProofStatus === 'PENDING') return { label: t(locale, 'updatePendingStaffReview'), tone: 'gold' };
     if (request.warned4d) return { label: t(locale, 'requestLastWarning'), tone: 'red' };
     if (request.warned3d) return { label: t(locale, 'requestUpdateNeeded'), tone: 'gold' };
@@ -174,41 +179,43 @@ function PlayerItemRequestsPanel() {
                   <Badge tone={request.rankPosition === 1 ? 'gold' : 'blue'}>{categoryLabel(locale, request.itemCatalog?.category)}</Badge>
                 </div>
               </div>
-              {request.updateProofImageUrl && (
+              {!isBossRequest(request) && request.updateProofImageUrl && (
                 <div className="flex items-center gap-3 rounded-md border bg-background/35 p-2 text-sm">
                   <img className="h-14 w-14 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />
                   <span className="text-muted-foreground">{t(locale, 'newUpdateProof')}</span>
                 </div>
               )}
-              <div className="space-y-2 rounded-md border border-primary/25 bg-primary/10 p-3">
-                <p className="text-sm text-primary">{t(locale, 'updateRequestProofHelp')}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <FileUploadButton
-                    className="max-w-xs"
-                    label={t(locale, 'attachImage')}
-                    onFileSelect={(files) => {
-                      const file = files?.[0];
-                      if (file) uploadImage.mutate(file, { onSuccess: (data) => setUpdateProofs((current) => ({ ...current, [request.id]: data.url })) });
-                    }}
-                  />
-                  {updateProofs[request.id] && <span className="text-xs text-primary">{t(locale, 'printAttached')}</span>}
-                  <Button
-                    variant="secondary"
-                    disabled={!updateProofs[request.id] || updateRequest.isPending || uploadImage.isPending}
-                    onClick={() => updateRequest.mutate(
-                      { id: request.id, imageUrl: updateProofs[request.id] },
-                      {
-                        onSuccess: () => {
-                          setUpdateProofs((current) => ({ ...current, [request.id]: '' }));
-                          notifyToast({ title: t(locale, 'requestUpToDate'), tone: 'success' });
+              {!isBossRequest(request) && (
+                <div className="space-y-2 rounded-md border border-primary/25 bg-primary/10 p-3">
+                  <p className="text-sm text-primary">{t(locale, 'updateRequestProofHelp')}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <FileUploadButton
+                      className="max-w-xs"
+                      label={t(locale, 'attachImage')}
+                      onFileSelect={(files) => {
+                        const file = files?.[0];
+                        if (file) uploadImage.mutate(file, { onSuccess: (data) => setUpdateProofs((current) => ({ ...current, [request.id]: data.url })) });
+                      }}
+                    />
+                    {updateProofs[request.id] && <span className="text-xs text-primary">{t(locale, 'printAttached')}</span>}
+                    <Button
+                      variant="secondary"
+                      disabled={!updateProofs[request.id] || updateRequest.isPending || uploadImage.isPending}
+                      onClick={() => updateRequest.mutate(
+                        { id: request.id, imageUrl: updateProofs[request.id] },
+                        {
+                          onSuccess: () => {
+                            setUpdateProofs((current) => ({ ...current, [request.id]: '' }));
+                            notifyToast({ title: t(locale, 'requestUpToDate'), tone: 'success' });
+                          },
                         },
-                      },
-                    )}
-                  >
-                    <CheckCircle2 className="h-4 w-4" /> {t(locale, 'updateRequest')}
-                  </Button>
+                      )}
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> {t(locale, 'updateRequest')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
           {!requests.isLoading && (requests.data ?? []).length === 0 && (
@@ -280,7 +287,7 @@ function StaffItemRequestsPanel() {
 
   const grouped = useMemo(() => groupRequestsByItem(requests.data ?? []), [requests.data]);
   const pendingUpdates = useMemo(
-    () => (requests.data ?? []).filter((request) => request.updateProofStatus === 'PENDING' && request.updateProofImageUrl),
+    () => (requests.data ?? []).filter((request) => !isBossRequest(request) && request.updateProofStatus === 'PENDING' && request.updateProofImageUrl),
     [requests.data],
   );
 
@@ -384,7 +391,7 @@ function StaffItemRequestsPanel() {
                         <img className="h-20 w-20 rounded-md border object-cover" src={displayImageUrl(request.imageUrl)} alt={request.itemName} />
                       </a>
                     )}
-                    {request.updateProofImageUrl && (
+                    {!isBossRequest(request) && request.updateProofImageUrl && (
                       <a href={request.updateProofImageUrl} target="_blank" rel="noreferrer">
                         <img className="h-20 w-20 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />
                       </a>
@@ -453,17 +460,17 @@ function StaffItemRequestsPanel() {
                       </div>
                       <div className="mt-2 flex gap-3">
                         {request.imageUrl && <img className="h-16 w-16 rounded-md border object-cover" src={displayImageUrl(request.imageUrl)} alt={request.itemName} />}
-                        {request.updateProofImageUrl && <img className="h-16 w-16 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />}
+                        {!isBossRequest(request) && request.updateProofImageUrl && <img className="h-16 w-16 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />}
                         <div>
                           <p className="text-sm text-muted-foreground">
                             {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {t(locale, 'lastUpdate')}: {request.legacyUpdatedAt ? new Date(request.legacyUpdatedAt).toLocaleString() : new Date(request.updatedAt).toLocaleString()}
-                            {request.warned3d ? ' - 3d' : ''}
-                            {request.warned4d ? ' - 4d' : ''}
+                            {!isBossRequest(request) && request.warned3d ? ' - 3d' : ''}
+                            {!isBossRequest(request) && request.warned4d ? ' - 4d' : ''}
                           </p>
-                          {request.updateProofStatus === 'PENDING' && (
+                          {!isBossRequest(request) && request.updateProofStatus === 'PENDING' && (
                             <p className="mt-1 text-xs text-primary">{t(locale, 'updatePendingStaffReview')}</p>
                           )}
                         </div>
@@ -487,12 +494,14 @@ function StaffItemRequestsPanel() {
                       >
                         <PackageCheck className="h-4 w-4" /> {t(locale, 'deliver')}
                       </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => updateRequest.mutate(request.id, { onSuccess: () => notifyToast({ title: t(locale, 'requestUpToDate'), tone: 'success' }) })}
-                      >
-                        <CheckCircle2 className="h-4 w-4" /> {t(locale, 'update')}
-                      </Button>
+                      {!isBossRequest(request) && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => updateRequest.mutate(request.id, { onSuccess: () => notifyToast({ title: t(locale, 'requestUpToDate'), tone: 'success' }) })}
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> {t(locale, 'update')}
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         onClick={() => dropRank.mutate(request.id, { onSuccess: () => notifyToast({ title: t(locale, 'dropRank'), tone: 'success' }) })}

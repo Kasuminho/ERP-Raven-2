@@ -8,6 +8,8 @@ import { ApproveItemRequestUpdateDto, CreateItemRequestDto, DeliverItemRequestDt
 import { ItemRequestDetails, ItemRequestsRepository } from '../repositories/item-requests.repository';
 
 const categoryLimitExemptions = new Set(['creature of gaiety', 'elder dragon isteria', 'carnival queen']);
+const categoryLimitExemptCategories = new Set(['creature']);
+const updateExpiryExemptCategories = new Set(['creature']);
 
 @Injectable()
 export class ItemRequestsService {
@@ -465,12 +467,25 @@ export class ItemRequestsService {
   async processStaleRequests(now = new Date()): Promise<{ warned3d: number; warned4d: number; dropped: number }> {
     const requests = await this.repository.client.itemRequest.findMany({
       where: { rankPosition: 1 },
+      include: { itemCatalog: true },
       orderBy: [{ itemName: 'asc' }, { rankPosition: 'asc' }],
     });
     const result = { warned3d: 0, warned4d: 0, dropped: 0 };
 
     for (const request of requests) {
-      if (categoryLimitExemptions.has(request.itemName)) {
+      if (this.isUpdateExpiryExemptRequest(request)) {
+        if (request.warned3d || request.warned4d || request.lastReminderStage || request.lastReminderAt) {
+          await this.repository.update(request.id, {
+            warned3d: false,
+            warned4d: false,
+            lastReminderStage: null,
+            lastReminderAt: null,
+          });
+          await this.audit('ITEM_REQUEST_EXPIRY_CLEARED_FOR_BOSS', request.id, undefined, {
+            itemName: request.itemName,
+            category: request.itemCatalog?.category,
+          });
+        }
         continue;
       }
 
@@ -555,13 +570,13 @@ export class ItemRequestsService {
   }
 
   private async validateCategoryLimit(discordId: string, item: ItemCatalog, tx: Prisma.TransactionClient): Promise<void> {
-    if (categoryLimitExemptions.has(this.itemKey(item))) {
+    if (this.isCategoryLimitExemptItem(item)) {
       return;
     }
 
     const existingRequests = await this.repository.findByDiscord(discordId, tx);
     const sameCategory = existingRequests.find((request) => {
-      if (categoryLimitExemptions.has(request.itemName)) {
+      if (this.isUpdateExpiryExemptRequest(request)) {
         return false;
       }
 
@@ -600,10 +615,20 @@ export class ItemRequestsService {
   } | null> {
     const firstRequest = await tx.itemRequest.findFirst({
       where: { itemName, rankPosition: 1 },
+      include: { itemCatalog: true },
       orderBy: [{ rankPosition: 'asc' }, { createdAt: 'asc' }],
     });
 
     if (!firstRequest) {
+      return null;
+    }
+
+    if (this.isUpdateExpiryExemptRequest(firstRequest)) {
+      await this.auditWithinTransaction(tx, 'ITEM_REQUEST_QUEUE_RESET_SKIPPED_FOR_BOSS', firstRequest.id, actorId, {
+        itemName,
+        promotedPlayerName: firstRequest.playerName,
+        category: firstRequest.itemCatalog?.category,
+      });
       return null;
     }
 
@@ -644,6 +669,16 @@ export class ItemRequestsService {
     return item.kind === 'request'
       || requestableItemKeys.has(this.itemKey(item))
       || requestableItemCategories.has(item.category);
+  }
+
+  private isCategoryLimitExemptItem(item: ItemCatalog): boolean {
+    return categoryLimitExemptions.has(this.itemKey(item))
+      || Boolean(item.category && categoryLimitExemptCategories.has(item.category));
+  }
+
+  private isUpdateExpiryExemptRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): boolean {
+    return categoryLimitExemptions.has(request.itemName)
+      || Boolean(request.itemCatalog?.category && updateExpiryExemptCategories.has(request.itemCatalog.category));
   }
 
   private async createDropHistory(

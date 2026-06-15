@@ -7,15 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
 import { useCloseItemInterest, useDeliverItemInterest, useItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
-import type { ItemInterestEntry, ItemInterestPost } from '@/types/api';
+import type { ItemInterestEntry, ItemInterestPost, ItemType } from '@/types/api';
 
 const STAFF_VOTE_THRESHOLD = 3;
+const itemTypes: ItemType[] = ['WEAPON', 'ARMOR', 'ACCESSORY', 'CELESTIAL_STONE'];
 
 function currentRoundVotes(post: ItemInterestPost): Map<string, number> {
   const counts = new Map<string, number>();
@@ -70,6 +73,14 @@ function sortedEntriesByVotes(post: ItemInterestPost): ItemInterestEntry[] {
   });
 }
 
+function localDateKey(value: string): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function itemTypeLabel(type: ItemType): string {
+  return type.replace('_', ' ');
+}
+
 export default function StaffInterestsPage() {
   const locale = useLocaleStore((state) => state.locale);
   const userId = useAuthStore((state) => state.userId);
@@ -81,11 +92,16 @@ export default function StaffInterestsPage() {
   const uploadImage = useUploadImage();
   const [proofs, setProofs] = useState<Record<string, string>>({});
   const [showResolved, setShowResolved] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'ALL' | ItemType>('ALL');
+  const [createdDateFilter, setCreatedDateFilter] = useState('');
   const [votingEntryId, setVotingEntryId] = useState<string>();
 
   const postsToRender = useMemo(
-    () => (posts.data ?? []).filter((post) => showResolved || !['DELIVERED', 'CANCELLED'].includes(post.status)),
-    [posts.data, showResolved],
+    () => (posts.data ?? [])
+      .filter((post) => showResolved || !['DELIVERED', 'CANCELLED'].includes(post.status))
+      .filter((post) => typeFilter === 'ALL' || post.itemCatalog?.itemType === typeFilter)
+      .filter((post) => !createdDateFilter || localDateKey(post.createdAt) === createdDateFilter),
+    [createdDateFilter, posts.data, showResolved, typeFilter],
   );
 
   return (
@@ -95,10 +111,37 @@ export default function StaffInterestsPage() {
         <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'interestPosts')}</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t(locale, 'staffInterestsFlowHelp')}</p>
       </div>
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <input className="h-4 w-4 accent-primary" type="checkbox" checked={showResolved} onChange={(event) => setShowResolved(event.target.checked)} />
-        {t(locale, 'showResolvedInterests')}
-      </label>
+      <Card>
+        <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+          <label className="space-y-1 text-sm">
+            <span className="text-xs uppercase text-muted-foreground">{t(locale, 'filterByType')}</span>
+            <Select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as 'ALL' | ItemType)}>
+              <option value="ALL">{t(locale, 'allTypes')}</option>
+              {itemTypes.map((type) => (
+                <option key={type} value={type}>{itemTypeLabel(type)}</option>
+              ))}
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs uppercase text-muted-foreground">{t(locale, 'filterByAddedDate')}</span>
+            <Input type="date" value={createdDateFilter} onChange={(event) => setCreatedDateFilter(event.target.value)} />
+          </label>
+          <label className="flex items-center gap-2 rounded-md border bg-background/45 px-3 py-2 text-sm text-muted-foreground">
+            <input className="h-4 w-4 accent-primary" type="checkbox" checked={showResolved} onChange={(event) => setShowResolved(event.target.checked)} />
+            {t(locale, 'showResolvedInterests')}
+          </label>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setTypeFilter('ALL');
+              setCreatedDateFilter('');
+              setShowResolved(false);
+            }}
+          >
+            {t(locale, 'clearFilters')}
+          </Button>
+        </CardContent>
+      </Card>
       <div className="space-y-4">
         {postsToRender.map((post) => {
           const selectedEntry = (post.entries ?? []).find((entry) => entry.id === post.selectedEntryId);

@@ -13,6 +13,10 @@ import { useAttendanceStats, useAuctions, useDkpLeaderboard, useDkpSummary, useE
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 
+function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
+  return request.itemCatalog?.category === 'creature';
+}
+
 export default function DashboardPage() {
   const locale = useLocaleStore((state) => state.locale);
   const playerId = usePlayerId();
@@ -23,7 +27,7 @@ export default function DashboardPage() {
   const leaderboard = useDkpLeaderboard();
   const itemRequests = useItemRequests();
   const operations = usePlayerOperations();
-  const requestsNeedingUpdate = (itemRequests.data ?? []).filter((request) => request.rankPosition === 1 && (request.warned3d || request.warned4d));
+  const requestsNeedingUpdate = (itemRequests.data ?? []).filter((request) => !isBossRequest(request) && request.rankPosition === 1 && (request.warned3d || request.warned4d));
   const upcomingEvents = (events.data ?? [])
     .filter((event) => ['OPEN', 'ATTENDANCE_REGISTRATION'].includes(event.status) && new Date(event.startsAt).getTime() >= Date.now())
     .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime())

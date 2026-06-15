@@ -156,14 +156,14 @@ export default function ItemInterestsPage() {
                     >
                       {t(locale, 'declareInterest')}
                     </Button>
-                    {!post.viewerHasDeclared && !post.viewerSeenAt && (
+                    {!post.viewerHasDeclared && (
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={markSeen.isPending}
+                        disabled={Boolean(post.viewerSeenAt) || markSeen.isPending}
                         onClick={() => markSeen.mutate(post.id, { onSuccess: () => notifyToast({ title: t(locale, 'interestMarkedSeen'), tone: 'success' }) })}
                       >
-                        {t(locale, 'markSeen')}
+                        {post.viewerSeenAt ? t(locale, 'seen') : t(locale, 'markSeen')}
                       </Button>
                     )}
                   </div>

@@ -42,6 +42,10 @@ const STAFF_PENDING_THRESHOLDS = {
   itemRequest: { mediumAfterMs: 2 * DAYS, highAfterMs: 5 * DAYS },
 } satisfies Record<string, PriorityThreshold>;
 
+function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
+  return request.itemCatalog?.category === 'creature';
+}
+
 @Injectable()
 export class OperationsService {
   constructor(
@@ -62,6 +66,7 @@ export class OperationsService {
     const [requests, codexRequests, bids, openInterests, myInterestEntries, progress] = await Promise.all([
       this.prisma.itemRequest.findMany({
         where: { playerId: player.id, remainingQuantity: { gt: 0 } },
+        include: { itemCatalog: true },
         orderBy: [{ rankPosition: 'asc' }, { updatedAt: 'asc' }],
         take: 8,
       }),
@@ -104,7 +109,7 @@ export class OperationsService {
     const tasks: OperationTask[] = [];
 
     for (const request of requests) {
-      if (request.rankPosition === 1 && (request.warned3d || request.warned4d)) {
+      if (!isBossRequest(request) && request.rankPosition === 1 && (request.warned3d || request.warned4d)) {
         tasks.push({
           id: request.id,
           type: 'ITEM_REQUEST_UPDATE',
