@@ -142,6 +142,20 @@ export class AuctionsRepository {
     });
   }
 
+  async reactivateBid(
+    bidId: string,
+    bidAmount: number,
+    client: AuctionClient = this.prisma,
+  ): Promise<AuctionBid> {
+    return client.auctionBid.update({
+      where: { id: bidId },
+      data: {
+        bidAmount,
+        isValid: true,
+      },
+    });
+  }
+
   async updateStatus(
     auctionId: string,
     status: AuctionStatus,

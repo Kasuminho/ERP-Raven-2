@@ -92,4 +92,14 @@ export class DkpRepository {
       data: { amount },
     });
   }
+
+  async reactivateLock(lockId: string, amount: number, client: DkpClient = this.prisma): Promise<DKPLock> {
+    return client.dKPLock.update({
+      where: { id: lockId },
+      data: {
+        amount,
+        released: false,
+      },
+    });
+  }
 }

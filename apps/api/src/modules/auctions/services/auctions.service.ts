@@ -36,7 +36,7 @@ export type BidCancellationRequestResult = {
 
 type BidPlacementResult = {
   bid: AuctionBid;
-  auditAction: 'AUCTION_BID_PLACED' | 'AUCTION_BID_INCREASED';
+  auditAction: 'AUCTION_BID_PLACED' | 'AUCTION_BID_INCREASED' | 'AUCTION_BID_REACTIVATED';
   previousBidAmount?: number;
 };
 
@@ -550,8 +550,21 @@ export class AuctionsService {
 
     const existingBid = await this.repository.findBidByPlayerAndAuction(playerId, auctionId, tx);
 
-    if (existingBid && auction.auctionMode !== AuctionMode.STANDARD) {
+    if (existingBid?.isValid && auction.auctionMode !== AuctionMode.STANDARD) {
       throw new DuplicateBidException(playerId, auctionId);
+    }
+
+    if (existingBid && !existingBid.isValid) {
+      const approvedCancellation = await tx.auctionBidCancellationRequest.findFirst({
+        where: {
+          bidId: existingBid.id,
+          status: AuctionBidCancellationStatus.APPROVED,
+        },
+      });
+
+      if (!approvedCancellation) {
+        throw new DuplicateBidException(playerId, auctionId);
+      }
     }
 
     const eligibility = await this.eligibilityService.canPlayerBidWithinTransaction(playerId, auctionId, tx);
@@ -591,7 +604,7 @@ export class AuctionsService {
       ? availableDkp + existingLock.amount
       : availableDkp;
 
-    if (existingBid && validBidAmount <= existingBid.bidAmount) {
+    if (existingBid?.isValid && validBidAmount <= existingBid.bidAmount) {
       throw new InvalidBidException(`Bid amount must be greater than your current bid of ${existingBid.bidAmount}.`);
     }
 
@@ -608,7 +621,7 @@ export class AuctionsService {
         async (tx) => {
           const validation = await this.validateBidWithinTransaction(playerId, auctionId, amount, tx);
 
-          if (validation.existingBid) {
+          if (validation.existingBid?.isValid) {
             const updatedBid = await this.repository.updateBidAmount(
               validation.existingBid.id,
               validation.bidAmount,
@@ -620,6 +633,22 @@ export class AuctionsService {
             return {
               bid: updatedBid,
               auditAction: 'AUCTION_BID_INCREASED',
+              previousBidAmount: validation.existingBid.bidAmount,
+            };
+          }
+
+          if (validation.existingBid && !validation.existingBid.isValid) {
+            const reactivatedBid = await this.repository.reactivateBid(
+              validation.existingBid.id,
+              validation.bidAmount,
+              tx,
+            );
+
+            await this.dkpService.lockOrReactivateDKPWithinTransaction(playerId, auctionId, validation.bidAmount, tx);
+
+            return {
+              bid: reactivatedBid,
+              auditAction: 'AUCTION_BID_REACTIVATED',
               previousBidAmount: validation.existingBid.bidAmount,
             };
           }

@@ -334,6 +334,40 @@ export class DkpService {
     );
   }
 
+  async lockOrReactivateDKPWithinTransaction(
+    playerId: string,
+    auctionId: string,
+    amount: number,
+    client: Prisma.TransactionClient,
+  ): Promise<DKPLock> {
+    this.assertPositiveAmount(amount, 'Lock amount must be greater than zero.');
+
+    const existingLock = await this.repository.findLockByPlayerAndAuction(playerId, auctionId, client);
+
+    if (existingLock && !existingLock.released) {
+      throw new DuplicateDkpLockException(playerId, auctionId);
+    }
+
+    const snapshot = await this.getSnapshot(playerId, client);
+
+    if (snapshot.available < amount) {
+      throw new InsufficientDkpException(playerId);
+    }
+
+    if (existingLock) {
+      return this.repository.reactivateLock(existingLock.id, amount, client);
+    }
+
+    return this.repository.createLock(
+      {
+        player: { connect: { id: playerId } },
+        auction: { connect: { id: auctionId } },
+        amount,
+      },
+      client,
+    );
+  }
+
   async increaseAuctionLockWithinTransaction(
     playerId: string,
     auctionId: string,
