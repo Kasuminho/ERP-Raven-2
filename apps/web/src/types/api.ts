@@ -343,6 +343,8 @@ export type EligibilityRow = {
   availableDKP: number;
   bidId?: string;
   bidAmount?: number;
+  lockAmount?: number;
+  lockMatchesBid?: boolean;
   priorityScore: number;
   eligibilityStatus: 'ELIGIBLE' | 'INELIGIBLE' | 'NEEDS_STAFF_REVIEW';
   eligibilityReason: string;

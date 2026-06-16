@@ -8,6 +8,8 @@ export class RankingResponseDto {
   availableDKP!: number;
   bidId?: string;
   bidAmount?: number;
+  lockAmount?: number;
+  lockMatchesBid?: boolean;
   priorityScore!: number;
   eligibilityStatus!: EligibilityStatus;
   eligibilityReason!: string;

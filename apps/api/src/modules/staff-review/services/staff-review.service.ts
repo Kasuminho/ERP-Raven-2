@@ -580,6 +580,12 @@ export class StaffReviewService {
     if (!lock) {
       throw new InvalidStaffReviewActionException('Winner must have a valid active DKP lock.');
     }
+
+    if (lock.amount !== bid.bidAmount) {
+      throw new InvalidStaffReviewActionException(
+        `Winner bid and DKP lock are inconsistent. Bid: ${bid.bidAmount} DKP. Lock: ${lock.amount} DKP.`,
+      );
+    }
   }
 
   private async approveWinnerWithinTransaction(

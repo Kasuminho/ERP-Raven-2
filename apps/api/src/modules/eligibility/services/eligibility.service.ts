@@ -185,6 +185,27 @@ export class EligibilityService {
       );
     }
 
+    const lock = await client.dKPLock.findFirst({
+      where: {
+        auctionId,
+        playerId,
+        released: false,
+      },
+    });
+
+    if (!lock) {
+      return this.ineligible(playerId, auctionId, rules.requiresStaffReview, 'Player bid has no active DKP lock.');
+    }
+
+    if (lock.amount !== bid.bidAmount) {
+      return this.ineligible(
+        playerId,
+        auctionId,
+        rules.requiresStaffReview,
+        `Player bid and DKP lock are inconsistent. Bid: ${bid.bidAmount} DKP. Lock: ${lock.amount} DKP.`,
+      );
+    }
+
     return {
       playerId,
       auctionId,
@@ -322,7 +343,32 @@ export class EligibilityService {
     bidId?: string,
   ): Promise<RankingResponseDto> {
     const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(player.id, client);
-    const eligibility = await this.evaluatePlayer(player, auction, availableDKP, client);
+    const lock = bidAmount === undefined
+      ? null
+      : await client.dKPLock.findFirst({
+          where: {
+            auctionId,
+            playerId: player.id,
+            released: false,
+          },
+        });
+    const lockAmount = lock?.amount;
+    const lockMatchesBid = bidAmount === undefined ? undefined : lockAmount === bidAmount;
+    const eligibilityDkp = bidAmount === undefined ? availableDKP : bidAmount;
+    let eligibility = await this.evaluatePlayer(player, auction, eligibilityDkp, client);
+
+    if (bidAmount !== undefined && !lock) {
+      eligibility = {
+        eligibilityStatus: 'INELIGIBLE',
+        eligibilityReason: 'Bid has no active DKP lock.',
+      };
+    } else if (bidAmount !== undefined && lockAmount !== bidAmount) {
+      eligibility = {
+        eligibilityStatus: 'INELIGIBLE',
+        eligibilityReason: `Bid and DKP lock are inconsistent. Bid: ${bidAmount} DKP. Lock: ${lockAmount ?? 0} DKP.`,
+      };
+    }
+
     const scoreConfig = await this.businessRules.getPriorityScoreRules();
 
     return {
@@ -333,6 +379,8 @@ export class EligibilityService {
       availableDKP,
       bidId,
       bidAmount,
+      lockAmount,
+      lockMatchesBid,
       priorityScore: this.score(
         player.dimensionalLayer,
         player.attendancePercentage,
