@@ -155,7 +155,7 @@ export default function AuctionDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t(locale, 'rankingPreview')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {(ranking.data ?? []).slice(0, 6).map((row, index) => (
+            {canManageAuctions ?? (ranking.data ?? []).slice(0, 6).map((row, index) => (
               <div key={row.playerId} className="flex items-center justify-between rounded-md border bg-background/35 p-3 text-sm">
                 <span>{index + 1}. {row.nickname}</span>
                 <span className="text-primary">{Math.round(row.priorityScore)}</span>
@@ -168,7 +168,7 @@ export default function AuctionDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t(locale, 'bids')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {(bids.data ?? []).map((bid) => <div key={bid.id} className="flex justify-between text-sm"><span>{bid.playerId}</span><span>{bid.bidAmount} DKP</span></div>)}
+            {canManageAuctions ?? (bids.data ?? []).map((bid) => <div key={bid.id} className="flex justify-between text-sm"><span>{bid.playerId}</span><span>{bid.bidAmount} DKP</span></div>)}
           </CardContent>
         </Card>
       </aside>
