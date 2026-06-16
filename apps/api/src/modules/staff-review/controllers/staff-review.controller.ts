@@ -95,7 +95,7 @@ export class StaffReviewController {
     @Param('auctionId') auctionId: string,
     @Body() dto: RemoveBidDto,
     @Req() req: StaffRequest,
-  ): Promise<void> {
+  ): Promise<void | StaffReviewDetails> {
     return this.service.removeBid(auctionId, dto.bidId, req.user.userId, dto.reason);
   }
 

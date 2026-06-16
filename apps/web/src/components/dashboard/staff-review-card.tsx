@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
-import type { Auction, AuctionReviewVote, EligibilityRow } from '@/types/api';
+import type { Auction, AuctionBidInvalidationVote, AuctionReviewVote, EligibilityRow } from '@/types/api';
 
 const STAFF_REVIEW_THRESHOLD = 3;
 
-function voteName(vote: AuctionReviewVote): string {
+function voteName(vote: AuctionReviewVote | AuctionBidInvalidationVote): string {
   return vote.voter?.discordNickname || vote.voter?.discordUsername || vote.voterId;
 }
 
@@ -37,12 +37,18 @@ export function StaffReviewCard({
   const currentVote = votes.find((vote) => vote.voterId === userId);
   const rejectionVotes = votes.filter((vote) => vote.action === 'REJECT');
   const approvalVotes = votes.filter((vote) => vote.action === 'APPROVE');
+  const bidInvalidationVotes = auction.bidInvalidationVotes ?? [];
   const approvalsByPlayer = new Map<string, AuctionReviewVote[]>();
+  const invalidationsByBid = new Map<string, AuctionBidInvalidationVote[]>();
 
   for (const vote of approvalVotes) {
     if (!vote.playerId) continue;
 
     approvalsByPlayer.set(vote.playerId, [...(approvalsByPlayer.get(vote.playerId) ?? []), vote]);
+  }
+
+  for (const vote of bidInvalidationVotes) {
+    invalidationsByBid.set(vote.bidId, [...(invalidationsByBid.get(vote.bidId) ?? []), vote]);
   }
 
   const neededRejections = Math.max(0, STAFF_REVIEW_THRESHOLD - rejectionVotes.length);
@@ -64,9 +70,13 @@ export function StaffReviewCard({
           <div className="space-y-3">
             {ranking.map((candidate, index) => {
               const candidateVotes = approvalsByPlayer.get(candidate.playerId) ?? [];
+              const invalidationVotes = candidate.bidId ? invalidationsByBid.get(candidate.bidId) ?? [] : [];
               const neededApprovals = Math.max(0, STAFF_REVIEW_THRESHOLD - candidateVotes.length);
+              const neededInvalidations = Math.max(0, STAFF_REVIEW_THRESHOLD - invalidationVotes.length);
               const currentApprovalForCandidate =
                 currentVote?.action === 'APPROVE' && currentVote.playerId === candidate.playerId;
+              const currentInvalidationForCandidate =
+                candidate.bidId ? invalidationVotes.some((vote) => vote.voterId === userId) : false;
               const canApprove =
                 candidate.eligibilityStatus !== 'INELIGIBLE' && candidate.lockMatchesBid !== false;
 
@@ -121,6 +131,23 @@ export function StaffReviewCard({
                     </p>
                   </div>
 
+                  <div className="mt-3 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Invalidar este bid</span>
+                      <span>{invalidationVotes.length}/{STAFF_REVIEW_THRESHOLD}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-destructive transition-all"
+                        style={{ width: `${Math.min(100, (invalidationVotes.length / STAFF_REVIEW_THRESHOLD) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-muted-foreground">
+                      Votaram para invalidar:{' '}
+                      {invalidationVotes.length ? invalidationVotes.map(voteName).join(', ') : 'ninguem ainda'}
+                    </p>
+                  </div>
+
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Button
                       className="flex-1"
@@ -136,10 +163,14 @@ export function StaffReviewCard({
                     <Button
                       className="flex-1"
                       variant="secondary"
-                      disabled={!candidate.bidId || pending}
+                      disabled={!candidate.bidId || pending || currentInvalidationForCandidate}
                       onClick={() => candidate.bidId && onInvalidateBid?.(candidate.bidId)}
                     >
-                      Invalidar
+                      {currentInvalidationForCandidate
+                        ? 'Voto de invalidação registrado'
+                        : neededInvalidations > 0
+                          ? `Votar invalidar (${neededInvalidations})`
+                          : 'Invalidar bid'}
                     </Button>
                   </div>
                 </div>
@@ -177,7 +208,11 @@ export function StaffReviewCard({
         </div>
         <div className="flex gap-2">
           <Button className="flex-1" variant="danger" disabled={pending || currentVote?.action === 'REJECT'} onClick={onReject}>
-            {currentVote?.action === 'APPROVE' ? 'Alterar para rejeitar' : neededRejections > 0 ? `${t(locale, 'reject')} (${neededRejections})` : t(locale, 'reject')}
+            {currentVote?.action === 'APPROVE'
+              ? 'Alterar para rejeitar resultado'
+              : neededRejections > 0
+                ? `Rejeitar resultado e relistar (${neededRejections})`
+                : 'Rejeitar resultado e relistar'}
           </Button>
         </div>
       </CardContent>

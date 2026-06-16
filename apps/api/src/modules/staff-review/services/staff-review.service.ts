@@ -152,10 +152,10 @@ export class StaffReviewService {
     return this.approveWinner(auctionId, targetPlayerId, reviewerId, 'OVERRIDE_PRIORITY', reason);
   }
 
-  async removeBid(auctionId: string, bidId: string, reviewerId: string, reason: string): Promise<void> {
+  async removeBid(auctionId: string, bidId: string, reviewerId: string, reason: string): Promise<StaffReviewDetails | void> {
     this.assertReason(reason);
 
-    await this.repository.client.$transaction(
+    return this.repository.client.$transaction(
       async (tx) => {
         const auction = await this.requireAuction(auctionId, tx);
 
@@ -173,6 +173,47 @@ export class StaffReviewService {
           throw new InvalidStaffReviewActionException(`Bid ${bidId} has already been invalidated.`);
         }
 
+        await tx.auctionReviewVote.deleteMany({
+          where: {
+            auctionId,
+            voterId: reviewerId,
+            action: 'APPROVE',
+            playerId: bid.playerId,
+          },
+        });
+
+        await tx.auctionBidInvalidationVote.upsert({
+          where: { bidId_voterId: { bidId, voterId: reviewerId } },
+          create: {
+            auctionId,
+            bidId,
+            voterId: reviewerId,
+            reason,
+          },
+          update: {
+            reason,
+          },
+        });
+
+        const invalidationVotes = await tx.auctionBidInvalidationVote.count({
+          where: {
+            bidId,
+          },
+        });
+
+        await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_BID_INVALIDATION_VOTE', 'AuctionBid', bidId, {
+          auctionId,
+          bidId,
+          playerId: bid.playerId,
+          reason,
+          invalidationVotes,
+          requiredVotes: this.reviewVoteThreshold,
+        });
+
+        if (invalidationVotes < this.reviewVoteThreshold) {
+          return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
+        }
+
         const lock = await this.repository.findActiveLock(auctionId, bid.playerId, tx);
 
         if (lock) {
@@ -183,6 +224,7 @@ export class StaffReviewService {
         }
 
         await this.repository.invalidateBid(bidId, tx);
+        await this.repository.deleteBidInvalidationVotes(bidId, tx);
 
         const remainingValidBids = await tx.auctionBid.count({
           where: {
@@ -205,8 +247,11 @@ export class StaffReviewService {
           bidId,
           playerId: bid.playerId,
           reason,
+          invalidationThreshold: this.reviewVoteThreshold,
           releasedLockId: lock?.id,
         });
+
+        return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -521,7 +566,9 @@ export class StaffReviewService {
   ): Promise<StaffReviewDetails> {
     const [details, ranking, timeline] = await Promise.all([
       this.repository.findAuctionReviewDetails(auctionId, tx),
-      this.eligibilityService.rankAuctionCandidates(auctionId),
+      tx
+        ? this.eligibilityService.rankAuctionCandidatesWithinTransaction(auctionId, tx)
+        : this.eligibilityService.rankAuctionCandidates(auctionId),
       this.repository.findReviewTimeline(auctionId, tx),
     ]);
 

@@ -36,7 +36,7 @@ function ReviewItem({ auctionId }: { auctionId: string }) {
       return;
     }
 
-    removeBid.mutate({ bidId, reason }, { onSuccess: () => notifyToast({ title: 'Bid invalidado e DKP liberado.', tone: 'success' }) });
+    removeBid.mutate({ bidId, reason }, { onSuccess: () => notifyToast({ title: 'Voto de invalidação registrado.', tone: 'success' }) });
   }
 
   return (

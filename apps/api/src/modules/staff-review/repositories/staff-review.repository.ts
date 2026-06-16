@@ -75,6 +75,18 @@ export class StaffReviewRepository {
           },
           orderBy: { updatedAt: 'asc' },
         },
+        bidInvalidationVotes: {
+          include: {
+            voter: {
+              select: {
+                id: true,
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'asc' },
+        },
       },
     });
   }
@@ -125,6 +137,12 @@ export class StaffReviewRepository {
     return client.auctionBid.update({
       where: { id: bidId },
       data: { isValid: false },
+    });
+  }
+
+  async deleteBidInvalidationVotes(bidId: string, client: StaffReviewClient = this.prisma): Promise<void> {
+    await client.auctionBidInvalidationVote.deleteMany({
+      where: { bidId },
     });
   }
 

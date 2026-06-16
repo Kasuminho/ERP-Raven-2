@@ -58,6 +58,7 @@ export type Auction = {
   createdAt: string;
   itemCatalog?: ItemCatalog;
   reviewVotes?: AuctionReviewVote[];
+  bidInvalidationVotes?: AuctionBidInvalidationVote[];
 };
 
 export type AuctionReviewVote = {
@@ -67,6 +68,21 @@ export type AuctionReviewVote = {
   action: 'APPROVE' | 'REJECT' | string;
   playerId?: string;
   reason?: string;
+  createdAt: string;
+  updatedAt: string;
+  voter?: {
+    id: string;
+    discordUsername: string;
+    discordNickname?: string;
+  };
+};
+
+export type AuctionBidInvalidationVote = {
+  id: string;
+  auctionId: string;
+  bidId: string;
+  voterId: string;
+  reason: string;
   createdAt: string;
   updatedAt: string;
   voter?: {
