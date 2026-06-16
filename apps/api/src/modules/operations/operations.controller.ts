@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -7,6 +7,7 @@ import {
   DiscordTemplateSummary,
   GuildRulesSummary,
   IntegritySummary,
+  AuctionDiagnosticSummary,
   LegacyAuditSummary,
   LootFairnessSummary,
   NoticeBoardItem,
@@ -97,6 +98,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async integrity(): Promise<IntegritySummary> {
     return this.service.getIntegritySummary();
+  }
+
+  @Get('staff/auction-diagnostics/:auctionId')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async auctionDiagnostics(@Param('auctionId') auctionId: string): Promise<AuctionDiagnosticSummary> {
+    return this.service.getAuctionDiagnostics(auctionId);
   }
 
   @Get('staff/fairness')

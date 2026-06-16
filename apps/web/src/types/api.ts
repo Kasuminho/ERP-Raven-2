@@ -843,6 +843,99 @@ export type OperationalHealthSummary = StaffHealthSummary & {
   pendingQueueApproximation: number;
 };
 
+export type AuctionDiagnosticSummary = {
+  generatedAt: string;
+  outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
+  auction: {
+    id: string;
+    itemName: string;
+    itemTier: string;
+    itemType: string;
+    auctionMode: string;
+    status: string;
+    minimumBid: number;
+    minimumLayer?: number | null;
+    requiresStaffReview: boolean;
+    endsAt: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  counts: {
+    bids: number;
+    validBids: number;
+    invalidBids: number;
+    activeLocks: number;
+    validBidsWithActiveLocks: number;
+    validBidsAtMinimumLayer: number;
+    cancellationRequests: number;
+    approvalVotes: number;
+    rejectionVotes: number;
+    invalidationVotes: number;
+    auditLogs: number;
+  };
+  issues: Array<{
+    severity: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  bids: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    bidAmount: number;
+    isValid: boolean;
+    hasActiveLock: boolean;
+    activeLockAmount?: number;
+    createdAt: string;
+  }>;
+  locks: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    amount: number;
+    released: boolean;
+    createdAt: string;
+  }>;
+  cancellationRequests: Array<{
+    id: string;
+    bidId: string;
+    playerId: string;
+    playerName: string;
+    reason: string;
+    status: string;
+    reviewNote?: string | null;
+    reviewedAt?: string | null;
+    createdAt: string;
+  }>;
+  reviewVotes: Array<{
+    id: string;
+    action: string;
+    playerId?: string | null;
+    voterName: string;
+    reason?: string | null;
+    updatedAt: string;
+  }>;
+  bidInvalidationVotes: Array<{
+    id: string;
+    bidId: string;
+    voterName: string;
+    reason: string;
+    updatedAt: string;
+  }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    targetType: string;
+    targetId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt: string;
+    actorName?: string | null;
+  }>;
+};
+
 export type StaffDayViewSummary = {
   generatedAt: string;
   todaysAnnouncements: number;

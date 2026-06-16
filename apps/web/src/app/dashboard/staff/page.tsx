@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, BarChart3, BellRing, Calculator, CalendarCheck, ClipboardList, Coins, Database, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, ShieldAlert, SlidersHorizontal, Trophy, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, BellRing, Calculator, CalendarCheck, ClipboardList, Coins, Database, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, ShieldAlert, SlidersHorizontal, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -23,6 +23,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/meeting', titleKey: 'staffMeeting', descriptionKey: 'staffMeetingDescription', icon: HeartHandshake },
   { href: '/dashboard/staff/season', titleKey: 'seasonSummary', descriptionKey: 'seasonSummaryDescription', icon: Trophy },
   { href: '/dashboard/staff/auction-simulator', titleKey: 'auctionSimulator', descriptionKey: 'auctionSimulatorDescription', icon: Calculator },
+  { href: '/dashboard/staff/auction-diagnostics', titleKey: 'auctionDiagnostics', descriptionKey: 'auctionDiagnosticsDescription', icon: SearchCheck },
   { href: '/dashboard/staff/fairness', titleKey: 'lootFairness', descriptionKey: 'lootFairnessDescription', icon: Scale },
   { href: '/dashboard/staff/compare', titleKey: 'playerCompare', descriptionKey: 'playerCompareDescription', icon: UsersRound },
   { href: '/dashboard/staff/legacy-audit', titleKey: 'legacyAudit', descriptionKey: 'legacyAuditDescription', icon: Database },

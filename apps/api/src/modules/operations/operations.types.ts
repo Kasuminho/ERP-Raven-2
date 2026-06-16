@@ -188,3 +188,99 @@ export type OperationalHealthSummary = StaffHealthSummary & {
   activeAnnouncements: number;
   pendingQueueApproximation: number;
 };
+
+export type AuctionDiagnosticIssue = {
+  severity: IntegrityIssueSeverity;
+  title: string;
+  description: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type AuctionDiagnosticSummary = {
+  generatedAt: Date;
+  outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
+  auction: {
+    id: string;
+    itemName: string;
+    itemTier: string;
+    itemType: string;
+    auctionMode: string;
+    status: string;
+    minimumBid: number;
+    minimumLayer?: number | null;
+    requiresStaffReview: boolean;
+    endsAt: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  counts: {
+    bids: number;
+    validBids: number;
+    invalidBids: number;
+    activeLocks: number;
+    validBidsWithActiveLocks: number;
+    validBidsAtMinimumLayer: number;
+    cancellationRequests: number;
+    approvalVotes: number;
+    rejectionVotes: number;
+    invalidationVotes: number;
+    auditLogs: number;
+  };
+  issues: AuctionDiagnosticIssue[];
+  bids: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    bidAmount: number;
+    isValid: boolean;
+    hasActiveLock: boolean;
+    activeLockAmount?: number;
+    createdAt: Date;
+  }>;
+  locks: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    amount: number;
+    released: boolean;
+    createdAt: Date;
+    releasedAt?: Date | null;
+  }>;
+  cancellationRequests: Array<{
+    id: string;
+    bidId: string;
+    playerId: string;
+    playerName: string;
+    reason: string;
+    status: string;
+    reviewNote?: string | null;
+    reviewedAt?: Date | null;
+    createdAt: Date;
+  }>;
+  reviewVotes: Array<{
+    id: string;
+    action: string;
+    playerId?: string | null;
+    voterName: string;
+    reason?: string | null;
+    updatedAt: Date;
+  }>;
+  bidInvalidationVotes: Array<{
+    id: string;
+    bidId: string;
+    voterName: string;
+    reason: string;
+    updatedAt: Date;
+  }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    targetType: string;
+    targetId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt: Date;
+    actorName?: string | null;
+  }>;
+};

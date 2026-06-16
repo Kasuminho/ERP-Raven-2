@@ -43,7 +43,7 @@ export class AuctionAutomationService {
         {
           name: 'relistInvalidAuctions',
           schedule: '0 * * * *',
-          description: 'Relist invalid OPEN auctions and reopen relisted auctions whose delay elapsed.',
+          description: 'Relist malformed OPEN auctions and reopen RELISTED auctions whose delay elapsed.',
         },
         {
           name: 'cleanupExpiredLocks',
@@ -118,18 +118,7 @@ export class AuctionAutomationService {
 
   async relistInvalidAuctions(now = new Date()): Promise<AutomationJobResult> {
     const malformedOpenAuctions = await this.repository.findInvalidOpenAuctions();
-    const expiredOpenAuctions = await this.repository.findExpiredOpenAuctions(now);
-    const expiredWithoutBids: Auction[] = [];
-
-    for (const auction of expiredOpenAuctions) {
-      const validBidCount = await this.repository.countValidBids(auction.id);
-
-      if (validBidCount === 0) {
-        expiredWithoutBids.push(auction);
-      }
-    }
-
-    const invalidAuctions = this.dedupeAuctions([...malformedOpenAuctions, ...expiredWithoutBids]);
+    const invalidAuctions = this.dedupeAuctions(malformedOpenAuctions);
     const readyToReopen = await this.repository.findRelistedAuctionsReadyToReopen(now);
     const result = this.createResult('relistInvalidAuctions', [...invalidAuctions, ...readyToReopen]);
 
