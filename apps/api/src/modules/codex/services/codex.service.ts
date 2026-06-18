@@ -141,14 +141,58 @@ export class CodexService {
     return updated;
   }
 
-  async cancel(id: string, actorId: string): Promise<CodexRequest> {
-    const request = await this.getExisting(id);
-    const updated = await this.prisma.codexRequest.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
-    await this.audit('CODEX_REQUEST_CANCELLED', id, actorId, { playerId: request.playerId });
-    return updated;
+  async reject(id: string, actorId: string, reason: string): Promise<CodexRequest> {
+    const normalizedReason = reason?.trim();
+
+    if (!normalizedReason) {
+      throw new BadRequestException('A rejection reason is required.');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.codexRequest.findUnique({ where: { id } });
+
+      if (!request) {
+        throw new NotFoundException(`Codex request ${id} was not found.`);
+      }
+
+      if (request.status === CodexRequestStatus.CONFIRMED || request.status === CodexRequestStatus.CANCELLED) {
+        throw new BadRequestException('Confirmed or cancelled codex requests cannot be rejected.');
+      }
+
+      const rejected = await tx.codexRequest.update({
+        where: { id },
+        data: { status: CodexRequestStatus.CANCELLED },
+      });
+
+      await this.auditService.logWithinTransaction({
+        actorId,
+        action: 'CODEX_REQUEST_REJECTED',
+        targetType: 'CodexRequest',
+        targetId: id,
+        metadata: { playerId: request.playerId, reason: normalizedReason },
+      }, tx);
+
+      return { rejected, playerId: request.playerId };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    try {
+      await this.notificationsService.createForPlayer({
+        playerId: result.playerId,
+        type: 'CODEX_REJECTED',
+        title: 'Pedido de Codex recusado',
+        body: `A Staff recusou seu pedido porque o print nao seguiu o padrao. Motivo: ${normalizedReason}`,
+        href: '/dashboard/codex',
+        metadata: { codexRequestId: id, reason: normalizedReason },
+      });
+    } catch (error) {
+      await this.audit('CODEX_REQUEST_REJECTION_NOTIFICATION_FAILED', id, actorId, {
+        playerId: result.playerId,
+        message: error instanceof Error ? error.message : 'Unknown notification error',
+      });
+    }
+
+    await this.cleanupRejectedCodexImages(result.rejected, actorId);
+    return result.rejected;
   }
 
   private async list(where?: Prisma.CodexRequestWhereInput): Promise<CodexRequestDetails[]> {
@@ -269,6 +313,35 @@ export class CodexService {
       await this.audit('CODEX_REQUEST_IMAGE_DELETE_FAILED', request.id, actorId, {
         playerId: request.playerId,
         failed,
+      });
+    }
+  }
+
+  private async cleanupRejectedCodexImages(request: CodexRequest, actorId: string): Promise<void> {
+    const urls = [...new Set([request.imageUrl, request.proofImageUrl].filter((url): url is string => Boolean(url)))];
+    let deletedCount = 0;
+    const failures: string[] = [];
+
+    for (const url of urls) {
+      try {
+        if (await this.imageStorage.deleteByUrl(url)) {
+          deletedCount += 1;
+        }
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : 'Unknown storage deletion error');
+      }
+    }
+
+    await this.audit('CODEX_REQUEST_REJECTED_IMAGES_CLEANED', request.id, actorId, {
+      playerId: request.playerId,
+      deletedCount,
+      failedCount: failures.length,
+    });
+
+    if (failures.length > 0) {
+      await this.audit('CODEX_REQUEST_REJECTED_IMAGE_DELETE_FAILED', request.id, actorId, {
+        playerId: request.playerId,
+        failures,
       });
     }
   }

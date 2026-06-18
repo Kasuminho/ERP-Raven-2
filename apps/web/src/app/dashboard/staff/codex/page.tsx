@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { notifyToast } from '@/components/ui/toaster';
-import { useSendCodexRequest, useStaffCodexRequests, useUploadImage } from '@/hooks/use-guild-api';
+import { useRejectCodexRequest, useSendCodexRequest, useStaffCodexRequests, useUploadImage } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -15,8 +15,10 @@ export default function StaffCodexPage() {
   const locale = useLocaleStore((state) => state.locale);
   const requests = useStaffCodexRequests();
   const sendRequest = useSendCodexRequest();
+  const rejectRequest = useRejectCodexRequest();
   const uploadImage = useUploadImage();
   const [proofs, setProofs] = useState<Record<string, string>>({});
+  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
   return (
     <div className="space-y-6">
@@ -50,6 +52,17 @@ export default function StaffCodexPage() {
                 </div>
               )}
               {request.note && <p className="text-sm text-muted-foreground">{request.note}</p>}
+              <div className="rounded-md border border-accent/30 bg-accent/5 p-3">
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium">{t(locale, 'codexRejectionReason')}</span>
+                  <input
+                    className="h-10 w-full rounded-md border border-white/10 bg-background/78 px-3 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-ring"
+                    placeholder={t(locale, 'codexRejectionReasonPlaceholder')}
+                    value={rejectionReasons[request.id] ?? ''}
+                    onChange={(event) => setRejectionReasons((current) => ({ ...current, [request.id]: event.target.value }))}
+                  />
+                </label>
+              </div>
               <FileUploadButton
                 label={t(locale, 'attachImage')}
                 onFileSelect={(files) => {
@@ -58,8 +71,9 @@ export default function StaffCodexPage() {
                 }}
               />
               {proofs[request.id] && <p className="text-center text-xs text-primary">{t(locale, 'proofAttached')}</p>}
-              <Button
-                onClick={() => sendRequest.mutate(
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  onClick={() => sendRequest.mutate(
                   { id: request.id, proofImageUrl: proofs[request.id] },
                   {
                     onSuccess: () => {
@@ -68,10 +82,26 @@ export default function StaffCodexPage() {
                     },
                   },
                 )}
-                disabled={request.status === 'CONFIRMED' || request.status === 'CANCELLED' || request.status === 'SENT'}
-              >
-                {t(locale, 'markSent')}
-              </Button>
+                  disabled={request.status === 'CONFIRMED' || request.status === 'CANCELLED' || request.status === 'SENT'}
+                >
+                  {t(locale, 'markSent')}
+                </Button>
+                <Button
+                  variant="danger"
+                  disabled={!rejectionReasons[request.id]?.trim() || rejectRequest.isPending}
+                  onClick={() => {
+                    const reason = rejectionReasons[request.id]?.trim();
+                    if (!reason || !window.confirm(t(locale, 'rejectCodexConfirm'))) return;
+
+                    rejectRequest.mutate(
+                      { id: request.id, reason },
+                      { onSuccess: () => notifyToast({ title: t(locale, 'codexRejected'), tone: 'success' }) },
+                    );
+                  }}
+                >
+                  {t(locale, 'rejectAndRemove')}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

@@ -10,7 +10,7 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCloseItemInterest, useDeliverItemInterest, useItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
+import { useCancelItemInterest, useCloseItemInterest, useDeliverItemInterest, useItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
@@ -86,6 +86,7 @@ export default function StaffInterestsPage() {
   const userId = useAuthStore((state) => state.userId);
   const posts = useItemInterests();
   const closeInterest = useCloseItemInterest();
+  const cancelInterest = useCancelItemInterest();
   const deliverInterest = useDeliverItemInterest();
   const voteInterest = useVoteItemInterest();
   const tieBreak = useStartItemInterestTieBreak();
@@ -290,6 +291,21 @@ export default function StaffInterestsPage() {
                   })}
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    variant="danger"
+                    disabled={post.status === 'DELIVERED' || post.status === 'CANCELLED' || cancelInterest.isPending}
+                    onClick={() => {
+                      const reason = window.prompt(t(locale, 'removeInterestReasonPrompt'))?.trim();
+                      if (!reason || !window.confirm(t(locale, 'removeInterestConfirm'))) return;
+
+                      cancelInterest.mutate(
+                        { id: post.id, reason },
+                        { onSuccess: () => notifyToast({ title: t(locale, 'interestRemoved'), tone: 'success' }) },
+                      );
+                    }}
+                  >
+                    {t(locale, 'removeInterest')}
+                  </Button>
                   <Button
                     variant="secondary"
                     onClick={() => closeInterest.mutate(post.id, { onSuccess: () => notifyToast({ title: t(locale, 'closeDeclaration'), tone: 'success' }) })}

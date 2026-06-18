@@ -3,7 +3,7 @@ import { CodexRequest, CodexRequestStatus } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CreateCodexRequestDto, SendCodexRequestDto } from '../dto';
+import { CreateCodexRequestDto, RejectCodexRequestDto, SendCodexRequestDto } from '../dto';
 import { CodexRequestDetails, CodexService } from '../services/codex.service';
 
 type AuthRequest = { user: { userId: string } };
@@ -40,8 +40,8 @@ export class CodexController {
   @Post(':id/cancel')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async cancel(@Param('id') id: string, @Req() req: AuthRequest): Promise<CodexRequest> {
-    return this.service.cancel(id, req.user.userId);
+  async cancel(@Param('id') id: string, @Body() dto: RejectCodexRequestDto, @Req() req: AuthRequest): Promise<CodexRequest> {
+    return this.service.reject(id, req.user.userId, dto.reason);
   }
 
   @Post(':id/confirm')

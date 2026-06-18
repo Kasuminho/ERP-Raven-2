@@ -3,6 +3,7 @@ import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, I
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
+import { ImageStorageService } from '../../uploads/image-storage.service';
 import { BulkCreateItemInterestPostDto, CreateItemInterestPostDto, DeclareItemInterestDto, DeliverItemInterestDto } from '../dto';
 
 export type ItemInterestDetails = ItemInterestPost & {
@@ -88,6 +89,7 @@ export class ItemInterestsService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationService: NotificationService,
+    private readonly imageStorage: ImageStorageService,
   ) {}
 
   async listPosts(status?: ItemInterestStatus, userId?: string): Promise<ItemInterestDetails[]> {
@@ -287,6 +289,56 @@ export class ItemInterestsService {
 
   async closePost(id: string, actorId: string): Promise<ItemInterestPost> {
     return this.closePostWithinTransaction(id, actorId, false);
+  }
+
+  async cancelPost(id: string, actorId: string, reason: string): Promise<ItemInterestPost> {
+    const normalizedReason = reason?.trim();
+
+    if (!normalizedReason) {
+      throw new BadRequestException('A cancellation reason is required.');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const post = await tx.itemInterestPost.findUnique({
+        where: { id },
+        include: { entries: { select: { id: true, imageUrl: true, playerId: true } } },
+      });
+
+      if (!post) {
+        throw new NotFoundException(`Interest post ${id} was not found.`);
+      }
+
+      if (post.status === ItemInterestStatus.DELIVERED) {
+        throw new BadRequestException('Delivered interest posts cannot be removed.');
+      }
+
+      if (post.status === ItemInterestStatus.CANCELLED) {
+        throw new BadRequestException('This interest post was already removed.');
+      }
+
+      const updated = await tx.itemInterestPost.update({
+        where: { id },
+        data: {
+          status: ItemInterestStatus.CANCELLED,
+          closedAt: new Date(),
+          selectedEntryId: null,
+          deliveryEnabledAt: null,
+          votingCandidateEntryIds: [],
+        },
+      });
+
+      await this.auditWithinTransaction(tx, 'ITEM_INTEREST_POST_CANCELLED', id, actorId, {
+        reason: normalizedReason,
+        previousStatus: post.status,
+        entriesCount: post.entries.length,
+        playerIds: post.entries.map((entry) => entry.playerId),
+      });
+
+      return { updated, imageUrls: post.entries.map((entry) => entry.imageUrl).filter((url): url is string => Boolean(url)) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    await this.cleanupCancelledInterestImages(id, actorId, result.imageUrls);
+    return result.updated;
   }
 
   async closeExpiredPosts(): Promise<{ closed: number; voting: number; empty: number }> {
@@ -824,5 +876,26 @@ export class ItemInterestsService {
     metadata: Prisma.InputJsonObject,
   ): Promise<void> {
     await this.auditService.logWithinTransaction({ actorId, action, targetType: 'ItemInterest', targetId, metadata }, tx);
+  }
+
+  private async cleanupCancelledInterestImages(postId: string, actorId: string, imageUrls: string[]): Promise<void> {
+    let deletedCount = 0;
+    const failures: string[] = [];
+
+    for (const imageUrl of [...new Set(imageUrls)]) {
+      try {
+        if (await this.imageStorage.deleteByUrl(imageUrl)) {
+          deletedCount += 1;
+        }
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : 'Unknown storage deletion error');
+      }
+    }
+
+    await this.audit('ITEM_INTEREST_CANCELLED_IMAGES_CLEANED', postId, actorId, {
+      deletedCount,
+      failedCount: failures.length,
+      failures,
+    });
   }
 }

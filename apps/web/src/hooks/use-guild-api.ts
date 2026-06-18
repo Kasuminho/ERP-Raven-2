@@ -580,6 +580,20 @@ export function useCloseItemInterest() {
   });
 }
 
+export function useCancelItemInterest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: string; reason: string }) =>
+      (await api.post<ItemInterestPost>(`/item-interests/${data.id}/cancel`, { reason: data.reason })).data,
+    onSuccess: (_data, variables) => {
+      queryClient.setQueriesData<ItemInterestPost[]>({ queryKey: ['item-interests'] }, (current) =>
+        current?.filter((post) => post.id !== variables.id) ?? current,
+      );
+      return queryClient.invalidateQueries({ queryKey: ['item-interests'] });
+    },
+  });
+}
+
 export function useDeliverItemInterest() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -657,6 +671,24 @@ export function useSendCodexRequest() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['codex-staff'] }),
         queryClient.invalidateQueries({ queryKey: ['codex-me'] }),
+      ]);
+    },
+  });
+}
+
+export function useRejectCodexRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: string; reason: string }) =>
+      (await api.post<CodexRequest>(`/codex/${data.id}/cancel`, { reason: data.reason })).data,
+    onSuccess: async (_data, variables) => {
+      queryClient.setQueryData<CodexRequest[]>(['codex-staff'], (current) =>
+        current?.filter((request) => request.id !== variables.id) ?? current,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['codex-staff'] }),
+        queryClient.invalidateQueries({ queryKey: ['codex-me'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
       ]);
     },
   });

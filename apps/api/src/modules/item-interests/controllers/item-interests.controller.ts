@@ -54,6 +54,13 @@ export class ItemInterestsController {
     return this.service.closePost(id, req.user.userId);
   }
 
+  @Post(':id/cancel')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async cancel(@Param('id') id: string, @Body('reason') reason: string, @Req() req: AuthRequest): Promise<ItemInterestPost> {
+    return this.service.cancelPost(id, req.user.userId, reason);
+  }
+
   @Post(':id/vote')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
