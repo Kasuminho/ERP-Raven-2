@@ -49,6 +49,12 @@ export class AuctionsController {
     return this.service.getUserBidCancellation(req.user?.userId ?? '', auctionId);
   }
 
+  @Get(':id/bid/me')
+  @UseGuards(JwtAuthGuard)
+  async myBid(@Param('id') auctionId: string, @Req() req: AuthRequest): Promise<AuctionBid | null> {
+    return this.service.getUserBid(req.user?.userId ?? '', auctionId);
+  }
+
   @Post(':id/finalize')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
@@ -74,6 +80,8 @@ export class AuctionsController {
   }
 
   @Get(':id/bids')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
   async bids(@Param('id') auctionId: string): Promise<AuctionBid[]> {
     return this.service.getAuctionBids(auctionId);
   }

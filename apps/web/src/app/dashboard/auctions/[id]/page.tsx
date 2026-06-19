@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, useMyBidCancellation, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
+import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, useMyAuctionBid, useMyBidCancellation, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
@@ -18,21 +18,23 @@ import { useLocaleStore } from '@/store/locale-store';
 export default function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const playerId = usePlayerId();
+  const canManageAuctions = useAuthStore((state) => state.hasRole(['STAFF', 'ADMIN']));
   const auction = useAuction(id);
-  const bids = useAuctionBids(id);
+  const bids = useAuctionBids(id, canManageAuctions);
+  const myBid = useMyAuctionBid(id);
   const dkp = useDkpSummary(playerId);
   const eligibility = useEligibility(playerId, id);
-  const ranking = useAuctionRanking(id);
+  const ranking = useAuctionRanking(id, canManageAuctions);
   const placeBid = usePlaceBid(id);
   const requestBidCancellation = useRequestBidCancellation(id);
   const myBidCancellation = useMyBidCancellation(id);
   const finalizeAuction = useFinalizeAuction(id);
-  const canManageAuctions = useAuthStore((state) => state.hasRole(['STAFF', 'ADMIN']));
   const locale = useLocaleStore((state) => state.locale);
 
   if (!auction.data) return <EmptyState title={t(locale, 'loadingAuction')} />;
 
-  const existingBid = (bids.data ?? []).find((bid) => bid.playerId === playerId);
+  const existingBid = myBid.data ?? undefined;
+  const rankingByPlayerId = new Map((ranking.data ?? []).map((row) => [row.playerId, row]));
 
   function closeAuctionEarly() {
     if (!window.confirm(t(locale, 'closeAuctionConfirm'))) return;
@@ -155,20 +157,26 @@ export default function AuctionDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t(locale, 'rankingPreview')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {canManageAuctions ?? (ranking.data ?? []).slice(0, 6).map((row, index) => (
+            {canManageAuctions && (ranking.data ?? []).slice(0, 6).map((row, index) => (
               <div key={row.playerId} className="flex items-center justify-between rounded-md border bg-background/35 p-3 text-sm">
                 <span>{index + 1}. {row.nickname}</span>
                 <span className="text-primary">{Math.round(row.priorityScore)}</span>
               </div>
             ))}
-            {!ranking.data?.length && <p className="text-sm text-muted-foreground">{t(locale, 'noCandidatesRanked')}</p>}
+            {canManageAuctions && !ranking.isLoading && !ranking.data?.length && <p className="text-sm text-muted-foreground">{t(locale, 'noCandidatesRanked')}</p>}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>{t(locale, 'bids')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {canManageAuctions ?? (bids.data ?? []).map((bid) => <div key={bid.id} className="flex justify-between text-sm"><span>{bid.playerId}</span><span>{bid.bidAmount} DKP</span></div>)}
+            {canManageAuctions && (bids.data ?? []).map((bid) => (
+              <div key={bid.id} className="flex justify-between text-sm">
+                <span>{rankingByPlayerId.get(bid.playerId)?.nickname ?? bid.playerId}</span>
+                <span>{bid.bidAmount} DKP</span>
+              </div>
+            ))}
+            {canManageAuctions && !bids.isLoading && !bids.data?.length && <p className="text-sm text-muted-foreground">{t(locale, 'noCandidatesRanked')}</p>}
           </CardContent>
         </Card>
       </aside>

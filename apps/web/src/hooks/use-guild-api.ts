@@ -1031,15 +1031,23 @@ export function useUploadImage() {
 export function useAuction(id: string) {
   return useQuery({
     queryKey: ['auction', id],
-    queryFn: async () => (await api.get<Auction & { bids?: AuctionBid[] }>(`/auctions/${id}`)).data,
+    queryFn: async () => (await api.get<Auction>(`/auctions/${id}`)).data,
     enabled: Boolean(id),
   });
 }
 
-export function useAuctionBids(id: string) {
+export function useAuctionBids(id: string, enabled = true) {
   return useQuery({
     queryKey: ['auction-bids', id],
     queryFn: async () => (await api.get<AuctionBid[]>(`/auctions/${id}/bids`)).data,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useMyAuctionBid(id: string) {
+  return useQuery({
+    queryKey: ['my-auction-bid', id],
+    queryFn: async () => (await api.get<AuctionBid | null>(`/auctions/${id}/bid/me`)).data,
     enabled: Boolean(id),
   });
 }
@@ -1052,11 +1060,11 @@ export function useEligibility(playerId: string, auctionId: string) {
   });
 }
 
-export function useAuctionRanking(auctionId: string) {
+export function useAuctionRanking(auctionId: string, enabled = true) {
   return useQuery({
     queryKey: ['auction-ranking', auctionId],
     queryFn: async () => (await api.get<EligibilityRow[]>(`/eligibility/auction/${auctionId}/ranking`)).data,
-    enabled: Boolean(auctionId),
+    enabled: Boolean(auctionId) && enabled,
   });
 }
 
@@ -1068,6 +1076,7 @@ export function usePlaceBid(auctionId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auction', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auction-bids', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['my-auction-bid', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auctions'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
@@ -1085,6 +1094,7 @@ export function useRequestBidCancellation(auctionId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auction', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auction-bids', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['my-auction-bid', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auction-ranking', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['auctions'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-summary'] }),

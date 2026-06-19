@@ -13,7 +13,7 @@ import {
   InvalidAuctionStateException,
   InvalidBidException,
 } from '../exceptions/auction-domain.exceptions';
-import { AuctionDetails, AuctionsRepository } from '../repositories/auctions.repository';
+import { AuctionsRepository, PublicAuctionDetails } from '../repositories/auctions.repository';
 
 type AuctionRules = {
   minimumBid: number;
@@ -289,6 +289,24 @@ export class AuctionsService {
     });
   }
 
+  async getUserBid(userId: string, auctionId: string): Promise<AuctionBid | null> {
+    if (!userId) {
+      throw new BadRequestException('Authenticated user is required.');
+    }
+
+    const player = await this.repository.client.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      return null;
+    }
+
+    return this.repository.findBidByPlayerAndAuction(player.id, auctionId);
+  }
+
   async validateBid(playerId: string, auctionId: string, amount?: number): Promise<{ bidAmount: number }> {
     const validation = await this.repository.client.$transaction((tx) =>
       this.validateBidWithinTransaction(playerId, auctionId, amount, tx),
@@ -469,8 +487,8 @@ export class AuctionsService {
     return auction;
   }
 
-  async getAuctionDetails(auctionId: string): Promise<AuctionDetails> {
-    const auction = await this.repository.findDetailsById(auctionId);
+  async getAuctionDetails(auctionId: string): Promise<PublicAuctionDetails> {
+    const auction = await this.repository.findPublicDetailsById(auctionId);
 
     if (!auction) {
       throw new AuctionNotFoundException(auctionId);

@@ -16,6 +16,12 @@ export type AuctionDetails = Prisma.AuctionGetPayload<{
   };
 }>;
 
+export type PublicAuctionDetails = Prisma.AuctionGetPayload<{
+  include: {
+    itemCatalog: true;
+  };
+}>;
+
 @Injectable()
 export class AuctionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,6 +57,13 @@ export class AuctionsRepository {
         },
         dkpLocks: true,
       },
+    });
+  }
+
+  async findPublicDetailsById(auctionId: string, client: AuctionClient = this.prisma): Promise<PublicAuctionDetails | null> {
+    return client.auction.findUnique({
+      where: { id: auctionId },
+      include: { itemCatalog: true },
     });
   }
 
