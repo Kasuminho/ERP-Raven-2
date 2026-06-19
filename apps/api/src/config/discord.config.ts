@@ -7,6 +7,21 @@ export default registerAs('discord', () => ({
   botToken: process.env.DISCORD_BOT_TOKEN ?? '',
   guildId: process.env.DISCORD_GUILD_ID ?? '',
   publicUrl: process.env.PUBLIC_APP_URL ?? process.env.CORS_ORIGIN ?? '',
+  webhookUsername: process.env.DISCORD_WEBHOOK_USERNAME ?? 'Aristolfo, 570 anos de webhook',
+  webhookAvatarUrl: process.env.DISCORD_WEBHOOK_AVATAR_URL
+    ?? `${(process.env.PUBLIC_APP_URL ?? process.env.CORS_ORIGIN ?? '').replace(/\/$/, '')}/aristolfo-webhooks.png`,
+  locales: {
+    default: process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    announcements: process.env.DISCORD_ANNOUNCEMENTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    auctions: process.env.DISCORD_AUCTIONS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    drops: process.env.DISCORD_DROPS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    attendance: process.env.DISCORD_ATTENDANCE_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    interests: process.env.DISCORD_INTERESTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    itemRequests: process.env.DISCORD_ITEM_REQUESTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    staffReview: 'pt-BR',
+    staffRequests: 'pt-BR',
+    staffUpdates: 'pt-BR',
+  },
   staffRoleId: process.env.DISCORD_STAFF_ROLE_ID ?? '1431337988423549000',
   channels: {
     auctions: process.env.DISCORD_AUCTIONS_CHANNEL_ID ?? '',

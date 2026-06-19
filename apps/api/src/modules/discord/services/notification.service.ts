@@ -8,6 +8,7 @@ import { buildAuctionCreatedEmbed, buildAuctionDeliveryEmbed, buildAuctionWinner
 import { buildDkpNotificationEmbed } from '../bot/embeds/dkp.embeds';
 import { buildAnnouncementEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../bot/embeds/staff-review.embeds';
+import { DiscordLocale, localeCopy, resolveDiscordLocale } from '../bot/embeds/discord-locale';
 import { DiscordBotService } from '../bot/services/discord-bot.service';
 import { DiscordWebhookQueueService } from './discord-webhook-queue.service';
 
@@ -31,13 +32,21 @@ export class NotificationService {
   }): Promise<void> {
     const url = this.dashboardUrl(`/auctions/${data.auctionId}`);
     await this.sendChannel('auctions', {
-      embeds: [buildAuctionCreatedEmbed({ ...data, url })],
+      embeds: [buildAuctionCreatedEmbed({ ...data, url }, this.localeFor('auctions', data.itemName))],
     }, 'DISCORD_NOTIFY_AUCTION_CREATED', data.auctionId);
   }
 
   async notifyAuctionEndingSoon(data: { auctionId: string; itemName: string }): Promise<void> {
+    const locale = this.localeFor('auctions', data.itemName);
     await this.sendChannel('auctions', {
-      embeds: [buildDkpNotificationEmbed('Auction Ending Soon', `${data.itemName} is ending soon.`)],
+      embeds: [buildDkpNotificationEmbed(
+        localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon', es: 'Subasta por terminar' }),
+        localeCopy(locale, {
+          'pt-BR': `**${data.itemName}** esta nos minutos finais. Bid agora ou contemple o classico "eu ia participar".`,
+          en: `**${data.itemName}** is in its final minutes. Bid now or deploy the classic "I was about to".`,
+          es: `**${data.itemName}** esta en los ultimos minutos. Puja ahora o prepara el clasico "ya iba".`,
+        }),
+      )],
     }, 'DISCORD_NOTIFY_AUCTION_ENDING_SOON', data.auctionId);
   }
 
@@ -53,7 +62,8 @@ export class NotificationService {
   }
 
   async notifyAuctionWinner(data: { auctionId: string; itemName: string; playerName: string; discordId?: string; proofImageUrl?: string }): Promise<void> {
-    const payload = { embeds: [buildAuctionWinnerEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl))] };
+    const locale = this.localeFor('auctions', data.itemName);
+    const payload = { embeds: [buildAuctionWinnerEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl), locale)] };
     await this.sendChannel('auctions', payload, 'DISCORD_NOTIFY_AUCTION_WINNER', data.auctionId);
 
     if (data.discordId) {
@@ -68,7 +78,8 @@ export class NotificationService {
     discordId?: string;
     proofImageUrl?: string;
   }): Promise<void> {
-    const payload = { embeds: [buildAuctionDeliveryEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl))] };
+    const locale = this.localeFor('drops', data.itemName);
+    const payload = { embeds: [buildAuctionDeliveryEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl), locale)] };
     await this.sendChannel('drops', payload, 'DISCORD_NOTIFY_AUCTION_DROP_DELIVERED', data.auctionId);
 
     if (data.discordId) {
@@ -78,7 +89,7 @@ export class NotificationService {
 
   async notifyAttendanceStarted(data: { eventId: string; eventName: string; startsAt: Date }): Promise<void> {
     await this.sendChannel('attendance', {
-      embeds: [buildAttendanceStartedEmbed(data.eventName, data.startsAt)],
+      embeds: [buildAttendanceStartedEmbed(data.eventName, data.startsAt, this.localeFor('attendance', data.eventName))],
     }, 'DISCORD_NOTIFY_ATTENDANCE_STARTED', data.eventId);
   }
 
@@ -91,7 +102,7 @@ export class NotificationService {
     absentCount: number;
   }): Promise<void> {
     await this.sendChannel('attendance', {
-      embeds: [buildEventFinalizedEmbed(data)],
+      embeds: [buildEventFinalizedEmbed(data, this.localeFor('attendance', data.eventName))],
     }, 'DISCORD_NOTIFY_EVENT_FINALIZED', data.eventId);
   }
 
@@ -116,7 +127,7 @@ export class NotificationService {
         ...data,
         url: this.dashboardUrl('/dashboard/interests'),
         imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
-      })],
+      }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn))],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_CREATED', data.postId, {
       itemName: data.itemName,
       mode: data.mode,
@@ -137,7 +148,7 @@ export class NotificationService {
         itemName: data.itemName,
         playerNames: data.playerNames,
         proofImageUrl: this.publicImageUrl(data.proofImageUrl ?? undefined),
-      })],
+      }, this.localeFor('drops', data.title, data.itemName))],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_DELIVERED', data.postId);
   }
 
@@ -152,7 +163,7 @@ export class NotificationService {
       embeds: [buildItemInterestSkillBatchEmbed({
         ...data,
         url: this.dashboardUrl('/dashboard/interests'),
-      })],
+      }, this.localeFor('interests', ...data.sampleTitles))],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_SKILL_BATCH_CREATED', data.batchId, {
       count: data.count,
       mode: data.mode,
@@ -169,24 +180,27 @@ export class NotificationService {
     daysIdle: number;
     rankPosition: number;
   }): Promise<void> {
+    const locale = this.localeFor('itemRequests', data.itemName);
     const stageText = {
-      '3d': 'precisa atualizar o print do request.',
-      '4d': 'ultimo aviso para atualizar o print do request.',
-      dropped: 'caiu uma posicao na fila por falta de atualizacao.',
+      '3d': localeCopy(locale, { 'pt-BR': 'precisa atualizar o print do request.', en: 'needs to update the request screenshot.', es: 'necesita actualizar la captura del request.' }),
+      '4d': localeCopy(locale, { 'pt-BR': 'ultimo aviso para atualizar o print do request.', en: 'final warning to update the request screenshot.', es: 'ultimo aviso para actualizar la captura del request.' }),
+      dropped: localeCopy(locale, { 'pt-BR': 'caiu uma posicao na fila por falta de atualizacao.', en: 'dropped one queue position due to no update.', es: 'bajo una posicion por falta de actualizacion.' }),
     }[data.stage];
     const url = this.dashboardUrl('/item-requests');
-    const actionText = data.stage === 'dropped' ? 'Voce caiu uma posicao na fila.' : `Atualize pelo site: ${url}`;
+    const actionText = data.stage === 'dropped'
+      ? localeCopy(locale, { 'pt-BR': 'Voce caiu uma posicao na fila.', en: 'You dropped one queue position.', es: 'Bajaste una posicion en la cola.' })
+      : `${localeCopy(locale, { 'pt-BR': 'Atualize pelo site', en: 'Update on the website', es: 'Actualiza en el sitio' })}: ${url}`;
 
     await this.sendWebhookChannel('itemRequests', {
       content: `<@${data.discordId}> ${stageText}`,
       embeds: [buildRequestReminderEmbed({
-        title: 'Atualizacao de Item Request',
+        title: localeCopy(locale, { 'pt-BR': 'Atualizacao de Item Request', en: 'Item Request Update', es: 'Actualizacion de Item Request' }),
         playerName: data.playerName,
         itemName: data.itemName,
         daysIdle: data.daysIdle,
         rankPosition: data.rankPosition,
         actionText,
-      })],
+      }, locale)],
     }, 'DISCORD_NOTIFY_ITEM_REQUEST_REMINDER', data.requestId, {
       stage: data.stage,
       discordId: data.discordId,
@@ -217,7 +231,7 @@ export class NotificationService {
         daysIdle: data.daysIdle,
         rankPosition: data.rankPosition,
         actionText: data.stage === 'dropped' ? 'Rank ajustado automaticamente.' : 'Cobrar update do player.',
-      })],
+      }, 'pt-BR')],
     }, 'DISCORD_NOTIFY_STAFF_ITEM_REQUEST_REMINDER', data.requestId, {
       stage: data.stage,
       discordId: data.discordId,
@@ -237,9 +251,10 @@ export class NotificationService {
     },
     targetId = channelId,
   ): Promise<void> {
+    const locale = this.localeFor('announcements', data.title, data.description);
     const payload = {
       content: data.mentionRoleId ? `<@&${data.mentionRoleId}>` : undefined,
-      embeds: [buildAnnouncementEmbed(data)],
+      embeds: [buildAnnouncementEmbed(data, locale)],
       allowedMentions: { roles: data.mentionRoleId ? [data.mentionRoleId] : [] },
     };
     const webhookUrl = this.config.get<string>('discord.webhooks.announcements') ?? '';
@@ -338,6 +353,12 @@ export class NotificationService {
   private dashboardUrl(path: string): string {
     const baseUrl = this.config.get<string>('discord.publicUrl') ?? '';
     return baseUrl ? `${baseUrl.replace(/\/$/, '')}${path}` : '';
+  }
+
+  private localeFor(channelKey: string, ...context: Array<string | null | undefined>): DiscordLocale {
+    const configured = this.config.get<string>(`discord.locales.${channelKey}`)
+      ?? this.config.get<string>('discord.locales.default');
+    return resolveDiscordLocale(configured, ...context);
   }
 
   private publicImageUrl(url?: string): string | undefined {

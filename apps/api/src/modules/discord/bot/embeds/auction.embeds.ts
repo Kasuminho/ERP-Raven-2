@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { blocks } from './discord-formatting';
+import { DiscordLocale, localeCopy } from './discord-locale';
 
 export type AuctionEmbedData = {
   itemName: string;
@@ -17,19 +17,24 @@ function isDiscordImageUrl(url?: string): url is string {
   return Boolean(url && /^https?:\/\//i.test(url));
 }
 
-export function buildAuctionCreatedEmbed(data: AuctionEmbedData): EmbedBuilder {
+export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   return new EmbedBuilder()
-    .setTitle(`Leilao aberto: ${data.itemName}`)
+    .setTitle(localeCopy(locale, {
+      'pt-BR': `Leilao aberto: ${data.itemName}`,
+      en: `Auction open: ${data.itemName}`,
+      es: `Subasta abierta: ${data.itemName}`,
+    }))
     .setColor(0x2f80ed)
-    .setDescription(blocks(
-      'Loot na mesa. Confere elegibilidade, DKP e pensa antes de apertar o botao, porque lance travado nao volta ate acabar.',
-      'Loot is on the table. Check eligibility and DKP before bidding, because locked DKP stays locked until the auction ends.',
-    ))
+    .setDescription(localeCopy(locale, {
+      'pt-BR': '**Loot na mesa.** Confere o DKP antes de clicar; matematica depois do bid vira fanfic.',
+      en: '**Loot is live.** Check your DKP before clicking; post-bid math is premium copium.',
+      es: '**Hay loot.** Revisa tu DKP antes de pujar; hacer cuentas despues es puro copium.',
+    }))
     .addFields(
       { name: 'Tier', value: data.itemTier, inline: true },
-      { name: 'Lance minimo / Minimum Bid', value: String(data.minimumBid), inline: true },
+      { name: localeCopy(locale, { 'pt-BR': 'Lance minimo', en: 'Minimum bid', es: 'Puja minima' }), value: String(data.minimumBid), inline: true },
       {
-        name: 'Termina / Ends',
+        name: localeCopy(locale, { 'pt-BR': 'Termina', en: 'Ends', es: 'Termina' }),
         value: `${discordTimestamp(data.endsAt, 'F')}\n${discordTimestamp(data.endsAt, 'R')}`,
         inline: false,
       },
@@ -38,13 +43,14 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData): EmbedBuilder {
     .setTimestamp(new Date());
 }
 
-export function buildAuctionWinnerEmbed(itemName: string, playerName: string, proofImageUrl?: string): EmbedBuilder {
+export function buildAuctionWinnerEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Vencedor definido: ${itemName}`)
-    .setDescription(blocks(
-      `${playerName} levou essa. DKP consumido, registro feito, sem historia triste depois.`,
-      `${playerName} won this one. DKP consumed, delivery trail logged, clean ending.`,
-    ))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}`, es: `Ganador definido: ${itemName}` }))
+    .setDescription(localeCopy(locale, {
+      'pt-BR': `**${playerName} levou.** DKP consumido e chororo encaminhado ao setor de skill issue.`,
+      en: `**${playerName} got it.** DKP consumed; complaints have been routed to the skill issue department.`,
+      es: `**${playerName} se lo lleva.** DKP consumido; quejas enviadas al departamento de skill issue.`,
+    }))
     .setColor(0x27ae60)
     .setTimestamp(new Date());
 
@@ -55,13 +61,14 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
   return embed;
 }
 
-export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string): EmbedBuilder {
+export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(`Drop entregue: ${itemName}`)
-    .setDescription(blocks(
-      `Entrega registrada para ${playerName}. Pode guardar o print, porque aqui tem memoria.`,
-      `Delivery registered for ${playerName}. Proof is logged for the record.`,
-    ))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}`, es: `Drop entregado: ${itemName}` }))
+    .setDescription(localeCopy(locale, {
+      'pt-BR': `Entrega registrada para **${playerName}**. Print salvo, memoria ativada e caozinho domesticado.`,
+      en: `Delivery logged for **${playerName}**. Screenshot saved; selective memory has left the chat.`,
+      es: `Entrega registrada para **${playerName}**. Captura guardada; la memoria selectiva salio del chat.`,
+    }))
     .setColor(0xf2c94c)
     .setTimestamp(new Date());
 

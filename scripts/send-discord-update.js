@@ -7,6 +7,14 @@ const colors = {
   announcements: 0x2f80ed,
 };
 
+const webhookUsername = 'Aristolfo, 570 anos de webhook';
+const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
+const punchlines = {
+  'PT-BR': '*Aristolfo auditou. Se quebrar agora, foi feature com autoestima.*',
+  EN: '*Aristolfo reviewed it. Any remaining bug is clearly a confidence feature.*',
+  ES: '*Aristolfo lo reviso. Si falla ahora, es una feature con autoestima.*',
+};
+
 function loadEnv(cwd) {
   const envPath = path.join(cwd, '.env');
 
@@ -39,7 +47,7 @@ function loadEnv(cwd) {
 
 function readMessage() {
   const ignoredValueIndexes = new Set();
-  for (const option of ['--username']) {
+  for (const option of ['--username', '--locale']) {
     const index = process.argv.indexOf(option);
     if (index >= 0) {
       ignoredValueIndexes.add(index + 1);
@@ -132,12 +140,26 @@ function chunkText(text, limit = 3600) {
   return chunks;
 }
 
-function buildEmbeds(content, target) {
-  return normalizeSections(content).flatMap((section) => {
+function normalizeLocale(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'en' || normalized === 'en-us') return 'EN';
+  if (normalized === 'es' || normalized === 'es-es') return 'ES';
+  return 'PT-BR';
+}
+
+function selectLocaleSections(content, locale) {
+  const sections = normalizeSections(content);
+  const aliases = locale === 'PT-BR' ? new Set(['PT-BR', 'PT']) : new Set([locale]);
+  const selected = sections.filter((section) => aliases.has(section.language));
+  return selected.length > 0 ? selected : sections.filter((section) => section.language === 'Update');
+}
+
+function buildEmbeds(content, target, locale) {
+  return selectLocaleSections(content, locale).flatMap((section) => {
     const chunks = chunkText(section.body);
     return chunks.map((chunk, index) => ({
-      title: `${section.language} - ${section.title}${chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : ''}`,
-      description: chunk,
+      title: `${section.title}${chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : ''}`,
+      description: `${chunk}\n\n${punchlines[locale]}`,
       color: colors[target] || colors.player,
       timestamp: new Date().toISOString(),
     }));
@@ -173,7 +195,9 @@ async function main() {
   loadEnv(process.cwd());
 
   const target = process.argv.includes('--staff') ? 'staff' : process.argv.includes('--announcements') ? 'announcements' : 'player';
-  const username = readArgValue('--username') || 'Aristolfo, um pouco maior que o anão';
+  const locale = target === 'staff' ? 'PT-BR' : normalizeLocale(readArgValue('--locale') || process.env.DISCORD_UPDATES_LOCALE);
+  const username = readArgValue('--username') || process.env.DISCORD_WEBHOOK_USERNAME || webhookUsername;
+  const avatarUrl = process.env.DISCORD_WEBHOOK_AVATAR_URL || webhookAvatarUrl;
   const webhookUrl = target === 'staff'
     ? (process.env.DISCORD_STAFF_UPDATES_WEBHOOK_URL || process.env.DISCORD_UPDATES_WEBHOOK_URL)
     : target === 'announcements'
@@ -189,7 +213,16 @@ async function main() {
     throw new Error(`${expectedEnv} is not configured.`);
   }
 
-  const embedGroups = groupEmbeds(buildEmbeds(readMessage(), target));
+  const embedGroups = groupEmbeds(buildEmbeds(readMessage(), target, locale));
+
+  if (embedGroups.length === 0) {
+    throw new Error(`No ${locale} section was found in the changelog.`);
+  }
+
+  if (process.argv.includes('--dry-run')) {
+    console.log(JSON.stringify({ target, locale, username, avatarUrl, messages: embedGroups.length, embeds: embedGroups.flat().length }, null, 2));
+    return;
+  }
 
   for (const [index, embeds] of embedGroups.entries()) {
     const response = await fetch(webhookUrl, {
@@ -197,6 +230,7 @@ async function main() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         username,
+        avatar_url: avatarUrl,
         content: embedGroups.length > 1 ? `Atualizacao (${index + 1}/${embedGroups.length})` : undefined,
         embeds,
         allowed_mentions: { parse: [] },
