@@ -890,13 +890,17 @@ export class OperationsService {
 
   async postWeeklySummary(): Promise<{ posted: boolean; summary: WeeklyGuildSummary }> {
     const summary = await this.getWeeklySummary();
-    const topPlayers = summary.topPlayers.slice(0, 5).map((player, index) => {
+    const topPlayersPt = summary.topPlayers.slice(0, 5).map((player, index) => {
       const score = player.dkpDelta + player.attendanceCount * 50 + player.dropsCount * 25 + player.daoshiApprovedCents / 1000;
       return `${index + 1}. ${player.nickname} - score ${Math.round(score)} | DKP ${player.dkpDelta} | presencas ${player.attendanceCount} | drops ${player.dropsCount}`;
     });
+    const topPlayersEn = summary.topPlayers.slice(0, 5).map((player, index) => {
+      const score = player.dkpDelta + player.attendanceCount * 50 + player.dropsCount * 25 + player.daoshiApprovedCents / 1000;
+      return `${index + 1}. ${player.nickname} - score ${Math.round(score)} | DKP ${player.dkpDelta} | attendance ${player.attendanceCount} | drops ${player.dropsCount}`;
+    });
     const staff = await this.getStaffSummary();
     const message = [
-      '**Resumo semanal da guild**',
+      '**PT-BR - Resumo semanal da guild**',
       '',
       `Periodo: ${new Date(summary.weekStart).toLocaleDateString('pt-BR')} ate ${new Date(summary.weekEnd).toLocaleDateString('pt-BR')}`,
       `DKP distribuido: ${summary.dkpEarned}`,
@@ -907,10 +911,28 @@ export class OperationsService {
       `Daoshi aprovado: R$ ${(summary.daoshiApprovedCents / 100).toFixed(2)}`,
       '',
       '**Top da semana**',
-      topPlayers.length > 0 ? topPlayers.join('\n') : 'Sem movimentacao suficiente ainda.',
+      topPlayersPt.length > 0 ? topPlayersPt.join('\n') : 'Sem movimentacao suficiente ainda.',
       '',
       '**Pendencias da Staff**',
       `Reviews: ${staff.counts.reviews} | Entregas: ${staff.counts.deliveries} | Codex: ${staff.counts.codex} | Interesses: ${staff.counts.interests}`,
+      '',
+      '**EN - Guild weekly summary**',
+      '',
+      `Period: ${new Date(summary.weekStart).toLocaleDateString('en-US')} to ${new Date(summary.weekEnd).toLocaleDateString('en-US')}`,
+      `DKP distributed: ${summary.dkpEarned}`,
+      `DKP spent on auctions/negative adjustments: ${summary.dkpSpent}`,
+      `Attendance events: ${summary.attendanceEvents}`,
+      `Drops delivered: ${summary.dropsDelivered}`,
+      `Requests completed: ${summary.itemRequestsDelivered}`,
+      `Daoshi approved: BRL ${(summary.daoshiApprovedCents / 100).toFixed(2)}`,
+      '',
+      '**Top of the week**',
+      topPlayersEn.length > 0 ? topPlayersEn.join('\n') : 'Not enough activity yet.',
+      '',
+      '**Staff backlog**',
+      `Reviews: ${staff.counts.reviews} | Deliveries: ${staff.counts.deliveries} | Codex: ${staff.counts.codex} | Interests: ${staff.counts.interests}`,
+      '',
+      '*Aristolfo counted everything twice. The spreadsheet still looks suspicious.*',
     ].join('\n');
 
     await this.discordNotifications.sendOperationalNotification('', message, 'weekly-guild-summary');

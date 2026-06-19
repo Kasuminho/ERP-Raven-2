@@ -147,19 +147,22 @@ function normalizeLocale(value) {
   return 'PT-BR';
 }
 
-function selectLocaleSections(content, locale) {
+function selectLocaleSections(content, target, locale) {
   const sections = normalizeSections(content);
-  const aliases = locale === 'PT-BR' ? new Set(['PT-BR', 'PT']) : new Set([locale]);
+  const aliases = target === 'staff'
+    ? new Set(['PT-BR', 'PT'])
+    : new Set(['PT-BR', 'PT', 'EN']);
   const selected = sections.filter((section) => aliases.has(section.language));
   return selected.length > 0 ? selected : sections.filter((section) => section.language === 'Update');
 }
 
 function buildEmbeds(content, target, locale) {
-  return selectLocaleSections(content, locale).flatMap((section) => {
+  return selectLocaleSections(content, target, locale).flatMap((section) => {
     const chunks = chunkText(section.body);
+    const sectionLocale = section.language === 'EN' ? 'EN' : section.language === 'ES' ? 'ES' : 'PT-BR';
     return chunks.map((chunk, index) => ({
-      title: `${section.title}${chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : ''}`,
-      description: `${chunk}\n\n${punchlines[locale]}`,
+      title: `${target === 'staff' ? '' : `${sectionLocale} - `}${section.title}${chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : ''}`,
+      description: `${chunk}\n\n${punchlines[sectionLocale]}`,
       color: colors[target] || colors.player,
       timestamp: new Date().toISOString(),
     }));

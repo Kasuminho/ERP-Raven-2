@@ -36,6 +36,13 @@ export function resolveDiscordLocale(configured: string | undefined, ...context:
   return scores[0].score > 0 ? scores[0].locale : 'pt-BR';
 }
 
-export function localeCopy(locale: DiscordLocale, copy: Record<DiscordLocale, string>): string {
-  return copy[locale];
+export function localeCopy(_locale: DiscordLocale, copy: Record<DiscordLocale, string>): string {
+  const shortCopy = copy['pt-BR'].length <= 60 && copy.en.length <= 60
+    && !copy['pt-BR'].includes('\n') && !copy.en.includes('\n');
+
+  if (shortCopy) {
+    return `${copy['pt-BR']} / ${copy.en}`;
+  }
+
+  return `**PT-BR**\n${copy['pt-BR']}\n\n**EN**\n${copy.en}`;
 }

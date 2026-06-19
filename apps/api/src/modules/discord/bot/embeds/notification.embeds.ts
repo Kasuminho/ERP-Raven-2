@@ -61,7 +61,8 @@ function announcementStageLabel(label: string, locale: DiscordLocale): string {
     'Faltam 30 minutos': { 'pt-BR': 'Faltam 30 minutos', en: '30 minutes left', es: 'Faltan 30 minutos' },
     Agora: { 'pt-BR': 'Agora', en: 'Starting now', es: 'Ahora' },
   };
-  return stages[label]?.[locale] ?? label;
+  const stage = stages[label];
+  return stage ? localeCopy(locale, stage) : label;
 }
 
 export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
@@ -114,7 +115,8 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
       { name: 'Item', value: data.itemName, inline: false },
       { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode', es: 'Modo' }), value: data.mode, inline: true },
       { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes', es: 'Cierra' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
-      { name: localeCopy(locale, { 'pt-BR': 'Regras', en: 'Rules', es: 'Reglas' }), value: locale === 'en' ? (data.criteriaEn || 'No rules configured.') : (data.criteriaPt || localeCopy(locale, { 'pt-BR': 'Sem regras cadastradas.', en: 'No rules configured.', es: 'Sin reglas configuradas.' })), inline: false },
+      { name: 'Regras PT-BR', value: data.criteriaPt || 'Sem regras cadastradas.', inline: false },
+      { name: 'Rules EN', value: data.criteriaEn || 'No rules configured.', inline: false },
       { name: 'Dashboard', value: data.url || 'Dashboard link unavailable', inline: false },
     )
     .setTimestamp(new Date());

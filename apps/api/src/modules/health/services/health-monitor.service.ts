@@ -74,22 +74,22 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const failedChecks = report.checks.filter((check) => check.status !== 'ok');
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
-      ? 'Healthcheck recuperado. Aristolfo venceu.'
+      ? 'Healthcheck recuperado / Healthcheck recovered'
       : report.status === 'degraded'
-        ? 'Healthcheck tossiu no voice'
-        : 'Healthcheck critico. F no chat.';
+        ? 'Healthcheck tossiu no voice / Healthcheck coughed in voice'
+        : 'Healthcheck critico / Critical healthcheck';
 
     await this.webhookQueue.send(webhookUrl, {
       embeds: [{
         title,
         color,
         description: report.status === 'ok'
-          ? '**A plataforma voltou.** O servidor respirou, Aristolfo julgou e seguimos o farm.'
+          ? '**PT-BR**\n**A plataforma voltou.** O servidor respirou, Aristolfo julgou e seguimos o farm.\n\n**EN**\n**The platform is back.** The server breathed, Aristolfo judged, and the grind continues.'
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [
-          { name: 'Status', value: report.status.toUpperCase(), inline: true },
+          { name: 'Status PT-BR / EN', value: report.status.toUpperCase(), inline: true },
           { name: 'Uptime', value: `${report.uptimeSeconds}s`, inline: true },
-          { name: 'Checked at', value: report.checkedAt, inline: false },
+          { name: 'Verificado em / Checked at', value: report.checkedAt, inline: false },
         ],
       }],
     });

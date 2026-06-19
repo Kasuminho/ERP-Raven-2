@@ -4,10 +4,9 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 
 ## Idioma
 
-- Staff recebe somente PT-BR.
-- Cada mensagem publica usa um unico idioma: PT-BR, EN ou ES.
-- O locale vem da configuracao do canal. Sem configuracao, o sistema tenta detectar pelo contexto e usa PT-BR como fallback.
-- Nunca juntar traducoes no mesmo embed.
+- Somente o changelog da Staff recebe apenas PT-BR.
+- Todas as demais mensagens de webhook usam PT-BR e EN no mesmo post.
+- Cada idioma fica em seu proprio bloco para continuar legivel.
 
 ## Personalidade
 
@@ -33,4 +32,4 @@ Para aplicar nome e avatar aos webhooks ja existentes:
 npm run discord:configure-webhooks
 ```
 
-Para changelog, `--staff` sempre seleciona apenas a secao PT-BR. Outros canais aceitam `--locale pt-BR`, `--locale en` ou `--locale es`.
+Para changelog, `--staff` sempre seleciona apenas a secao PT-BR. Os demais alvos selecionam as secoes PT-BR e EN.

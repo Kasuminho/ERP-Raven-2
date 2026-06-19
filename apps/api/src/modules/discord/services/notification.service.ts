@@ -53,7 +53,10 @@ export class NotificationService {
   async notifyBidOutbid(data: { auctionId: string; discordId: string; itemName: string }): Promise<void> {
     try {
       await this.bot.sendDirectMessage(data.discordId, {
-        embeds: [buildDkpNotificationEmbed('Bid Outbid', `You were outbid on ${data.itemName}.`)],
+        embeds: [buildDkpNotificationEmbed(
+          'Bid superado / Bid outbid',
+          `**PT-BR**\nSuperaram seu bid em **${data.itemName}**. Reaja ou abrace o desenvolvimento de personagem.\n\n**EN**\nYour bid on **${data.itemName}** was outbid. React or embrace the character development.`,
+        )],
       });
       await this.audit('DISCORD_NOTIFY_BID_OUTBID', data.auctionId, { discordId: data.discordId });
     } catch (error) {
@@ -218,9 +221,9 @@ export class NotificationService {
     rankPosition: number;
   }): Promise<void> {
     const stageText = {
-      '3d': 'Cobrar atualizacao',
-      '4d': 'Ultimo aviso',
-      dropped: 'Queda de rank automatica',
+      '3d': 'Cobrar atualizacao / Request update',
+      '4d': 'Ultimo aviso / Final warning',
+      dropped: 'Queda automatica de rank / Automatic rank drop',
     }[data.stage];
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,
@@ -230,7 +233,9 @@ export class NotificationService {
         itemName: data.itemName,
         daysIdle: data.daysIdle,
         rankPosition: data.rankPosition,
-        actionText: data.stage === 'dropped' ? 'Rank ajustado automaticamente.' : 'Cobrar update do player.',
+        actionText: data.stage === 'dropped'
+          ? 'Rank ajustado automaticamente. / Rank adjusted automatically.'
+          : 'Cobrar update do player. / Request an update from the player.',
       }, 'pt-BR')],
     }, 'DISCORD_NOTIFY_STAFF_ITEM_REQUEST_REMINDER', data.requestId, {
       stage: data.stage,
