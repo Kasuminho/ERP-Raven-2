@@ -4,8 +4,8 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 
 ## Idioma
 
-- Somente o changelog da Staff recebe apenas PT-BR.
-- Todas as demais mensagens de webhook usam PT-BR e EN no mesmo post.
+- Todo canal exclusivo da Staff recebe apenas PT-BR.
+- Mensagens destinadas aos players usam PT-BR e EN no mesmo post.
 - Cada idioma fica em seu proprio bloco para continuar legivel.
 
 ## Personalidade

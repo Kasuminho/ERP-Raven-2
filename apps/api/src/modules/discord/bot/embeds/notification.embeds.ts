@@ -83,11 +83,12 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
   return embed;
 }
 
-export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
+export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale: DiscordLocale = 'pt-BR', staffOnly = false): EmbedBuilder {
+  const copy = (values: Record<DiscordLocale, string>) => staffOnly ? values['pt-BR'] : localeCopy(locale, values);
   return new EmbedBuilder()
     .setTitle(data.title)
     .setColor(0xeb5757)
-    .setDescription(localeCopy(locale, {
+    .setDescription(copy({
       'pt-BR': '**Fila parada nao dropa item.** Atualiza o print antes que seu rank conheca o porao.',
       en: '**A frozen queue drops nothing.** Update the screenshot before your rank discovers the basement.',
       es: '**Una cola parada no da loot.** Actualiza la captura antes de que tu rank conozca el sotano.',
@@ -95,9 +96,9 @@ export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale
     .addFields(
       { name: 'Player', value: data.playerName, inline: true },
       { name: 'Item', value: data.itemName, inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Sem atualizar', en: 'No update', es: 'Sin actualizar' }), value: `${data.daysIdle} ${localeCopy(locale, { 'pt-BR': 'dia(s)', en: 'day(s)', es: 'dia(s)' })}`, inline: true },
+      { name: copy({ 'pt-BR': 'Sem atualizar', en: 'No update', es: 'Sin actualizar' }), value: `${data.daysIdle} ${copy({ 'pt-BR': 'dia(s)', en: 'day(s)', es: 'dia(s)' })}`, inline: true },
       { name: 'Rank', value: `#${data.rankPosition}`, inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Acao', en: 'Action', es: 'Accion' }), value: data.actionText, inline: false },
+      { name: copy({ 'pt-BR': 'Acao', en: 'Action', es: 'Accion' }), value: data.actionText, inline: false },
     )
     .setTimestamp(new Date());
 }

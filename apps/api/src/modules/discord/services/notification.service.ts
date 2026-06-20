@@ -221,9 +221,9 @@ export class NotificationService {
     rankPosition: number;
   }): Promise<void> {
     const stageText = {
-      '3d': 'Cobrar atualizacao / Request update',
-      '4d': 'Ultimo aviso / Final warning',
-      dropped: 'Queda automatica de rank / Automatic rank drop',
+      '3d': 'Cobrar atualizacao',
+      '4d': 'Ultimo aviso',
+      dropped: 'Queda automatica de rank',
     }[data.stage];
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,
@@ -234,9 +234,9 @@ export class NotificationService {
         daysIdle: data.daysIdle,
         rankPosition: data.rankPosition,
         actionText: data.stage === 'dropped'
-          ? 'Rank ajustado automaticamente. / Rank adjusted automatically.'
-          : 'Cobrar update do player. / Request an update from the player.',
-      }, 'pt-BR')],
+          ? 'Rank ajustado automaticamente.'
+          : 'Cobrar update do player.',
+      }, 'pt-BR', true)],
     }, 'DISCORD_NOTIFY_STAFF_ITEM_REQUEST_REMINDER', data.requestId, {
       stage: data.stage,
       discordId: data.discordId,

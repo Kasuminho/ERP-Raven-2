@@ -385,12 +385,30 @@ model DKPTransaction {
   createdAt   DateTime           @default(now())
   player      Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
   createdBy   User               @relation("DKPTransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  discordLogDelivery DiscordDkpLogDelivery?
 
   @@unique([playerId, type, referenceId])
   @@index([playerId, createdAt])
   @@index([type])
   @@index([referenceId])
   @@index([createdById])
+}
+
+model DiscordDkpLogState {
+  id                  String    @id
+  startedAt           DateTime
+  backfillCompletedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model DiscordDkpLogDelivery {
+  id            String         @id @default(uuid())
+  transactionId String         @unique
+  sentAt        DateTime       @default(now())
+  transaction   DKPTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([sentAt])
 }
 
 model DKPLock {

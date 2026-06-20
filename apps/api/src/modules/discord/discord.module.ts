@@ -10,6 +10,7 @@ import { DiscordRepository } from './repositories/discord.repository';
 import { DiscordSyncService } from './services/discord-sync.service';
 import { DiscordWebhookQueueService } from './services/discord-webhook-queue.service';
 import { NotificationService } from './services/notification.service';
+import { DkpLogPublisherService } from './services/dkp-log-publisher.service';
 
 @Module({
   imports: [AuditModule],
@@ -23,6 +24,7 @@ import { NotificationService } from './services/notification.service';
     DiscordSyncService,
     DiscordWebhookQueueService,
     NotificationService,
+    DkpLogPublisherService,
     RolesGuard,
   ],
   exports: [DiscordSyncService, DiscordWebhookQueueService, NotificationService, DiscordBotService],
