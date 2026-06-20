@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BellRing, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, BellRing, XCircle } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAnnouncements, useCancelAnnouncement, useCreateAnnouncement, useCreateEvent } from '@/hooks/use-guild-api';
+import { useAnnouncements, useCancelAnnouncement, useCreateAnnouncement } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { EventType } from '@/types/api';
@@ -61,7 +61,6 @@ function formatAnnouncementPreview(form: {
 export default function AdminAnnouncementsPage() {
   const announcements = useAnnouncements();
   const createAnnouncement = useCreateAnnouncement();
-  const createEvent = useCreateEvent();
   const cancelAnnouncement = useCancelAnnouncement();
   const locale = useLocaleStore((state) => state.locale);
   const [form, setForm] = useState({
@@ -75,7 +74,10 @@ export default function AdminAnnouncementsPage() {
   });
   const [createAttendanceEvents, setCreateAttendanceEvents] = useState(false);
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
-  const preview = formatAnnouncementPreview(form);
+  const orderedAnnouncementTitle = createAttendanceEvents && selectedEventTypes.length > 1
+    ? `${form.title} - ${selectedEventTypes.join(' - ')}`
+    : form.title;
+  const preview = formatAnnouncementPreview({ ...form, title: orderedAnnouncementTitle });
 
   async function submit() {
     try {
@@ -85,15 +87,8 @@ export default function AdminAnnouncementsPage() {
         channelId: form.channelId || undefined,
         mentionRoleId: form.mentionRoleId || undefined,
         eventTime: new Date(form.eventTime).toISOString(),
+        attendanceEventTypes: createAttendanceEvents ? selectedEventTypes : undefined,
       });
-
-      if (createAttendanceEvents) {
-        await Promise.all(selectedEventTypes.map((type) => createEvent.mutateAsync({
-          name: selectedEventTypes.length > 1 ? `${form.title} - ${type}` : form.title,
-          type,
-          startsAt: new Date(form.eventTime).toISOString(),
-        })));
-      }
 
       setForm({
         type: 'Evento',
@@ -119,6 +114,16 @@ export default function AdminAnnouncementsPage() {
     setSelectedEventTypes((current) => (
       current.includes(type) ? current.filter((value) => value !== type) : [...current, type]
     ));
+  }
+
+  function moveEventType(index: number, direction: -1 | 1) {
+    setSelectedEventTypes((current) => {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= current.length) return current;
+      const ordered = [...current];
+      [ordered[index], ordered[targetIndex]] = [ordered[targetIndex], ordered[index]];
+      return ordered;
+    });
   }
 
   return (
@@ -160,23 +165,43 @@ export default function AdminAnnouncementsPage() {
                 {t(locale, 'createAttendanceEventQuestion')}
               </label>
               {createAttendanceEvents && (
-                <div className="grid gap-2 rounded-md border bg-background/35 p-3 lg:col-span-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {eventTypes.map((type) => (
-                    <label key={type} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-primary"
-                        checked={selectedEventTypes.includes(type)}
-                        onChange={() => toggleEventType(type)}
-                      />
-                      {type}
-                    </label>
-                  ))}
+                <div className="space-y-4 rounded-md border bg-background/35 p-3 lg:col-span-4">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {eventTypes.map((type) => (
+                      <label key={type} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-primary"
+                          checked={selectedEventTypes.includes(type)}
+                          onChange={() => toggleEventType(type)}
+                        />
+                        {type}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedEventTypes.length > 0 && (
+                    <div className="space-y-2 border-t pt-3">
+                      <p className="text-xs font-semibold uppercase text-primary">Ordem dos bosses</p>
+                      {selectedEventTypes.map((type, index) => (
+                        <div key={type} className="flex items-center justify-between gap-3 rounded-md border bg-black/20 px-3 py-2 text-sm">
+                          <span><strong>{index + 1}.</strong> {type}</span>
+                          <div className="flex gap-1">
+                            <Button variant="secondary" onClick={() => moveEventType(index, -1)} disabled={index === 0} aria-label={`Subir ${type}`}>
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button variant="secondary" onClick={() => moveEventType(index, 1)} disabled={index === selectedEventTypes.length - 1} aria-label={`Descer ${type}`}>
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               <Button
                 onClick={submit}
-                disabled={createAnnouncement.isPending || createEvent.isPending || !form.title || !form.eventTime || (createAttendanceEvents && selectedEventTypes.length === 0)}
+                disabled={createAnnouncement.isPending || !form.title || !form.eventTime || (createAttendanceEvents && selectedEventTypes.length === 0)}
                 className="lg:col-span-4"
               >
                 <BellRing className="h-4 w-4" /> {t(locale, 'scheduleRepostingAnnouncement')}
@@ -191,7 +216,7 @@ export default function AdminAnnouncementsPage() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">{form.type || 'Evento'}</p>
-                    <p className="font-semibold">{form.title || 'Nome do evento'}</p>
+                    <p className="font-semibold">{orderedAnnouncementTitle || 'Nome do evento'}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Horario</p>

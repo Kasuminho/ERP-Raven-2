@@ -383,6 +383,15 @@ export type EventRecord = {
   dkpReward: number;
   startsAt: string;
   finalizedAt?: string;
+  attendanceBatchId?: string;
+  batchOrder?: number;
+};
+
+export type FinalizeEventResult = {
+  event: EventRecord;
+  nextEvent: EventRecord | null;
+  copiedAttendanceCount: number;
+  attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
 };
 
 export type EventAttendanceRow = {

@@ -340,25 +340,28 @@ model PlayerRole {
 }
 
 model Event {
-  id               String            @id @default(uuid())
-  name             String
-  type             EventType
-  status           EventStatus       @default(OPEN)
-  dkpReward        Int
-  startsAt         DateTime
-  finalizedAt      DateTime?
-  dkpDistributedAt DateTime?
-  createdById      String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  createdBy        User              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  attendances      EventAttendance[]
+  id                String            @id @default(uuid())
+  name              String
+  type              EventType
+  status            EventStatus       @default(OPEN)
+  dkpReward         Int
+  startsAt          DateTime
+  finalizedAt       DateTime?
+  dkpDistributedAt  DateTime?
+  createdById       String
+  attendanceBatchId String?
+  batchOrder        Int?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdBy         User              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  attendances       EventAttendance[]
 
   @@index([type])
   @@index([status])
   @@index([startsAt])
   @@index([finalizedAt])
   @@index([createdById])
+  @@index([attendanceBatchId, batchOrder])
 }
 
 model EventAttendance {

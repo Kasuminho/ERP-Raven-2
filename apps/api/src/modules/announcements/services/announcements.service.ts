@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Announcement, AnnouncementStatus, Prisma } from '@prisma/client';
+import { Announcement, AnnouncementStatus, EventType, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
+import { AttendanceService } from '../../events/services/attendance.service';
 import { CreateAnnouncementDto } from '../dto/create-announcement.dto';
 import { AnnouncementsRepository } from '../repositories/announcements.repository';
 
@@ -17,10 +18,26 @@ export class AnnouncementsService {
     private readonly notifications: NotificationService,
     private readonly auditService: AuditService,
     private readonly config: ConfigService,
+    private readonly attendanceService: AttendanceService,
   ) {}
 
   async createAnnouncement(data: CreateAnnouncementDto, createdById?: string): Promise<Announcement> {
     const eventTime = new Date(data.eventTime);
+    const baseTitle = data.title?.trim();
+    const attendanceEventTypes = data.attendanceEventTypes ?? [];
+
+    if (!baseTitle) {
+      throw new BadRequestException('Announcement title is required.');
+    }
+
+    if (new Set(attendanceEventTypes).size !== attendanceEventTypes.length
+      || attendanceEventTypes.some((type) => !Object.values(EventType).includes(type))) {
+      throw new BadRequestException('Attendance event types must be valid and unique.');
+    }
+
+    if (attendanceEventTypes.length > 0 && !createdById) {
+      throw new BadRequestException('Authenticated user is required to create attendance events.');
+    }
 
     if (Number.isNaN(eventTime.getTime()) || eventTime <= new Date()) {
       throw new BadRequestException('eventTime must be a future ISO date.');
@@ -35,9 +52,12 @@ export class AnnouncementsService {
 
     const now = new Date();
     const timezone = data.timezone?.trim() || this.brtTimeZone;
+    const announcementTitle = attendanceEventTypes.length > 1
+      ? `${baseTitle} - ${attendanceEventTypes.join(' - ')}`
+      : baseTitle;
     const announcement = await this.repository.create({
       type: data.type.trim(),
-      title: data.title.trim(),
+      title: announcementTitle,
       description: data.description?.trim() || undefined,
       eventTime,
       timezone,
@@ -47,12 +67,24 @@ export class AnnouncementsService {
       createdBy: createdById ? { connect: { id: createdById } } : undefined,
     });
 
+    for (const [batchOrder, eventType] of attendanceEventTypes.entries()) {
+      await this.attendanceService.createEvent({
+        name: attendanceEventTypes.length > 1 ? `${baseTitle} - ${eventType}` : baseTitle,
+        type: eventType,
+        startsAt: eventTime.toISOString(),
+        createdById,
+        attendanceBatchId: announcement.id,
+        batchOrder,
+      });
+    }
+
     await this.sendAnnouncement(announcement, 'created');
     await this.audit('ANNOUNCEMENT_CREATED', announcement.id, createdById, {
       type: announcement.type,
       title: announcement.title,
       eventTime: announcement.eventTime.toISOString(),
       channelId: announcement.channelId,
+      attendanceEventTypes,
     });
 
     return announcement;

@@ -5,4 +5,6 @@ export class CreateEventDto {
   type!: EventType;
   startsAt!: string;
   createdById?: string;
+  attendanceBatchId?: string;
+  batchOrder?: number;
 }

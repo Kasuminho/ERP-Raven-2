@@ -1,3 +1,5 @@
+import { EventType } from '@prisma/client';
+
 export class CreateAnnouncementDto {
   type!: string;
   title!: string;
@@ -6,4 +8,5 @@ export class CreateAnnouncementDto {
   timezone?: string;
   channelId?: string;
   mentionRoleId?: string;
+  attendanceEventTypes?: EventType[];
 }

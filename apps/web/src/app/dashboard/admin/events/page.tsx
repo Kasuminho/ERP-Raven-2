@@ -104,6 +104,28 @@ export default function AdminEventsPage() {
     );
   }
 
+  function finalizeSelectedEvent() {
+    if (!selectedEvent) return;
+
+    finalizeEvent.mutate(selectedEvent.id, {
+      onSuccess: (result) => {
+        if (!result.nextEvent) {
+          notifyToast({ title: 'Evento finalizado. Esse era o ultimo boss do lote.', tone: 'success' });
+          return;
+        }
+
+        setSelectedEventId(result.nextEvent.id);
+
+        if (result.attendanceCopyStatus === 'NEXT_EVENT_NOT_EMPTY') {
+          notifyToast({ title: `Evento finalizado. ${result.nextEvent.name} ja tinha presencas e foi aberto sem sobrescrever nada.`, tone: 'success' });
+          return;
+        }
+
+        notifyToast({ title: `Evento finalizado. ${result.copiedAttendanceCount} presencas copiadas para ${result.nextEvent.name}; revise e confirme.`, tone: 'success' });
+      },
+    });
+  }
+
   return (
     <AuthGuard roles={['STAFF', 'ADMIN']}>
       <div className="space-y-6">
@@ -173,7 +195,7 @@ export default function AdminEventsPage() {
                   <div className="flex items-center gap-2">
                     <Badge tone="blue">{presentPlayerIds.size} {t(locale, 'presentPlayers')}</Badge>
                     <Button
-                      onClick={() => finalizeEvent.mutate(selectedEvent.id, { onSuccess: () => notifyToast({ title: 'Evento finalizado.', tone: 'success' }) })}
+                      onClick={finalizeSelectedEvent}
                       disabled={isClosed || presentPlayerIds.size === 0 || finalizeEvent.isPending}
                     >
                       {t(locale, 'finalize')}

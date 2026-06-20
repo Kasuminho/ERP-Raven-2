@@ -14,6 +14,13 @@ import {
 } from '../exceptions/attendance-domain.exceptions';
 import { EventDetails, EventsRepository } from '../repositories/events.repository';
 
+export type FinalizeEventResult = {
+  event: Event;
+  nextEvent: Event | null;
+  copiedAttendanceCount: number;
+  attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -51,6 +58,8 @@ export class AttendanceService {
       dkpReward: reward,
       startsAt,
       createdBy: { connect: { id: data.createdById } },
+      attendanceBatchId: data.attendanceBatchId,
+      batchOrder: data.batchOrder,
     });
 
     await this.audit('EVENT_CREATED', 'Event', event.id, data.createdById, {
@@ -183,7 +192,7 @@ export class AttendanceService {
     );
   }
 
-  async finalizeEvent(eventId: string): Promise<Event> {
+  async finalizeEvent(eventId: string): Promise<FinalizeEventResult> {
     const result = await this.repository.client.$transaction(
       async (tx) => {
         const event = await this.requireEvent(eventId, tx);
@@ -225,8 +234,48 @@ export class AttendanceService {
           rewardTransactionIds,
         });
 
+        const nextEvent = event.attendanceBatchId && event.batchOrder !== null
+          ? await tx.event.findFirst({
+              where: {
+                attendanceBatchId: event.attendanceBatchId,
+                batchOrder: { gt: event.batchOrder },
+                status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] },
+              },
+              orderBy: { batchOrder: 'asc' },
+            })
+          : null;
+        let copiedAttendanceCount = 0;
+        let attendanceCopyStatus: FinalizeEventResult['attendanceCopyStatus'] = nextEvent ? 'COPIED' : 'NO_NEXT_EVENT';
+
+        if (nextEvent) {
+          const existingAttendanceCount = await tx.eventAttendance.count({ where: { eventId: nextEvent.id } });
+
+          if (existingAttendanceCount > 0) {
+            attendanceCopyStatus = 'NEXT_EVENT_NOT_EMPTY';
+          } else if (attendances.length > 0) {
+            const copied = await tx.eventAttendance.createMany({
+              data: attendances.map((attendance) => ({
+                eventId: nextEvent.id,
+                playerId: attendance.playerId,
+                attended: true,
+              })),
+              skipDuplicates: true,
+            });
+            copiedAttendanceCount = copied.count;
+            await this.auditWithinTransaction(tx, 'EVENT_BATCH_ATTENDANCE_COPIED', 'Event', nextEvent.id, event.createdById, {
+              sourceEventId: event.id,
+              targetEventId: nextEvent.id,
+              attendanceBatchId: event.attendanceBatchId,
+              copiedAttendanceCount,
+            });
+          }
+        }
+
         return {
           event: finalized,
+          nextEvent,
+          copiedAttendanceCount,
+          attendanceCopyStatus,
           summary: {
             rewardPerPlayer: event.dkpReward,
             totalDkp: presentCount * event.dkpReward,
@@ -244,7 +293,12 @@ export class AttendanceService {
       ...result.summary,
     });
 
-    return result.event;
+    return {
+      event: result.event,
+      nextEvent: result.nextEvent,
+      copiedAttendanceCount: result.copiedAttendanceCount,
+      attendanceCopyStatus: result.attendanceCopyStatus,
+    };
   }
 
   async distributeDKP(eventId: string): Promise<string[]> {
