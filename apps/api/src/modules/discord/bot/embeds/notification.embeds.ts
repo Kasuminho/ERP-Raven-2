@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { DiscordLocale, localeCopy } from './discord-locale';
+import { pickBilingualVoice, pickStaffVoice } from './webhook-voice';
 
 export type AnnouncementEmbedData = {
   stageLabel: string;
@@ -54,12 +55,12 @@ function isDiscordImageUrl(url?: string): url is string {
 
 function announcementStageLabel(label: string, locale: DiscordLocale): string {
   const stages: Record<string, Record<DiscordLocale, string>> = {
-    'Novo anuncio cadastrado': { 'pt-BR': 'Novo anuncio cadastrado', en: 'New announcement', es: 'Nuevo anuncio' },
-    'Lembrete diario': { 'pt-BR': 'Lembrete diario', en: 'Daily reminder', es: 'Recordatorio diario' },
-    'Faltam 4 horas': { 'pt-BR': 'Faltam 4 horas', en: '4 hours left', es: 'Faltan 4 horas' },
-    'Falta 1 hora': { 'pt-BR': 'Falta 1 hora', en: '1 hour left', es: 'Falta 1 hora' },
-    'Faltam 30 minutos': { 'pt-BR': 'Faltam 30 minutos', en: '30 minutes left', es: 'Faltan 30 minutos' },
-    Agora: { 'pt-BR': 'Agora', en: 'Starting now', es: 'Ahora' },
+    'Novo anuncio cadastrado': { 'pt-BR': 'Novo anuncio cadastrado', en: 'New announcement' },
+    'Lembrete diario': { 'pt-BR': 'Lembrete diario', en: 'Daily reminder' },
+    'Faltam 4 horas': { 'pt-BR': 'Faltam 4 horas', en: '4 hours left' },
+    'Falta 1 hora': { 'pt-BR': 'Falta 1 hora', en: '1 hour left' },
+    'Faltam 30 minutos': { 'pt-BR': 'Faltam 30 minutos', en: '30 minutes left' },
+    Agora: { 'pt-BR': 'Agora', en: 'Starting now' },
   };
   const stage = stages[label];
   return stage ? localeCopy(locale, stage) : label;
@@ -69,14 +70,21 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
   const embed = new EmbedBuilder()
     .setTitle(announcementStageLabel(data.stageLabel, locale))
     .setColor(0xf2c94c)
-    .setDescription(data.description?.trim() || localeCopy(locale, {
-      'pt-BR': '**Aviso no ar.** Bota no calendario agora; confiar na memoria e build de papel.',
-      en: '**Announcement live.** Put it on your calendar; trusting memory is a paper-tier build.',
-      es: '**Aviso publicado.** Ponlo en el calendario; confiar en la memoria es build de papel.',
-    }))
+    .setDescription(data.description?.trim() || pickBilingualVoice({
+      'pt-BR': [
+        '**Aviso no radar.** Marca no calendario agora; confiar na memoria e jogar ranked com ping alto.',
+        '**Anuncio publicado.** Salva o horario antes que o cerebro invente patch notes paralelas.',
+        '**Recado no ar.** Agenda isso ja; memoria solta e build sem backup.',
+      ],
+      en: [
+        '**Announcement is live.** Put it on your calendar now; trusting memory is ranked on high ping.',
+        '**Notice posted.** Save the time before your brain ships parallel patch notes.',
+        '**Heads-up is live.** Schedule it now; freehand memory is a build without backups.',
+      ],
+    }, data.stageLabel, data.type, data.title, data.eventTime))
     .addFields(
       { name: data.type, value: `**${data.title}**`, inline: false },
-      { name: localeCopy(locale, { 'pt-BR': 'Horario', en: 'Time', es: 'Horario' }), value: `${discordTimestamp(data.eventTime, 'F')}\n${discordTimestamp(data.eventTime, 'R')}`, inline: false },
+      { name: localeCopy(locale, { 'pt-BR': 'Horario', en: 'Time' }), value: `${discordTimestamp(data.eventTime, 'F')}\n${discordTimestamp(data.eventTime, 'R')}`, inline: false },
     )
     .setTimestamp(new Date());
 
@@ -85,37 +93,59 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
 
 export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale: DiscordLocale = 'pt-BR', staffOnly = false): EmbedBuilder {
   const copy = (values: Record<DiscordLocale, string>) => staffOnly ? values['pt-BR'] : localeCopy(locale, values);
+  const description = staffOnly
+    ? pickStaffVoice([
+      '**Fila parada virou quest da Staff.** Cobra update do print antes que o rank continue derretendo.',
+      '**Request em modo AFK.** Vale cutucar o player antes que a fila vire museu.',
+      '**Sem update novo.** Melhor puxar o player agora do que revisar fanfic depois.',
+    ], data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition)
+    : pickBilingualVoice({
+      'pt-BR': [
+        '**Request parado nao se carrega sozinho.** Atualiza o print antes que o rank pegue elevador pra baixo.',
+        '**Fila em stand-by nao dropa milagre.** Sobe o print novo antes do seu lugar virar souvenir.',
+        '**Sem update recente.** Ajusta o request logo; deixar pro ultimo minuto e speedrun de arrependimento.',
+      ],
+      en: [
+        '**A stalled request does not move itself.** Update the screenshot before your rank takes the elevator down.',
+        '**An idle queue does not drop miracles.** Upload the fresh screenshot before your spot becomes a souvenir.',
+        '**No recent update found.** Fix the request now; leaving it for the last minute is a regret speedrun.',
+      ],
+    }, data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition);
+
   return new EmbedBuilder()
     .setTitle(data.title)
     .setColor(0xeb5757)
-    .setDescription(copy({
-      'pt-BR': '**Fila parada nao dropa item.** Atualiza o print antes que seu rank conheca o porao.',
-      en: '**A frozen queue drops nothing.** Update the screenshot before your rank discovers the basement.',
-      es: '**Una cola parada no da loot.** Actualiza la captura antes de que tu rank conozca el sotano.',
-    }))
+    .setDescription(description)
     .addFields(
       { name: 'Player', value: data.playerName, inline: true },
       { name: 'Item', value: data.itemName, inline: true },
-      { name: copy({ 'pt-BR': 'Sem atualizar', en: 'No update', es: 'Sin actualizar' }), value: `${data.daysIdle} ${copy({ 'pt-BR': 'dia(s)', en: 'day(s)', es: 'dia(s)' })}`, inline: true },
+      { name: copy({ 'pt-BR': 'Sem atualizar', en: 'No update' }), value: `${data.daysIdle} ${copy({ 'pt-BR': 'dia(s)', en: 'day(s)' })}`, inline: true },
       { name: 'Rank', value: `#${data.rankPosition}`, inline: true },
-      { name: copy({ 'pt-BR': 'Acao', en: 'Action', es: 'Accion' }), value: data.actionText, inline: false },
+      { name: copy({ 'pt-BR': 'Acao', en: 'Action' }), value: data.actionText, inline: false },
     )
     .setTimestamp(new Date());
 }
 
 export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(localeCopy(locale, { 'pt-BR': `Interesse aberto: ${data.title}`, en: `Interest open: ${data.title}`, es: `Interes abierto: ${data.title}` }))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Interesse aberto: ${data.title}`, en: `Interest open: ${data.title}` }))
     .setColor(0x27ae60)
-    .setDescription(localeCopy(locale, {
-      'pt-BR': '**Loot disponivel.** Declara no site e manda o print certo. Sem print, sem magia; Aristolfo nao le mente ainda.',
-      en: '**Loot available.** Declare on the site and attach the right screenshot. Aristolfo cannot read minds yet.',
-      es: '**Loot disponible.** Declara en el sitio y adjunta la captura correcta. Aristolfo aun no lee mentes.',
-    }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        '**Interesse liberado.** Declara no site e manda o print certo; guess aqui so serve pra quiz errado.',
+        '**Loot elegivel abriu fila.** Escolhe com criterio e anexa a prova antes do Discord comecar CSI de print.',
+        '**Janela de interesse ativa.** Registro sem print bom vira side quest chata, entao ja resolve direito.',
+      ],
+      en: [
+        '**Interest is open.** Declare it on the site and attach the right screenshot; guessing only wins the wrong quiz.',
+        '**Eligible loot opened the queue.** Choose with intent and attach proof before Discord starts screenshot CSI.',
+        '**Interest window is active.** A request without a proper screenshot turns into an annoying side quest, so solve it now.',
+      ],
+    }, data.title, data.itemName, data.mode, data.closesAt))
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
-      { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode', es: 'Modo' }), value: data.mode, inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes', es: 'Cierra' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
+      { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode' }), value: data.mode, inline: true },
+      { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
       { name: 'Regras PT-BR', value: data.criteriaPt || 'Sem regras cadastradas.', inline: false },
       { name: 'Rules EN', value: data.criteriaEn || 'No rules configured.', inline: false },
       { name: 'Dashboard', value: data.url || 'Dashboard link unavailable', inline: false },
@@ -131,16 +161,23 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
 
 export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(localeCopy(locale, { 'pt-BR': `Interesse entregue: ${data.title}`, en: `Interest delivered: ${data.title}`, es: `Interes entregado: ${data.title}` }))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Interesse entregue: ${data.title}`, en: `Interest delivered: ${data.title}` }))
     .setColor(0xf2c94c)
-    .setDescription(localeCopy(locale, {
-      'pt-BR': '**Entrega registrada.** O loot saiu da fila; pode encerrar a teoria da conspiracao.',
-      en: '**Delivery logged.** Loot left the queue; the conspiracy thread may now close.',
-      es: '**Entrega registrada.** El loot salio de la cola; pueden cerrar la teoria conspirativa.',
-    }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        '**Entrega registrada.** O loot saiu da fila e a auditoria do "sera que esqueceram?" perdeu assunto.',
+        '**Interesse concluido.** Item entregue; a timeline da conspiracao acabou de tomar timeout.',
+        '**Distribuicao salva.** Quem recebeu ja entrou no log e o resto e eco do chat.',
+      ],
+      en: [
+        '**Delivery logged.** Loot left the queue and the "did they forget?" audit lost its talking point.',
+        '**Interest completed.** Item delivered; the conspiracy timeline just got timed out.',
+        '**Distribution saved.** The recipients are in the log now and the rest is just chat echo.',
+      ],
+    }, data.title, data.itemName, data.playerNames.join('|')))
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
-      { name: localeCopy(locale, { 'pt-BR': 'Recebedor(es)', en: 'Recipient(s)', es: 'Receptor(es)' }), value: data.playerNames.join('\n') || 'Player', inline: false },
+      { name: localeCopy(locale, { 'pt-BR': 'Recebedor(es)', en: 'Recipient(s)' }), value: data.playerNames.join('\n') || 'Player', inline: false },
     )
     .setTimestamp(new Date());
 
@@ -152,22 +189,29 @@ export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbed
 }
 
 export function buildItemInterestSkillBatchEmbed(data: ItemInterestSkillBatchEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
-  const sample = data.sampleTitles.length > 0 ? data.sampleTitles.slice(0, 12).join('\n') : localeCopy(locale, { 'pt-BR': 'Skills disponiveis no dashboard.', en: 'Skills available on the dashboard.', es: 'Skills disponibles en el dashboard.' });
-  const extra = data.count > data.sampleTitles.length ? `\n${localeCopy(locale, { 'pt-BR': '... e mais', en: '... and', es: '... y' })} ${data.count - data.sampleTitles.length}` : '';
+  const sample = data.sampleTitles.length > 0 ? data.sampleTitles.slice(0, 12).join('\n') : localeCopy(locale, { 'pt-BR': 'Skills disponiveis no dashboard.', en: 'Skills available on the dashboard.' });
+  const extra = data.count > data.sampleTitles.length ? `\n${localeCopy(locale, { 'pt-BR': '... e mais', en: '... and' })} ${data.count - data.sampleTitles.length}` : '';
 
   return new EmbedBuilder()
-    .setTitle(localeCopy(locale, { 'pt-BR': 'Skills abertas para interesse', en: 'Skills open for interest', es: 'Skills abiertas para interes' }))
+    .setTitle(localeCopy(locale, { 'pt-BR': 'Skills abertas para interesse', en: 'Skills open for interest' }))
     .setColor(0x27ae60)
-    .setDescription(localeCopy(locale, {
-      'pt-BR': '**Pacote de skills liberado.** Escolhe o que presta pro boneco, nao o que brilha mais no inventario.',
-      en: '**Skill batch unlocked.** Pick what helps your build, not whatever shines hardest in inventory.',
-      es: '**Paquete de skills liberado.** Elige lo que sirve a tu build, no lo que mas brilla.',
-    }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        '**Pacote de skills liberado.** Escolhe o que fecha build, nao o item que so grita mais alto.',
+        '**Lote aberto.** Prioriza utilidade no boneco; brilho falso e DLC de arrependimento.',
+        '**Mais skills na fila.** Mira no upgrade real e foge do pick por puro efeito especial.',
+      ],
+      en: [
+        '**Skill batch unlocked.** Pick what completes the build, not the item that just screams louder.',
+        '**Bundle is open.** Prioritize what helps your character; fake sparkle is paid regret DLC.',
+        '**More skills in queue.** Aim for the real upgrade and dodge picks made for pure special effects.',
+      ],
+    }, data.count, data.mode, data.closesAt, data.sampleTitles.join('|')))
     .addFields(
-      { name: localeCopy(locale, { 'pt-BR': 'Quantidade', en: 'Count', es: 'Cantidad' }), value: String(data.count), inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode', es: 'Modo' }), value: data.mode, inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes', es: 'Cierra' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
-      { name: localeCopy(locale, { 'pt-BR': 'Amostra', en: 'Sample', es: 'Muestra' }), value: `${sample}${extra}`.slice(0, 1024), inline: false },
+      { name: localeCopy(locale, { 'pt-BR': 'Quantidade', en: 'Count' }), value: String(data.count), inline: true },
+      { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode' }), value: data.mode, inline: true },
+      { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
+      { name: localeCopy(locale, { 'pt-BR': 'Amostra', en: 'Sample' }), value: `${sample}${extra}`.slice(0, 1024), inline: false },
       { name: 'Dashboard', value: data.url || 'Dashboard link unavailable', inline: false },
     )
     .setTimestamp(new Date());

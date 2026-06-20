@@ -9,6 +9,7 @@ import { buildDkpNotificationEmbed } from '../bot/embeds/dkp.embeds';
 import { buildAnnouncementEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../bot/embeds/staff-review.embeds';
 import { DiscordLocale, localeCopy, resolveDiscordLocale } from '../bot/embeds/discord-locale';
+import { bilingualBlocks, pickBilingualVoice, pickStaffVoice } from '../bot/embeds/webhook-voice';
 import { DiscordBotService } from '../bot/services/discord-bot.service';
 import { DiscordWebhookQueueService } from './discord-webhook-queue.service';
 
@@ -40,12 +41,19 @@ export class NotificationService {
     const locale = this.localeFor('auctions', data.itemName);
     await this.sendChannel('auctions', {
       embeds: [buildDkpNotificationEmbed(
-        localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon', es: 'Subasta por terminar' }),
-        localeCopy(locale, {
-          'pt-BR': `**${data.itemName}** esta nos minutos finais. Bid agora ou contemple o classico "eu ia participar".`,
-          en: `**${data.itemName}** is in its final minutes. Bid now or deploy the classic "I was about to".`,
-          es: `**${data.itemName}** esta en los ultimos minutos. Puja ahora o prepara el clasico "ya iba".`,
-        }),
+        localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon' }),
+        pickBilingualVoice({
+          'pt-BR': [
+            `**${data.itemName}** esta nos minutos finais. Bid agora ou prepara o combo "eu tava abrindo a tela".`,
+            `**${data.itemName}** ja entrou no clutch final. Quem vacilar vai clipar so a desculpa.`,
+            `**${data.itemName}** ta fechando a janela. Se o bid nao sair agora, depois vira nostalgia aplicada.`,
+          ],
+          en: [
+            `**${data.itemName}** is in its final minutes. Bid now or prepare the classic "I was opening the page".`,
+            `**${data.itemName}** is already in the final clutch. Miss it now and only the excuse gets clipped.`,
+            `**${data.itemName}** is closing its window. If the bid does not go in now, it becomes applied nostalgia.`,
+          ],
+        }, data.auctionId, data.itemName),
       )],
     }, 'DISCORD_NOTIFY_AUCTION_ENDING_SOON', data.auctionId);
   }
@@ -55,7 +63,7 @@ export class NotificationService {
       await this.bot.sendDirectMessage(data.discordId, {
         embeds: [buildDkpNotificationEmbed(
           'Bid superado / Bid outbid',
-          `**PT-BR**\nSuperaram seu bid em **${data.itemName}**. Reaja ou abrace o desenvolvimento de personagem.\n\n**EN**\nYour bid on **${data.itemName}** was outbid. React or embrace the character development.`,
+          `**PT-BR**\nSuperaram seu bid em **${data.itemName}**. Reage agora ou deixa o replay te assombrar.\n\n**EN**\nYour bid on **${data.itemName}** was outbid. React now or let the replay haunt you.`,
         )],
       });
       await this.audit('DISCORD_NOTIFY_BID_OUTBID', data.auctionId, { discordId: data.discordId });
@@ -185,19 +193,34 @@ export class NotificationService {
   }): Promise<void> {
     const locale = this.localeFor('itemRequests', data.itemName);
     const stageText = {
-      '3d': localeCopy(locale, { 'pt-BR': 'precisa atualizar o print do request.', en: 'needs to update the request screenshot.', es: 'necesita actualizar la captura del request.' }),
-      '4d': localeCopy(locale, { 'pt-BR': 'ultimo aviso para atualizar o print do request.', en: 'final warning to update the request screenshot.', es: 'ultimo aviso para actualizar la captura del request.' }),
-      dropped: localeCopy(locale, { 'pt-BR': 'caiu uma posicao na fila por falta de atualizacao.', en: 'dropped one queue position due to no update.', es: 'bajo una posicion por falta de actualizacion.' }),
+      '3d': bilingualBlocks({
+        'pt-BR': 'Seu request precisa de print atualizado.',
+        en: 'Your request needs an updated screenshot.',
+      }),
+      '4d': bilingualBlocks({
+        'pt-BR': 'Ultimo aviso para atualizar o print do request.',
+        en: 'Final warning to update the request screenshot.',
+      }),
+      dropped: bilingualBlocks({
+        'pt-BR': 'Seu request caiu uma posicao na fila por falta de atualizacao.',
+        en: 'Your request dropped one queue position because it was not updated.',
+      }),
     }[data.stage];
     const url = this.dashboardUrl('/item-requests');
     const actionText = data.stage === 'dropped'
-      ? localeCopy(locale, { 'pt-BR': 'Voce caiu uma posicao na fila.', en: 'You dropped one queue position.', es: 'Bajaste una posicion en la cola.' })
-      : `${localeCopy(locale, { 'pt-BR': 'Atualize pelo site', en: 'Update on the website', es: 'Actualiza en el sitio' })}: ${url}`;
+      ? bilingualBlocks({
+        'pt-BR': 'Voce caiu uma posicao na fila.',
+        en: 'You dropped one queue position.',
+      })
+      : bilingualBlocks({
+        'pt-BR': `Atualize pelo site: ${url}`,
+        en: `Update on the website: ${url}`,
+      });
 
     await this.sendWebhookChannel('itemRequests', {
-      content: `<@${data.discordId}> ${stageText}`,
+      content: `<@${data.discordId}>\n${stageText}`,
       embeds: [buildRequestReminderEmbed({
-        title: localeCopy(locale, { 'pt-BR': 'Atualizacao de Item Request', en: 'Item Request Update', es: 'Actualizacion de Item Request' }),
+        title: localeCopy(locale, { 'pt-BR': 'Atualizacao de Item Request', en: 'Item Request Update' }),
         playerName: data.playerName,
         itemName: data.itemName,
         daysIdle: data.daysIdle,
@@ -225,6 +248,17 @@ export class NotificationService {
       '4d': 'Ultimo aviso',
       dropped: 'Queda automatica de rank',
     }[data.stage];
+    const actionText = data.stage === 'dropped'
+      ? pickStaffVoice([
+        'Rank ajustado automaticamente. So falta garantir que o player entenda o debuff.',
+        'A fila ja puniu sozinha. Agora vale alinhar o player sem abrir side quest.',
+        'O rank desceu no automatico. Melhor avisar antes que venha contestacao em 240p.',
+      ], data.requestId, data.itemName, data.playerName, data.stage)
+      : pickStaffVoice([
+        'Cobrar update do player com print novo no site.',
+        'Puxar o player para atualizar o request sem inventar moda.',
+        'Lembrar o player de subir prova nova antes do cron cobrar de novo.',
+      ], data.requestId, data.itemName, data.playerName, data.stage);
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,
       embeds: [buildRequestReminderEmbed({
@@ -233,9 +267,7 @@ export class NotificationService {
         itemName: data.itemName,
         daysIdle: data.daysIdle,
         rankPosition: data.rankPosition,
-        actionText: data.stage === 'dropped'
-          ? 'Rank ajustado automaticamente.'
-          : 'Cobrar update do player.',
+        actionText,
       }, 'pt-BR', true)],
     }, 'DISCORD_NOTIFY_STAFF_ITEM_REQUEST_REMINDER', data.requestId, {
       stage: data.stage,

@@ -10,10 +10,30 @@ const colors = {
 const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
-  'PT-BR': '*Aristolfo auditou. Se quebrar agora, foi feature com autoestima.*',
-  EN: '*Aristolfo reviewed it. Any remaining bug is clearly a confidence feature.*',
-  ES: '*Aristolfo lo reviso. Si falla ahora, es una feature con autoestima.*',
+  'PT-BR': [
+    '*Aristolfo conferiu. Se der ruim agora, foi side quest da realidade.*',
+    '*Aristolfo passou o olho torto. Se quebrar daqui pra frente, o bug entrou sem convite.*',
+    '*Aristolfo soltou o changelog. O resto agora e PvP entre deploy e destino.*',
+    '*Aristolfo revisou. Se surgir caos novo, pelo menos ele veio com timestamp.*',
+  ],
+  EN: [
+    '*Aristolfo checked it. If it breaks now, reality queued a side quest.*',
+    '*Aristolfo gave it the side-eye. Any new failure arrived without an invite.*',
+    '*Aristolfo shipped the changelog. The rest is PvP between deploy and fate.*',
+    '*Aristolfo reviewed it. If chaos appears now, at least it comes with a timestamp.*',
+  ],
 };
+
+function pickVariant(options, seed) {
+  let hash = 2166136261;
+
+  for (const char of String(seed || 'aristolfo')) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return options[(hash >>> 0) % options.length] || options[0];
+}
 
 function loadEnv(cwd) {
   const envPath = path.join(cwd, '.env');
@@ -94,24 +114,24 @@ function normalizeSections(content) {
   const normalized = content
     .replace(/\r\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
-    .replace(/\n*(\*\*(?:PT-BR|PT|EN|ES)\*\*)/g, '\n\n$1')
-    .replace(/\n*(^|\n)(PT-BR|PT|EN|ES)(?=\n)/g, '\n\n**$2**')
+    .replace(/\n*(\*\*(?:PT-BR|PT|EN)\*\*)/g, '\n\n$1')
+    .replace(/\n*(^|\n)(PT-BR|PT|EN)(?=\n)/g, '\n\n**$2**')
     .trim();
   const titleMatch = normalized.match(/^#\s+(.+)$/m);
   const title = titleMatch?.[1]?.trim() || 'Atualizacao da plataforma';
   const withoutTitle = normalized.replace(/^#\s+.+\n?/, '').trim();
-  const parts = withoutTitle.split(/\n(?=\*\*(?:PT-BR|PT|EN|ES)\*\*)/).map((part) => part.trim()).filter(Boolean);
+  const parts = withoutTitle.split(/\n(?=\*\*(?:PT-BR|PT|EN)\*\*)/).map((part) => part.trim()).filter(Boolean);
 
   if (parts.length === 0) {
     return [{ title, language: 'Update', body: withoutTitle || normalized }];
   }
 
   return parts.map((part) => {
-    const match = part.match(/^\*\*(PT-BR|PT|EN|ES)\*\*\s*\n?/);
+    const match = part.match(/^\*\*(PT-BR|PT|EN)\*\*\s*\n?/);
     return {
       title,
       language: match?.[1] || 'Update',
-      body: part.replace(/^\*\*(PT-BR|PT|EN|ES)\*\*\s*\n?/, '').trim(),
+      body: part.replace(/^\*\*(PT-BR|PT|EN)\*\*\s*\n?/, '').trim(),
     };
   });
 }
@@ -143,7 +163,6 @@ function chunkText(text, limit = 3600) {
 function normalizeLocale(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'en' || normalized === 'en-us') return 'EN';
-  if (normalized === 'es' || normalized === 'es-es') return 'ES';
   return 'PT-BR';
 }
 
@@ -159,10 +178,10 @@ function selectLocaleSections(content, target, locale) {
 function buildEmbeds(content, target, locale) {
   return selectLocaleSections(content, target, locale).flatMap((section) => {
     const chunks = chunkText(section.body);
-    const sectionLocale = section.language === 'EN' ? 'EN' : section.language === 'ES' ? 'ES' : 'PT-BR';
+    const sectionLocale = section.language === 'EN' ? 'EN' : 'PT-BR';
     return chunks.map((chunk, index) => ({
       title: `${target === 'staff' ? '' : `${sectionLocale} - `}${section.title}${chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : ''}`,
-      description: `${chunk}\n\n${punchlines[sectionLocale]}`,
+      description: `${chunk}\n\n${pickVariant(punchlines[sectionLocale], `${target}|${section.title}|${sectionLocale}|${index}|${chunk}`)}`,
       color: colors[target] || colors.player,
       timestamp: new Date().toISOString(),
     }));
@@ -234,7 +253,7 @@ async function main() {
       body: JSON.stringify({
         username,
         avatar_url: avatarUrl,
-        content: embedGroups.length > 1 ? `Atualizacao (${index + 1}/${embedGroups.length})` : undefined,
+        content: embedGroups.length > 1 ? `Aristolfo ${index + 1}/${embedGroups.length}` : undefined,
         embeds,
         allowed_mentions: { parse: [] },
       }),

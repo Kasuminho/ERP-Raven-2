@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { BusinessRulesService } from '../business-rules/business-rules.service';
+import { bilingualBlocks, pickVoiceLine } from '../discord/bot/embeds/webhook-voice';
 import { NotificationService } from '../discord/services/notification.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
 import { AuctionDiagnosticSummary, IntegrityIssue, IntegritySummary } from './operations.types';
@@ -932,7 +933,18 @@ export class OperationsService {
       '**Staff backlog**',
       `Reviews: ${staff.counts.reviews} | Deliveries: ${staff.counts.deliveries} | Codex: ${staff.counts.codex} | Interests: ${staff.counts.interests}`,
       '',
-      '*Aristolfo counted everything twice. The spreadsheet still looks suspicious.*',
+      bilingualBlocks({
+        'pt-BR': pickVoiceLine([
+          'Aristolfo fechou a contagem duas vezes. Se a planilha chiar agora, e porque ela sentiu o hit.',
+          'Resumo revisado. A conta passou no pente-fino e a planilha segue em modo sobrevivencia.',
+          'Aristolfo auditou a semana toda. Se sobrar duvida, o problema ja e filosofia, nao soma.',
+        ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
+        en: pickVoiceLine([
+          'Aristolfo counted the week twice. If the spreadsheet still complains, it just took emotional damage.',
+          'Weekly summary reviewed. The math survived the comb-through and the spreadsheet remains barely online.',
+          'Aristolfo audited the whole week. Any doubt left now is philosophy, not arithmetic.',
+        ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
+      }),
     ].join('\n');
 
     await this.discordNotifications.sendOperationalNotification('', message, 'weekly-guild-summary');

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { pickStaffVoice } from '../../discord/bot/embeds/webhook-voice';
 import { DiscordWebhookQueueService } from '../../discord/services/discord-webhook-queue.service';
 import { HealthReport, HealthState } from '../health.types';
 import { HealthService } from './health.service';
@@ -74,17 +75,33 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const failedChecks = report.checks.filter((check) => check.status !== 'ok');
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
-      ? 'Healthcheck recuperado. Aristolfo venceu.'
+      ? pickStaffVoice([
+        'Healthcheck recuperado. Aristolfo largou o extintor.',
+        'Healthcheck verde de novo. O servidor parou de farmar susto.',
+        'Healthcheck normalizado. A treta saiu do mapa por enquanto.',
+      ], report.status, report.checkedAt)
       : report.status === 'degraded'
-        ? 'Healthcheck tossiu no voice'
-        : 'Healthcheck critico. F no chat.';
+        ? pickStaffVoice([
+          'Healthcheck com chiado no voice',
+          'Healthcheck amarelou no radar',
+          'Healthcheck em modo cautela',
+        ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
+        : pickStaffVoice([
+          'Healthcheck critico. Puxar o cabo de paciencia.',
+          'Healthcheck vermelho. O plantao ganhou boss fight.',
+          'Healthcheck caiu em modo desastre premium.',
+        ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
       embeds: [{
         title,
         color,
         description: report.status === 'ok'
-          ? '**A plataforma voltou.** O servidor respirou, Aristolfo julgou e seguimos o farm.'
+          ? pickStaffVoice([
+            '**A plataforma voltou.** O servidor respirou fundo e o plantao pode tirar o dedo do F5.',
+            '**Tudo normalizado.** A infra saiu do modo roguelike e voltou para a rota prevista.',
+            '**Servico recuperado.** O susto fechou a thread e a stack parou de brincar de Jenga.',
+          ], report.status, report.checkedAt)
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [
           { name: 'Status', value: report.status.toUpperCase(), inline: true },

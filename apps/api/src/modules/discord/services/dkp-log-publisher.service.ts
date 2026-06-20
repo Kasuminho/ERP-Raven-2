@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DKPTransactionType } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
+import { pickStaffVoice } from '../bot/embeds/webhook-voice';
 import { DiscordWebhookQueueService } from './discord-webhook-queue.service';
 
 type DkpLogRow = {
@@ -85,8 +86,16 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
             title,
             color: 0x9b51e0,
             description: `${initialBackfill
-              ? '**Aristolfo abriu o bau dos ultimos 3 dias.** Segue o extrato antes que alguem culpe a matematica.\n\n'
-              : '**O contador de DKP espirrou.** Aristolfo registrou tudo antes que a memoria seletiva entrasse no voice.\n\n'}${chunk.lines.join('\n')}`,
+              ? `${pickStaffVoice([
+                '**Aristolfo abriu o bau dos ultimos 3 dias.** Confere o extrato antes que nasca fanfic de saldo.',
+                '**Backfill na mesa.** Os ultimos 3 dias entraram em ordem, sem speedrun de contabilidade criativa.',
+                '**Historico puxado.** O cofre cuspiu 3 dias de DKP antes que alguem chamasse a calculadora de suspeita.',
+              ], this.stateId, index, 'backfill')}\n\n`
+              : `${pickStaffVoice([
+                '**Movimentacao nova pingou.** O log chegou antes da memoria coletiva editar a cena.',
+                '**DKP mexeu.** Aristolfo anotou no susto para a timeline nao inventar patch paralelo.',
+                '**Extrato atualizado.** O contador registrou tudo antes do Discord virar tribunal de achismo.',
+              ], this.stateId, index, 'live')}\n\n`}${chunk.lines.join('\n')}`,
             footer: { text: `${chunk.rows.length} movimentacao(oes) | Ordem cronologica` },
             timestamp: new Date().toISOString(),
           }],

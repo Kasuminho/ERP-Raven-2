@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { DiscordLocale, localeCopy } from './discord-locale';
+import { pickBilingualVoice } from './webhook-voice';
 
 export type AuctionEmbedData = {
   itemName: string;
@@ -22,19 +23,25 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setTitle(localeCopy(locale, {
       'pt-BR': `Leilao aberto: ${data.itemName}`,
       en: `Auction open: ${data.itemName}`,
-      es: `Subasta abierta: ${data.itemName}`,
     }))
     .setColor(0x2f80ed)
-    .setDescription(localeCopy(locale, {
-      'pt-BR': '**Loot na mesa.** Confere o DKP antes de clicar; matematica depois do bid vira fanfic.',
-      en: '**Loot is live.** Check your DKP before clicking; post-bid math is premium copium.',
-      es: '**Hay loot.** Revisa tu DKP antes de pujar; hacer cuentas despues es puro copium.',
-    }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        '**Loot na pista.** Confere o DKP antes do clique; conta refeita no susto nunca sai premium.',
+        '**Leilao spawnou.** Entra com o DKP checado; fazer matematica no pos-jogo e patch de desespero.',
+        '**Item em disputa.** Mira no bid com o saldo certo; improviso depois do lock so rende clip de vergonha.',
+      ],
+      en: [
+        '**Loot is live.** Check your DKP before clicking; panic math after the lock is low-ELO tech.',
+        '**Auction just spawned.** Queue up with verified DKP; post-lock arithmetic is bargain-bin strategy.',
+        '**Item is contested.** Aim with the right balance; freestyle math after the bid only creates cringe VODs.',
+      ],
+    }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
       { name: 'Tier', value: data.itemTier, inline: true },
-      { name: localeCopy(locale, { 'pt-BR': 'Lance minimo', en: 'Minimum bid', es: 'Puja minima' }), value: String(data.minimumBid), inline: true },
+      { name: localeCopy(locale, { 'pt-BR': 'Lance minimo', en: 'Minimum bid' }), value: String(data.minimumBid), inline: true },
       {
-        name: localeCopy(locale, { 'pt-BR': 'Termina', en: 'Ends', es: 'Termina' }),
+        name: localeCopy(locale, { 'pt-BR': 'Termina', en: 'Ends' }),
         value: `${discordTimestamp(data.endsAt, 'F')}\n${discordTimestamp(data.endsAt, 'R')}`,
         inline: false,
       },
@@ -45,12 +52,19 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
 
 export function buildAuctionWinnerEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}`, es: `Ganador definido: ${itemName}` }))
-    .setDescription(localeCopy(locale, {
-      'pt-BR': `**${playerName} levou.** DKP consumido e chororo encaminhado ao setor de skill issue.`,
-      en: `**${playerName} got it.** DKP consumed; complaints have been routed to the skill issue department.`,
-      es: `**${playerName} se lo lleva.** DKP consumido; quejas enviadas al departamento de skill issue.`,
-    }))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        `**${playerName} fechou o drop.** O DKP saiu da conta e o tribunal do "eu quase dei bid" ja pode abrir.`,
+        `**${playerName} garantiu o item.** DKP consumido; o resto vira textao tardio no canal errado.`,
+        `**${playerName} levou.** O lock virou gasto real e o debate tardio perdeu o buff.`,
+      ],
+      en: [
+        `**${playerName} locked the drop.** DKP is spent; the "I almost bid" court may now convene.`,
+        `**${playerName} secured the item.** DKP consumed; the rest is just a late essay posted in the wrong channel.`,
+        `**${playerName} got it.** The lock became a real spend and the late debate lost its buff.`,
+      ],
+    }, itemName, playerName))
     .setColor(0x27ae60)
     .setTimestamp(new Date());
 
@@ -63,12 +77,19 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
 
 export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}`, es: `Drop entregado: ${itemName}` }))
-    .setDescription(localeCopy(locale, {
-      'pt-BR': `Entrega registrada para **${playerName}**. Print salvo, memoria ativada e caozinho domesticado.`,
-      en: `Delivery logged for **${playerName}**. Screenshot saved; selective memory has left the chat.`,
-      es: `Entrega registrada para **${playerName}**. Captura guardada; la memoria selectiva salio del chat.`,
-    }))
+    .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        `Entrega registrada para **${playerName}**. Print guardado e a novela do "cade a prova?" perdeu tela.`,
+        `**${playerName}** recebeu e ficou tudo salvo. O print entrou no cofre antes do Discord inventar teoria.`,
+        `Entrega confirmada para **${playerName}**. Prova anexada e o VAR do loot ja tem replay.`,
+      ],
+      en: [
+        `Delivery logged for **${playerName}**. Screenshot stored and the "where is the proof?" arc lost its screen time.`,
+        `**${playerName}** received it and everything is saved. The screenshot hit the vault before Discord could theorycraft.`,
+        `Delivery confirmed for **${playerName}**. Proof attached and the loot VAR already has the replay.`,
+      ],
+    }, itemName, playerName))
     .setColor(0xf2c94c)
     .setTimestamp(new Date());
 

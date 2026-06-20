@@ -1,4 +1,4 @@
-export type DiscordLocale = 'pt-BR' | 'en' | 'es';
+export type DiscordLocale = 'pt-BR' | 'en';
 
 const localeAliases: Record<string, DiscordLocale> = {
   pt: 'pt-BR',
@@ -7,15 +7,11 @@ const localeAliases: Record<string, DiscordLocale> = {
   en: 'en',
   'en-us': 'en',
   english: 'en',
-  es: 'es',
-  'es-es': 'es',
-  spanish: 'es',
 };
 
 const languageHints: Record<DiscordLocale, string[]> = {
   'pt-BR': [' voce ', ' leilao', ' atualiza', ' faltam', ' agora', ' guilda'],
   en: [' the ', ' you ', ' auction', ' update', ' hours', ' now', ' guild'],
-  es: [' subasta', ' actualiza', ' faltan', ' ahora', ' gremio', ' jugador'],
 };
 
 export function normalizeDiscordLocale(value?: string | null): DiscordLocale | undefined {

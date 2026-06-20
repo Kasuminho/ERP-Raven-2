@@ -6,6 +6,7 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 
 - Todo canal exclusivo da Staff recebe apenas PT-BR.
 - Mensagens destinadas aos players usam PT-BR e EN no mesmo post.
+- Espanhol nao entra mais no fluxo de webhook.
 - Cada idioma fica em seu proprio bloco para continuar legivel.
 
 ## Personalidade
@@ -15,6 +16,7 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 - Deboche direcionado a bugs, builds, planilhas, filas e situacoes, nunca a caracteristicas pessoais.
 - Sem pedido de desculpa cerimonial. Erro vira correcao objetiva com uma piada curta.
 - Alertas criticos continuam claros antes da zoeira.
+- Variacoes usam selecao deterministica por contexto para evitar bordao fixo e nao baguncar retries.
 
 ## Configuracao
 
