@@ -49,6 +49,13 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/drops', titleKey: 'drops', descriptionKey: 'staffDropsDescription', icon: Gem },
 ];
 
+const toolGroups = [
+  { label: 'Operacao de hoje', hrefs: ['/dashboard/staff/day', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/admin/announcements'] },
+  { label: 'Loot e economia', hrefs: ['/dashboard/staff/dkp', '/dashboard/staff/economy', '/dashboard/staff/interests', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/admin/items', '/dashboard/staff/daoshi', '/dashboard/staff/codex'] },
+  { label: 'Players e temporada', hrefs: ['/dashboard/staff/players', '/dashboard/staff/progress', '/dashboard/staff/compare', '/dashboard/staff/fairness', '/dashboard/staff/season'] },
+  { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/discord-templates'] },
+];
+
 export default function StaffHubPage() {
   const locale = useLocaleStore((state) => state.locale);
   const operations = useStaffOperations();
@@ -61,18 +68,6 @@ export default function StaffHubPage() {
       <div>
         <p className="text-sm uppercase text-primary">{t(locale, 'governanceDeck')}</p>
         <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'staffTools')}</h1>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-        {tools.map((tool) => (
-          <Link
-            key={`shortcut-${tool.href}`}
-            href={tool.href}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border bg-card/80 px-3 py-2 text-sm font-semibold transition hover:border-primary/60 hover:bg-card"
-          >
-            <tool.icon className="h-4 w-4 text-primary" />
-            <span>{t(locale, tool.titleKey)}</span>
-          </Link>
-        ))}
       </div>
       <div className="grid gap-3 md:grid-cols-4">
         {[
@@ -98,24 +93,30 @@ export default function StaffHubPage() {
           title="Central de pendencias da Staff"
           tasks={operations.data?.tasks ?? []}
           emptyText="Fila limpa. Nada exigindo acao da Staff agora."
+          ownerLabel="Staff"
         />
         <StaffHealthPanel health={health.data} />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tools.map((tool) => (
-          <Link key={tool.href} href={tool.href}>
-            <Card className="h-full transition hover:border-primary/55 hover:bg-card">
-              <CardContent className="space-y-2 p-4">
-                <tool.icon className="h-5 w-5 text-primary" />
-                <div>
-                  <h2 className="text-lg font-semibold">{t(locale, tool.titleKey)}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{t(locale, tool.descriptionKey)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {toolGroups.map((group) => (
+        <section key={group.label} className="space-y-3">
+          <div><p className="page-kicker">Ferramentas</p><h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{group.label}</h2></div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {tools.filter((tool) => group.hrefs.includes(tool.href)).map((tool) => (
+              <Link key={tool.href} href={tool.href}>
+                <Card className="h-full transition hover:border-primary/55 hover:bg-card">
+                  <CardContent className="space-y-2 p-4">
+                    <tool.icon className="h-5 w-5 text-primary" />
+                    <div>
+                      <h3 className="text-lg font-semibold">{t(locale, tool.titleKey)}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{t(locale, tool.descriptionKey)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
       <AuditTimeline logs={audit.data ?? []} />
     </div>
   );

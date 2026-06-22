@@ -24,6 +24,13 @@ Producao:
 - Tipos compartilhados: `packages/shared`.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
+Qualidade obrigatoria:
+
+- A suite critica usa Node Test Runner via `tsx` e cobre DKP, bids, ALL_IN, lotes de presenca, sessao e upload seguro.
+- O workflow de imagens possui um job `quality` que executa install travado, Prisma, lint, testes, politica de audit e builds antes de publicar.
+- `scripts/audit-policy.js` bloqueia vulnerabilidade critica ou regressao acima do baseline versionado de severidade alta.
+- O smoke publico roda depois da janela do Watchtower e valida endpoints sem usar credenciais.
+
 Modulos principais da API:
 
 - `announcements`, `events`, `dkp`, `auctions`, `drops`;
@@ -50,6 +57,27 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
+
+## Seguranca, sessao e uploads
+
+- O navegador autentica por cookie `guild_session` HttpOnly, Secure em producao e SameSite=Lax.
+- JWT nao passa em query string e nao fica em localStorage ou acessivel ao JavaScript.
+- `GET /auth/me` hidrata o perfil; `POST /auth/logout` encerra a sessao. Bearer token continua aceito para automacoes e smoke autenticado.
+- A API aplica headers defensivos, HSTS em producao, limite de body, rate limit para OAuth/upload, CORS com credenciais e `ValidationPipe` estrito.
+- Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
+- `GET /health` e publico e minimo: status, horario e `APP_VERSION`. Detalhes exigem Staff/Admin em `GET /health/details`.
+- A Web aplica CSP, protecao contra framing, politica de referrer e permissoes restritas.
+
+## UX e navegacao
+
+- A navegacao principal e agrupada em Agora, Loot, Progresso e Conta.
+- No mobile ficam quatro destinos principais e o menu `Mais`; a central Staff agrupa ferramentas por contexto operacional.
+- A busca global `Ctrl+K` consulta itens, leiloes e eventos; resultados de players existem apenas no endpoint Staff.
+- Busca possui modulo e hook proprios; novos dominios nao devem ser adicionados ao `operations.service.ts` ou `use-guild-api.ts` quando puderem ter ownership independente.
+- A central de pendencias filtra por severidade e mostra responsavel, abertura e prazo quando aplicavel. Prazos Staff derivam dos thresholds configuraveis.
+- Acoes destrutivas e financeiras usam `ConfirmationDialog` acessivel, sem `window.confirm` ou `window.prompt`.
+- O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
+- A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
 
 ## Leiloes e sigilo
 
@@ -110,6 +138,16 @@ Fluxo:
 4. Containers `guild-api` e `guild-web` sao recriados.
 5. API executa `prisma migrate deploy` na inicializacao.
 
+Confiabilidade:
+
+- Deploy de imagens usa `DEPLOY_IMAGE_TAG` imutavel e registra historico para rollback.
+- `APP_VERSION` identifica o artefato no health e no smoke de producao.
+- `scripts/prod/deploy-images.sh` e `rollback-images.sh` controlam promocao e retorno de versao.
+- Containers possuem healthcheck e limites configuraveis de CPU/memoria.
+- `docker-compose.monitoring.yml` oferece Uptime Kuma independente da API; fonte operacional em `docs/MONITORING.md`.
+- Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `verify-backup.sh` restaura em PostgreSQL temporario para provar integridade.
+- Runbooks de banco, Discord, deploy, leilao e DKP ficam em `docs/OPERATIONS_RUNBOOKS.md`.
+
 Imagens:
 
 - `ghcr.io/kasuminho/erp-raven-2-api:latest`
@@ -136,6 +174,8 @@ npm.cmd run discord:configure-webhooks
 - Antes de interpretar arquivos locais como trabalho novo ou publicar, busque e compare `origin/master`; automacoes usam worktrees separadas.
 - O lint possui um warning preexistente em `eligibility.service.ts:467` sobre `client` nao usado.
 - `.env`, `.env.production`, tokens e URLs de webhooks nunca entram em documentacao ou resposta publica.
+- O audit de 2026-06-21 ficou em 0 criticas e 8 altas conhecidas; o gate impede regressao, mas upgrades maiores de Nest/Discord devem continuar em sprint controlada.
+- O rate limit atual e local ao processo. Se a API escalar para varias replicas, migrar o contador para Redis ou gateway compartilhado.
 
 ## Documentos de referencia
 
@@ -151,6 +191,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-21 | Endurecimento completo: sessao HttpOnly, upload seguro, CI/testes, busca e navegacao, confirmacoes, monitoramento, backups verificados e rollback. | trabalho atual |
 | 2026-06-21 | Criados `AGENTS.md` e `WIKI.md` como memoria viva obrigatoria para novos chats. | este commit |
 | 2026-06-21 | Primeira rotacao automatica renovou as variacoes dos webhooks. | `a4f1c22` |
 | 2026-06-20 | Anuncios em lote ganharam ordem persistente e copia de presenca boss a boss. | `695bd37` |

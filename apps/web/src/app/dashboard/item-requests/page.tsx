@@ -6,6 +6,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
@@ -292,6 +293,7 @@ function StaffItemRequestsPanel() {
   const [form, setForm] = useState({ itemCatalogId: '', playerId: '', quantity: 1, imageUrl: '' });
   const [deliveryQty, setDeliveryQty] = useState<Record<string, number>>({});
   const [reviewRemaining, setReviewRemaining] = useState<Record<string, number>>({});
+  const [confirmation, setConfirmation] = useState<{ kind: 'deliver' | 'delete'; requestId: string; quantity?: number }>();
 
   const grouped = useMemo(() => groupRequestsByItem(requests.data ?? []), [requests.data]);
   const pendingUpdates = useMemo(
@@ -495,10 +497,8 @@ function StaffItemRequestsPanel() {
                       />
                       <Button
                         variant="secondary"
-                        onClick={() => deliverRequest.mutate(
-                          { id: request.id, quantity: qty },
-                          { onSuccess: () => notifyToast({ title: t(locale, 'delivered'), tone: 'success' }) },
-                        )}
+                        disabled={deliverRequest.isPending}
+                        onClick={() => setConfirmation({ kind: 'deliver', requestId: request.id, quantity: qty })}
                       >
                         <PackageCheck className="h-4 w-4" /> {t(locale, 'deliver')}
                       </Button>
@@ -518,7 +518,8 @@ function StaffItemRequestsPanel() {
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={() => deleteRequest.mutate(request.id, { onSuccess: () => notifyToast({ title: t(locale, 'removeRequestTitle'), tone: 'success' }) })}
+                        disabled={deleteRequest.isPending}
+                        onClick={() => setConfirmation({ kind: 'delete', requestId: request.id })}
                         title={t(locale, 'removeRequestTitle')}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -534,6 +535,34 @@ function StaffItemRequestsPanel() {
           <EmptyState title={t(locale, 'activeRequestsEmpty')}>{t(locale, 'staffRequestsEmptyHelp')}</EmptyState>
         )}
       </div>
+      <ConfirmationDialog
+        open={Boolean(confirmation)}
+        title={confirmation?.kind === 'deliver' ? 'Confirmar entrega do request?' : t(locale, 'removeRequestTitle')}
+        description={confirmation?.kind === 'deliver'
+          ? `A entrega de ${confirmation.quantity ?? 0} unidade(s) sera registrada e podera concluir ou reduzir o request.`
+          : 'O request sera removido da fila. Esta acao nao entrega item e nao deve ser usada como atalho para concluir a solicitacao.'}
+        confirmLabel={confirmation?.kind === 'deliver' ? t(locale, 'deliver') : t(locale, 'removeRequestTitle')}
+        pending={deliverRequest.isPending || deleteRequest.isPending}
+        tone={confirmation?.kind === 'deliver' ? 'primary' : 'danger'}
+        onClose={() => setConfirmation(undefined)}
+        onConfirm={() => {
+          if (!confirmation) return;
+          if (confirmation.kind === 'deliver') {
+            deliverRequest.mutate(
+              { id: confirmation.requestId, quantity: confirmation.quantity ?? 1 },
+              { onSuccess: () => {
+                setConfirmation(undefined);
+                notifyToast({ title: t(locale, 'delivered'), tone: 'success' });
+              } },
+            );
+            return;
+          }
+          deleteRequest.mutate(confirmation.requestId, { onSuccess: () => {
+            setConfirmation(undefined);
+            notifyToast({ title: t(locale, 'removeRequestTitle'), tone: 'success' });
+          } });
+        }}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
 import { usePostWeeklySummary, useSeasonSummary, useWeeklySummary } from '@/hooks/use-guild-api';
@@ -33,6 +34,7 @@ function Metric({ title, value, icon: Icon }: { title: string; value: string; ic
 export default function StaffSeasonPage() {
   const locale = useLocaleStore((state) => state.locale);
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [confirmWeeklyPost, setConfirmWeeklyPost] = useState(false);
   const summary = useSeasonSummary(month);
   const weekly = useWeeklySummary();
   const postWeekly = usePostWeeklySummary();
@@ -62,7 +64,7 @@ export default function StaffSeasonPage() {
             </div>
             <Button
               disabled={postWeekly.isPending}
-              onClick={() => postWeekly.mutate(undefined, { onSuccess: () => notifyToast({ title: t(locale, 'weeklySummaryPosted'), tone: 'success' }) })}
+              onClick={() => setConfirmWeeklyPost(true)}
             >
               <Send className="h-4 w-4" /> {t(locale, 'postWeeklySummary')}
             </Button>
@@ -94,6 +96,19 @@ export default function StaffSeasonPage() {
             ))}
           </CardContent>
         </Card>
+        <ConfirmationDialog
+          open={confirmWeeklyPost}
+          title="Publicar resumo semanal?"
+          description={weekly.data ? `O resumo de ${new Date(weekly.data.weekStart).toLocaleDateString()} a ${new Date(weekly.data.weekEnd).toLocaleDateString()} sera publicado no canal configurado.` : 'O resumo da janela semanal atual sera publicado no canal configurado.'}
+          confirmLabel={t(locale, 'postWeeklySummary')}
+          pending={postWeekly.isPending}
+          tone="primary"
+          onClose={() => setConfirmWeeklyPost(false)}
+          onConfirm={() => postWeekly.mutate(undefined, { onSuccess: () => {
+            setConfirmWeeklyPost(false);
+            notifyToast({ title: t(locale, 'weeklySummaryPosted'), tone: 'success' });
+          } })}
+        />
       </div>
     </AuthGuard>
   );

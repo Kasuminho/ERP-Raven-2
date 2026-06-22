@@ -1,6 +1,7 @@
 'use client';
 
 import { Disc3, Shield } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getPublicApiUrl } from '@/lib/public-api-url';
@@ -25,6 +26,7 @@ export default function LoginPage() {
             <Disc3 className="h-4 w-4" /> {t(locale, 'continueWithDiscord')}
           </Button>
           <p className="text-xs text-muted-foreground">{t(locale, 'loginFootnote')}</p>
+          <p className="text-center text-xs text-muted-foreground">Ao continuar, voce concorda com a <Link href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">politica de privacidade</Link>.</p>
         </CardContent>
       </Card>
     </main>

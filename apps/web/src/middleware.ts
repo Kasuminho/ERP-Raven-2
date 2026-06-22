@@ -17,14 +17,12 @@ export function middleware(request: NextRequest) {
       scope: 'guild-web',
       event: 'dashboard_request',
       path: request.nextUrl.pathname,
-      search: request.nextUrl.search,
       method: request.method,
       durationMs: Date.now() - startedAt,
     }),
   );
 
-  // Dashboard protection happens in AuthGuard after the persisted client session
-  // hydrates. Redirecting here can race the persisted token and force relogins.
+  // The API owns the HttpOnly session cookie. AuthGuard verifies it through /auth/me.
   return response;
 }
 

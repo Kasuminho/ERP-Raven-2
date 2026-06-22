@@ -59,4 +59,9 @@ export class AuthService {
     const payload = { sub: user.id, discordId: user.discordId, username: user.username };
     return { accessToken: this.jwtService.sign(payload) };
   }
+
+  async getSessionProfile(userId: string): Promise<{ userId: string; playerId?: string; roles: string[] }> {
+    const session = await this.discordSyncService.getSessionProfile(userId);
+    return { userId, playerId: session.playerId, roles: session.roles.length ? session.roles : ['MEMBER'] };
+  }
 }

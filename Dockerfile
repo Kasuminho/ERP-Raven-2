@@ -18,6 +18,8 @@ RUN npm run -w @guild/api build
 FROM node:20-alpine AS api
 WORKDIR /app
 ENV NODE_ENV=production
+ARG APP_VERSION=development
+ENV APP_VERSION=${APP_VERSION}
 RUN apk add --no-cache openssl
 COPY --from=api-build /app ./
 EXPOSE 3000
@@ -31,6 +33,8 @@ RUN npm run -w @guild/web build
 FROM node:20-alpine AS web
 WORKDIR /app
 ENV NODE_ENV=production
+ARG APP_VERSION=development
+ENV APP_VERSION=${APP_VERSION}
 RUN apk add --no-cache openssl
 COPY --from=web-build /app ./
 EXPOSE 5173

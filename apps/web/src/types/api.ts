@@ -698,6 +698,14 @@ export type OperationTask = {
   metadata?: Record<string, unknown>;
 };
 
+export type GlobalSearchResult = {
+  id: string;
+  kind: 'item' | 'auction' | 'event' | 'player';
+  title: string;
+  subtitle: string;
+  href: string;
+};
+
 export type PlayerOperationsSummary = {
   tasks: OperationTask[];
   counts: {

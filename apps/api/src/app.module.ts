@@ -27,6 +27,7 @@ import { DaoshiModule } from './modules/daoshi/daoshi.module';
 import { HealthModule } from './modules/health/health.module';
 import { BusinessRulesModule } from './modules/business-rules/business-rules.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     OperationsModule,
     DaoshiModule,
     HealthModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

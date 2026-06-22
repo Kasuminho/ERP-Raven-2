@@ -13,6 +13,9 @@ GitHub Actions builds the API and Web Docker images, then ICP only pulls and run
 Use `docker-compose.icp-images.yml` in the ICP Compose screen.
 It includes Watchtower, which checks for new `latest` images every 5 minutes and recreates only containers marked with the Watchtower label.
 
+API and Web also have Docker healthchecks and configurable CPU/memory guardrails. Web
+waits for a healthy API before starting.
+
 The API still needs all production environment variables, especially:
 
 ```env
@@ -45,3 +48,20 @@ Route:
 If the GHCR packages are private, the ICP host needs Docker registry credentials for `ghcr.io`, or the packages must be made public.
 
 ICP's Docker daemon may reject old Docker API negotiation, so Watchtower is pinned with `DOCKER_API_VERSION=1.40`.
+
+## Immutable deploy and rollback
+
+`latest` remains the default and preserves the current Watchtower flow. For a controlled
+release, publish API and Web with the same immutable Git SHA tag, then run:
+
+```bash
+scripts/prod/deploy-images.sh GIT_SHA
+EXPECTED_VERSION=GIT_SHA scripts/prod/smoke-production.sh
+```
+
+The deploy promotes local state only after both containers become healthy. Return to
+the previously recorded immutable tag with `scripts/prod/rollback-images.sh`.
+
+Do not use a mutable tag as a rollback target. Deployment state lives in `.deploy/` and
+is excluded from Git. Operational procedures are in `docs/OPERATIONS_RUNBOOKS.md`;
+external monitoring is in `docs/MONITORING.md`.

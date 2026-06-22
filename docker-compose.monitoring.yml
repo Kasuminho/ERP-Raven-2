@@ -1,0 +1,20 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: guild-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${UPTIME_KUMA_HOST_PORT:-3001}:3001'
+    volumes:
+      - uptime_kuma_data:/app/data
+    healthcheck:
+      test: ['CMD', 'extra/healthcheck']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    mem_limit: ${UPTIME_KUMA_MEMORY_LIMIT:-512m}
+    cpus: ${UPTIME_KUMA_CPU_LIMIT:-0.75}
+
+volumes:
+  uptime_kuma_data:

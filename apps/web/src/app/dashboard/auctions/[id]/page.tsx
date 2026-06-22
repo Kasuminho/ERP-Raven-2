@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 import { BidModal } from '@/components/dashboard/bid-modal';
 import { CountdownTimer } from '@/components/dashboard/countdown-timer';
 import { EligibilityBadge } from '@/components/dashboard/eligibility-badge';
@@ -8,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
 import { useAuction, useAuctionBids, useAuctionRanking, useDkpSummary, useEligibility, useFinalizeAuction, useMyAuctionBid, useMyBidCancellation, usePlaceBid, usePlayerId, useRequestBidCancellation } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
@@ -30,6 +33,9 @@ export default function AuctionDetailPage() {
   const myBidCancellation = useMyBidCancellation(id);
   const finalizeAuction = useFinalizeAuction(id);
   const locale = useLocaleStore((state) => state.locale);
+  const [confirmFinalize, setConfirmFinalize] = useState(false);
+  const [confirmBidCancellation, setConfirmBidCancellation] = useState(false);
+  const [bidCancellationReason, setBidCancellationReason] = useState('');
 
   if (!auction.data) return <EmptyState title={t(locale, 'loadingAuction')} />;
 
@@ -37,22 +43,25 @@ export default function AuctionDetailPage() {
   const rankingByPlayerId = new Map((ranking.data ?? []).map((row) => [row.playerId, row]));
 
   function closeAuctionEarly() {
-    if (!window.confirm(t(locale, 'closeAuctionConfirm'))) return;
-    finalizeAuction.mutate(undefined, { onSuccess: () => notifyToast({ title: 'Leilao enviado para finalizacao.', tone: 'success' }) });
+    finalizeAuction.mutate(undefined, {
+      onSuccess: () => {
+        setConfirmFinalize(false);
+        notifyToast({ title: 'Leilao enviado para finalizacao.', tone: 'success' });
+      },
+    });
   }
 
   function requestCancellation() {
-    const reason = window.prompt(t(locale, 'bidCancellationReasonPrompt'));
-
-    if (!reason?.trim()) {
-      return;
-    }
-
-    requestBidCancellation.mutate(reason, {
-      onSuccess: (response) => notifyToast({
-        title: response.autoApproved ? t(locale, 'bidCancellationAutoApproved') : t(locale, 'bidCancellationRequested'),
-        tone: 'success',
-      }),
+    if (!bidCancellationReason.trim()) return;
+    requestBidCancellation.mutate(bidCancellationReason.trim(), {
+      onSuccess: (response) => {
+        setConfirmBidCancellation(false);
+        setBidCancellationReason('');
+        notifyToast({
+          title: response.autoApproved ? t(locale, 'bidCancellationAutoApproved') : t(locale, 'bidCancellationRequested'),
+          tone: 'success',
+        });
+      },
       onError: () => notifyToast({
         title: t(locale, 'bidCancellationFailed'),
         tone: 'error',
@@ -74,7 +83,7 @@ export default function AuctionDetailPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {canManageAuctions && auction.data.status === 'OPEN' ? (
-                  <Button variant="secondary" onClick={closeAuctionEarly} disabled={finalizeAuction.isPending}>
+                  <Button variant="secondary" onClick={() => setConfirmFinalize(true)} disabled={finalizeAuction.isPending}>
                     {t(locale, 'closeNow')}
                   </Button>
                 ) : null}
@@ -141,7 +150,7 @@ export default function AuctionDetailPage() {
                       variant="secondary"
                       className="mt-3"
                       disabled={requestBidCancellation.isPending}
-                      onClick={requestCancellation}
+                      onClick={() => setConfirmBidCancellation(true)}
                     >
                       {t(locale, 'requestBidCancellation')}
                     </Button>
@@ -180,6 +189,29 @@ export default function AuctionDetailPage() {
           </CardContent>
         </Card>
       </aside>
+      <ConfirmationDialog
+        open={confirmFinalize}
+        title="Encerrar leilao agora?"
+        description={t(locale, 'closeAuctionConfirm')}
+        confirmLabel={t(locale, 'closeNow')}
+        pending={finalizeAuction.isPending}
+        onClose={() => setConfirmFinalize(false)}
+        onConfirm={closeAuctionEarly}
+      />
+      <ConfirmationDialog
+        open={confirmBidCancellation}
+        title={t(locale, 'requestBidCancellation')}
+        description={t(locale, 'confirmBidCancellationRule')}
+        confirmLabel={t(locale, 'requestBidCancellation')}
+        pending={requestBidCancellation.isPending}
+        onClose={() => { setConfirmBidCancellation(false); setBidCancellationReason(''); }}
+        onConfirm={requestCancellation}
+      >
+        <label className="space-y-1 text-sm">
+          <span className="text-xs uppercase text-muted-foreground">{t(locale, 'reason')}</span>
+          <Input value={bidCancellationReason} onChange={(event) => setBidCancellationReason(event.target.value)} placeholder={t(locale, 'bidCancellationReasonPrompt')} />
+        </label>
+      </ConfirmationDialog>
     </div>
   );
 }

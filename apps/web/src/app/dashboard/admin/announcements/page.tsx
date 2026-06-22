@@ -6,6 +6,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -73,6 +74,7 @@ export default function AdminAnnouncementsPage() {
     mentionRoleId: defaultMemberRoleId,
   });
   const [createAttendanceEvents, setCreateAttendanceEvents] = useState(false);
+  const [announcementToCancel, setAnnouncementToCancel] = useState<string>();
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
   const orderedAnnouncementTitle = createAttendanceEvents && selectedEventTypes.length > 1
     ? `${form.title} - ${selectedEventTypes.join(' - ')}`
@@ -250,7 +252,7 @@ export default function AdminAnnouncementsPage() {
                 {announcement.status === 'ACTIVE' && (
                   <Button
                     variant="secondary"
-                    onClick={() => cancelAnnouncement.mutate(announcement.id, { onSuccess: () => notifyToast({ title: t(locale, 'announcementCancelled'), tone: 'success' }) })}
+                    onClick={() => setAnnouncementToCancel(announcement.id)}
                     disabled={cancelAnnouncement.isPending}
                   >
                     <XCircle className="h-4 w-4" /> {t(locale, 'cancel')}
@@ -263,6 +265,20 @@ export default function AdminAnnouncementsPage() {
             )}
           </CardContent>
         </Card>
+        <ConfirmationDialog
+          open={Boolean(announcementToCancel)}
+          title="Cancelar anuncio?"
+          description="O anuncio sera cancelado e deixara de representar uma operacao ativa. Eventos vinculados devem ser conferidos separadamente."
+          confirmLabel={t(locale, 'cancel')}
+          pending={cancelAnnouncement.isPending}
+          onClose={() => setAnnouncementToCancel(undefined)}
+          onConfirm={() => announcementToCancel && cancelAnnouncement.mutate(announcementToCancel, {
+            onSuccess: () => {
+              setAnnouncementToCancel(undefined);
+              notifyToast({ title: t(locale, 'announcementCancelled'), tone: 'success' });
+            },
+          })}
+        />
       </div>
     </AuthGuard>
   );

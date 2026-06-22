@@ -6,6 +6,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -39,6 +40,8 @@ export default function StaffDaoshiPage() {
   const players = usePlayers();
   const createManual = useCreateManualDaoshiReceipt();
   const [review, setReview] = useState<Record<string, { amount: string; note: string }>>({});
+  const [confirmRaffle, setConfirmRaffle] = useState(false);
+  const [receiptToReject, setReceiptToReject] = useState<string>();
   const [manual, setManual] = useState({ playerId: '', amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
   const winner = useMemo(
     () => summary.data?.entries.find((entry) => entry.playerId === summary.data?.raffle?.winnerPlayerId),
@@ -112,7 +115,7 @@ export default function StaffDaoshiPage() {
               ) : (
                 <Button
                   disabled={!summary.data?.raffleEnabled || runRaffle.isPending}
-                  onClick={() => runRaffle.mutate(month, { onSuccess: () => notifyToast({ title: 'Sorteio executado.', tone: 'success' }) })}
+                  onClick={() => setConfirmRaffle(true)}
                 >
                   <Gift className="h-4 w-4" /> Rodar sorteio do mes
                 </Button>
@@ -237,10 +240,7 @@ export default function StaffDaoshiPage() {
                       <Button
                         variant="secondary"
                         disabled={reject.isPending || !state.note.trim()}
-                        onClick={() => reject.mutate(
-                          { id: receipt.id, reviewNote: state.note },
-                          { onSuccess: () => notifyToast({ title: 'Comprovante rejeitado.', tone: 'success' }) },
-                        )}
+                        onClick={() => setReceiptToReject(receipt.id)}
                       >
                         <XCircle className="h-4 w-4" /> Rejeitar
                       </Button>
@@ -254,6 +254,39 @@ export default function StaffDaoshiPage() {
             <EmptyState title="Nenhum comprovante encontrado">Troque o filtro de status ou mes para buscar outros envios.</EmptyState>
           )}
         </div>
+        <ConfirmationDialog
+          open={confirmRaffle}
+          title="Rodar sorteio mensal?"
+          description={`O vencedor de ${month} sera escolhido entre ${summary.data?.totalCoupons ?? 0} cupons aprovados. O resultado nao deve ser sorteado novamente.`}
+          confirmLabel="Rodar sorteio"
+          pending={runRaffle.isPending}
+          tone="primary"
+          onClose={() => setConfirmRaffle(false)}
+          onConfirm={() => runRaffle.mutate(month, { onSuccess: () => {
+            setConfirmRaffle(false);
+            notifyToast({ title: 'Sorteio executado.', tone: 'success' });
+          } })}
+        />
+        <ConfirmationDialog
+          open={Boolean(receiptToReject)}
+          title="Rejeitar comprovante?"
+          description="O comprovante nao contara para a meta nem gerara cupons. A justificativa preenchida ficara registrada para o player e a Staff."
+          confirmLabel="Rejeitar comprovante"
+          pending={reject.isPending}
+          onClose={() => setReceiptToReject(undefined)}
+          onConfirm={() => {
+            if (!receiptToReject) return;
+            const note = review[receiptToReject]?.note?.trim();
+            if (!note) return;
+            reject.mutate(
+              { id: receiptToReject, reviewNote: note },
+              { onSuccess: () => {
+                setReceiptToReject(undefined);
+                notifyToast({ title: 'Comprovante rejeitado.', tone: 'success' });
+              } },
+            );
+          }}
+        />
       </div>
     </AuthGuard>
   );

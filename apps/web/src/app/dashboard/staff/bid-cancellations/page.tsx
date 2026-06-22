@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
 import { useApproveBidCancellation, useBidCancellationHistory, usePendingBidCancellations, useRejectBidCancellation } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
@@ -83,15 +86,15 @@ export default function BidCancellationsPage() {
   const history = useBidCancellationHistory();
   const approve = useApproveBidCancellation();
   const reject = useRejectBidCancellation();
+  const [confirmation, setConfirmation] = useState<{ action: 'approve' | 'reject'; requestId: string }>();
+  const [reviewNote, setReviewNote] = useState('');
 
   function approveCancellation(requestId: string) {
-    const note = window.prompt(t(locale, 'optionalApprovalNote')) ?? undefined;
-    approve.mutate({ requestId, note }, { onSuccess: () => notifyToast({ title: t(locale, 'cancellationReviewed'), tone: 'success' }) });
+    setConfirmation({ action: 'approve', requestId });
   }
 
   function rejectCancellation(requestId: string) {
-    const note = window.prompt(t(locale, 'optionalRejectionNote')) ?? undefined;
-    reject.mutate({ requestId, note }, { onSuccess: () => notifyToast({ title: t(locale, 'cancellationReviewed'), tone: 'success' }) });
+    setConfirmation({ action: 'reject', requestId });
   }
 
   return (
@@ -146,6 +149,34 @@ export default function BidCancellationsPage() {
             <EmptyState title={t(locale, 'noRecentBidCancellations')} />
           )}
         </section>
+        <ConfirmationDialog
+          open={Boolean(confirmation)}
+          title={confirmation?.action === 'approve' ? t(locale, 'approveCancellation') : t(locale, 'rejectCancellation')}
+          description={confirmation?.action === 'approve'
+            ? 'O bid sera invalidado e o DKP bloqueado sera liberado conforme a regra do cancelamento.'
+            : 'O pedido sera rejeitado e o bid permanecera valido com seu DKP bloqueado.'}
+          confirmLabel={confirmation?.action === 'approve' ? t(locale, 'approveCancellation') : t(locale, 'rejectCancellation')}
+          pending={approve.isPending || reject.isPending}
+          tone={confirmation?.action === 'approve' ? 'primary' : 'danger'}
+          onClose={() => { setConfirmation(undefined); setReviewNote(''); }}
+          onConfirm={() => {
+            if (!confirmation) return;
+            const mutation = confirmation.action === 'approve' ? approve : reject;
+            mutation.mutate(
+              { requestId: confirmation.requestId, note: reviewNote.trim() || undefined },
+              { onSuccess: () => {
+                setConfirmation(undefined);
+                setReviewNote('');
+                notifyToast({ title: t(locale, 'cancellationReviewed'), tone: 'success' });
+              } },
+            );
+          }}
+        >
+          <label className="space-y-1 text-sm">
+            <span className="text-xs uppercase text-muted-foreground">{t(locale, 'reviewNote')}</span>
+            <Input value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder={confirmation?.action === 'approve' ? t(locale, 'optionalApprovalNote') : t(locale, 'optionalRejectionNote')} />
+          </label>
+        </ConfirmationDialog>
       </div>
     </AuthGuard>
   );

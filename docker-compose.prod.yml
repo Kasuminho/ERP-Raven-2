@@ -14,12 +14,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-1536m}
+    cpus: ${POSTGRES_CPU_LIMIT:-2.0}
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
       target: api
+      args:
+        APP_VERSION: ${APP_VERSION:-development}
     container_name: guild-api
     restart: unless-stopped
     env_file:
@@ -33,6 +37,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:3000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    mem_limit: ${API_MEMORY_LIMIT:-1536m}
+    cpus: ${API_CPU_LIMIT:-2.0}
 
   web:
     build:
@@ -41,6 +53,7 @@ services:
       target: web
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+        APP_VERSION: ${APP_VERSION:-development}
     container_name: guild-web
     restart: unless-stopped
     environment:
@@ -49,7 +62,16 @@ services:
     ports:
       - '127.0.0.1:${WEB_HOST_PORT:-5173}:5173'
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:5173/login']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    mem_limit: ${WEB_MEMORY_LIMIT:-1024m}
+    cpus: ${WEB_CPU_LIMIT:-1.5}
 
 volumes:
   postgres_data:

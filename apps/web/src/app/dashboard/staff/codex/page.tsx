@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { notifyToast } from '@/components/ui/toaster';
 import { useRejectCodexRequest, useSendCodexRequest, useStaffCodexRequests, useUploadImage } from '@/hooks/use-guild-api';
@@ -19,6 +20,7 @@ export default function StaffCodexPage() {
   const uploadImage = useUploadImage();
   const [proofs, setProofs] = useState<Record<string, string>>({});
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [requestToReject, setRequestToReject] = useState<string>();
 
   return (
     <div className="space-y-6">
@@ -91,12 +93,7 @@ export default function StaffCodexPage() {
                   disabled={!rejectionReasons[request.id]?.trim() || rejectRequest.isPending}
                   onClick={() => {
                     const reason = rejectionReasons[request.id]?.trim();
-                    if (!reason || !window.confirm(t(locale, 'rejectCodexConfirm'))) return;
-
-                    rejectRequest.mutate(
-                      { id: request.id, reason },
-                      { onSuccess: () => notifyToast({ title: t(locale, 'codexRejected'), tone: 'success' }) },
-                    );
+                    if (reason) setRequestToReject(request.id);
                   }}
                 >
                   {t(locale, 'rejectAndRemove')}
@@ -106,6 +103,26 @@ export default function StaffCodexPage() {
           </Card>
         ))}
       </div>
+      <ConfirmationDialog
+        open={Boolean(requestToReject)}
+        title={t(locale, 'rejectAndRemove')}
+        description={t(locale, 'rejectCodexConfirm')}
+        confirmLabel={t(locale, 'rejectAndRemove')}
+        pending={rejectRequest.isPending}
+        onClose={() => setRequestToReject(undefined)}
+        onConfirm={() => {
+          if (!requestToReject) return;
+          const reason = rejectionReasons[requestToReject]?.trim();
+          if (!reason) return;
+          rejectRequest.mutate(
+            { id: requestToReject, reason },
+            { onSuccess: () => {
+              setRequestToReject(undefined);
+              notifyToast({ title: t(locale, 'codexRejected'), tone: 'success' });
+            } },
+          );
+        }}
+      />
     </div>
   );
 }

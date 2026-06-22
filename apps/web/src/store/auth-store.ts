@@ -1,62 +1,51 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { api } from '@/lib/api';
 
 export type UserRole = 'MEMBER' | 'STAFF' | 'ADMIN';
 
 type AuthState = {
-  token?: string;
+  authenticated: boolean;
   roles: UserRole[];
   userId?: string;
   playerId?: string;
-  hasHydrated: boolean;
-  setSession: (token: string, roles?: UserRole[], userId?: string, playerId?: string) => void;
-  logout: () => void;
+  initialized: boolean;
+  initialize: (force?: boolean) => Promise<boolean>;
+  logout: () => Promise<void>;
   hasRole: (roles: UserRole[]) => boolean;
-  restoreCookie: () => void;
-  setHasHydrated: (hasHydrated: boolean) => void;
 };
 
-const sessionMaxAgeSeconds = 12 * 60 * 60;
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  authenticated: false,
+  roles: ['MEMBER'],
+  initialized: false,
+  initialize: async (force = false) => {
+    if (get().initialized && !force) return get().authenticated;
 
-function writeSessionCookie(token: string) {
-  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `guild_token=${token}; path=/; max-age=${sessionMaxAgeSeconds}; SameSite=Lax${secure}`;
-}
-
-function clearSessionCookie() {
-  document.cookie = 'guild_token=; path=/; max-age=0; SameSite=Lax';
-}
-
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      roles: ['MEMBER'],
-      hasHydrated: false,
-      setSession: (token, roles = ['MEMBER'], userId, playerId) => {
-        writeSessionCookie(token);
-        set({ token, roles, userId, playerId });
-      },
-      logout: () => {
-        clearSessionCookie();
-        set({ token: undefined, roles: ['MEMBER'], userId: undefined, playerId: undefined });
-      },
-      hasRole: (roles) => get().roles.some((role) => roles.includes(role)),
-      restoreCookie: () => {
-        const token = get().token;
-        if (token) {
-          writeSessionCookie(token);
-        }
-      },
-      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
-    }),
-    {
-      name: 'guild-auth',
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-        state?.restoreCookie();
-      },
-    },
-  ),
-);
+    try {
+      const { data } = await api.get<{ userId: string; playerId?: string; roles?: UserRole[] }>('/auth/me', {
+        headers: { 'X-Suppress-Session-Toast': 'true' },
+      });
+      set({
+        authenticated: true,
+        initialized: true,
+        roles: data.roles?.length ? data.roles : ['MEMBER'],
+        userId: data.userId,
+        playerId: data.playerId,
+      });
+      return true;
+    } catch {
+      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined });
+      return false;
+    }
+  },
+  logout: async () => {
+    try {
+      await api.post('/auth/logout', undefined, { headers: { 'X-Suppress-Session-Toast': 'true' } });
+    } finally {
+      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined });
+    }
+  },
+  hasRole: (roles) => get().roles.some((role) => roles.includes(role)),
+}));

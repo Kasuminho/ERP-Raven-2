@@ -6,7 +6,9 @@
     "build": "nest build",
     "start:api:prod": "cd ../.. && npm run start:api:prod",
     "start:dev": "nodemon --watch src --ext ts --exec \"node -r ts-node/register -r tsconfig-paths/register src/main.ts\"",
-    "lint": "eslint \"src/**/*.ts\""
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "tsx --test test/**/*.test.ts",
+    "test:ci": "tsx --test --test-reporter=spec test/**/*.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.2",

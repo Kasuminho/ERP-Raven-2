@@ -189,6 +189,7 @@ export class OperationsService {
           itemName: bid.auction.itemName,
           status: bid.auction.status,
           bidAmount: bid.bidAmount,
+          dueAt: bid.auction.endsAt.toISOString(),
         },
       });
     }
@@ -205,6 +206,7 @@ export class OperationsService {
         metadata: {
           title: post.title,
           closesAt: post.closesAt.toISOString(),
+          dueAt: post.closesAt.toISOString(),
         },
       });
     }
@@ -330,6 +332,7 @@ export class OperationsService {
         href: '/dashboard/staff/reviews',
         priority: this.priorityByAge(auction.updatedAt, thresholds.auctionReview),
         createdAt: auction.updatedAt,
+        metadata: { dueAt: new Date(auction.updatedAt.getTime() + thresholds.auctionReview.highAfterMs).toISOString() },
       })),
       ...codex.slice(0, 5).map((request) => ({
         id: request.id,
@@ -341,6 +344,10 @@ export class OperationsService {
           ? this.priorityByAge(request.retryRequestedAt ?? request.updatedAt, thresholds.codexRetry)
           : this.priorityByAge(request.queuedAt, thresholds.codexPending),
         createdAt: request.status === CodexRequestStatus.NEEDS_RETRY ? request.retryRequestedAt ?? request.updatedAt : request.queuedAt,
+        metadata: {
+          dueAt: new Date((request.status === CodexRequestStatus.NEEDS_RETRY ? request.retryRequestedAt ?? request.updatedAt : request.queuedAt).getTime()
+            + (request.status === CodexRequestStatus.NEEDS_RETRY ? thresholds.codexRetry.highAfterMs : thresholds.codexPending.highAfterMs)).toISOString(),
+        },
       })),
       ...itemRequests.slice(0, 5).map((request) => ({
         id: request.id,
@@ -350,6 +357,7 @@ export class OperationsService {
         href: '/dashboard/staff/deliveries',
         priority: this.priorityByAge(request.updatedAt, thresholds.itemRequest),
         createdAt: request.updatedAt,
+        metadata: { dueAt: new Date(request.updatedAt.getTime() + thresholds.itemRequest.highAfterMs).toISOString() },
       })),
       ...closedInterests.map((post) => ({
         id: post.id,
@@ -359,6 +367,7 @@ export class OperationsService {
         href: '/dashboard/staff/interests',
         priority: this.priorityByAge(post.closedAt ?? post.updatedAt, thresholds.interestDelivery),
         createdAt: post.closedAt ?? post.updatedAt,
+        metadata: { dueAt: new Date((post.closedAt ?? post.updatedAt).getTime() + thresholds.interestDelivery.highAfterMs).toISOString() },
       })),
       ...pendingAuctionDeliveries.slice(0, 5).map((transaction) => ({
         id: transaction.id,
@@ -368,6 +377,7 @@ export class OperationsService {
         href: '/dashboard/staff/deliveries',
         priority: this.priorityByAge(transaction.createdAt, thresholds.auctionDropDelivery),
         createdAt: transaction.createdAt,
+        metadata: { dueAt: new Date(transaction.createdAt.getTime() + thresholds.auctionDropDelivery.highAfterMs).toISOString() },
       })),
       ...progress.map((row) => ({
         id: row.id,
@@ -377,6 +387,7 @@ export class OperationsService {
         href: '/dashboard/staff/progress',
         priority: this.priorityByAge(row.createdAt, thresholds.progressReview),
         createdAt: row.createdAt,
+        metadata: { dueAt: new Date(row.createdAt.getTime() + thresholds.progressReview.highAfterMs).toISOString() },
       })),
       ...events.map((event) => ({
         id: event.id,
@@ -386,6 +397,7 @@ export class OperationsService {
         href: '/dashboard/admin/events',
         priority: this.priorityByAge(event.startsAt, thresholds.eventFinalization),
         createdAt: event.startsAt,
+        metadata: { dueAt: new Date(event.startsAt.getTime() + thresholds.eventFinalization.highAfterMs).toISOString() },
       })),
     ];
 

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -22,6 +23,8 @@ export function BidModal({
   const locale = useLocaleStore((state) => state.locale);
   const minimumAmount = existingBidAmount ? existingBidAmount + 1 : auction.minimumBid;
   const [amount, setAmount] = useState(String(minimumAmount));
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const bidAmount = auction.auctionMode === 'ALL_IN' ? undefined : Number(amount);
 
   useEffect(() => {
     setAmount(String(minimumAmount));
@@ -29,31 +32,11 @@ export function BidModal({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const bidAmount = auction.auctionMode === 'ALL_IN' ? undefined : Number(amount);
-    const confirmation = auction.auctionMode === 'ALL_IN'
-      ? [
-          t(locale, 'confirmAllInBidTitle'),
-          '',
-          t(locale, 'confirmAllInBidRules'),
-          t(locale, 'confirmBidCancellationRule'),
-        ].join('\n')
-      : [
-          t(locale, existingBidAmount ? 'confirmBidIncreaseTitle' : 'confirmStandardBidTitle'),
-          '',
-          `${t(locale, 'bidAmount')}: ${bidAmount} DKP`,
-          t(locale, 'confirmStandardBidRules'),
-        ].join('\n');
-
-    if (!window.confirm(confirmation)) {
-      return;
-    }
-
-    onBid({
-      amount: bidAmount,
-    });
+    setConfirmationOpen(true);
   }
 
   return (
+    <>
     <form onSubmit={submit} className="space-y-3 rounded-lg border bg-background/45 p-4">
       {auction.auctionMode === 'STANDARD' ? (
         <div className="space-y-2">
@@ -73,5 +56,21 @@ export function BidModal({
         {auction.auctionMode === 'ALL_IN' ? t(locale, 'confirmParticipation') : existingBidAmount ? t(locale, 'increaseBid') : t(locale, 'placeBid')}
       </Button>
     </form>
+    <ConfirmationDialog
+      open={confirmationOpen}
+      title={t(locale, auction.auctionMode === 'ALL_IN' ? 'confirmAllInBidTitle' : existingBidAmount ? 'confirmBidIncreaseTitle' : 'confirmStandardBidTitle')}
+      description={auction.auctionMode === 'ALL_IN'
+        ? `${t(locale, 'confirmAllInBidRules')} ${t(locale, 'confirmBidCancellationRule')}`
+        : `${t(locale, 'bidAmount')}: ${bidAmount} DKP. ${t(locale, 'confirmStandardBidRules')}`}
+      confirmLabel={auction.auctionMode === 'ALL_IN' ? t(locale, 'confirmParticipation') : existingBidAmount ? t(locale, 'increaseBid') : t(locale, 'placeBid')}
+      pending={pending}
+      tone="primary"
+      onClose={() => setConfirmationOpen(false)}
+      onConfirm={() => {
+        setConfirmationOpen(false);
+        onBid({ amount: bidAmount });
+      }}
+    />
+    </>
   );
 }

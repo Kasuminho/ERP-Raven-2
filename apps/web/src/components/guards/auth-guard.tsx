@@ -6,18 +6,21 @@ import { useAuthStore, UserRole } from '@/store/auth-store';
 
 export function AuthGuard({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
-  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const authenticated = useAuthStore((state) => state.authenticated);
+  const initialized = useAuthStore((state) => state.initialized);
+  const initialize = useAuthStore((state) => state.initialize);
   const hasRole = useAuthStore((state) => state.hasRole);
 
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (!token) router.replace('/login');
-    if (token && roles && !hasRole(roles)) router.replace('/dashboard');
-  }, [hasHydrated, hasRole, roles, router, token]);
+    if (!initialized) {
+      void initialize();
+      return;
+    }
+    if (!authenticated) router.replace('/login');
+    if (authenticated && roles && !hasRole(roles)) router.replace('/dashboard');
+  }, [authenticated, hasRole, initialize, initialized, roles, router]);
 
-  if (!hasHydrated) return null;
-  if (!token) return null;
+  if (!initialized || !authenticated) return null;
   if (roles && !hasRole(roles)) return null;
 
   return children;

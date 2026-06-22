@@ -6,6 +6,7 @@ import { CheckCircle2, Trophy, Vote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -96,6 +97,8 @@ export default function StaffInterestsPage() {
   const [typeFilter, setTypeFilter] = useState<'ALL' | ItemType>('ALL');
   const [createdDateFilter, setCreatedDateFilter] = useState('');
   const [votingEntryId, setVotingEntryId] = useState<string>();
+  const [confirmation, setConfirmation] = useState<{ kind: 'cancel' | 'deliver'; postId: string; entryId?: string }>();
+  const [cancelReason, setCancelReason] = useState('');
 
   const postsToRender = useMemo(
     () => (posts.data ?? [])
@@ -294,15 +297,7 @@ export default function StaffInterestsPage() {
                   <Button
                     variant="danger"
                     disabled={post.status === 'DELIVERED' || post.status === 'CANCELLED' || cancelInterest.isPending}
-                    onClick={() => {
-                      const reason = window.prompt(t(locale, 'removeInterestReasonPrompt'))?.trim();
-                      if (!reason || !window.confirm(t(locale, 'removeInterestConfirm'))) return;
-
-                      cancelInterest.mutate(
-                        { id: post.id, reason },
-                        { onSuccess: () => notifyToast({ title: t(locale, 'interestRemoved'), tone: 'success' }) },
-                      );
-                    }}
+                    onClick={() => setConfirmation({ kind: 'cancel', postId: post.id })}
                   >
                     {t(locale, 'removeInterest')}
                   </Button>
@@ -331,15 +326,7 @@ export default function StaffInterestsPage() {
                   {proofs[post.id] && <span className="self-center text-xs text-primary">{t(locale, 'proofAttached')}</span>}
                   <Button
                     disabled={!selectedEntry || !proofs[post.id] || post.status !== 'READY_FOR_DELIVERY' || deliverInterest.isPending}
-                    onClick={() => selectedEntry && deliverInterest.mutate(
-                      { id: post.id, entryIds: [selectedEntry.id], proofImageUrl: proofs[post.id] },
-                      {
-                        onSuccess: () => {
-                          setProofs((current) => ({ ...current, [post.id]: '' }));
-                          notifyToast({ title: t(locale, 'delivered'), tone: 'success' });
-                        },
-                      },
-                    )}
+                    onClick={() => selectedEntry && setConfirmation({ kind: 'deliver', postId: post.id, entryId: selectedEntry.id })}
                   >
                     <CheckCircle2 className="h-4 w-4" /> {t(locale, 'markDelivered')}
                   </Button>
@@ -349,6 +336,50 @@ export default function StaffInterestsPage() {
           );
         })}
       </div>
+      <ConfirmationDialog
+        open={confirmation?.kind === 'cancel'}
+        title={t(locale, 'removeInterest')}
+        description={t(locale, 'removeInterestConfirm')}
+        confirmLabel={t(locale, 'removeInterest')}
+        pending={cancelInterest.isPending}
+        onClose={() => { setConfirmation(undefined); setCancelReason(''); }}
+        onConfirm={() => {
+          if (confirmation?.kind !== 'cancel' || !cancelReason.trim()) return;
+          cancelInterest.mutate(
+            { id: confirmation.postId, reason: cancelReason.trim() },
+            { onSuccess: () => {
+              setConfirmation(undefined);
+              setCancelReason('');
+              notifyToast({ title: t(locale, 'interestRemoved'), tone: 'success' });
+            } },
+          );
+        }}
+      >
+        <label className="space-y-1 text-sm">
+          <span className="text-xs uppercase text-muted-foreground">Motivo obrigatorio</span>
+          <Input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} placeholder={t(locale, 'removeInterestReasonPrompt')} />
+        </label>
+      </ConfirmationDialog>
+      <ConfirmationDialog
+        open={confirmation?.kind === 'deliver'}
+        title="Confirmar entrega do interesse?"
+        description="O candidato selecionado sera marcado como vencedor e o comprovante anexado concluira esta declaracao."
+        confirmLabel={t(locale, 'markDelivered')}
+        pending={deliverInterest.isPending}
+        tone="primary"
+        onClose={() => setConfirmation(undefined)}
+        onConfirm={() => {
+          if (confirmation?.kind !== 'deliver' || !confirmation.entryId || !proofs[confirmation.postId]) return;
+          deliverInterest.mutate(
+            { id: confirmation.postId, entryIds: [confirmation.entryId], proofImageUrl: proofs[confirmation.postId] },
+            { onSuccess: () => {
+              setProofs((current) => ({ ...current, [confirmation.postId]: '' }));
+              setConfirmation(undefined);
+              notifyToast({ title: t(locale, 'delivered'), tone: 'success' });
+            } },
+          );
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { AlertTriangle, ArrowRight, CircleDot, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -92,12 +93,15 @@ export function OperationTaskList({
   title,
   tasks,
   emptyText,
+  ownerLabel,
 }: {
   title: string;
   tasks: OperationTask[];
   emptyText: string;
+  ownerLabel?: string;
 }) {
   const locale = useLocaleStore((state) => state.locale);
+  const [filter, setFilter] = useState<'all' | OperationTask['priority']>('all');
   const orderedTasks = [...tasks].sort((first, second) => {
     const weight = { high: 0, medium: 1, low: 2 };
     const priorityDiff = weight[first.priority] - weight[second.priority];
@@ -113,6 +117,7 @@ export function OperationTaskList({
     },
     { high: 0, medium: 0, low: 0 },
   );
+  const visibleTasks = filter === 'all' ? orderedTasks : orderedTasks.filter((task) => task.priority === filter);
 
   return (
     <Card className="overflow-hidden">
@@ -127,11 +132,22 @@ export function OperationTaskList({
             </div>
           )}
         </div>
+        {orderedTasks.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="Filtrar pendencias por prioridade">
+            {(['all', 'high', 'medium', 'low'] as const).map((value) => (
+              <button key={value} type="button" onClick={() => setFilter(value)} className={`min-h-9 rounded-md border px-3 text-xs font-semibold transition ${filter === value ? 'border-primary bg-primary/15 text-primary' : 'border-white/10 text-muted-foreground hover:border-primary/35'}`} aria-pressed={filter === value}>
+                {value === 'all' ? (locale === 'pt' ? 'Todas' : 'All') : t(locale, value)}
+              </button>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {orderedTasks.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyText}</p>
-        ) : orderedTasks.map((task) => {
+        ) : visibleTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma pendencia nesta prioridade.</p>
+        ) : visibleTasks.map((task) => {
           const Icon = priorityIcon[task.priority];
           const localizedTask = localizeTask(task, locale);
           const ageLabel = task.createdAt ? formatTaskDate(locale, task.createdAt) : undefined;
@@ -152,6 +168,10 @@ export function OperationTaskList({
                       {locale === 'pt' ? 'Aberto desde' : locale === 'es' ? 'Abierto desde' : 'Open since'}: {ageLabel}
                     </p>
                   )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {ownerLabel && <span>{locale === 'pt' ? 'Responsavel' : 'Owner'}: {ownerLabel}</span>}
+                    {metadataString(task, 'dueAt') && <span>{locale === 'pt' ? 'Prazo' : 'Due'}: {formatTaskDate(locale, metadataString(task, 'dueAt'))}</span>}
+                  </div>
                 </div>
                 <Link href={task.href}>
                   <Button variant="secondary" className="w-full px-3 sm:w-auto">

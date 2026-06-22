@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, InternalServerErrorException, Logger }
 import { ConfigService } from '@nestjs/config';
 import { drive_v3, google } from 'googleapis';
 import { createReadStream, existsSync, mkdirSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 @Injectable()
@@ -11,6 +12,24 @@ export class ImageStorageService {
   private driveClient?: drive_v3.Drive;
 
   constructor(private readonly config: ConfigService) {}
+
+  async storeValidated(file: { buffer: Buffer; size: number }): Promise<{ url: string; fileId?: string; mimetype: string; size: number }> {
+    const detected = this.detectImageType(file.buffer);
+    if (!detected) {
+      throw new BadRequestException('Only valid PNG, JPEG and WebP images are accepted.');
+    }
+
+    const filename = `${randomUUID()}.${detected.extension}`;
+    const path = join(this.ensureLocalUploadDir(), filename);
+    await writeFile(path, file.buffer, { flag: 'wx' });
+
+    try {
+      return await this.store({ path, filename, mimetype: detected.mimetype, size: file.size });
+    } catch (error) {
+      await this.removeLocalTempFile(path);
+      throw error;
+    }
+  }
 
   async store(file: { path: string; filename: string; mimetype: string; size: number }): Promise<{ url: string; fileId?: string; mimetype: string; size: number }> {
     const provider = this.getProvider();
@@ -99,6 +118,19 @@ export class ImageStorageService {
     }
 
     return uploadDir;
+  }
+
+  private detectImageType(buffer: Buffer): { mimetype: string; extension: string } | undefined {
+    if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+      return { mimetype: 'image/png', extension: 'png' };
+    }
+    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+      return { mimetype: 'image/jpeg', extension: 'jpg' };
+    }
+    if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+      return { mimetype: 'image/webp', extension: 'webp' };
+    }
+    return undefined;
   }
 
   private getProvider(): string {

@@ -7,5 +7,6 @@ coverage
 *.log
 *.db
 backups
+.deploy
 uploads
 apps/api/uploads

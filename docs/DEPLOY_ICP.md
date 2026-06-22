@@ -133,7 +133,7 @@ Valide que o arquivo existe antes de mexer no banco da VPS. O arquivo `.dump` fi
 Na VPS, com o container `guild-postgres` já de pé:
 
 ```bash
-scripts/prod/restore-postgres.sh ./backups/guild_platform_YYYYMMDD_HHMMSS.dump
+RESTORE_CONFIRM=guild_platform scripts/prod/restore-postgres.sh ./backups/guild_platform_YYYYMMDD_HHMMSS.dump
 ```
 
 Depois recrie a API para garantir migrations:
@@ -157,6 +157,17 @@ Cron diário sugerido:
 ```
 
 Se o ICP tiver agendador próprio, configure o mesmo comando nele.
+
+O script tambem cria SHA-256, remove backups alem de `BACKUP_RETENTION_DAYS`, aceita
+criptografia GPG e um comando de copia off-site. Uma vez por semana, restaure o backup
+em banco temporario sem afetar producao:
+
+```bash
+scripts/prod/verify-backup.sh ./backups/guild_platform_TIMESTAMP.dump.gpg
+```
+
+Veja `docs/OPERATIONS_RUNBOOKS.md` para o procedimento completo e
+`docs/MONITORING.md` para monitoramento em host externo.
 
 ## Deploy de atualização
 

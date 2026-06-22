@@ -5,6 +5,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
@@ -48,6 +49,8 @@ export default function AdminEventsPage() {
   const [eventType, setEventType] = useState<EventType>('LUNOS');
   const [selectedEventId, setSelectedEventId] = useState('');
   const [hideFinalized, setHideFinalized] = useState(true);
+  const [confirmation, setConfirmation] = useState<'finalize' | 'cancel'>();
+  const [cancelReason, setCancelReason] = useState('');
   const attendance = useEventAttendance(selectedEventId);
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
   const visibleEvents = useMemo(
@@ -94,13 +97,13 @@ export default function AdminEventsPage() {
   function cancelSelectedEvent() {
     if (!selectedEvent) return;
 
-    const reason = window.prompt(t(locale, 'eventCancelReasonPrompt'));
-
-    if (reason === null) return;
-
     cancelEvent.mutate(
-      { eventId: selectedEvent.id, reason },
-      { onSuccess: () => notifyToast({ title: t(locale, 'eventCancelledRefunded'), tone: 'success' }) },
+      { eventId: selectedEvent.id, reason: cancelReason.trim() || undefined },
+      { onSuccess: () => {
+        setConfirmation(undefined);
+        setCancelReason('');
+        notifyToast({ title: t(locale, 'eventCancelledRefunded'), tone: 'success' });
+      } },
     );
   }
 
@@ -109,6 +112,7 @@ export default function AdminEventsPage() {
 
     finalizeEvent.mutate(selectedEvent.id, {
       onSuccess: (result) => {
+        setConfirmation(undefined);
         if (!result.nextEvent) {
           notifyToast({ title: 'Evento finalizado. Esse era o ultimo boss do lote.', tone: 'success' });
           return;
@@ -195,14 +199,14 @@ export default function AdminEventsPage() {
                   <div className="flex items-center gap-2">
                     <Badge tone="blue">{presentPlayerIds.size} {t(locale, 'presentPlayers')}</Badge>
                     <Button
-                      onClick={finalizeSelectedEvent}
+                      onClick={() => setConfirmation('finalize')}
                       disabled={isClosed || presentPlayerIds.size === 0 || finalizeEvent.isPending}
                     >
                       {t(locale, 'finalize')}
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={cancelSelectedEvent}
+                      onClick={() => setConfirmation('cancel')}
                       disabled={isCancelled || cancelEvent.isPending}
                     >
                       Cancelar
@@ -260,6 +264,30 @@ export default function AdminEventsPage() {
             </CardContent>
           </Card>
         </div>
+        <ConfirmationDialog
+          open={confirmation === 'finalize'}
+          title="Finalizar evento?"
+          description={`${presentPlayerIds.size} presencas serao confirmadas e ${totalDkp} DKP serao distribuidos. Esta operacao nao deve ser repetida.`}
+          confirmLabel={t(locale, 'finalize')}
+          pending={finalizeEvent.isPending}
+          tone="primary"
+          onClose={() => setConfirmation(undefined)}
+          onConfirm={finalizeSelectedEvent}
+        />
+        <ConfirmationDialog
+          open={confirmation === 'cancel'}
+          title="Cancelar evento?"
+          description="O evento sera encerrado e os efeitos associados serao revertidos conforme as regras atuais. Informe o motivo para a auditoria."
+          confirmLabel="Cancelar evento"
+          pending={cancelEvent.isPending}
+          onClose={() => setConfirmation(undefined)}
+          onConfirm={cancelSelectedEvent}
+        >
+          <label className="space-y-1 text-sm">
+            <span className="text-xs uppercase text-muted-foreground">Motivo</span>
+            <Input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} placeholder={t(locale, 'eventCancelReasonPrompt')} />
+          </label>
+        </ConfirmationDialog>
       </div>
     </AuthGuard>
   );

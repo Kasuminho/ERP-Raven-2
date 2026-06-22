@@ -5,6 +5,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { notifyToast } from '@/components/ui/toaster';
@@ -19,6 +20,7 @@ export default function StaffDeliveriesPage() {
   const deliverDrop = useDeliverAuctionDrop();
   const uploadImage = useUploadImage();
   const [proofs, setProofs] = useState<Record<string, string>>({});
+  const [deliveryToConfirm, setDeliveryToConfirm] = useState<string>();
 
   async function uploadProof(auctionId: string, file?: File) {
     if (!file) return;
@@ -55,15 +57,7 @@ export default function StaffDeliveriesPage() {
                   {proof ? <a className="block text-center text-sm text-primary" href={proof} target="_blank" rel="noreferrer">{t(locale, 'openDeliveryProof')}</a> : null}
                   <Button
                     disabled={!proof || deliverDrop.isPending || uploadImage.isPending}
-                    onClick={() => deliverDrop.mutate(
-                      { auctionId: row.auction.id, proofImageUrl: proof },
-                      {
-                        onSuccess: () => {
-                          setProofs((current) => ({ ...current, [row.auction.id]: '' }));
-                          notifyToast({ title: t(locale, 'delivered'), tone: 'success' });
-                        },
-                      },
-                    )}
+                    onClick={() => setDeliveryToConfirm(row.auction.id)}
                   >
                     {t(locale, 'registerDelivery')}
                   </Button>
@@ -76,6 +70,26 @@ export default function StaffDeliveriesPage() {
         {!deliveries.isLoading && (deliveries.data ?? []).length === 0 && (
           <EmptyState title={t(locale, 'noPendingDeliveries')}>{t(locale, 'noPendingDeliveriesHelp')}</EmptyState>
         )}
+        <ConfirmationDialog
+          open={Boolean(deliveryToConfirm)}
+          title="Confirmar entrega do leilao?"
+          description="A entrega vincula o comprovante ao vencedor e conclui esta pendencia. Confira player, item e imagem antes de continuar."
+          confirmLabel={t(locale, 'registerDelivery')}
+          pending={deliverDrop.isPending}
+          tone="primary"
+          onClose={() => setDeliveryToConfirm(undefined)}
+          onConfirm={() => {
+            if (!deliveryToConfirm || !proofs[deliveryToConfirm]) return;
+            deliverDrop.mutate(
+              { auctionId: deliveryToConfirm, proofImageUrl: proofs[deliveryToConfirm] },
+              { onSuccess: () => {
+                setProofs((current) => ({ ...current, [deliveryToConfirm]: '' }));
+                setDeliveryToConfirm(undefined);
+                notifyToast({ title: t(locale, 'delivered'), tone: 'success' });
+              } },
+            );
+          }}
+        />
       </div>
     </AuthGuard>
   );

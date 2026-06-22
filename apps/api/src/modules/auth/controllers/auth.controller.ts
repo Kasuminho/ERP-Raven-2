@@ -1,8 +1,8 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
-import { AuthService, AuthSession, DiscordOAuthUser } from '../services/auth.service';
+import { AuthService, DiscordOAuthUser } from '../services/auth.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -24,28 +24,38 @@ export class AuthController {
   @UseGuards(AuthGuard('discord'))
   async discordCallback(@Req() req: { user: DiscordOAuthUser }, @Res() res: Response): Promise<void> {
     const session = await this.authService.createDiscordSession(req.user);
-    const callbackUrl = this.webCallbackUrl(session);
-    res.redirect(callbackUrl);
+    this.setSessionCookie(res, session.accessToken);
+    res.redirect(this.webCallbackUrl());
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  me(@Req() req: { user: unknown }): unknown {
-    return req.user;
+  async me(@Req() req: { user: { userId: string; username: string; discordId?: string } }): Promise<unknown> {
+    const profile = await this.authService.getSessionProfile(req.user.userId);
+    return { ...req.user, ...profile };
   }
 
-  private webCallbackUrl(session: AuthSession): string {
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response): { ok: true } {
+    res.clearCookie('guild_session', this.cookieOptions());
+    return { ok: true };
+  }
+
+  private webCallbackUrl(): string {
     const publicUrl = this.config.get<string>('discord.publicUrl') || 'http://localhost:5173';
-    const url = new URL('/login/callback', publicUrl);
-    url.searchParams.set('token', session.accessToken);
-    url.searchParams.set('userId', session.userId);
+    return new URL('/login/callback', publicUrl).toString();
+  }
 
-    if (session.playerId) {
-      url.searchParams.set('playerId', session.playerId);
-    }
+  private setSessionCookie(res: Response, accessToken: string): void {
+    res.cookie('guild_session', accessToken, { ...this.cookieOptions(), maxAge: 12 * 60 * 60 * 1000 });
+  }
 
-    url.searchParams.set('roles', session.roles.join(','));
-
-    return url.toString();
+  private cookieOptions(): { httpOnly: true; secure: boolean; sameSite: 'lax'; path: string } {
+    return {
+      httpOnly: true,
+      secure: this.config.get<string>('app.nodeEnv') === 'production',
+      sameSite: 'lax',
+      path: '/',
+    };
   }
 }

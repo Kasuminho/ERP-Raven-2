@@ -14,8 +14,49 @@ env:
   NEXT_PUBLIC_API_URL: https://app.guild-g3x.com.br/api/v1
 
 jobs:
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema packages/database/prisma/schema.prisma
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema packages/database/prisma/schema.prisma
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test critical domain rules
+        run: npm run test:ci
+
+      - name: Audit production dependencies
+        run: npm run audit:ci
+
+      - name: Build API
+        run: npm run build --workspace apps/api
+
+      - name: Build Web
+        run: npm run build --workspace apps/web
+        env:
+          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
+
   build:
     name: Build and publish
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +85,8 @@ jobs:
           file: Dockerfile
           target: api
           push: true
+          build-args: |
+            APP_VERSION=${{ env.SHORT_SHA }}
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/erp-raven-2-api:latest
             ghcr.io/${{ env.OWNER_LC }}/erp-raven-2-api:${{ env.SHORT_SHA }}
@@ -57,6 +100,33 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            APP_VERSION=${{ env.SHORT_SHA }}
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/erp-raven-2-web:latest
             ghcr.io/${{ env.OWNER_LC }}/erp-raven-2-web:${{ env.SHORT_SHA }}
+
+  deploy-smoke:
+    name: Public production smoke
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Wait for Watchtower polling window
+        run: sleep 330
+
+      - name: Check public API health
+        run: |
+          export EXPECTED_VERSION="${GITHUB_SHA::7}"
+          node scripts/public-smoke-test.js
+        env:
+          SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
+          SMOKE_ATTEMPTS: 12
+          SMOKE_DELAY_MS: 15000

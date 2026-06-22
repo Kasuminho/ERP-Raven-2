@@ -97,6 +97,7 @@ export default function DashboardPage() {
         title={t(locale, 'myPendingTasks')}
         tasks={operations.data?.tasks ?? []}
         emptyText={t(locale, 'myPendingTasksEmpty')}
+        ownerLabel={locale === 'pt' ? 'Voce' : 'You'}
       />
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">

@@ -5,6 +5,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
@@ -21,6 +22,7 @@ export default function StaffProgressReviewPage() {
   const commentProgress = useCommentProgress();
   const [forms, setForms] = useState<Record<string, { combatPower: string; dimensionalLayer: string; reviewNote: string }>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [reviewToReject, setReviewToReject] = useState<string>();
 
   function updateForm(id: string, patch: Partial<{ combatPower: string; dimensionalLayer: string; reviewNote: string }>) {
     setForms((current) => ({
@@ -117,10 +119,7 @@ export default function StaffProgressReviewPage() {
                     <Button
                       variant="danger"
                       disabled={reject.isPending}
-                      onClick={() => reject.mutate(
-                        { id: review.id, reviewNote: form.reviewNote },
-                        { onSuccess: () => notifyToast({ title: t(locale, 'reject'), tone: 'success' }) },
-                      )}
+                      onClick={() => setReviewToReject(review.id)}
                     >
                       {t(locale, 'reject')}
                     </Button>
@@ -133,6 +132,24 @@ export default function StaffProgressReviewPage() {
         {!reviews.isLoading && (reviews.data ?? []).length === 0 && (
           <EmptyState title={t(locale, 'noProgressReviews')}>{t(locale, 'noProgressReviewsHelp')}</EmptyState>
         )}
+        <ConfirmationDialog
+          open={Boolean(reviewToReject)}
+          title="Rejeitar atualizacao de progresso?"
+          description="A atualizacao nao sera aplicada ao perfil do player. A nota preenchida sera usada como justificativa da revisao."
+          confirmLabel={t(locale, 'reject')}
+          pending={reject.isPending}
+          onClose={() => setReviewToReject(undefined)}
+          onConfirm={() => {
+            if (!reviewToReject) return;
+            reject.mutate(
+              { id: reviewToReject, reviewNote: forms[reviewToReject]?.reviewNote ?? '' },
+              { onSuccess: () => {
+                setReviewToReject(undefined);
+                notifyToast({ title: t(locale, 'reject'), tone: 'success' });
+              } },
+            );
+          }}
+        />
       </div>
     </AuthGuard>
   );
