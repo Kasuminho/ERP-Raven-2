@@ -1,4 +1,3 @@
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
@@ -6,6 +5,7 @@ import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
+import { createGlobalValidationPipe } from './common/pipes/global-validation.pipe';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
@@ -31,7 +31,7 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(config.get<string>('app.apiPrefix', 'api/v1'));
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(createGlobalValidationPipe());
   app.useGlobalInterceptors(new RequestLoggingInterceptor());
   const corsOrigins = (config.get<string>('app.corsOrigin', '') || '').split(',').map((value) => value.trim()).filter(Boolean);
   app.enableCors({

@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from '../src/modules/auth/controllers/auth.controller';
 import { AuthService, DiscordOAuthUser } from '../src/modules/auth/services/auth.service';
 import { ImageStorageService } from '../src/modules/uploads/image-storage.service';
+import { createGlobalValidationPipe } from '../src/common/pipes/global-validation.pipe';
+import { CreateAnnouncementDto } from '../src/modules/announcements/dto/create-announcement.dto';
 
 test('OAuth callback stores the JWT only in an HttpOnly cookie', async () => {
   const authService = {
@@ -43,4 +45,24 @@ test('upload storage rejects SVG content even when presented as an image', async
     storage.storeValidated({ buffer: svg, size: svg.length }),
     /Only valid PNG, JPEG and WebP images are accepted/,
   );
+});
+
+test('global validation preserves the announcement batch contract', async () => {
+  const payload = {
+    type: 'Evento',
+    title: 'BOSSES T5',
+    description: 'BOSSES T5 - FLOUD - KRATERIUS',
+    eventTime: '2026-06-22T23:00:00.000Z',
+    timezone: 'America/Sao_Paulo',
+    mentionRoleId: 'role-1',
+    attendanceEventTypes: ['FLOUD', 'KRATERIUS'],
+  };
+
+  const result = await createGlobalValidationPipe().transform(payload, {
+    type: 'body',
+    metatype: CreateAnnouncementDto,
+    data: '',
+  });
+
+  assert.deepEqual({ ...result }, payload);
 });
