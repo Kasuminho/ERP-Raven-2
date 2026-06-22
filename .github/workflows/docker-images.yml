@@ -12,6 +12,7 @@ permissions:
 
 env:
   NEXT_PUBLIC_API_URL: https://app.guild-g3x.com.br/api/v1
+  DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/guild_platform?schema=public
 
 jobs:
   quality:
