@@ -183,11 +183,33 @@ export default function ProfilePage() {
     if (!player) return;
 
     setTimezone(player.timezone ?? '');
+    setProfileForm({
+      nickname: player.nickname ?? '',
+      class: player.class ?? 'VANGUARD',
+      dimensionalLayer: player.dimensionalLayer ?? 1,
+    });
 
     if (player.user?.preferredLocale === 'pt' || player.user?.preferredLocale === 'en' || player.user?.preferredLocale === 'es') {
       setLocale(player.user.preferredLocale);
     }
   }, [player]);
+
+  function saveProfile() {
+    if (!Number.isInteger(profileForm.dimensionalLayer) || profileForm.dimensionalLayer < 1 || profileForm.dimensionalLayer > 10) {
+      notifyToast({ title: t(currentLocale, 'invalidLayer'), description: t(currentLocale, 'profileLayerHelp'), tone: 'error' });
+      return;
+    }
+
+    updateProfile.mutate(
+      { ...profileForm, nickname: profileForm.nickname || undefined, timezone, locale },
+      {
+        onSuccess: () => {
+          setCurrentLocale(locale);
+          notifyToast({ title: t(currentLocale, 'profileUpdated'), tone: 'success' });
+        },
+      },
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -212,22 +234,23 @@ export default function ProfilePage() {
         <Card>
           <CardHeader><CardTitle>{t(currentLocale, 'completeProfile')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <Input placeholder={player?.nickname ?? 'Nickname'} value={profileForm.nickname} onChange={(event) => setProfileForm((current) => ({ ...current, nickname: event.target.value }))} />
-            <Select value={profileForm.class} onChange={(event) => setProfileForm((current) => ({ ...current, class: event.target.value as PlayerClass }))}>
-              {playerClasses.map((playerClass) => <option key={playerClass} value={playerClass}>{playerClassLabel(playerClass, currentLocale)}</option>)}
-            </Select>
-            <Input type="number" min={1} max={10} value={profileForm.dimensionalLayer} onChange={(event) => setProfileForm((current) => ({ ...current, dimensionalLayer: Number(event.target.value) }))} />
-            <Button
-              onClick={() => updateProfile.mutate(
-                { ...profileForm, nickname: profileForm.nickname || undefined, timezone, locale },
-                {
-                  onSuccess: () => {
-                    setCurrentLocale(locale);
-                    notifyToast({ title: 'Perfil atualizado.', tone: 'success' });
-                  },
-                },
-              )}
-            >
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase text-muted-foreground" htmlFor="profile-nickname">Nickname</label>
+              <Input id="profile-nickname" placeholder={player?.nickname ?? 'Nickname'} value={profileForm.nickname} onChange={(event) => setProfileForm((current) => ({ ...current, nickname: event.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase text-muted-foreground" htmlFor="profile-class">{t(currentLocale, 'class')}</label>
+              <Select id="profile-class" value={profileForm.class} onChange={(event) => setProfileForm((current) => ({ ...current, class: event.target.value as PlayerClass }))}>
+                {playerClasses.map((playerClass) => <option key={playerClass} value={playerClass}>{playerClassLabel(playerClass, currentLocale)}</option>)}
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase text-muted-foreground" htmlFor="profile-layer">{t(currentLocale, 'layer')}</label>
+              <Input id="profile-layer" type="number" min={1} max={10} value={profileForm.dimensionalLayer} onChange={(event) => setProfileForm((current) => ({ ...current, dimensionalLayer: Number(event.target.value) }))} />
+              <p className="text-xs text-muted-foreground">{t(currentLocale, 'profileLayerHelp')}</p>
+              <p className="text-xs text-primary">{t(currentLocale, 'profileCpHelp')}</p>
+            </div>
+            <Button onClick={saveProfile} disabled={updateProfile.isPending}>
               {t(currentLocale, 'save')}
             </Button>
           </CardContent>

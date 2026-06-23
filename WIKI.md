@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-22
+**Ultima revisao:** 2026-06-23
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -50,6 +50,7 @@ Fonte detalhada: `docs/DISCORD_WEBHOOK_VOICE.md`.
 - Estilo curto, sarcastico, gamer e de internet, sem preconceito ou ataque pessoal.
 - Alertas criticos explicam o problema antes da punchline.
 - Changelog da Staff e enviado com `npm.cmd run discord:update -- ARQUIVO --staff`.
+- Avisos extraordinarios para players podem ser redigidos/revisados no chat Codex e publicados com `npm.cmd run discord:update -- ARQUIVO --announcements`; fazer `--dry-run` antes, manter PT-BR/EN em blocos separados e exigir confirmacao humana antes do envio.
 - Nunca documentar URLs completas de webhook.
 
 Automacao ativa:
@@ -79,6 +80,7 @@ Automacao ativa:
 - Acoes destrutivas e financeiras usam `ConfirmationDialog` acessivel, sem `window.confirm` ou `window.prompt`.
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
 - A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
+- No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
 
 ## Leiloes e sigilo
 
@@ -126,6 +128,12 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Registra entregas em `DiscordDkpLogDelivery` para nao repetir transacoes apos restart.
 - Estado persistido em `DiscordDkpLogState`.
 - Configuracao usa `DISCORD_DKP_WEBHOOK_URL`; nunca registrar o valor.
+
+## Pedidos de craft
+
+- Materiais solicitados para concluir itens T3 possuem prioridade sobre pedidos do mesmo material destinados a Quintessencia.
+- Um pedido de Quintessencia continua valido, mas so deve ser atendido quando nao houver player aguardando aquele material para fabricar um item T3.
+- A regra existe para elevar primeiro quem ainda esta abaixo na progressao e melhorar o resultado coletivo da guilda.
 
 ## Deploy e producao
 
@@ -192,6 +200,8 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-23 | Perfil do player passou a validar camada 1-10 com erro 400, carregar dados reais no formulario e orientar que CP muda via progresso aprovado pela Staff. | perfil/progresso |
+| 2026-06-22 | Registrada a prioridade de materiais para T3 sobre Quintessencia e o fluxo de avisos extraordinarios bilingues pelo Aristolfo. | comunicacao operacional |
 | 2026-06-22 | Hotfix preserva contratos dos DTOs legados no pipe global e cobre agendamento de bosses em lote. | trabalho atual |
 | 2026-06-21 | Endurecimento completo: sessao HttpOnly, upload seguro, CI/testes, busca e navegacao, confirmacoes, monitoramento, backups verificados e rollback. | trabalho atual |
 | 2026-06-21 | Criados `AGENTS.md` e `WIKI.md` como memoria viva obrigatoria para novos chats. | este commit |

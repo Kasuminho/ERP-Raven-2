@@ -194,14 +194,14 @@ export class PlayersService {
     const player = await this.getPrimaryPlayerByUser(userId);
 
     if (!player) {
-      throw new Error('Player profile not found.');
+      throw new NotFoundException('Player profile not found.');
     }
 
-    const dimensionalLayer = data.dimensionalLayer === undefined ? undefined : Number(data.dimensionalLayer);
+    const nickname = this.normalizeOptionalNickname(data.nickname);
+    const playerClass = this.normalizeOptionalPlayerClass(data.class);
+    const dimensionalLayer = this.normalizeOptionalLayer(data.dimensionalLayer);
 
-    if (dimensionalLayer !== undefined && (!Number.isInteger(dimensionalLayer) || dimensionalLayer < 1 || dimensionalLayer > 10)) {
-      throw new Error('Dimensional layer must be an integer between 1 and 10.');
-    }
+    this.assertProfileUpdateHasChanges({ nickname, class: playerClass, dimensionalLayer, timezone: data.timezone, locale: data.locale });
 
     return this.repository.client.$transaction(async (tx) => {
       if (data.locale && ['pt', 'en', 'es'].includes(data.locale)) {
@@ -211,8 +211,8 @@ export class PlayersService {
       return tx.player.update({
         where: { id: player.id },
         data: {
-          nickname: data.nickname?.trim() || undefined,
-          class: data.class,
+          nickname,
+          class: playerClass,
           dimensionalLayer,
           timezone: data.timezone?.trim() || undefined,
         },
@@ -840,5 +840,53 @@ export class PlayersService {
     }
 
     return number;
+  }
+
+  private normalizeOptionalNickname(value: unknown): string | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    const nickname = String(value).trim();
+
+    if (!nickname) {
+      return undefined;
+    }
+
+    if (nickname.length < 2 || nickname.length > 32) {
+      throw new BadRequestException('Nickname must be between 2 and 32 characters.');
+    }
+
+    return nickname;
+  }
+
+  private normalizeOptionalPlayerClass(value: unknown): PlayerClass | undefined {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+
+    if (!Object.values(PlayerClass).includes(value as PlayerClass)) {
+      throw new BadRequestException('Invalid player class.');
+    }
+
+    return value as PlayerClass;
+  }
+
+  private assertProfileUpdateHasChanges(data: {
+    nickname?: string;
+    class?: PlayerClass;
+    dimensionalLayer?: number;
+    timezone?: string;
+    locale?: string;
+  }): void {
+    if (
+      data.nickname === undefined
+      && data.class === undefined
+      && data.dimensionalLayer === undefined
+      && !data.timezone?.trim()
+      && !data.locale
+    ) {
+      throw new BadRequestException('At least one profile field must be provided.');
+    }
   }
 }
