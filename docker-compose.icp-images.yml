@@ -12,6 +12,8 @@ services:
       PORT: 3000
     ports:
       - '127.0.0.1:${API_HOST_PORT:-3000}:3000'
+    volumes:
+      - ${UPLOADS_HOST_DIR:-/srv/guild/uploads}:/app/uploads
     networks:
       - icontainer
     healthcheck:

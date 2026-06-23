@@ -27,16 +27,55 @@ CORS_ORIGIN=https://app.guild-g3x.com.br
 DISCORD_CALLBACK_URL=https://app.guild-g3x.com.br/api/v1/auth/discord/callback
 NEXT_PUBLIC_API_URL=https://app.guild-g3x.com.br/api/v1
 ICP_SHARED_NETWORK=icontainer-network-name
+IMAGE_STORAGE_PROVIDER=local
+UPLOADS_HOST_DIR=/srv/guild/uploads
 ```
 
 Set `ICP_SHARED_NETWORK` to the exact Docker network used by the ICP PostgreSQL container. This keeps API/Web on the same internal network as Postgres and avoids falling back to external database access.
+
+The API stores new uploaded images in `${UPLOADS_HOST_DIR}` mounted at `/app/uploads`.
+Keep this host directory persistent and include it in backups together with PostgreSQL.
 
 ## OpenResty
 
 Route:
 
 - `/api/v1` -> `http://127.0.0.1:3000`
+- `/uploads` -> `http://127.0.0.1:3000`
 - `/` -> `http://127.0.0.1:5173`
+
+## Migrating legacy Google Drive images
+
+New uploads should use `IMAGE_STORAGE_PROVIDER=local`, but old database records can
+still point to Google Drive until they are migrated.
+
+Before applying the migration, create a PostgreSQL backup and keep a raw copy of the
+Google Drive folder. Then run an inventory:
+
+```bash
+npm run images:migrate-drive -- --dry-run
+```
+
+Apply a small batch first:
+
+```bash
+npm run images:migrate-drive -- --apply --limit 10 --uploads-dir /srv/guild/uploads
+```
+
+After checking the generated `reports/drive-image-migration-*.jsonl` manifest and
+opening migrated images in production, run the full migration:
+
+```bash
+npm run images:migrate-drive -- --apply --uploads-dir /srv/guild/uploads
+```
+
+If running the command inside the `guild-api` container instead of on the VPS host,
+use `--uploads-dir /app/uploads`, because the host directory is mounted there.
+
+The script validates PNG, JPEG and WebP by magic bytes before writing files, stores
+them under `/uploads/<uuid>.<ext>`, updates the image URL fields in PostgreSQL, and
+keeps a JSONL manifest with old URL, new URL, size and SHA-256. Do not remove Drive
+access or CSP allowances until the dry-run reports zero remaining Drive references.
 
 ## Update flow
 

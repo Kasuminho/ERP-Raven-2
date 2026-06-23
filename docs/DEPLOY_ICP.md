@@ -41,6 +41,8 @@ DISCORD_CALLBACK_URL=https://app.guild-g3x.com.br/api/v1/auth/discord/callback
 POSTGRES_PASSWORD=uma_senha_longa_e_unica
 JWT_ACCESS_SECRET=segredo_longo
 JWT_REFRESH_SECRET=outro_segredo_longo
+IMAGE_STORAGE_PROVIDER=local
+UPLOADS_HOST_DIR=/srv/guild/uploads
 ```
 
 No Discord Developer Portal, atualize o redirect OAuth para:
@@ -92,6 +94,15 @@ server {
 
   location /api/v1/ {
     proxy_pass http://127.0.0.1:3000/api/v1/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /uploads/ {
+    proxy_pass http://127.0.0.1:3000/uploads/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -191,9 +202,41 @@ Sem SSH, pelo painel:
 - `https://app.guild-g3x.com.br/api/v1/auth/discord/login` redireciona para Discord
 - Login volta para `https://app.guild-g3x.com.br/login/callback`
 - Staff consegue abrir `/dashboard/staff`
-- Upload de imagem envia ao Google Drive
+- Upload de imagem salva em `/srv/guild/uploads` e abre em `https://app.guild-g3x.com.br/uploads/NOME_DO_ARQUIVO`
 - Webhooks postam no Discord
 - Backup manual gera arquivo `.dump`
+
+## Migrar imagens antigas do Google Drive
+
+Novos uploads usam `IMAGE_STORAGE_PROVIDER=local`, mas registros antigos podem manter
+URLs do Google Drive ate a migracao. Antes de aplicar, gere backup do PostgreSQL e
+guarde uma copia bruta da pasta do Drive.
+
+Inventario sem alterar dados:
+
+```bash
+npm run images:migrate-drive -- --dry-run
+```
+
+Lote pequeno para validar:
+
+```bash
+npm run images:migrate-drive -- --apply --limit 10 --uploads-dir /srv/guild/uploads
+```
+
+Migracao completa:
+
+```bash
+npm run images:migrate-drive -- --apply --uploads-dir /srv/guild/uploads
+```
+
+Se o comando for executado dentro do container `guild-api`, use
+`--uploads-dir /app/uploads`, pois `/srv/guild/uploads` existe no host e e montado
+nesse caminho dentro do container.
+
+O script grava manifesto JSONL em `reports/`, valida PNG/JPEG/WebP por magic bytes,
+salva arquivos em `/srv/guild/uploads` e troca os campos de imagem no banco para
+`/uploads/NOME_DO_ARQUIVO`.
 
 ## Atenção
 
@@ -201,6 +244,7 @@ Nunca apague:
 
 ```text
 postgres_data
+/srv/guild/uploads
 ```
 
-Esse volume guarda o banco.
+Esses volumes guardam o banco e as imagens enviadas.

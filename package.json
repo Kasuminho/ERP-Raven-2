@@ -21,6 +21,7 @@
     "test:smoke": "node scripts/smoke-test.js",
     "discord:update": "node scripts/send-discord-update.js",
     "discord:configure-webhooks": "node scripts/configure-discord-webhooks.js",
+    "images:migrate-drive": "node scripts/migrate-drive-images-to-local.js",
     "prisma:generate": "npm run -w @guild/database prisma:generate",
     "prisma:migrate:dev": "npm run -w @guild/database prisma:migrate:dev"
   },
