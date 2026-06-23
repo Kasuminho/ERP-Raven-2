@@ -87,14 +87,16 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
             color: 0x9b51e0,
             description: `${initialBackfill
               ? `${pickStaffVoice([
-                '**Aristolfo abriu o bau dos ultimos 3 dias.** Confere o extrato antes que nasca fanfic de saldo.',
-                '**Backfill na mesa.** Os ultimos 3 dias entraram em ordem, sem speedrun de contabilidade criativa.',
-                '**Historico puxado.** O cofre cuspiu 3 dias de DKP antes que alguem chamasse a calculadora de suspeita.',
+                '**Aristolfo abriu o bau dos ultimos 3 dias.** Confere o extrato antes que o folclore do saldo acorde.',
+                '**Backfill na mesa.** Os ultimos 3 dias chegaram em ordem, sem parkour de contabilidade criativa.',
+                '**Historico puxado.** O cofre devolveu 3 dias de DKP antes que a calculadora pedisse advogado.',
+                '**Resumo retroativo no ar.** O log buscou os ultimos 3 dias sem deixar espaco pro mito nascer.',
               ], this.stateId, index, 'backfill')}\n\n`
               : `${pickStaffVoice([
-                '**Movimentacao nova pingou.** O log chegou antes da memoria coletiva editar a cena.',
-                '**DKP mexeu.** Aristolfo anotou no susto para a timeline nao inventar patch paralelo.',
-                '**Extrato atualizado.** O contador registrou tudo antes do Discord virar tribunal de achismo.',
+                '**Movimentacao nova pingou.** O log chegou antes da memoria coletiva editar a cutscene.',
+                '**DKP mexeu.** Aristolfo anotou na hora para a timeline nao abrir fanfic paralela.',
+                '**Extrato atualizado.** O contador registrou tudo antes do chat virar juri de chute.',
+                '**Saldo mexeu.** O registro saiu cedo, antes que alguem tente narrar de ouvido.',
               ], this.stateId, index, 'live')}\n\n`}${chunk.lines.join('\n')}`,
             footer: { text: `${chunk.rows.length} movimentacao(oes) | Ordem cronologica` },
             timestamp: new Date().toISOString(),

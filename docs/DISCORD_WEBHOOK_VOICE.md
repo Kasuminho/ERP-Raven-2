@@ -17,6 +17,7 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 - Sem pedido de desculpa cerimonial. Erro vira correcao objetiva com uma piada curta.
 - Alertas criticos continuam claros antes da zoeira.
 - Variacoes usam selecao deterministica por contexto para evitar bordao fixo e nao baguncar retries.
+- Quando houver bloco PT-BR/EN com pares equivalentes, os dois idiomas devem cair na mesma variante contextual.
 
 ## Configuracao
 

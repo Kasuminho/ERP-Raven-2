@@ -11,16 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo conferiu. Se der ruim agora, foi side quest da realidade.*',
-    '*Aristolfo passou o olho torto. Se quebrar daqui pra frente, o bug entrou sem convite.*',
-    '*Aristolfo soltou o changelog. O resto agora e PvP entre deploy e destino.*',
-    '*Aristolfo revisou. Se surgir caos novo, pelo menos ele veio com timestamp.*',
+    '*Aristolfo passou no raio-x. Se der ruim agora, o caos furou a fila.*',
+    '*Aristolfo soltou o changelog. O resto agora e ranked entre deploy e universo.*',
+    '*Aristolfo fez a conferencia final. Se quebrar daqui pra frente, o bug veio de penetra.*',
+    '*Aristolfo carimbou a nota. Se nascer treta nova, pelo menos ela ja chega protocolada.*',
+    '*Aristolfo revisou sem pular cutscene. Se der BO agora, foi DLC da realidade.*',
   ],
   EN: [
-    '*Aristolfo checked it. If it breaks now, reality queued a side quest.*',
-    '*Aristolfo gave it the side-eye. Any new failure arrived without an invite.*',
-    '*Aristolfo shipped the changelog. The rest is PvP between deploy and fate.*',
-    '*Aristolfo reviewed it. If chaos appears now, at least it comes with a timestamp.*',
+    '*Aristolfo ran the X-ray. If it breaks now, chaos skipped the queue.*',
+    '*Aristolfo shipped the changelog. The rest is ranked between deploy and the universe.*',
+    '*Aristolfo did the final check. If it breaks from here, the bug crashed as an uninvited guest.*',
+    '*Aristolfo stamped the note. If new trouble spawns now, at least it arrives documented.*',
+    '*Aristolfo reviewed it without skipping the cutscene. If it breaks now, that was reality DLC.*',
   ],
 };
 

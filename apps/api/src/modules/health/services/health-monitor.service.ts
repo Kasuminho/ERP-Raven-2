@@ -76,20 +76,23 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
       ? pickStaffVoice([
-        'Healthcheck recuperado. Aristolfo largou o extintor.',
-        'Healthcheck verde de novo. O servidor parou de farmar susto.',
-        'Healthcheck normalizado. A treta saiu do mapa por enquanto.',
+        'Healthcheck recuperado. Aristolfo desligou o alarme.',
+        'Healthcheck verde de novo. O servidor parou de farmar susto gratis.',
+        'Healthcheck normalizado. A treta quitou da partida por enquanto.',
+        'Healthcheck estabilizado. O plantao saiu do modo jump scare.',
       ], report.status, report.checkedAt)
       : report.status === 'degraded'
         ? pickStaffVoice([
           'Healthcheck com chiado no voice',
           'Healthcheck amarelou no radar',
           'Healthcheck em modo cautela',
+          'Healthcheck entrou no amarelo sem pedir duo',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
         : pickStaffVoice([
-          'Healthcheck critico. Puxar o cabo de paciencia.',
+          'Healthcheck critico. Puxar o cabo da paciencia.',
           'Healthcheck vermelho. O plantao ganhou boss fight.',
           'Healthcheck caiu em modo desastre premium.',
+          'Healthcheck abriu a cutscene do caos.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
@@ -101,6 +104,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
             '**A plataforma voltou.** O servidor respirou fundo e o plantao pode tirar o dedo do F5.',
             '**Tudo normalizado.** A infra saiu do modo roguelike e voltou para a rota prevista.',
             '**Servico recuperado.** O susto fechou a thread e a stack parou de brincar de Jenga.',
+            '**Recuperacao confirmada.** A infra largou o drama e voltou para o roteiro oficial.',
           ], report.status, report.checkedAt)
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [

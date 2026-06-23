@@ -27,14 +27,16 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setColor(0x2f80ed)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Loot na pista.** Confere o DKP antes do clique; conta refeita no susto nunca sai premium.',
-        '**Leilao spawnou.** Entra com o DKP checado; fazer matematica no pos-jogo e patch de desespero.',
-        '**Item em disputa.** Mira no bid com o saldo certo; improviso depois do lock so rende clip de vergonha.',
+        '**Loot na pista.** Confere o DKP antes do clique; conta refeita no susto e build de emergencia.',
+        '**Leilao spawnou.** Entra com o saldo checado; matematica no pos-jogo so gera replay triste.',
+        '**Item em disputa.** Mira no bid com o valor certo; improviso depois do lock e compilado de vergonha.',
+        '**Janela abriu.** Se for entrar, entra com o DKP contado e sem inventar moda no ultimo frame.',
       ],
       en: [
-        '**Loot is live.** Check your DKP before clicking; panic math after the lock is low-ELO tech.',
-        '**Auction just spawned.** Queue up with verified DKP; post-lock arithmetic is bargain-bin strategy.',
-        '**Item is contested.** Aim with the right balance; freestyle math after the bid only creates cringe VODs.',
+        '**Loot is live.** Check your DKP before clicking; panic math is an emergency build.',
+        '**Auction just spawned.** Queue up with verified balance; post-lock arithmetic only creates sad replays.',
+        '**Item is contested.** Aim with the right amount; freestyle math after the lock becomes a cringe compilation.',
+        '**Window is open.** If you are going in, do it with counted DKP and no last-frame improvising.',
       ],
     }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
@@ -55,14 +57,16 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
     .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `**${playerName} fechou o drop.** O DKP saiu da conta e o tribunal do "eu quase dei bid" ja pode abrir.`,
-        `**${playerName} garantiu o item.** DKP consumido; o resto vira textao tardio no canal errado.`,
-        `**${playerName} levou.** O lock virou gasto real e o debate tardio perdeu o buff.`,
+        `**${playerName} fechou o drop.** O DKP saiu da conta e o clube do "faltou um clique" ficou sem argumento.`,
+        `**${playerName} garantiu o item.** DKP consumido; o resto agora e comentario atrasado com ping de museu.`,
+        `**${playerName} levou.** O lock virou gasto real e a conversa tardia perdeu o buff.`,
+        `**${playerName} cravou.** O item trocou de dono e o quase ficou preso no lobby.`,
       ],
       en: [
-        `**${playerName} locked the drop.** DKP is spent; the "I almost bid" court may now convene.`,
-        `**${playerName} secured the item.** DKP consumed; the rest is just a late essay posted in the wrong channel.`,
+        `**${playerName} locked the drop.** DKP is spent and the "one click away" club is left with no argument.`,
+        `**${playerName} secured the item.** DKP consumed; the rest is late commentary with museum-grade ping.`,
         `**${playerName} got it.** The lock became a real spend and the late debate lost its buff.`,
+        `**${playerName} called it.** The item changed hands and the almost got stuck in the lobby.`,
       ],
     }, itemName, playerName))
     .setColor(0x27ae60)
@@ -80,14 +84,16 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `Entrega registrada para **${playerName}**. Print guardado e a novela do "cade a prova?" perdeu tela.`,
-        `**${playerName}** recebeu e ficou tudo salvo. O print entrou no cofre antes do Discord inventar teoria.`,
-        `Entrega confirmada para **${playerName}**. Prova anexada e o VAR do loot ja tem replay.`,
+        `Entrega registrada para **${playerName}**. Print guardado e a saga do "cade a prova?" perdeu episodio.`,
+        `**${playerName}** recebeu e ficou tudo salvo. O print entrou no cofre antes do chat inventar multiverso.`,
+        `Entrega confirmada para **${playerName}**. Prova anexada e o VAR do loot ja abriu o replay.`,
+        `Drop entregue para **${playerName}**. Tudo logado antes que alguem tente editar a timeline no grito.`,
       ],
       en: [
-        `Delivery logged for **${playerName}**. Screenshot stored and the "where is the proof?" arc lost its screen time.`,
-        `**${playerName}** received it and everything is saved. The screenshot hit the vault before Discord could theorycraft.`,
-        `Delivery confirmed for **${playerName}**. Proof attached and the loot VAR already has the replay.`,
+        `Delivery logged for **${playerName}**. Screenshot stored and the "where is the proof?" arc lost an episode.`,
+        `**${playerName}** received it and everything is saved. The screenshot hit the vault before chat could invent a multiverse.`,
+        `Delivery confirmed for **${playerName}**. Proof attached and the loot VAR already opened the replay.`,
+        `Drop delivered to **${playerName}**. Everything was logged before anyone could shout-edit the timeline.`,
       ],
     }, itemName, playerName))
     .setColor(0xf2c94c)

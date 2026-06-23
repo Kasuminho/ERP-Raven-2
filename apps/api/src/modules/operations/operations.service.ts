@@ -947,14 +947,16 @@ export class OperationsService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo fechou a contagem duas vezes. Se a planilha chiar agora, e porque ela sentiu o hit.',
-          'Resumo revisado. A conta passou no pente-fino e a planilha segue em modo sobrevivencia.',
-          'Aristolfo auditou a semana toda. Se sobrar duvida, o problema ja e filosofia, nao soma.',
+          'Aristolfo passou a semana no pente-fino. Se a planilha reclamar agora, ela so tomou dano emocional.',
+          'Resumo revisado. A conta fechou limpa e a planilha escapou de mais uma boss fight.',
+          'Aristolfo auditou tudo. Se sobrar duvida agora, o bug ja mora em filosofia aplicada.',
+          'Semana fechada no extrato. O numero bateu antes que o chat resolvesse freestyle de lore.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo counted the week twice. If the spreadsheet still complains, it just took emotional damage.',
-          'Weekly summary reviewed. The math survived the comb-through and the spreadsheet remains barely online.',
-          'Aristolfo audited the whole week. Any doubt left now is philosophy, not arithmetic.',
+          'Aristolfo combed through the whole week. If the spreadsheet still complains, it only took emotional damage.',
+          'Weekly summary reviewed. The math closed cleanly and the spreadsheet escaped one more boss fight.',
+          'Aristolfo audited everything. Any doubt left now belongs to applied philosophy, not arithmetic.',
+          'Week closed on the ledger. The numbers matched before chat could invent a parallel patch.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

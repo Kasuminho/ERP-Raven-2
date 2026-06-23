@@ -49,6 +49,7 @@ Fonte detalhada: `docs/DISCORD_WEBHOOK_VOICE.md`.
 - Nao usar espanhol nos posts normais atuais.
 - Estilo curto, sarcastico, gamer e de internet, sem preconceito ou ataque pessoal.
 - Alertas criticos explicam o problema antes da punchline.
+- Bancos de voz dos webhooks usam selecao deterministica por contexto; quando ha par PT-BR/EN equivalente, a variante escolhida e espelhada entre os dois blocos.
 - Changelog da Staff e enviado com `npm.cmd run discord:update -- ARQUIVO --staff`.
 - Avisos extraordinarios para players podem ser redigidos/revisados no chat Codex e publicados com `npm.cmd run discord:update -- ARQUIVO --announcements`; fazer `--dry-run` antes, manter PT-BR/EN em blocos separados e exigir confirmacao humana antes do envio.
 - Nunca documentar URLs completas de webhook.
@@ -58,6 +59,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
+- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, evitando repetir o lote anterior recente.
 
 ## Seguranca, sessao e uploads
 
@@ -202,6 +204,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-23 | Segunda rotacao automatica renovou o repertorio dos webhooks, alinhou variantes PT-BR/EN por contexto e trocou punchlines do changelog. | webhook-joke-rotation |
 | 2026-06-23 | Criado runbook/script para inventariar e migrar imagens legadas do Google Drive para uploads locais com manifesto. | migracao de imagens |
 | 2026-06-23 | Uploads novos passaram a ser documentados como armazenamento local persistente na VPS, com `/uploads/` roteado para a API. | uploads/producao |
 | 2026-06-23 | Perfil do player passou a validar camada 1-10 com erro 400, carregar dados reais no formulario e orientar que CP muda via progresso aprovado pela Staff. | perfil/progresso |
