@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -15,6 +16,13 @@ import { useLocaleStore } from '@/store/locale-store';
 import type { ItemInterestPost, ItemType } from '@/types/api';
 
 const itemTypes: ItemType[] = ['WEAPON', 'ARMOR', 'ACCESSORY', 'CELESTIAL_STONE'];
+const TRANSMUTE_IMAGE_URL = '/transmutar.png';
+
+type InterestForm = {
+  note: string;
+  imageUrl: string;
+  useTransmute: boolean;
+};
 
 function localDateKey(value: string): string {
   const date = new Date(value);
@@ -35,17 +43,34 @@ export default function ItemInterestsPage() {
   const declareInterest = useDeclareItemInterest();
   const markSeen = useMarkItemInterestSeen();
   const uploadImage = useUploadImage();
-  const [forms, setForms] = useState<Record<string, { note: string; imageUrl: string }>>({});
+  const [forms, setForms] = useState<Record<string, InterestForm>>({});
+  const [transmuteConfirmationPostId, setTransmuteConfirmationPostId] = useState<string>();
   const [typeFilter, setTypeFilter] = useState<'ALL' | ItemType>('ALL');
   const [createdDateFilter, setCreatedDateFilter] = useState('');
   const [hideDeclared, setHideDeclared] = useState(false);
   const [showSeen, setShowSeen] = useState(false);
 
-  const updateForm = (postId: string, patch: Partial<{ note: string; imageUrl: string }>) => {
+  const updateForm = (postId: string, patch: Partial<InterestForm>) => {
     setForms((current) => {
-      const base = current[postId] ?? { note: '', imageUrl: '' };
+      const base = current[postId] ?? { note: '', imageUrl: '', useTransmute: false };
       return { ...current, [postId]: { ...base, ...patch } };
     });
+  };
+
+  const declarePostInterest = (postId: string) => {
+    const form = forms[postId] ?? { note: '', imageUrl: '', useTransmute: false };
+    const imageUrl = form.useTransmute ? TRANSMUTE_IMAGE_URL : form.imageUrl;
+
+    declareInterest.mutate(
+      { postId, note: form.note, imageUrl },
+      {
+        onSuccess: () => {
+          updateForm(postId, { note: '', imageUrl: '', useTransmute: false });
+          setTransmuteConfirmationPostId(undefined);
+          notifyToast({ title: t(locale, 'itemInterestDeclared'), tone: 'success' });
+        },
+      },
+    );
   };
 
   const filteredPosts = (posts.data ?? []).filter((post: ItemInterestPost) => {
@@ -105,7 +130,10 @@ export default function ItemInterestsPage() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         {filteredPosts.map((post) => {
-          const form = forms[post.id] ?? { note: '', imageUrl: '' };
+          const form = forms[post.id] ?? { note: '', imageUrl: '', useTransmute: false };
+          const isEquipment = post.itemCatalog?.kind?.trim().toLowerCase() !== 'skill';
+          const canDeclare = form.useTransmute || Boolean(form.imageUrl);
+
           return (
             <Card key={post.id}>
               <CardHeader>
@@ -133,26 +161,41 @@ export default function ItemInterestsPage() {
                 {post.status === 'OPEN' && (
                   <div className="space-y-3">
                     <Input placeholder={t(locale, 'optionalNote')} value={form.note} onChange={(event) => updateForm(post.id, { note: event.target.value })} />
-                    <p className="rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">{t(locale, 'interestPrintHelp')}</p>
-                    <FileUploadButton
-                      label={t(locale, 'attachImage')}
-                      onFileSelect={(files) => {
-                        const file = files?.[0];
-                        if (file) uploadImage.mutate(file, { onSuccess: (data) => updateForm(post.id, { imageUrl: data.url }) });
-                      }}
-                    />
-                    {form.imageUrl && <p className="text-center text-xs text-primary">{t(locale, 'printAttached')}</p>}
+                    {isEquipment && (
+                      <label className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+                        <input
+                          className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                          type="checkbox"
+                          checked={form.useTransmute}
+                          onChange={(event) => updateForm(post.id, { useTransmute: event.target.checked })}
+                        />
+                        <span>
+                          <span className="block font-semibold text-foreground">{t(locale, 'transmuteInterestLabel')}</span>
+                          <span className="block text-muted-foreground">{t(locale, 'transmuteInterestHelp')}</span>
+                        </span>
+                      </label>
+                    )}
+                    {form.useTransmute ? (
+                      <div className="space-y-2">
+                        <img className="aspect-video rounded-md border object-cover" src={TRANSMUTE_IMAGE_URL} alt={t(locale, 'transmuteInterestLabel')} />
+                        <p className="text-center text-xs text-primary">{t(locale, 'transmutePrintSelected')}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">{t(locale, 'interestPrintHelp')}</p>
+                        <FileUploadButton
+                          label={t(locale, 'attachImage')}
+                          onFileSelect={(files) => {
+                            const file = files?.[0];
+                            if (file) uploadImage.mutate(file, { onSuccess: (data) => updateForm(post.id, { imageUrl: data.url }) });
+                          }}
+                        />
+                        {form.imageUrl && <p className="text-center text-xs text-primary">{t(locale, 'printAttached')}</p>}
+                      </>
+                    )}
                     <Button
-                      disabled={!form.imageUrl || uploadImage.isPending || declareInterest.isPending}
-                      onClick={() => declareInterest.mutate(
-                        { postId: post.id, note: form.note, imageUrl: form.imageUrl },
-                        {
-                          onSuccess: () => {
-                            updateForm(post.id, { note: '', imageUrl: '' });
-                            notifyToast({ title: t(locale, 'itemInterestDeclared'), tone: 'success' });
-                          },
-                        },
-                      )}
+                      disabled={!canDeclare || uploadImage.isPending || declareInterest.isPending}
+                      onClick={() => (form.useTransmute ? setTransmuteConfirmationPostId(post.id) : declarePostInterest(post.id))}
                     >
                       {t(locale, 'declareInterest')}
                     </Button>
@@ -174,6 +217,18 @@ export default function ItemInterestsPage() {
           );
         })}
       </div>
+      <ConfirmationDialog
+        open={Boolean(transmuteConfirmationPostId)}
+        title={t(locale, 'transmuteConfirmTitle')}
+        description={t(locale, 'transmuteConfirmDescription')}
+        confirmLabel={t(locale, 'declareInterest')}
+        pending={declareInterest.isPending}
+        tone="primary"
+        onClose={() => setTransmuteConfirmationPostId(undefined)}
+        onConfirm={() => {
+          if (transmuteConfirmationPostId) declarePostInterest(transmuteConfirmationPostId);
+        }}
+      />
       {!posts.isLoading && filteredPosts.length === 0 && (
         <Card>
           <CardContent className="p-5 text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-23
+**Ultima revisao:** 2026-06-24
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -85,6 +85,7 @@ Automacao ativa:
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
 - A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
 - No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
+- Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl` da declaracao e pede confirmacao do Aristolfo antes de registrar.
 
 ## Leiloes e sigilo
 
@@ -204,6 +205,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-24 | Interesses de equipamento ganharam atalho de pedido para transmutar com print padrao e confirmacao antes do registro. | interesses/transmutar |
 | 2026-06-23 | Segunda rotacao automatica renovou o repertorio dos webhooks, alinhou variantes PT-BR/EN por contexto e trocou punchlines do changelog. | webhook-joke-rotation |
 | 2026-06-23 | Criado runbook/script para inventariar e migrar imagens legadas do Google Drive para uploads locais com manifesto. | migracao de imagens |
 | 2026-06-23 | Uploads novos passaram a ser documentados como armazenamento local persistente na VPS, com `/uploads/` roteado para a API. | uploads/producao |
