@@ -170,6 +170,32 @@ Imagens:
 
 Nao considere apenas o Actions verde como deploy concluido. Verifique um campo, endpoint, asset ou comportamento especifico em producao antes do changelog.
 
+## SaaS single-tenant
+
+Plano vivo: `docs/SAAS_SINGLE_TENANT_ROADMAP.md`.
+
+- A direcao de SaaS para o Raven e single-tenant operacional: um Compose
+  explicito, uma database PostgreSQL, um usuario de banco restrito, um volume
+  de uploads, um conjunto de envs e uma integracao Discord por guilda.
+- Nao iniciar com banco multi-tenant compartilhado. O schema atual e a regra de
+  negocio foram desenhados como plataforma single-guild; o caminho seguro e
+  automatizar varias instancias antes de considerar `tenantId` em todos os
+  modelos.
+- A G3X deve ser tratada como primeira instalacao/preset, nao como identidade
+  rigida do produto SaaS.
+- Trabalhos de descoberta, documentacao e infraestrutura SaaS interna nao devem
+  enviar changelog no Discord da G3X. Changelog da Staff continua reservado para
+  mudancas publicadas e verificadas na operacao da G3X.
+- Antes de piloto externo, cada guilda precisa ter provisionamento repetivel,
+  backup/restore, smoke, update e rollback independentes.
+- Para novas guildas, criar um arquivo Compose proprio, por exemplo
+  `docker-compose.guilda-teste.yml`, com nomes de containers, portas, banco,
+  uploads e envs explicitos. Nao usar uma camada generica de nomes por env para
+  esconder diferencas entre guildas.
+- O PostgreSQL da VPS pode ser compartilhado entre clientes, desde que cada
+  guilda use database propria e usuario que so tenha acesso a ela. O guia
+  pratico fica em `docs/SAAS_GUILD_COMPOSE_GUIDE.md`.
+
 ## Comandos usuais
 
 ```powershell
@@ -196,6 +222,8 @@ npm.cmd run discord:configure-webhooks
 
 - `AGENTS.md`: regras obrigatorias para chats futuros.
 - `docs/ICP_DOCKER_IMAGES.md`: deploy por imagens e Watchtower.
+- `docs/SAAS_SINGLE_TENANT_ROADMAP.md`: plano para empacotar o Raven como SaaS por instancia Docker isolada por guilda.
+- `docs/SAAS_GUILD_COMPOSE_GUIDE.md`: guia pratico para Compose por guilda e database PostgreSQL isolada.
 - `docs/DEPLOY_ICP.md`: contexto de deploy ICP.
 - `docs/DISCORD_WEBHOOK_VOICE.md`: identidade, idioma e tom.
 - `docs/staff-guide-2026-06-04.md`: guia funcional da Staff.
@@ -206,6 +234,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-25 | Registrada a direcao SaaS single-tenant por guilda, com Compose explicito, database/usuario PostgreSQL isolados, uploads, envs e Discord por cliente. | `docs/SAAS_SINGLE_TENANT_ROADMAP.md` |
 | 2026-06-25 | Central Staff passou a mostrar ferramentas primeiro e ganhou mais respiro visual nos cards. | UX Staff |
 | 2026-06-24 | Interesses de equipamento ganharam atalho de pedido para transmutar com print padrao e confirmacao antes do registro. | interesses/transmutar |
 | 2026-06-23 | Segunda rotacao automatica renovou o repertorio dos webhooks, alinhou variantes PT-BR/EN por contexto e trocou punchlines do changelog. | webhook-joke-rotation |
