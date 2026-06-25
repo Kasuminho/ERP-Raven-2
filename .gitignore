@@ -9,5 +9,6 @@ coverage
 backups
 reports
 .deploy
+.local-secrets
 uploads
 apps/api/uploads

@@ -195,6 +195,9 @@ Plano vivo: `docs/SAAS_SINGLE_TENANT_ROADMAP.md`.
 - O PostgreSQL da VPS pode ser compartilhado entre clientes, desde que cada
   guilda use database propria e usuario que so tenha acesso a ela. O guia
   pratico fica em `docs/SAAS_GUILD_COMPOSE_GUIDE.md`.
+- A Web resolve a API em runtime pelo hostname `*.guild-g3x.com.br`, usando
+  `https://HOST/api/v1`; isso permite reutilizar a mesma imagem Web em stacks
+  de teste/guilda sem ficar presa ao `NEXT_PUBLIC_API_URL` gravado no build.
 
 ## Comandos usuais
 
@@ -234,6 +237,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-25 | Web passou a resolver a API por hostname em runtime para permitir stacks `*.guild-g3x.com.br` com a mesma imagem. | SaaS single-tenant |
 | 2026-06-25 | Registrada a direcao SaaS single-tenant por guilda, com Compose explicito, database/usuario PostgreSQL isolados, uploads, envs e Discord por cliente. | `docs/SAAS_SINGLE_TENANT_ROADMAP.md` |
 | 2026-06-25 | Central Staff passou a mostrar ferramentas primeiro e ganhou mais respiro visual nos cards. | UX Staff |
 | 2026-06-24 | Interesses de equipamento ganharam atalho de pedido para transmutar com print padrao e confirmacao antes do registro. | interesses/transmutar |
