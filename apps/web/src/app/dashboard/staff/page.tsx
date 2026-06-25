@@ -64,10 +64,35 @@ export default function StaffHubPage() {
   const counts = operations.data?.counts;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pt-3 sm:pt-4 lg:pt-6">
       <div>
         <p className="text-sm uppercase text-primary">{t(locale, 'governanceDeck')}</p>
         <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'staffTools')}</h1>
+      </div>
+      <div className="space-y-8">
+        {toolGroups.map((group) => (
+          <section key={group.label} className="scroll-mt-24 space-y-4">
+            <div>
+              <p className="page-kicker">Ferramentas</p>
+              <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{group.label}</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {tools.filter((tool) => group.hrefs.includes(tool.href)).map((tool) => (
+                <Link key={tool.href} href={tool.href} className="block h-full">
+                  <Card className="h-full min-h-36 transition hover:border-primary/55 hover:bg-card">
+                    <CardContent className="flex h-full flex-col gap-5 p-5 sm:p-6">
+                      <tool.icon className="h-6 w-6 shrink-0 text-primary" />
+                      <div>
+                        <h3 className="text-lg font-semibold leading-tight">{t(locale, tool.titleKey)}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{t(locale, tool.descriptionKey)}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
       <div className="grid gap-3 md:grid-cols-4">
         {[
@@ -97,26 +122,6 @@ export default function StaffHubPage() {
         />
         <StaffHealthPanel health={health.data} />
       </div>
-      {toolGroups.map((group) => (
-        <section key={group.label} className="space-y-3">
-          <div><p className="page-kicker">Ferramentas</p><h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{group.label}</h2></div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {tools.filter((tool) => group.hrefs.includes(tool.href)).map((tool) => (
-              <Link key={tool.href} href={tool.href}>
-                <Card className="h-full transition hover:border-primary/55 hover:bg-card">
-                  <CardContent className="space-y-2 p-4">
-                    <tool.icon className="h-5 w-5 text-primary" />
-                    <div>
-                      <h3 className="text-lg font-semibold">{t(locale, tool.titleKey)}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{t(locale, tool.descriptionKey)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ))}
       <AuditTimeline logs={audit.data ?? []} />
     </div>
   );
