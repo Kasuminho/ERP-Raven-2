@@ -22,7 +22,7 @@ export class ItemInterestsCronService {
       const result = await this.itemInterests.closeExpiredPosts();
 
       if (result.closed > 0) {
-        this.logger.log(`item_interest_auto_closed total=${result.closed} voting=${result.voting} empty=${result.empty}`);
+        this.logger.log(`item_interest_auto_closed total=${result.closed} voting=${result.voting} empty=${result.empty} autoSelected=${result.autoSelected}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown item interest automation failure.';

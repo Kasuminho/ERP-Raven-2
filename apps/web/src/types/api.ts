@@ -170,6 +170,7 @@ export type ItemInterestEntry = {
   playerId: string;
   note?: string;
   imageUrl?: string;
+  isTransmuteRequest: boolean;
   createdAt: string;
   dropHistory?: {
     id: string;
@@ -510,7 +511,7 @@ export type ItemAuditFull = {
     dropHistory?: DropHistory & { player?: PlayerProfile };
   }>;
   interestPosts: Array<ItemInterestPost & {
-    entries?: Array<{ id: string; player?: PlayerProfile; imageUrl?: string; status: string; createdAt: string }>;
+    entries?: Array<{ id: string; player?: PlayerProfile; imageUrl?: string; isTransmuteRequest?: boolean; status: string; createdAt: string }>;
     votes?: Array<{ id: string; voter?: { discordUsername: string; discordNickname?: string }; targetPlayerId: string; createdAt: string }>;
     dropHistory?: DropHistory[];
   }>;

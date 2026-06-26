@@ -236,6 +236,7 @@ export default function StaffInterestsPage() {
                               )}
                               {isCurrentVote && <Badge tone="blue">Seu voto</Badge>}
                               {isWinner && <Badge tone="gold">Vencedor</Badge>}
+                              {entry.isTransmuteRequest && <Badge tone="blue">Transmutar</Badge>}
                               {entry.dropHistory && <Badge tone="green">{t(locale, 'delivered')}</Badge>}
                               {isRestrictedOut && <Badge tone="muted">Fora do desempate</Badge>}
                             </div>

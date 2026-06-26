@@ -541,8 +541,12 @@ export function useCreateBulkItemInterests() {
 export function useDeclareItemInterest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { postId: string; note?: string; imageUrl?: string }) =>
-      (await api.post(`/item-interests/${data.postId}/declare`, { note: data.note, imageUrl: data.imageUrl })).data,
+    mutationFn: async (data: { postId: string; note?: string; imageUrl?: string; isTransmuteRequest?: boolean }) =>
+      (await api.post(`/item-interests/${data.postId}/declare`, {
+        note: data.note,
+        imageUrl: data.imageUrl,
+        isTransmuteRequest: data.isTransmuteRequest,
+      })).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
   });
 }

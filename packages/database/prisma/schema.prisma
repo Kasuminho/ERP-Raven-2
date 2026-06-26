@@ -707,19 +707,22 @@ model ItemInterestView {
 }
 
 model ItemInterestEntry {
-  id          String             @id @default(uuid())
-  postId      String
-  playerId    String
-  note        String?
-  imageUrl    String?
-  createdAt   DateTime           @default(now())
-  post        ItemInterestPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  player      Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  dropHistory DropHistory?
-  votes       ItemInterestVote[]
+  id                 String             @id @default(uuid())
+  postId             String
+  playerId           String
+  note               String?
+  imageUrl           String?
+  isTransmuteRequest Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  post               ItemInterestPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  player             Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  dropHistory        DropHistory?
+  votes              ItemInterestVote[]
 
   @@unique([postId, playerId])
   @@index([playerId])
+  @@index([isTransmuteRequest])
+  @@index([playerId, isTransmuteRequest])
 }
 
 model ItemInterestVote {

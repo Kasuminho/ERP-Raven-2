@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemType, Prisma } from '@prisma/client';
+import { randomInt } from 'node:crypto';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
@@ -80,6 +81,9 @@ const criteriaTexts: Record<string, { pt: string; en: string }> = {
     en: '- Players who use this equipment\n- Equipment lower than the announced one\n- Mandatory Level 75+\n- Priority for players missing the item\n- Send PvP equipment screenshot',
   },
 };
+
+const TRANSMUTE_IMAGE_URL = '/transmutar.png';
+const TRANSMUTE_TIME_ZONE = 'America/Sao_Paulo';
 
 @Injectable()
 export class ItemInterestsService {
@@ -210,7 +214,11 @@ export class ItemInterestsService {
   }
 
   async declareInterest(postId: string, userId: string, data: DeclareItemInterestDto): Promise<ItemInterestEntry> {
-    if (!data.imageUrl?.trim()) {
+    const normalizedImageUrl = data.imageUrl?.trim();
+    const isTransmuteRequest = data.isTransmuteRequest === true || normalizedImageUrl === TRANSMUTE_IMAGE_URL;
+    const imageUrl = isTransmuteRequest ? TRANSMUTE_IMAGE_URL : normalizedImageUrl;
+
+    if (!imageUrl) {
       throw new BadRequestException('Interest declaration print is required.');
     }
 
@@ -231,13 +239,15 @@ export class ItemInterestsService {
           postId,
           playerId: player.id,
           note: data.note?.trim() || undefined,
-          imageUrl: data.imageUrl?.trim() || undefined,
+          imageUrl,
+          isTransmuteRequest,
         },
       });
 
       await this.auditWithinTransaction(tx, 'ITEM_INTEREST_DECLARED', entry.id, userId, {
         postId,
         playerId: player.id,
+        isTransmuteRequest,
       });
 
       return entry;
@@ -341,7 +351,7 @@ export class ItemInterestsService {
     return result.updated;
   }
 
-  async closeExpiredPosts(): Promise<{ closed: number; voting: number; empty: number }> {
+  async closeExpiredPosts(): Promise<{ closed: number; voting: number; empty: number; autoSelected: number }> {
     const expiredPosts = await this.prisma.itemInterestPost.findMany({
       where: {
         status: ItemInterestStatus.OPEN,
@@ -354,6 +364,7 @@ export class ItemInterestsService {
 
     let voting = 0;
     let empty = 0;
+    let autoSelected = 0;
 
     for (const post of expiredPosts) {
       const updated = await this.closePostWithinTransaction(post.id, undefined, true);
@@ -362,12 +373,16 @@ export class ItemInterestsService {
         voting += 1;
       }
 
+      if (updated.status === ItemInterestStatus.READY_FOR_DELIVERY) {
+        autoSelected += 1;
+      }
+
       if (updated.status === ItemInterestStatus.CLOSED) {
         empty += 1;
       }
     }
 
-    return { closed: voting + empty, voting, empty };
+    return { closed: voting + empty + autoSelected, voting, empty, autoSelected };
   }
 
   async vote(postId: string, entryId: string, voterId: string): Promise<ItemInterestDetails> {
@@ -800,6 +815,7 @@ export class ItemInterestsService {
 
   private async closePostWithinTransaction(id: string, actorId: string | undefined, automatic: boolean): Promise<ItemInterestPost> {
     return this.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const post = await tx.itemInterestPost.findUnique({
         where: { id },
         include: { entries: true },
@@ -817,16 +833,97 @@ export class ItemInterestsService {
         throw new BadRequestException('Only open interest posts can be closed for voting.');
       }
 
-      if (automatic && post.closesAt > new Date()) {
+      if (automatic && post.closesAt > now) {
         return post;
       }
 
-      const nextStatus = post.entries.length > 0 ? ItemInterestStatus.VOTING : ItemInterestStatus.CLOSED;
+      if (post.entries.length === 0) {
+        const updated = await tx.itemInterestPost.update({
+          where: { id },
+          data: {
+            status: ItemInterestStatus.CLOSED,
+            closedAt: now,
+            votingRound: 1,
+            votingCandidateEntryIds: [],
+            selectedEntryId: null,
+            deliveryEnabledAt: null,
+          },
+        });
+
+        await this.auditWithinTransaction(tx, automatic ? 'ITEM_INTEREST_POST_AUTO_CLOSED' : 'ITEM_INTEREST_POST_CLOSED', id, actorId, {
+          automatic,
+          previousStatus: post.status,
+          nextStatus: ItemInterestStatus.CLOSED,
+          entriesCount: 0,
+          closesAt: post.closesAt.toISOString(),
+        });
+
+        return updated;
+      }
+
+      if (post.entries.every((entry) => entry.isTransmuteRequest)) {
+        const selection = await this.pickTransmuteWinnerForDay(tx, post, now);
+
+        if (selection.entry) {
+          const updated = await tx.itemInterestPost.update({
+            where: { id },
+            data: {
+              status: ItemInterestStatus.READY_FOR_DELIVERY,
+              closedAt: now,
+              votingRound: 1,
+              votingCandidateEntryIds: [],
+              selectedEntryId: selection.entry.id,
+              deliveryEnabledAt: now,
+            },
+          });
+
+          await this.auditWithinTransaction(tx, 'ITEM_INTEREST_TRANSMUTE_AUTO_SELECTED', id, actorId, {
+            automatic,
+            previousStatus: post.status,
+            nextStatus: ItemInterestStatus.READY_FOR_DELIVERY,
+            entriesCount: post.entries.length,
+            eligibleCount: selection.eligibleCount,
+            blockedPlayerIds: selection.blockedPlayerIds,
+            selectedEntryId: selection.entry.id,
+            selectedPlayerId: selection.entry.playerId,
+            transmuteDay: selection.dayKey,
+            closesAt: post.closesAt.toISOString(),
+          });
+
+          return updated;
+        }
+
+        const updated = await tx.itemInterestPost.update({
+          where: { id },
+          data: {
+            status: ItemInterestStatus.CLOSED,
+            closedAt: now,
+            votingRound: 1,
+            votingCandidateEntryIds: [],
+            selectedEntryId: null,
+            deliveryEnabledAt: null,
+          },
+        });
+
+        await this.auditWithinTransaction(tx, 'ITEM_INTEREST_TRANSMUTE_CLOSED_NO_ELIGIBLE_PLAYER', id, actorId, {
+          automatic,
+          previousStatus: post.status,
+          nextStatus: ItemInterestStatus.CLOSED,
+          entriesCount: post.entries.length,
+          blockedPlayerIds: selection.blockedPlayerIds,
+          transmuteDay: selection.dayKey,
+          closesAt: post.closesAt.toISOString(),
+        });
+
+        return updated;
+      }
+
+      const nextStatus = ItemInterestStatus.VOTING;
       const updated = await tx.itemInterestPost.update({
         where: { id },
         data: {
           status: nextStatus,
-          closedAt: new Date(),
+          closedAt: now,
           votingRound: 1,
           votingCandidateEntryIds: [],
           selectedEntryId: null,
@@ -844,6 +941,66 @@ export class ItemInterestsService {
 
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  private async pickTransmuteWinnerForDay(
+    tx: Prisma.TransactionClient,
+    post: ItemInterestPost & { entries: ItemInterestEntry[] },
+    now: Date,
+  ): Promise<{
+    entry: ItemInterestEntry | null;
+    eligibleCount: number;
+    blockedPlayerIds: string[];
+    dayKey: string;
+  }> {
+    const { start, end, dayKey } = this.transmuteDayRange(now);
+    const awardedEntries = await tx.itemInterestEntry.findMany({
+      where: {
+        isTransmuteRequest: true,
+        post: {
+          id: { not: post.id },
+          selectedEntryId: { not: null },
+          deliveryEnabledAt: { gte: start, lt: end },
+          status: { in: [ItemInterestStatus.READY_FOR_DELIVERY, ItemInterestStatus.DELIVERED] },
+        },
+      },
+      select: { playerId: true },
+    });
+    const blockedPlayerIds = [...new Set(awardedEntries.map((entry) => entry.playerId))];
+    const blocked = new Set(blockedPlayerIds);
+    const eligibleEntries = post.entries.filter((entry) => !blocked.has(entry.playerId));
+
+    if (eligibleEntries.length === 0) {
+      return { entry: null, eligibleCount: 0, blockedPlayerIds, dayKey };
+    }
+
+    return {
+      entry: eligibleEntries[randomInt(eligibleEntries.length)],
+      eligibleCount: eligibleEntries.length,
+      blockedPlayerIds,
+      dayKey,
+    };
+  }
+
+  private transmuteDayRange(now: Date): { start: Date; end: Date; dayKey: string } {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TRANSMUTE_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+
+    if (!year || !month || !day) {
+      throw new Error('Unable to resolve transmute operational day.');
+    }
+
+    const dayKey = `${year}-${month}-${day}`;
+    const start = new Date(`${dayKey}T00:00:00-03:00`);
+
+    return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000), dayKey };
   }
 
   private jsonStringArray(value: Prisma.JsonValue): string[] {

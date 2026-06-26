@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-25
+**Ultima revisao:** 2026-06-26
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -85,7 +85,8 @@ Automacao ativa:
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
 - A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
 - No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
-- Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl` da declaracao e pede confirmacao do Aristolfo antes de registrar.
+- Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
+- Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
 - A central Staff em `/dashboard/staff` prioriza os grupos de ferramentas no topo da pagina, com cards mais espacados; contadores, pendencias, saude e auditoria ficam abaixo.
 
 ## Leiloes e sigilo
@@ -237,6 +238,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-26 | Interesses de transmutar passaram a ter flag persistida, backfill da print fixa e sorteio automatico com limite diario por player quando todos os pedidos sao de transmutar. | interesses/transmutar |
 | 2026-06-25 | Web passou a resolver a API por hostname em runtime para permitir stacks `*.guild-g3x.com.br` com a mesma imagem. | SaaS single-tenant |
 | 2026-06-25 | Registrada a direcao SaaS single-tenant por guilda, com Compose explicito, database/usuario PostgreSQL isolados, uploads, envs e Discord por cliente. | `docs/SAAS_SINGLE_TENANT_ROADMAP.md` |
 | 2026-06-25 | Central Staff passou a mostrar ferramentas primeiro e ganhou mais respiro visual nos cards. | UX Staff |

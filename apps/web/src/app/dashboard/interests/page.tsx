@@ -62,7 +62,7 @@ export default function ItemInterestsPage() {
     const imageUrl = form.useTransmute ? TRANSMUTE_IMAGE_URL : form.imageUrl;
 
     declareInterest.mutate(
-      { postId, note: form.note, imageUrl },
+      { postId, note: form.note, imageUrl, isTransmuteRequest: form.useTransmute },
       {
         onSuccess: () => {
           updateForm(postId, { note: '', imageUrl: '', useTransmute: false });
