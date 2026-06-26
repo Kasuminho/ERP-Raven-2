@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo passou no raio-x. Se der ruim agora, o caos furou a fila.*',
-    '*Aristolfo soltou o changelog. O resto agora e ranked entre deploy e universo.*',
-    '*Aristolfo fez a conferencia final. Se quebrar daqui pra frente, o bug veio de penetra.*',
-    '*Aristolfo carimbou a nota. Se nascer treta nova, pelo menos ela ja chega protocolada.*',
-    '*Aristolfo revisou sem pular cutscene. Se der BO agora, foi DLC da realidade.*',
+    '*Aristolfo largou o changelog na mesa. Se der ruim agora, a realidade entrou de smurf.*',
+    '*Aristolfo bateu o martelo. Se nascer bug novo, ele veio de invite vazado.*',
+    '*Aristolfo publicou com checksum. O resto agora e PvP entre deploy e destino.*',
+    '*Aristolfo assinou a ata. Se pipocar caos novo, pelo menos ele chega registrado.*',
+    '*Aristolfo soltou a nota sem filtro. Se quebrar agora, foi jumpscare da vida real.*',
   ],
   EN: [
-    '*Aristolfo ran the X-ray. If it breaks now, chaos skipped the queue.*',
-    '*Aristolfo shipped the changelog. The rest is ranked between deploy and the universe.*',
-    '*Aristolfo did the final check. If it breaks from here, the bug crashed as an uninvited guest.*',
-    '*Aristolfo stamped the note. If new trouble spawns now, at least it arrives documented.*',
-    '*Aristolfo reviewed it without skipping the cutscene. If it breaks now, that was reality DLC.*',
+    '*Aristolfo dropped the changelog on the table. If it breaks now, reality queued as a smurf.*',
+    '*Aristolfo brought the hammer down. If a new bug spawns, it came from a leaked invite.*',
+    '*Aristolfo published with checksum. The rest is PvP between deploy and destiny.*',
+    '*Aristolfo signed the record. If new chaos pops off, at least it arrives documented.*',
+    '*Aristolfo released the note raw. If it breaks now, that was a real-life jumpscare.*',
   ],
 };
 

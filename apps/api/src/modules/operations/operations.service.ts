@@ -947,16 +947,16 @@ export class OperationsService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo passou a semana no pente-fino. Se a planilha reclamar agora, ela so tomou dano emocional.',
-          'Resumo revisado. A conta fechou limpa e a planilha escapou de mais uma boss fight.',
-          'Aristolfo auditou tudo. Se sobrar duvida agora, o bug ja mora em filosofia aplicada.',
-          'Semana fechada no extrato. O numero bateu antes que o chat resolvesse freestyle de lore.',
+          'Aristolfo fechou a semana no debugger. Se a planilha chiar agora, e so ghost de tilt antigo.',
+          'Resumo semanal carimbado. Numero bateu antes do chat abrir react de teoria.',
+          'Aristolfo passou pano nao; passou auditoria. O saldo fechou sem cosplay de fanfic.',
+          'Semana quitada no extrato. Se nascer duvida nova, ela ja vem de spawn ilegal.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo combed through the whole week. If the spreadsheet still complains, it only took emotional damage.',
-          'Weekly summary reviewed. The math closed cleanly and the spreadsheet escaped one more boss fight.',
-          'Aristolfo audited everything. Any doubt left now belongs to applied philosophy, not arithmetic.',
-          'Week closed on the ledger. The numbers matched before chat could invent a parallel patch.',
+          'Aristolfo closed the week in the debugger. If the spreadsheet complains now, that is just old tilt ghosting.',
+          'Weekly summary stamped. The numbers matched before chat could open theory reactions.',
+          'Aristolfo did not glaze it; he audited it. The balance closed without fanfic cosplay.',
+          'Week settled on the ledger. Any new doubt is spawning off-script.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');
