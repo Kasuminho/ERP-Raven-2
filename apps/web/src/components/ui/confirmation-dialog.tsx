@@ -32,6 +32,13 @@ export function ConfirmationDialog({
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const pendingRef = useRef(pending);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+    onCloseRef.current = onClose;
+  }, [onClose, pending]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +49,7 @@ export function ConfirmationDialog({
     cancelRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !pending) onClose();
+      if (event.key === 'Escape' && !pendingRef.current) onCloseRef.current();
       if (event.key !== 'Tab') return;
 
       const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
@@ -66,7 +73,7 @@ export function ConfirmationDialog({
       document.body.style.overflow = originalOverflow;
       previousFocus?.focus();
     };
-  }, [onClose, open, pending]);
+  }, [open]);
 
   if (!open) return null;
 

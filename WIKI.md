@@ -96,7 +96,8 @@ Automacao ativa:
 - O player pode consultar apenas o proprio bid pelo contrato especifico.
 - Resultado e entrega liberam apenas as informacoes apropriadas ao fluxo publico.
 - Nunca reintroduzir listas de participantes em payload publico, pagina publica ou webhook de players.
-- Quando uma review de leilao e rejeitada com quorum ou um leilao e relistado manualmente, o sistema libera locks e invalida os bids antigos antes de marcar `RELISTED`; a proxima abertura deve exigir novos bids e novos locks.
+- Quando uma review de leilao e rejeitada com quorum ou um leilao e relistado manualmente, o sistema libera locks e invalida os bids antigos; a proxima abertura deve exigir novos bids e novos locks.
+- Para leiloes T4, rejeicao/invalidacao sem bids antes da camada 1 nao marca `RELISTED`: o sistema avanca para a proxima camada e mantem o ciclo aberto. So depois de chegar na camada 1 e ainda nao haver vencedor apto o item vira `RELISTED`, voltando para camada 4 com `reopensAt` em 7 dias a partir da primeira abertura do ciclo.
 
 ## Eventos, presenca e DKP
 
@@ -239,7 +240,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
-| 2026-06-28 | Relist de leilao passou a invalidar bids antigos junto com a liberacao de locks para evitar bid valido sem DKP travado na proxima abertura. | leiloes/relist |
+| 2026-06-28 | Regra T4 ajustada: rejeicao/invalidacao sem bids desce camadas ate a 1; somente apos falhar na camada 1 o leilao relista para camada 4 em 7 dias desde a abertura original. Justificativas em modais deixaram de perder foco ao digitar. | leiloes/relist |
 | 2026-06-26 | Terceira rotacao automatica renovou os bancos de zoeira dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mexer em payloads nem regras. | webhook-joke-rotation |
 | 2026-06-26 | Interesses de transmutar passaram a ter flag persistida, backfill da print fixa e sorteio automatico com limite diario por player quando todos os pedidos sao de transmutar. | interesses/transmutar |
 | 2026-06-25 | Web passou a resolver a API por hostname em runtime para permitir stacks `*.guild-g3x.com.br` com a mesma imagem. | SaaS single-tenant |

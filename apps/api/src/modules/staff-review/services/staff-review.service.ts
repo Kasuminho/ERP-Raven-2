@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditLog, Auction, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionStatus, Prisma } from '@prisma/client';
+import { AuditLog, Auction, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionStatus, ItemTier, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
 import { DkpService } from '../../dkp/services/dkp.service';
@@ -670,14 +670,13 @@ export class StaffReviewService {
     reviewerId: string,
     tx: Prisma.TransactionClient,
   ): Promise<Auction> {
+    const auction = await this.requireAuction(auctionId, tx);
     const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
     const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
+    const clearedBidState = this.getStateAfterClearedBids(auction);
     const relisted = await this.repository.updateAuction(
       auctionId,
-      {
-        status: AuctionStatus.RELISTED,
-        reopensAt: this.addDays(new Date(), this.relistDelayDays),
-      },
+      clearedBidState.data,
       tx,
     );
 
@@ -687,6 +686,12 @@ export class StaffReviewService {
       rejectionThreshold: this.reviewVoteThreshold,
       refundedLockIds: refundedLocks.map((lock) => lock.id),
       invalidatedBidCount: invalidatedBids.count,
+      previousMinimumLayer: auction.minimumLayer,
+      nextMinimumLayer: relisted.minimumLayer,
+      advancedToNextLayer: clearedBidState.advancedToNextLayer,
+      relistedAfterLayerOne: clearedBidState.relistedAfterLayerOne,
+      reopensAt: relisted.reopensAt?.toISOString(),
+      endsAt: relisted.endsAt.toISOString(),
     });
 
     return relisted;
@@ -750,5 +755,47 @@ export class StaffReviewService {
 
   private addDays(date: Date, days: number): Date {
     return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  private getStateAfterClearedBids(auction: Auction, now = new Date()): {
+    data: Prisma.AuctionUpdateInput;
+    advancedToNextLayer: boolean;
+    relistedAfterLayerOne: boolean;
+  } {
+    const currentMinimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : 1);
+
+    if (auction.itemTier === ItemTier.T4 && currentMinimumLayer > 1) {
+      return {
+        data: {
+          status: AuctionStatus.OPEN,
+          minimumLayer: currentMinimumLayer - 1,
+          reopensAt: null,
+          endsAt: this.addDays(auction.endsAt, 1),
+        },
+        advancedToNextLayer: true,
+        relistedAfterLayerOne: false,
+      };
+    }
+
+    if (auction.itemTier === ItemTier.T4 && currentMinimumLayer <= 1) {
+      return {
+        data: {
+          status: AuctionStatus.RELISTED,
+          minimumLayer: 4,
+          reopensAt: this.addDays(auction.createdAt, this.relistDelayDays),
+        },
+        advancedToNextLayer: false,
+        relistedAfterLayerOne: true,
+      };
+    }
+
+    return {
+      data: {
+        status: AuctionStatus.RELISTED,
+        reopensAt: this.addDays(now, this.relistDelayDays),
+      },
+      advancedToNextLayer: false,
+      relistedAfterLayerOne: false,
+    };
   }
 }

@@ -43,3 +43,72 @@ describe('AuctionsService bid rules', () => {
     await assert.rejects(service.placeBid('p1', 'a1'), DuplicateBidException);
   });
 });
+
+function makeRelistService(minimumLayer: number) {
+  const auction = {
+    id: 'a1',
+    itemName: 'Ashen Dawn Society Bow',
+    itemTier: ItemTier.T4,
+    itemType: 'WEAPON',
+    minimumBid: 900,
+    auctionMode: AuctionMode.ALL_IN,
+    requiresStaffReview: true,
+    status: AuctionStatus.OPEN,
+    minimumLayer,
+    reopensAt: null,
+    endsAt: new Date('2026-06-28T05:00:00.000Z'),
+    createdAt: new Date('2026-06-27T05:00:00.000Z'),
+    updatedAt: new Date('2026-06-28T05:00:00.000Z'),
+    createdById: 'staff-1',
+    itemCatalogId: null,
+  };
+  const tx = {};
+  const repository = {
+    client: { $transaction: mock.fn(async (callback: any) => callback(tx)) },
+    findById: mock.fn(async () => auction),
+    invalidateAuctionBids: mock.fn(async () => ({ count: 1 })),
+    update: mock.fn(async (_auctionId: string, data: Record<string, unknown>) => ({
+      ...auction,
+      ...data,
+    })),
+  };
+  const dkp = {
+    releaseAuctionLocksWithinTransaction: mock.fn(async () => [{ id: 'l1' }]),
+  };
+  const audit = {
+    log: mock.fn(async () => undefined),
+    logWithinTransaction: mock.fn(async () => undefined),
+  };
+  const service = new AuctionsService(repository as never, dkp as never, audit as never, {} as never, {} as never, {} as never);
+
+  return { service, repository, audit };
+}
+
+describe('AuctionsService relist rules', () => {
+  it('advances T4 to the next layer before layer 1 has run', async () => {
+    const { service, repository, audit } = makeRelistService(3);
+
+    const result = await service.relistAuction('a1');
+
+    assert.equal(result.status, AuctionStatus.OPEN);
+    assert.equal(result.minimumLayer, 2);
+    assert.equal(result.reopensAt, null);
+    assert.equal(result.endsAt.toISOString(), '2026-06-29T05:00:00.000Z');
+    assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
+    assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, true);
+    assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, false);
+  });
+
+  it('relists T4 from layer 1 back to layer 4 after the original cycle week', async () => {
+    const { service, repository, audit } = makeRelistService(1);
+
+    const result = await service.relistAuction('a1');
+
+    assert.equal(result.status, AuctionStatus.RELISTED);
+    assert.equal(result.minimumLayer, 4);
+    assert.equal(result.reopensAt?.toISOString(), '2026-07-04T05:00:00.000Z');
+    assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
+    assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, false);
+    assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, true);
+  });
+});

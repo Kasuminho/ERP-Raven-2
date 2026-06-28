@@ -339,12 +339,10 @@ export class AuctionsService {
 
         if (validBids.length === 0) {
           const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+          const clearedBidState = this.getStateAfterClearedBids(auction);
           const relisted = await this.repository.update(
             auctionId,
-            {
-              status: AuctionStatus.RELISTED,
-              reopensAt: this.addDays(new Date(), this.relistDelayDays),
-            },
+            clearedBidState.data,
             tx,
           );
 
@@ -415,13 +413,11 @@ export class AuctionsService {
 
         await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
         const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
+        const clearedBidState = this.getStateAfterClearedBids(existing);
 
         const relisted = await this.repository.update(
           auctionId,
-          {
-            status: AuctionStatus.RELISTED,
-            reopensAt: this.addDays(new Date(), this.relistDelayDays),
-          },
+          clearedBidState.data,
           tx,
         );
 
@@ -431,6 +427,10 @@ export class AuctionsService {
           targetId: auctionId,
           metadata: {
             invalidatedBidCount: invalidatedBids.count,
+            previousMinimumLayer: existing.minimumLayer,
+            nextMinimumLayer: relisted.minimumLayer,
+            advancedToNextLayer: clearedBidState.advancedToNextLayer,
+            relistedAfterLayerOne: clearedBidState.relistedAfterLayerOne,
           },
         }, tx);
 
@@ -441,6 +441,8 @@ export class AuctionsService {
 
     await this.audit('AUCTION_RELISTED', 'Auction', auction.id, undefined, {
       reopensAt: auction.reopensAt?.toISOString(),
+      status: auction.status,
+      minimumLayer: auction.minimumLayer,
     });
 
     return auction;
@@ -539,12 +541,10 @@ export class AuctionsService {
 
     await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
 
+    const clearedBidState = this.getStateAfterClearedBids(auction);
     const relisted = await this.repository.update(
       auctionId,
-      {
-        status: AuctionStatus.RELISTED,
-        reopensAt: this.addDays(new Date(), this.relistDelayDays),
-      },
+      clearedBidState.data,
       tx,
     );
 
@@ -556,6 +556,11 @@ export class AuctionsService {
       metadata: {
         reason,
         reopensAt: relisted.reopensAt?.toISOString(),
+        status: relisted.status,
+        previousMinimumLayer: auction.minimumLayer,
+        nextMinimumLayer: relisted.minimumLayer,
+        advancedToNextLayer: clearedBidState.advancedToNextLayer,
+        relistedAfterLayerOne: clearedBidState.relistedAfterLayerOne,
       },
     }, tx);
 
@@ -789,6 +794,48 @@ export class AuctionsService {
 
   private addDays(date: Date, days: number): Date {
     return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  private getStateAfterClearedBids(auction: Auction, now = new Date()): {
+    data: Prisma.AuctionUpdateInput;
+    advancedToNextLayer: boolean;
+    relistedAfterLayerOne: boolean;
+  } {
+    const currentMinimumLayer = auction.minimumLayer ?? this.getRulesForTier(auction.itemTier).minimumLayer;
+
+    if (auction.itemTier === ItemTier.T4 && currentMinimumLayer > 1) {
+      return {
+        data: {
+          status: AuctionStatus.OPEN,
+          minimumLayer: currentMinimumLayer - 1,
+          reopensAt: null,
+          endsAt: this.addDays(auction.endsAt, 1),
+        },
+        advancedToNextLayer: true,
+        relistedAfterLayerOne: false,
+      };
+    }
+
+    if (auction.itemTier === ItemTier.T4 && currentMinimumLayer <= 1) {
+      return {
+        data: {
+          status: AuctionStatus.RELISTED,
+          minimumLayer: this.getRulesForTier(ItemTier.T4).minimumLayer,
+          reopensAt: this.addDays(auction.createdAt, this.relistDelayDays),
+        },
+        advancedToNextLayer: false,
+        relistedAfterLayerOne: true,
+      };
+    }
+
+    return {
+      data: {
+        status: AuctionStatus.RELISTED,
+        reopensAt: this.addDays(now, this.relistDelayDays),
+      },
+      advancedToNextLayer: false,
+      relistedAfterLayerOne: false,
+    };
   }
 
   private async expandLayerIfNeededWithinTransaction(
