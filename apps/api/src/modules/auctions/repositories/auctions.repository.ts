@@ -169,6 +169,16 @@ export class AuctionsRepository {
     });
   }
 
+  async invalidateAuctionBids(auctionId: string, client: AuctionClient = this.prisma): Promise<Prisma.BatchPayload> {
+    return client.auctionBid.updateMany({
+      where: {
+        auctionId,
+        isValid: true,
+      },
+      data: { isValid: false },
+    });
+  }
+
   async updateStatus(
     auctionId: string,
     status: AuctionStatus,

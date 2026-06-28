@@ -414,8 +414,9 @@ export class AuctionsService {
         }
 
         await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+        const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
 
-        return this.repository.update(
+        const relisted = await this.repository.update(
           auctionId,
           {
             status: AuctionStatus.RELISTED,
@@ -423,6 +424,17 @@ export class AuctionsService {
           },
           tx,
         );
+
+        await this.auditService.logWithinTransaction({
+          action: 'AUCTION_RELIST_BIDS_INVALIDATED',
+          targetType: 'Auction',
+          targetId: auctionId,
+          metadata: {
+            invalidatedBidCount: invalidatedBids.count,
+          },
+        }, tx);
+
+        return relisted;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );

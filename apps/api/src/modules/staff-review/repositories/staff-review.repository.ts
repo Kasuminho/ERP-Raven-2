@@ -140,6 +140,16 @@ export class StaffReviewRepository {
     });
   }
 
+  async invalidateAuctionBids(auctionId: string, client: StaffReviewClient = this.prisma): Promise<Prisma.BatchPayload> {
+    return client.auctionBid.updateMany({
+      where: {
+        auctionId,
+        isValid: true,
+      },
+      data: { isValid: false },
+    });
+  }
+
   async deleteBidInvalidationVotes(bidId: string, client: StaffReviewClient = this.prisma): Promise<void> {
     await client.auctionBidInvalidationVote.deleteMany({
       where: { bidId },

@@ -671,6 +671,7 @@ export class StaffReviewService {
     tx: Prisma.TransactionClient,
   ): Promise<Auction> {
     const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+    const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
     const relisted = await this.repository.updateAuction(
       auctionId,
       {
@@ -685,6 +686,7 @@ export class StaffReviewService {
       reason,
       rejectionThreshold: this.reviewVoteThreshold,
       refundedLockIds: refundedLocks.map((lock) => lock.id),
+      invalidatedBidCount: invalidatedBids.count,
     });
 
     return relisted;

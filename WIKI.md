@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-26
+**Ultima revisao:** 2026-06-28
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -96,6 +96,7 @@ Automacao ativa:
 - O player pode consultar apenas o proprio bid pelo contrato especifico.
 - Resultado e entrega liberam apenas as informacoes apropriadas ao fluxo publico.
 - Nunca reintroduzir listas de participantes em payload publico, pagina publica ou webhook de players.
+- Quando uma review de leilao e rejeitada com quorum ou um leilao e relistado manualmente, o sistema libera locks e invalida os bids antigos antes de marcar `RELISTED`; a proxima abertura deve exigir novos bids e novos locks.
 
 ## Eventos, presenca e DKP
 
@@ -238,6 +239,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-28 | Relist de leilao passou a invalidar bids antigos junto com a liberacao de locks para evitar bid valido sem DKP travado na proxima abertura. | leiloes/relist |
 | 2026-06-26 | Terceira rotacao automatica renovou os bancos de zoeira dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mexer em payloads nem regras. | webhook-joke-rotation |
 | 2026-06-26 | Interesses de transmutar passaram a ter flag persistida, backfill da print fixa e sorteio automatico com limite diario por player quando todos os pedidos sao de transmutar. | interesses/transmutar |
 | 2026-06-25 | Web passou a resolver a API por hostname em runtime para permitir stacks `*.guild-g3x.com.br` com a mesma imagem. | SaaS single-tenant |
