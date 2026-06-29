@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, ClipboardList, PackageCheck, Trash2, TrendingDown } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Clock3, PackageCheck, Trash2, TrendingDown } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,52 @@ function smartQueueLabel(locale: ReturnType<typeof useLocaleStore.getState>['loc
   if (request.warned4d || request.warned3d) return { label: t(locale, 'queueBlockedByUpdate'), tone: 'red' };
   if (request.rankPosition === 1) return { label: t(locale, 'queueNextLikely'), tone: 'gold' };
   return { label: t(locale, 'queueNoUpdateNeeded'), tone: 'green' };
+}
+
+function queueForecastText(locale: ReturnType<typeof useLocaleStore.getState>['locale'], request: ItemRequest): string {
+  if (!request.queueForecast) return '';
+  return locale === 'pt' ? request.queueForecast.summaryPt : request.queueForecast.summaryEn;
+}
+
+function QueueForecastPanel({ request, staff = false }: { request: ItemRequest; staff?: boolean }) {
+  const locale = useLocaleStore((state) => state.locale);
+  const forecast = request.queueForecast;
+
+  if (!forecast) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-2 rounded-md border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm md:grid-cols-[1fr_auto]">
+      <div className="min-w-0">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <Clock3 className="h-4 w-4 text-cyan-200" />
+          <p className="font-semibold text-cyan-100">{t(locale, 'queueForecast')}</p>
+          <Badge tone={forecast.isNext ? 'gold' : forecast.needsUpdate ? 'red' : 'blue'}>#{forecast.position}/{forecast.queueSize}</Badge>
+        </div>
+        <p className="text-muted-foreground">{queueForecastText(locale, request)}</p>
+        {staff ? <p className="mt-1 text-xs text-muted-foreground">{forecast.staffSummaryPt}</p> : null}
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-72">
+        <div className="rounded-sm border bg-background/45 p-2">
+          <p className="uppercase text-muted-foreground">{t(locale, 'requestsAhead')}</p>
+          <p className="text-lg font-semibold">{forecast.requestsAhead}</p>
+        </div>
+        <div className="rounded-sm border bg-background/45 p-2">
+          <p className="uppercase text-muted-foreground">{t(locale, 'unitsAhead')}</p>
+          <p className="text-lg font-semibold">{forecast.unitsAhead}</p>
+        </div>
+        <div className="rounded-sm border bg-background/45 p-2">
+          <p className="uppercase text-muted-foreground">{t(locale, 'updateAge')}</p>
+          <p className="font-semibold">{forecast.daysSinceUpdate}d</p>
+        </div>
+        <div className="rounded-sm border bg-background/45 p-2">
+          <p className="uppercase text-muted-foreground">{t(locale, 'lastDelivery')}</p>
+          <p className="font-semibold">{forecast.lastDeliveryAt ? new Date(forecast.lastDeliveryAt).toLocaleDateString(locale === 'pt' ? 'pt-BR' : 'en-US') : t(locale, 'noRecentDelivery')}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function groupRequestsByItem(requests: ItemRequest[] = []) {
@@ -187,6 +233,7 @@ function PlayerItemRequestsPanel() {
                   <Badge tone={request.rankPosition === 1 ? 'gold' : 'blue'}>{categoryLabel(locale, request.itemCatalog?.category)}</Badge>
                 </div>
               </div>
+              <QueueForecastPanel request={request} />
               {!isBossRequest(request) && request.updateProofImageUrl && (
                 <div className="flex items-center gap-3 rounded-md border bg-background/35 p-2 text-sm">
                   <img className="h-14 w-14 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />
@@ -264,6 +311,9 @@ function PlayerItemRequestsPanel() {
                       {t(locale, 'lastUpdate')}: {request.legacyUpdatedAt ? new Date(request.legacyUpdatedAt).toLocaleString() : new Date(request.updatedAt).toLocaleString()}
                     </p>
                     <Badge tone={smartQueueLabel(locale, request).tone}>{smartQueueLabel(locale, request).label}</Badge>
+                    <div className="w-full">
+                      <QueueForecastPanel request={request} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -485,6 +535,7 @@ function StaffItemRequestsPanel() {
                           )}
                         </div>
                       </div>
+                      <QueueForecastPanel request={request} staff />
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Input

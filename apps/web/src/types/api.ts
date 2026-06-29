@@ -150,6 +150,23 @@ export type ItemRequest = {
       discordNickname?: string;
     };
   };
+  queueForecast?: {
+    position: number;
+    queueSize: number;
+    requestsAhead: number;
+    unitsAhead: number;
+    estimatedDeliveriesBefore: number;
+    isNext: boolean;
+    needsUpdate: boolean;
+    updateStage: 'clear' | 'warned_3d' | 'warned_4d' | 'pending_review' | 'boss_manual';
+    lastUpdateAt: string;
+    daysSinceUpdate: number;
+    lastDeliveryAt?: string | null;
+    lastDeliveryPlayerName?: string | null;
+    summaryPt: string;
+    summaryEn: string;
+    staffSummaryPt: string;
+  };
 };
 
 export type ItemInterestStatus = 'OPEN' | 'CLOSED' | 'VOTING' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';

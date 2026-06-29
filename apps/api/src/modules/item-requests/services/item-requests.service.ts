@@ -11,6 +11,28 @@ const categoryLimitExemptions = new Set(['creature of gaiety', 'elder dragon ist
 const categoryLimitExemptCategories = new Set(['creature']);
 const updateExpiryExemptCategories = new Set(['creature']);
 
+export type ItemRequestQueueForecast = {
+  position: number;
+  queueSize: number;
+  requestsAhead: number;
+  unitsAhead: number;
+  estimatedDeliveriesBefore: number;
+  isNext: boolean;
+  needsUpdate: boolean;
+  updateStage: 'clear' | 'warned_3d' | 'warned_4d' | 'pending_review' | 'boss_manual';
+  lastUpdateAt: Date;
+  daysSinceUpdate: number;
+  lastDeliveryAt?: Date | null;
+  lastDeliveryPlayerName?: string | null;
+  summaryPt: string;
+  summaryEn: string;
+  staffSummaryPt: string;
+};
+
+export type ItemRequestDetailsWithForecast = ItemRequestDetails & {
+  queueForecast: ItemRequestQueueForecast;
+};
+
 @Injectable()
 export class ItemRequestsService {
   constructor(
@@ -148,25 +170,25 @@ export class ItemRequestsService {
     );
   }
 
-  async getRequestsForStaff(): Promise<ItemRequestDetails[]> {
-    return this.repository.findMany();
+  async getRequestsForStaff(): Promise<ItemRequestDetailsWithForecast[]> {
+    return this.withQueueForecast(await this.repository.findMany());
   }
 
-  async getPublicRankings(): Promise<ItemRequestDetails[]> {
-    return this.repository.findMany();
+  async getPublicRankings(): Promise<ItemRequestDetailsWithForecast[]> {
+    return this.withQueueForecast(await this.repository.findMany());
   }
 
-  async getRequestsForCurrentUser(userId: string): Promise<ItemRequestDetails[]> {
+  async getRequestsForCurrentUser(userId: string): Promise<ItemRequestDetailsWithForecast[]> {
     const player = await this.getPrimaryPlayer(userId);
-    return this.repository.findByPlayer(player.id);
+    return this.withQueueForecast(await this.repository.findByPlayer(player.id));
   }
 
-  async getPlayerRequests(discordId: string): Promise<ItemRequestDetails[]> {
-    return this.repository.findByDiscord(discordId);
+  async getPlayerRequests(discordId: string): Promise<ItemRequestDetailsWithForecast[]> {
+    return this.withQueueForecast(await this.repository.findByDiscord(discordId));
   }
 
-  async getItemRanking(itemName: string): Promise<ItemRequestDetails[]> {
-    return this.repository.findByItemName(itemName);
+  async getItemRanking(itemName: string): Promise<ItemRequestDetailsWithForecast[]> {
+    return this.withQueueForecast(await this.repository.findByItemName(itemName));
   }
 
   async markUpdated(id: string, actorId?: string): Promise<ItemRequest> {
@@ -663,6 +685,177 @@ export class ItemRequestsService {
 
   private itemKey(item: ItemCatalog): string {
     return getRequestableCatalogKey(item);
+  }
+
+  private async withQueueForecast(requests: ItemRequestDetails[]): Promise<ItemRequestDetailsWithForecast[]> {
+    if (requests.length === 0) {
+      return [];
+    }
+
+    const allRows = await this.repository.findMany();
+    const itemNames = [...new Set(allRows.map((request) => request.itemName))];
+    const itemCatalogIds = [...new Set(allRows.map((request) => request.itemCatalogId).filter((id): id is string => Boolean(id)))];
+    const deliveryWhere: Prisma.DropHistoryWhereInput[] = [{ itemName: { in: itemNames } }];
+    if (itemCatalogIds.length > 0) {
+      deliveryWhere.push({ itemCatalogId: { in: itemCatalogIds } });
+    }
+    const deliveries = await this.repository.client.dropHistory.findMany({
+      where: { OR: deliveryWhere },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const groups = new Map<string, ItemRequestDetails[]>();
+    for (const request of allRows) {
+      const group = groups.get(request.itemName) ?? [];
+      group.push(request);
+      groups.set(request.itemName, group);
+    }
+
+    const lastDeliveryByItem = new Map<string, (typeof deliveries)[number]>();
+    for (const delivery of deliveries) {
+      const keys = [delivery.itemName, delivery.itemCatalogId].filter((value): value is string => Boolean(value));
+      for (const key of keys) {
+        if (!lastDeliveryByItem.has(key)) {
+          lastDeliveryByItem.set(key, delivery);
+        }
+      }
+    }
+
+    const forecasts = new Map<string, ItemRequestQueueForecast>();
+    const now = new Date();
+
+    for (const [itemName, rows] of groups.entries()) {
+      const sorted = [...rows].sort((left, right) => left.rankPosition - right.rankPosition);
+
+      for (const request of sorted) {
+        const aheadRows = sorted.filter((candidate) => candidate.rankPosition < request.rankPosition);
+        const unitsAhead = aheadRows.reduce((total, candidate) => total + candidate.remainingQuantity, 0);
+        const lastUpdateAt = request.legacyUpdatedAt ?? request.updatedAt;
+        const daysSinceUpdate = Math.max(0, Math.floor((now.getTime() - lastUpdateAt.getTime()) / 86_400_000));
+        const lastDelivery = (request.itemCatalogId ? lastDeliveryByItem.get(request.itemCatalogId) : undefined) ?? lastDeliveryByItem.get(itemName) ?? null;
+        const updateStage = this.queueUpdateStage(request);
+        const forecast: ItemRequestQueueForecast = {
+          position: request.rankPosition,
+          queueSize: sorted.length,
+          requestsAhead: aheadRows.length,
+          unitsAhead,
+          estimatedDeliveriesBefore: unitsAhead,
+          isNext: request.rankPosition === 1,
+          needsUpdate: updateStage === 'warned_3d' || updateStage === 'warned_4d' || updateStage === 'pending_review',
+          updateStage,
+          lastUpdateAt,
+          daysSinceUpdate,
+          lastDeliveryAt: lastDelivery?.deliveredAt ?? lastDelivery?.createdAt ?? null,
+          lastDeliveryPlayerName: lastDelivery?.nicknameIngame ?? null,
+          summaryPt: this.queueForecastSummaryPt(request, aheadRows.length, unitsAhead, updateStage, lastDelivery),
+          summaryEn: this.queueForecastSummaryEn(request, aheadRows.length, unitsAhead, updateStage, lastDelivery),
+          staffSummaryPt: this.queueForecastStaffSummaryPt(request, sorted.length, aheadRows.length, unitsAhead, daysSinceUpdate, lastDelivery),
+        };
+
+        forecasts.set(request.id, forecast);
+      }
+    }
+
+    return requests.map((request) => ({
+      ...request,
+      queueForecast: forecasts.get(request.id) ?? this.emptyQueueForecast(request),
+    }));
+  }
+
+  private queueUpdateStage(request: ItemRequestDetails): ItemRequestQueueForecast['updateStage'] {
+    if (this.isUpdateExpiryExemptRequest(request)) return 'boss_manual';
+    if (request.updateProofStatus === ItemRequestUpdateStatus.PENDING) return 'pending_review';
+    if (request.warned4d) return 'warned_4d';
+    if (request.warned3d) return 'warned_3d';
+    return 'clear';
+  }
+
+  private queueForecastSummaryPt(
+    request: ItemRequestDetails,
+    requestsAhead: number,
+    unitsAhead: number,
+    updateStage: ItemRequestQueueForecast['updateStage'],
+    lastDelivery?: { deliveredAt: Date | null; createdAt: Date; nicknameIngame: string | null } | null,
+  ): string {
+    if (updateStage === 'boss_manual') {
+      return 'Pedido de boss/criatura usa avaliacao manual da Staff; a fila ajuda a consultar, mas nao promete entrega automatica.';
+    }
+    if (updateStage === 'pending_review') {
+      return 'Seu print novo esta aguardando a Staff validar antes da fila voltar ao normal.';
+    }
+    if (updateStage === 'warned_4d') {
+      return 'Ultimo aviso ativo: envie print novo para nao perder posicao na fila.';
+    }
+    if (updateStage === 'warned_3d') {
+      return 'A fila pediu update: envie print novo para manter sua posicao sem drama no Discord.';
+    }
+    if (requestsAhead === 0) {
+      return lastDelivery
+        ? 'Voce e o proximo da fila; acompanhe a proxima entrega desse item.'
+        : 'Voce e o proximo da fila; ainda nao ha entrega recente registrada desse item.';
+    }
+    return `Antes de voce ainda faltam ${requestsAhead} pedido(s) e ${unitsAhead} unidade(s) desse item.`;
+  }
+
+  private queueForecastSummaryEn(
+    request: ItemRequestDetails,
+    requestsAhead: number,
+    unitsAhead: number,
+    updateStage: ItemRequestQueueForecast['updateStage'],
+    lastDelivery?: { deliveredAt: Date | null; createdAt: Date; nicknameIngame: string | null } | null,
+  ): string {
+    if (updateStage === 'boss_manual') {
+      return 'Boss/creature requests use Staff manual review; the queue helps visibility but does not promise automatic delivery.';
+    }
+    if (updateStage === 'pending_review') {
+      return 'Your new proof is waiting for Staff validation before the queue returns to normal.';
+    }
+    if (updateStage === 'warned_4d') {
+      return 'Final warning active: send a new proof to avoid losing your queue position.';
+    }
+    if (updateStage === 'warned_3d') {
+      return 'The queue asked for an update: send a new proof to keep your position clean.';
+    }
+    if (requestsAhead === 0) {
+      return lastDelivery
+        ? 'You are next in line; watch for the next delivery of this item.'
+        : 'You are next in line; there is no recent delivery registered for this item yet.';
+    }
+    return `${requestsAhead} request(s) and ${unitsAhead} unit(s) of this item are still ahead of you.`;
+  }
+
+  private queueForecastStaffSummaryPt(
+    request: ItemRequestDetails,
+    queueSize: number,
+    requestsAhead: number,
+    unitsAhead: number,
+    daysSinceUpdate: number,
+    lastDelivery?: { deliveredAt: Date | null; createdAt: Date; nicknameIngame: string | null } | null,
+  ): string {
+    const lastDeliveryAt = lastDelivery?.deliveredAt ?? lastDelivery?.createdAt;
+    const deliveryText = lastDeliveryAt ? `Ultima entrega em ${lastDeliveryAt.toISOString().slice(0, 10)}` : 'Sem entrega registrada';
+    return `#${request.rankPosition}/${queueSize}; ${requestsAhead} pedido(s) e ${unitsAhead} unidade(s) antes; update ha ${daysSinceUpdate}d; ${deliveryText}.`;
+  }
+
+  private emptyQueueForecast(request: ItemRequestDetails): ItemRequestQueueForecast {
+    const lastUpdateAt = request.legacyUpdatedAt ?? request.updatedAt;
+    return {
+      position: request.rankPosition,
+      queueSize: 1,
+      requestsAhead: Math.max(0, request.rankPosition - 1),
+      unitsAhead: 0,
+      estimatedDeliveriesBefore: 0,
+      isNext: request.rankPosition === 1,
+      needsUpdate: false,
+      updateStage: 'clear',
+      lastUpdateAt,
+      daysSinceUpdate: 0,
+      lastDeliveryAt: null,
+      lastDeliveryPlayerName: null,
+      summaryPt: 'Previsao indisponivel para esta fila agora.',
+      summaryEn: 'Forecast is unavailable for this queue right now.',
+      staffSummaryPt: 'Previsao indisponivel.',
+    };
   }
 
   private isRequestableCatalogItem(item: ItemCatalog): boolean {

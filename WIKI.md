@@ -148,6 +148,7 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Materiais solicitados para concluir itens T3 possuem prioridade sobre pedidos do mesmo material destinados a Quintessencia.
 - Um pedido de Quintessencia continua valido, mas so deve ser atendido quando nao houver player aguardando aquele material para fabricar um item T3.
 - A regra existe para elevar primeiro quem ainda esta abaixo na progressao e melhorar o resultado coletivo da guilda.
+- Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
 
 ## Deploy e producao
 
@@ -246,6 +247,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Requests ganharam previsao operacional de fila com pedidos/unidades antes, idade do update, ultima entrega e resumo PT-BR/EN. | requests/UX |
 | 2026-06-29 | Timeline do player ganhou historico narrado PT-BR/EN com filtros por tipo/periodo, links de acao e sigilo preservado em leiloes. | player/UX |
 | 2026-06-29 | Pagina de leilao passou a explicar elegibilidade antes do bid com camada, DKP, attendance, modo e review Staff sem expor concorrentes. | leiloes/player |
 | 2026-06-29 | Dashboard do player ganhou action plan com proximo passo, motivo, impacto e links diretos sem expor informacao sigilosa de leilao. | player/UX |

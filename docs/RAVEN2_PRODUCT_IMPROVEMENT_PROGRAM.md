@@ -275,6 +275,8 @@ Entrega:
 
 Objetivo: mostrar expectativa e reduzir pergunta no Discord.
 
+Estado em 2026-06-29: implementado em `/dashboard/item-requests`.
+
 Entrega:
 
 - Para cada request:
@@ -285,6 +287,11 @@ Entrega:
   - se precisa print novo.
 - Staff ve fila completa; player ve propria posicao e explicacao sem dados
   indevidos.
+- Os endpoints existentes de item request continuam compativeis e agora retornam
+  `queueForecast` calculado com posicao, tamanho da fila, pedidos/unidades antes,
+  idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN.
+- A previsao usa a fila atual e `DropHistory`; nao cria promessa automatica de
+  entrega nem muda a ordenacao/entrega existente.
 
 ### D2. Sugestao de troca
 
