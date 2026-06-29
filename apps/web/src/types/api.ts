@@ -25,6 +25,7 @@ export type ProgressCategory =
 export type ProgressReviewStatus = 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 export type AuctionStatus = 'OPEN' | 'PENDING_REVIEW' | 'FINISHED' | 'CANCELLED' | 'RELISTED';
 export type AuctionMode = 'STANDARD' | 'ALL_IN' | 'STAFF_REVIEW';
+export type OperationPriority = 'high' | 'medium' | 'low';
 export type EventType =
   | 'LUNOS'
   | 'RIGRETO'
@@ -694,7 +695,7 @@ export type OperationTask = {
   title: string;
   description: string;
   href: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: OperationPriority;
   createdAt?: string;
   metadata?: Record<string, unknown>;
 };
@@ -1040,6 +1041,36 @@ export type StaffDayViewSummary = {
   pendingDeliveries: number;
   pendingProgressReviews: number;
   urgentTasks: OperationTask[];
+};
+
+export type StaffMorningBriefing = {
+  generatedAt: string;
+  title: string;
+  summary: string;
+  counts: {
+    urgent: number;
+    reviews: number;
+    deliveries: number;
+    codex: number;
+    itemRequests: number;
+    interests: number;
+    progress: number;
+    events: number;
+    expiredOpenAuctions: number;
+    endingAuctions24h: number;
+    integrityHigh: number;
+    healthAlerts: number;
+  };
+  sections: Array<{
+    key: string;
+    title: string;
+    description: string;
+    href: string;
+    priority: OperationPriority;
+    count: number;
+    tasks: OperationTask[];
+  }>;
+  markdown: string;
 };
 
 export type SeasonMonthlySummary = {

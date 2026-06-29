@@ -59,6 +59,36 @@ export type StaffDayViewSummary = {
   urgentTasks: OperationTask[];
 };
 
+export type StaffMorningBriefing = {
+  generatedAt: Date;
+  title: string;
+  summary: string;
+  counts: {
+    urgent: number;
+    reviews: number;
+    deliveries: number;
+    codex: number;
+    itemRequests: number;
+    interests: number;
+    progress: number;
+    events: number;
+    expiredOpenAuctions: number;
+    endingAuctions24h: number;
+    integrityHigh: number;
+    healthAlerts: number;
+  };
+  sections: Array<{
+    key: string;
+    title: string;
+    description: string;
+    href: string;
+    priority: OperationPriority;
+    count: number;
+    tasks: OperationTask[];
+  }>;
+  markdown: string;
+};
+
 export type SeasonMonthlySummary = {
   month: string;
   dkpEarned: number;

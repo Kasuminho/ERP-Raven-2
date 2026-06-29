@@ -1,15 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, BarChart3, BellRing, Calculator, CalendarCheck, ClipboardList, Coins, Database, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, ShieldAlert, SlidersHorizontal, Trophy, UsersRound } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useRecentAudit, useStaffHealth, useStaffOperations } from '@/hooks/use-guild-api';
+import { notifyToast } from '@/components/ui/toaster';
+import { useRecentAudit, useStaffHealth, useStaffMorningBriefing, useStaffOperations } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
+import type { StaffMorningBriefing } from '@/types/api';
 
 type StaffTool = {
   href: string;
@@ -56,9 +59,107 @@ const toolGroups = [
   { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/discord-templates'] },
 ];
 
+const morningTone = {
+  high: 'red',
+  medium: 'gold',
+  low: 'blue',
+} as const;
+
+function MorningBriefingPanel({ briefing }: { briefing?: StaffMorningBriefing }) {
+  async function copyMarkdown() {
+    if (!briefing) return;
+
+    try {
+      await navigator.clipboard.writeText(briefing.markdown);
+      notifyToast({ title: 'Resumo copiado', description: 'Markdown Staff pronto para colar na pauta.', tone: 'success' });
+    } catch {
+      notifyToast({ title: 'Nao consegui copiar', description: 'O navegador bloqueou o clipboard desta vez.', tone: 'error' });
+    }
+  }
+
+  if (!briefing) {
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <p className="text-sm text-muted-foreground">Carregando resumo matinal...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const countRows = [
+    ['Urgentes', briefing.counts.urgent],
+    ['Leiloes vencidos', briefing.counts.expiredOpenAuctions],
+    ['Leiloes 24h', briefing.counts.endingAuctions24h],
+    ['Reviews', briefing.counts.reviews],
+    ['Entregas', briefing.counts.deliveries],
+    ['Integridade alta', briefing.counts.integrityHigh],
+    ['Saude', briefing.counts.healthAlerts],
+  ];
+
+  return (
+    <Card className="overflow-hidden border-primary/25">
+      <CardContent className="space-y-5 p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Sunrise className="h-5 w-5 text-primary" />
+              <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{briefing.title}</h2>
+            </div>
+            <p className="mt-2 max-w-4xl text-sm text-muted-foreground">{briefing.summary}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Gerado em {new Date(briefing.generatedAt).toLocaleString()}</p>
+          </div>
+          <Button type="button" variant="secondary" className="gap-2" onClick={() => void copyMarkdown()}>
+            <Clipboard className="h-4 w-4" />
+            Copiar pauta
+          </Button>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+          {countRows.map(([label, value]) => (
+            <div key={String(label)} className="rounded-md border border-white/10 bg-background/45 p-3">
+              <p className="text-xs uppercase text-muted-foreground">{label}</p>
+              <p className="mt-1 text-lg font-semibold">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-3">
+          {briefing.sections.map((section) => (
+            <div key={section.key} className="rounded-lg border border-white/10 bg-background/45 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{section.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{section.description}</p>
+                </div>
+                <Badge tone={morningTone[section.priority]}>{section.count}</Badge>
+              </div>
+              <div className="mt-3 space-y-2">
+                {section.tasks.slice(0, 3).map((task) => (
+                  <Link key={`${section.key}-${task.type}-${task.id}`} href={task.href} className="block rounded-md border border-white/10 bg-black/15 p-2 text-sm transition hover:border-primary/35">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{task.title}</p>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
+                      </div>
+                      <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    </div>
+                  </Link>
+                ))}
+                {section.tasks.length === 0 ? <p className="text-sm text-muted-foreground">Sem itens nesta secao.</p> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function StaffHubPage() {
   const locale = useLocaleStore((state) => state.locale);
   const operations = useStaffOperations();
+  const briefing = useStaffMorningBriefing();
   const health = useStaffHealth();
   const audit = useRecentAudit(12);
   const counts = operations.data?.counts;
@@ -69,6 +170,7 @@ export default function StaffHubPage() {
         <p className="text-sm uppercase text-primary">{t(locale, 'governanceDeck')}</p>
         <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'staffTools')}</h1>
       </div>
+      <MorningBriefingPanel briefing={briefing.data} />
       <div className="space-y-8">
         {toolGroups.map((group) => (
           <section key={group.label} className="scroll-mt-24 space-y-4">

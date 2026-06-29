@@ -20,6 +20,7 @@ import {
   PlayerOperationsSummary,
   SeasonMonthlySummary,
   StaffDayViewSummary,
+  StaffMorningBriefing,
   StaffHealthSummary,
   StaffMeetingSummary,
   StaffOperationsSummary,
@@ -74,6 +75,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async dayView(): Promise<StaffDayViewSummary> {
     return this.service.getStaffDayView();
+  }
+
+  @Get('staff/morning-briefing')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async morningBriefing(): Promise<StaffMorningBriefing> {
+    return this.service.getStaffMorningBriefing();
   }
 
   @Get('staff/season')

@@ -175,6 +175,8 @@ Entrega:
 
 Objetivo: abrir o dia da guilda com prioridade clara.
 
+Estado em 2026-06-29: implementado no topo da central Staff.
+
 Entrega:
 
 - Endpoint `GET /operations/staff/morning-briefing`.
@@ -188,7 +190,8 @@ Entrega:
   - interesses fechados/votando;
   - anomalias de locks/DKP;
   - saude de webhooks.
-- Tela Staff e opcional post Staff manual.
+- Tela Staff com resumo, contadores, secoes acionaveis e copia Markdown para
+  pauta/changelog interno manual.
 
 ### B3. Modo reuniao completo
 
