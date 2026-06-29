@@ -167,6 +167,20 @@ export type ItemRequest = {
     summaryEn: string;
     staffSummaryPt: string;
   };
+  swapSuggestions?: Array<{
+    itemCatalogId: string;
+    itemName: string;
+    itemNamePt: string;
+    itemNameEn: string;
+    category: string;
+    itemTier?: ItemTier | null;
+    itemType?: ItemType | null;
+    queueSize: number;
+    unitsInQueue: number;
+    estimatedPosition: number;
+    tradeoffPt: string;
+    tradeoffEn: string;
+  }>;
 };
 
 export type ItemInterestStatus = 'OPEN' | 'CLOSED' | 'VOTING' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';

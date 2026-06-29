@@ -29,8 +29,24 @@ export type ItemRequestQueueForecast = {
   staffSummaryPt: string;
 };
 
+export type ItemRequestSwapSuggestion = {
+  itemCatalogId: string;
+  itemName: string;
+  itemNamePt: string;
+  itemNameEn: string;
+  category: string;
+  itemTier?: string | null;
+  itemType?: string | null;
+  queueSize: number;
+  unitsInQueue: number;
+  estimatedPosition: number;
+  tradeoffPt: string;
+  tradeoffEn: string;
+};
+
 export type ItemRequestDetailsWithForecast = ItemRequestDetails & {
   queueForecast: ItemRequestQueueForecast;
+  swapSuggestions: ItemRequestSwapSuggestion[];
 };
 
 @Injectable()
@@ -693,6 +709,10 @@ export class ItemRequestsService {
     }
 
     const allRows = await this.repository.findMany();
+    const requestableCatalogs = (await this.repository.client.itemCatalog.findMany({
+      where: { isActive: true },
+      orderBy: [{ category: 'asc' }, { namePt: 'asc' }],
+    })).filter((item) => this.isRequestableCatalogItem(item));
     const itemNames = [...new Set(allRows.map((request) => request.itemName))];
     const itemCatalogIds = [...new Set(allRows.map((request) => request.itemCatalogId).filter((id): id is string => Boolean(id)))];
     const deliveryWhere: Prisma.DropHistoryWhereInput[] = [{ itemName: { in: itemNames } }];
@@ -759,7 +779,87 @@ export class ItemRequestsService {
     return requests.map((request) => ({
       ...request,
       queueForecast: forecasts.get(request.id) ?? this.emptyQueueForecast(request),
+      swapSuggestions: this.swapSuggestionsForRequest(request, groups, requestableCatalogs),
     }));
+  }
+
+  private swapSuggestionsForRequest(
+    request: ItemRequestDetails,
+    groups: Map<string, ItemRequestDetails[]>,
+    requestableCatalogs: ItemCatalog[],
+  ): ItemRequestSwapSuggestion[] {
+    if (!request.itemCatalog || this.isUpdateExpiryExemptRequest(request)) {
+      return [];
+    }
+
+    const currentKey = request.itemName;
+    const currentRows = groups.get(currentKey) ?? [];
+    const currentUnits = currentRows.reduce((total, row) => total + row.remainingQuantity, 0);
+    const currentQueueSize = currentRows.length;
+
+    return requestableCatalogs
+      .filter((candidate) => candidate.id !== request.itemCatalogId)
+      .filter((candidate) => this.isComparableRequestableItem(request.itemCatalog!, candidate))
+      .map((candidate) => {
+        const candidateKey = this.itemKey(candidate);
+        const queueRows = groups.get(candidateKey) ?? [];
+        const unitsInQueue = queueRows.reduce((total, row) => total + row.remainingQuantity, 0);
+        const queueSize = queueRows.length;
+
+        return {
+          itemCatalogId: candidate.id,
+          itemName: candidateKey,
+          itemNamePt: candidate.namePt,
+          itemNameEn: candidate.nameEn,
+          category: candidate.category,
+          itemTier: candidate.itemTier,
+          itemType: candidate.itemType,
+          queueSize,
+          unitsInQueue,
+          estimatedPosition: queueSize + 1,
+          tradeoffPt: this.swapSuggestionTradeoffPt(queueSize, unitsInQueue, currentQueueSize, currentUnits),
+          tradeoffEn: this.swapSuggestionTradeoffEn(queueSize, unitsInQueue, currentQueueSize, currentUnits),
+        };
+      })
+      .filter((suggestion) => suggestion.unitsInQueue < currentUnits || suggestion.queueSize < currentQueueSize)
+      .sort((left, right) => left.unitsInQueue - right.unitsInQueue || left.queueSize - right.queueSize || left.itemNamePt.localeCompare(right.itemNamePt))
+      .slice(0, 3);
+  }
+
+  private isComparableRequestableItem(current: ItemCatalog, candidate: ItemCatalog): boolean {
+    if (candidate.category !== current.category) {
+      return false;
+    }
+
+    if (current.itemTier && candidate.itemTier && current.itemTier !== candidate.itemTier) {
+      return false;
+    }
+
+    if (current.itemType && candidate.itemType && current.itemType !== candidate.itemType) {
+      return false;
+    }
+
+    return this.itemKey(current) !== this.itemKey(candidate);
+  }
+
+  private swapSuggestionTradeoffPt(queueSize: number, unitsInQueue: number, currentQueueSize: number, currentUnits: number): string {
+    if (queueSize === 0) {
+      return 'Sem fila ativa agora; voce entraria como proximo, mas a troca ainda precisa ser combinada com a Staff.';
+    }
+
+    const savedUnits = Math.max(0, currentUnits - unitsInQueue);
+    const savedRows = Math.max(0, currentQueueSize - queueSize);
+    return `Fila menor: ${savedRows} pedido(s) e ${savedUnits} unidade(s) a menos. Trade-off: voce entra no fim dessa outra fila e a troca precisa da Staff.`;
+  }
+
+  private swapSuggestionTradeoffEn(queueSize: number, unitsInQueue: number, currentQueueSize: number, currentUnits: number): string {
+    if (queueSize === 0) {
+      return 'No active queue right now; you would enter as next, but the swap still needs Staff coordination.';
+    }
+
+    const savedUnits = Math.max(0, currentUnits - unitsInQueue);
+    const savedRows = Math.max(0, currentQueueSize - queueSize);
+    return `Shorter queue: ${savedRows} fewer request(s) and ${savedUnits} fewer unit(s). Trade-off: you enter the end of that other queue and Staff must coordinate the swap.`;
   }
 
   private queueUpdateStage(request: ItemRequestDetails): ItemRequestQueueForecast['updateStage'] {

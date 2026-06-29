@@ -99,6 +99,35 @@ function QueueForecastPanel({ request, staff = false }: { request: ItemRequest; 
   );
 }
 
+function SwapSuggestionsPanel({ request }: { request: ItemRequest }) {
+  const locale = useLocaleStore((state) => state.locale);
+  const suggestions = request.swapSuggestions ?? [];
+
+  if (suggestions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-emerald-100">{t(locale, 'swapSuggestions')}</p>
+        <Badge tone="green">{suggestions.length}</Badge>
+      </div>
+      <div className="grid gap-2 lg:grid-cols-3">
+        {suggestions.map((suggestion) => (
+          <div key={suggestion.itemCatalogId} className="rounded-sm border bg-background/45 p-3">
+            <p className="font-semibold">{locale === 'pt' ? suggestion.itemNamePt : suggestion.itemNameEn}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(locale, 'estimatedPosition')} #{suggestion.estimatedPosition} - {suggestion.unitsInQueue} {t(locale, 'unitsInQueue')}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{locale === 'pt' ? suggestion.tradeoffPt : suggestion.tradeoffEn}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function groupRequestsByItem(requests: ItemRequest[] = []) {
   const groups = new Map<string, ItemRequest[]>();
 
@@ -234,6 +263,7 @@ function PlayerItemRequestsPanel() {
                 </div>
               </div>
               <QueueForecastPanel request={request} />
+              <SwapSuggestionsPanel request={request} />
               {!isBossRequest(request) && request.updateProofImageUrl && (
                 <div className="flex items-center gap-3 rounded-md border bg-background/35 p-2 text-sm">
                   <img className="h-14 w-14 rounded-md border object-cover" src={displayImageUrl(request.updateProofImageUrl)} alt={t(locale, 'newUpdateProof')} />
@@ -313,6 +343,9 @@ function PlayerItemRequestsPanel() {
                     <Badge tone={smartQueueLabel(locale, request).tone}>{smartQueueLabel(locale, request).label}</Badge>
                     <div className="w-full">
                       <QueueForecastPanel request={request} />
+                      <div className="mt-2">
+                        <SwapSuggestionsPanel request={request} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -536,6 +569,9 @@ function StaffItemRequestsPanel() {
                         </div>
                       </div>
                       <QueueForecastPanel request={request} staff />
+                      <div className="mt-2">
+                        <SwapSuggestionsPanel request={request} />
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Input

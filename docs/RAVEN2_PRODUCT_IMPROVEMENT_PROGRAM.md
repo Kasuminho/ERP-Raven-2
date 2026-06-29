@@ -297,11 +297,17 @@ Entrega:
 
 Objetivo: ajudar progressao da guilda quando uma fila esta congestionada.
 
+Estado em 2026-06-29: implementado em `/dashboard/item-requests`.
+
 Entrega:
 
 - Sugerir itens requestaveis alternativos do mesmo tipo/tier/categoria.
 - Mostrar trade-off: fila menor, menos prioridade, falta material, etc.
 - Somente sugestao; troca continua fluxo controlado.
+- Os endpoints existentes de item request agora retornam `swapSuggestions`
+  quando houver alternativas requestaveis ativas comparaveis com fila menor.
+- A UI mostra ate tres alternativas com posicao estimada, unidades na fila e
+  trade-off PT-BR/EN, sem acao automatica de troca.
 
 ### D3. Transparencia da prioridade T3
 
