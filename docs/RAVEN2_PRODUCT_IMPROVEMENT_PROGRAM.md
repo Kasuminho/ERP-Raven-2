@@ -378,6 +378,9 @@ Entrega:
 
 Objetivo: evitar finalize errado.
 
+Estado em 2026-06-29: implementado em `/dashboard/admin/events` com endpoint
+Staff-only `GET /events/:id/finalization-checklist`.
+
 Entrega:
 
 - Modal antes de finalizar:
@@ -389,6 +392,12 @@ Entrega:
   - proximo boss do lote;
   - se copiara presenca;
   - alertas de presenca incomum.
+- O checklist usa a mesma regra de proximo boss da finalizacao real: copia para
+  o proximo evento ativo do lote quando ele ainda nao possui presenca; se ja
+  tiver chamada, mostra aviso e nao sobrescreve.
+- A modal mostra listas de presentes e ausentes ativos com classe/camada,
+  totais de DKP, status da copia e avisos de baixa presenca, evento futuro,
+  evento encerrado/cancelado ou ultimo boss do lote.
 
 ### F2. Painel visual de lote
 

@@ -21,6 +21,60 @@ export type FinalizeEventResult = {
   attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
 };
 
+export type EventFinalizationChecklist = {
+  eventId: string;
+  eventName: string;
+  eventType: EventType;
+  status: EventStatus;
+  dkpPerPlayer: number;
+  totalDkp: number;
+  presentCount: number;
+  absentCount: number;
+  activePlayerCount: number;
+  presentPlayers: Array<{
+    id: string;
+    nickname: string;
+    class: string;
+    dimensionalLayer: number;
+  }>;
+  absentPlayers: Array<{
+    id: string;
+    nickname: string;
+    class: string;
+    dimensionalLayer: number;
+  }>;
+  currentBoss: {
+    id: string;
+    name: string;
+    type: EventType;
+    startsAt: Date;
+    attendanceBatchId: string | null;
+    batchOrder: number | null;
+  };
+  nextBatchEvent: {
+    id: string;
+    name: string;
+    type: EventType;
+    startsAt: Date;
+    status: EventStatus;
+    attendanceBatchId: string | null;
+    batchOrder: number | null;
+    existingAttendanceCount: number;
+  } | null;
+  attendanceCopy: {
+    willCopy: boolean;
+    status: 'WILL_COPY' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
+    targetEventId?: string;
+    targetEventName?: string;
+    copiedCountEstimate: number;
+    messagePt: string;
+  };
+  warnings: Array<{
+    tone: 'info' | 'warning' | 'danger';
+    messagePt: string;
+  }>;
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -234,16 +288,7 @@ export class AttendanceService {
           rewardTransactionIds,
         });
 
-        const nextEvent = event.attendanceBatchId && event.batchOrder !== null
-          ? await tx.event.findFirst({
-              where: {
-                attendanceBatchId: event.attendanceBatchId,
-                batchOrder: { gt: event.batchOrder },
-                status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] },
-              },
-              orderBy: { batchOrder: 'asc' },
-            })
-          : null;
+        const nextEvent = await this.findNextBatchEvent(event, tx);
         let copiedAttendanceCount = 0;
         let attendanceCopyStatus: FinalizeEventResult['attendanceCopyStatus'] = nextEvent ? 'COPIED' : 'NO_NEXT_EVENT';
 
@@ -373,6 +418,83 @@ export class AttendanceService {
           attendanceStatus,
         };
       });
+    });
+  }
+
+  async getFinalizationChecklist(eventId: string): Promise<EventFinalizationChecklist> {
+    return this.repository.client.$transaction(async (tx) => {
+      const event = await this.requireEvent(eventId, tx);
+      const [details, activePlayers] = await Promise.all([
+        this.repository.findDetails(eventId, tx),
+        tx.player.findMany({ where: { isActive: true }, orderBy: { nickname: 'asc' } }),
+      ]);
+
+      if (!details) {
+        throw new EventNotFoundException(eventId);
+      }
+
+      const presentRows = details.attendances.filter((attendance) => attendance.attended);
+      const presentPlayerIds = new Set(presentRows.map((attendance) => attendance.playerId));
+      const presentPlayers = presentRows
+        .map((attendance) => attendance.player)
+        .filter((player): player is NonNullable<typeof player> => Boolean(player))
+        .map((player) => ({
+          id: player.id,
+          nickname: player.nickname,
+          class: player.class,
+          dimensionalLayer: player.dimensionalLayer,
+        }))
+        .sort((a, b) => a.nickname.localeCompare(b.nickname));
+      const absentPlayers = activePlayers
+        .filter((player) => !presentPlayerIds.has(player.id))
+        .map((player) => ({
+          id: player.id,
+          nickname: player.nickname,
+          class: player.class,
+          dimensionalLayer: player.dimensionalLayer,
+        }));
+      const nextEvent = await this.findNextBatchEvent(event, tx);
+      const existingAttendanceCount = nextEvent
+        ? await tx.eventAttendance.count({ where: { eventId: nextEvent.id } })
+        : 0;
+      const attendanceCopy = this.buildAttendanceCopyPreview(event, nextEvent, existingAttendanceCount, presentRows.length);
+      const warnings = this.buildFinalizationWarnings(event, presentRows.length, absentPlayers.length, activePlayers.length, nextEvent, existingAttendanceCount);
+
+      return {
+        eventId: event.id,
+        eventName: event.name,
+        eventType: event.type,
+        status: event.status,
+        dkpPerPlayer: event.dkpReward,
+        totalDkp: presentRows.length * event.dkpReward,
+        presentCount: presentRows.length,
+        absentCount: absentPlayers.length,
+        activePlayerCount: activePlayers.length,
+        presentPlayers,
+        absentPlayers,
+        currentBoss: {
+          id: event.id,
+          name: event.name,
+          type: event.type,
+          startsAt: event.startsAt,
+          attendanceBatchId: event.attendanceBatchId,
+          batchOrder: event.batchOrder,
+        },
+        nextBatchEvent: nextEvent
+          ? {
+              id: nextEvent.id,
+              name: nextEvent.name,
+              type: nextEvent.type,
+              startsAt: nextEvent.startsAt,
+              status: nextEvent.status,
+              attendanceBatchId: nextEvent.attendanceBatchId,
+              batchOrder: nextEvent.batchOrder,
+              existingAttendanceCount,
+            }
+          : null,
+        attendanceCopy,
+        warnings,
+      };
     });
   }
 
@@ -567,6 +689,104 @@ export class AttendanceService {
     }
 
     return event;
+  }
+
+  private async findNextBatchEvent(event: Event, tx: Prisma.TransactionClient): Promise<Event | null> {
+    if (!event.attendanceBatchId || event.batchOrder === null) {
+      return null;
+    }
+
+    return tx.event.findFirst({
+      where: {
+        attendanceBatchId: event.attendanceBatchId,
+        batchOrder: { gt: event.batchOrder },
+        status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] },
+      },
+      orderBy: { batchOrder: 'asc' },
+    });
+  }
+
+  private buildAttendanceCopyPreview(
+    event: Event,
+    nextEvent: Event | null,
+    existingAttendanceCount: number,
+    presentCount: number,
+  ): EventFinalizationChecklist['attendanceCopy'] {
+    if (!nextEvent) {
+      return {
+        willCopy: false,
+        status: 'NO_NEXT_EVENT',
+        copiedCountEstimate: 0,
+        messagePt: event.attendanceBatchId
+          ? 'Este e o ultimo boss ativo do lote; nenhuma presenca sera copiada.'
+          : 'Evento fora de lote; nenhuma presenca sera copiada.',
+      };
+    }
+
+    if (existingAttendanceCount > 0) {
+      return {
+        willCopy: false,
+        status: 'NEXT_EVENT_NOT_EMPTY',
+        targetEventId: nextEvent.id,
+        targetEventName: nextEvent.name,
+        copiedCountEstimate: 0,
+        messagePt: `${nextEvent.name} ja tem ${existingAttendanceCount} presenca(s); a finalizacao nao sobrescreve chamada existente.`,
+      };
+    }
+
+    return {
+      willCopy: presentCount > 0,
+      status: 'WILL_COPY',
+      targetEventId: nextEvent.id,
+      targetEventName: nextEvent.name,
+      copiedCountEstimate: presentCount,
+      messagePt: `${presentCount} presenca(s) serao copiadas para ${nextEvent.name} e a Staff revisa antes de finalizar o proximo boss.`,
+    };
+  }
+
+  private buildFinalizationWarnings(
+    event: Event,
+    presentCount: number,
+    absentCount: number,
+    activePlayerCount: number,
+    nextEvent: Event | null,
+    existingAttendanceCount: number,
+  ): EventFinalizationChecklist['warnings'] {
+    const warnings: EventFinalizationChecklist['warnings'] = [];
+
+    if (event.status === EventStatus.FINALIZED) {
+      warnings.push({ tone: 'danger', messagePt: 'Este evento ja esta finalizado; a acao de finalizar deve ficar bloqueada.' });
+    }
+
+    if (event.status === EventStatus.CANCELLED) {
+      warnings.push({ tone: 'danger', messagePt: 'Este evento esta cancelado; nao finalize evento cancelado.' });
+    }
+
+    if (presentCount === 0) {
+      warnings.push({ tone: 'danger', messagePt: 'Nenhum presente marcado; finalize bloqueado para nao distribuir DKP errado.' });
+    }
+
+    if (activePlayerCount > 0 && presentCount < Math.ceil(activePlayerCount * 0.25)) {
+      warnings.push({ tone: 'warning', messagePt: 'Presenca abaixo de 25% dos players ativos. Confere a chamada antes de bater o martelo.' });
+    }
+
+    if (absentCount > presentCount && presentCount > 0) {
+      warnings.push({ tone: 'warning', messagePt: 'Ha mais ausentes que presentes. Pode estar certo, mas merece aquela olhada de Staff sem sono.' });
+    }
+
+    if (event.startsAt.getTime() > Date.now() + 15 * 60 * 1000) {
+      warnings.push({ tone: 'warning', messagePt: 'O horario do evento ainda esta no futuro; confirme se este e mesmo o boss que acabou.' });
+    }
+
+    if (nextEvent && existingAttendanceCount > 0) {
+      warnings.push({ tone: 'warning', messagePt: 'O proximo boss ja tem presenca registrada; a copia automatica sera pulada.' });
+    }
+
+    if (!nextEvent) {
+      warnings.push({ tone: 'info', messagePt: event.attendanceBatchId ? 'Nenhum proximo boss ativo no lote.' : 'Evento sem lote de bosses.' });
+    }
+
+    return warnings;
   }
 
   private getAttendanceAdjustmentReference(action: 'attendance-add' | 'attendance-remove', eventId: string, attendanceId: string): string {

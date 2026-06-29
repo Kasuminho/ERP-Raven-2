@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventFinalizationChecklist, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -1274,6 +1274,7 @@ export function useRegisterAttendance() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
       ]);
     },
   });
@@ -1287,6 +1288,7 @@ export function useRemoveAttendance() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
       ]);
     },
   });
@@ -1300,10 +1302,12 @@ export function useFinalizeEvent() {
       const invalidations = [
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', eventId] }),
       ];
 
       if (data.nextEvent) {
         invalidations.push(queryClient.invalidateQueries({ queryKey: ['event-attendance', data.nextEvent.id] }));
+        invalidations.push(queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', data.nextEvent.id] }));
       }
 
       await Promise.all(invalidations);
@@ -1319,6 +1323,7 @@ export function useCancelEvent() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
       ]);
     },
@@ -1329,6 +1334,14 @@ export function useEventAttendance(eventId: string) {
   return useQuery({
     queryKey: ['event-attendance', eventId],
     queryFn: async () => (await api.get<EventDetails>(`/events/${eventId}/attendance`)).data,
+    enabled: Boolean(eventId),
+  });
+}
+
+export function useEventFinalizationChecklist(eventId: string) {
+  return useQuery({
+    queryKey: ['event-finalization-checklist', eventId],
+    queryFn: async () => (await api.get<EventFinalizationChecklist>(`/events/${eventId}/finalization-checklist`)).data,
     enabled: Boolean(eventId),
   });
 }

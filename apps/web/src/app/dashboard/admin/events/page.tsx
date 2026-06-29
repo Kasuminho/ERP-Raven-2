@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelEvent, useCreateEvent, useEventAttendance, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
+import { useCancelEvent, useCreateEvent, useEventAttendance, useEventFinalizationChecklist, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -52,6 +52,7 @@ export default function AdminEventsPage() {
   const [confirmation, setConfirmation] = useState<'finalize' | 'cancel'>();
   const [cancelReason, setCancelReason] = useState('');
   const attendance = useEventAttendance(selectedEventId);
+  const finalizationChecklist = useEventFinalizationChecklist(selectedEventId);
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
   const visibleEvents = useMemo(
     () => (events.data ?? []).filter((event) => !hideFinalized || !['FINALIZED', 'CANCELLED'].includes(event.status)),
@@ -200,7 +201,7 @@ export default function AdminEventsPage() {
                     <Badge tone="blue">{presentPlayerIds.size} {t(locale, 'presentPlayers')}</Badge>
                     <Button
                       onClick={() => setConfirmation('finalize')}
-                      disabled={isClosed || presentPlayerIds.size === 0 || finalizeEvent.isPending}
+                      disabled={isClosed || presentPlayerIds.size === 0 || finalizeEvent.isPending || finalizationChecklist.isLoading}
                     >
                       {t(locale, 'finalize')}
                     </Button>
@@ -266,14 +267,105 @@ export default function AdminEventsPage() {
         </div>
         <ConfirmationDialog
           open={confirmation === 'finalize'}
-          title="Finalizar evento?"
-          description={`${presentPlayerIds.size} presencas serao confirmadas e ${totalDkp} DKP serao distribuidos. Esta operacao nao deve ser repetida.`}
+          title="Checklist de finalizacao"
+          description="Revise boss, chamada, DKP e copia do lote antes de finalizar. Depois do clique, o Aristolfo nao aceita choro em caps lock."
           confirmLabel={t(locale, 'finalize')}
           pending={finalizeEvent.isPending}
           tone="primary"
           onClose={() => setConfirmation(undefined)}
           onConfirm={finalizeSelectedEvent}
-        />
+        >
+          {finalizationChecklist.isLoading || !finalizationChecklist.data ? (
+            <p className="rounded-md border bg-background/35 p-3 text-sm text-muted-foreground">Carregando checklist...</p>
+          ) : (
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1 text-sm">
+              <div className="grid gap-2 rounded-md border bg-background/35 p-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Boss atual</p>
+                  <p className="font-semibold">{finalizationChecklist.data.currentBoss.name}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(finalizationChecklist.data.currentBoss.startsAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Proximo boss do lote</p>
+                  <p className="font-semibold">{finalizationChecklist.data.nextBatchEvent?.name ?? 'Sem proximo boss ativo'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {finalizationChecklist.data.nextBatchEvent
+                      ? `${finalizationChecklist.data.nextBatchEvent.existingAttendanceCount} presenca(s) ja registradas`
+                      : 'Nada para copiar depois deste evento'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-2 rounded-md border bg-background/35 p-3 sm:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Presentes</p>
+                  <p className="text-lg font-semibold">{finalizationChecklist.data.presentCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Ausentes</p>
+                  <p className="text-lg font-semibold">{finalizationChecklist.data.absentCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">DKP por pessoa</p>
+                  <p className="text-lg font-semibold">{finalizationChecklist.data.dkpPerPlayer}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">DKP total</p>
+                  <p className="text-lg font-semibold">{finalizationChecklist.data.totalDkp}</p>
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-background/35 p-3">
+                <p className="text-xs uppercase text-muted-foreground">Copia de presenca</p>
+                <p className="mt-1 font-medium">{finalizationChecklist.data.attendanceCopy.messagePt}</p>
+              </div>
+
+              {finalizationChecklist.data.warnings.length > 0 && (
+                <div className="space-y-2">
+                  {finalizationChecklist.data.warnings.map((warning) => (
+                    <div
+                      key={warning.messagePt}
+                      className={`rounded-md border p-3 ${warning.tone === 'danger' ? 'border-red-400/50 bg-red-500/15 text-red-100' : warning.tone === 'warning' ? 'border-amber-400/50 bg-amber-500/15 text-amber-100' : 'border-blue-400/40 bg-blue-500/10 text-blue-100'}`}
+                    >
+                      {warning.messagePt}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-md border bg-background/35 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs uppercase text-muted-foreground">Presentes</p>
+                    <Badge tone="green">{finalizationChecklist.data.presentPlayers.length}</Badge>
+                  </div>
+                  <div className="max-h-44 space-y-2 overflow-y-auto">
+                    {finalizationChecklist.data.presentPlayers.map((player) => (
+                      <div key={player.id} className="flex items-center justify-between gap-2 rounded border bg-background/45 px-2 py-1.5">
+                        <span className="font-medium">{player.nickname}</span>
+                        <span className="text-xs text-muted-foreground">{playerClassLabel(player.class, locale)} - {t(locale, 'layer')} {player.dimensionalLayer}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-md border bg-background/35 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs uppercase text-muted-foreground">Ausentes ativos</p>
+                    <Badge tone="red">{finalizationChecklist.data.absentPlayers.length}</Badge>
+                  </div>
+                  <div className="max-h-44 space-y-2 overflow-y-auto">
+                    {finalizationChecklist.data.absentPlayers.map((player) => (
+                      <div key={player.id} className="flex items-center justify-between gap-2 rounded border bg-background/45 px-2 py-1.5">
+                        <span className="font-medium">{player.nickname}</span>
+                        <span className="text-xs text-muted-foreground">{playerClassLabel(player.class, locale)} - {t(locale, 'layer')} {player.dimensionalLayer}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </ConfirmationDialog>
         <ConfirmationDialog
           open={confirmation === 'cancel'}
           title="Cancelar evento?"

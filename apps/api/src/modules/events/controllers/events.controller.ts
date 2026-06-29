@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto } from '../dto';
 import { EventDetails } from '../repositories/events.repository';
-import { AttendanceService, FinalizeEventResult } from '../services/attendance.service';
+import { AttendanceService, EventFinalizationChecklist, FinalizeEventResult } from '../services/attendance.service';
 import { EventsService } from '../services/events.service';
 
 type AuthRequest = { user?: { userId?: string } };
@@ -56,6 +56,13 @@ export class EventsController {
   @Roles('STAFF', 'ADMIN')
   async finalizeEvent(@Param('id') eventId: string): Promise<FinalizeEventResult> {
     return this.attendanceService.finalizeEvent(eventId);
+  }
+
+  @Get('events/:id/finalization-checklist')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async finalizationChecklist(@Param('id') eventId: string): Promise<EventFinalizationChecklist> {
+    return this.attendanceService.getFinalizationChecklist(eventId);
   }
 
   @Post('events/:id/cancel')

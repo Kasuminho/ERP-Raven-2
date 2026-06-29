@@ -126,6 +126,7 @@ Criacao em lote:
 Encadeamento de presenca:
 
 - Ao finalizar um boss, o DKP dele e distribuido normalmente.
+- Antes de finalizar, a tela Staff de eventos consulta `GET /events/:id/finalization-checklist` e mostra checklist com boss atual, proximo boss do lote, presentes, ausentes ativos, DKP por pessoa, DKP total, previsao de copia e alertas de presenca/estado.
 - A presenca e copiada para o proximo evento ativo do mesmo lote.
 - A tela seleciona o proximo boss para a Staff revisar e finalizar explicitamente.
 - Eventos cancelados sao pulados.
@@ -252,6 +253,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Finalizacao de evento ganhou checklist Staff com presentes, ausentes, DKP, proximo boss do lote, previsao de copia e alertas antes de confirmar. | eventos/Staff |
 | 2026-06-29 | Player pode declarar interesse em lote, mantendo print/nota/transmutar por post e uma confirmacao unica antes de enviar. | interesses/player |
 | 2026-06-29 | Interesses Staff ganharam comparador por interessado com classe, camada, presenca, DKP, requests ativos, nota Staff e historico de loot em endpoint Staff-only. | interesses/Staff |
 | 2026-06-29 | Requests ganharam transparencia da prioridade de material T3 sobre Quintessencia, com badge, texto Staff/player e bloqueio auditado de entrega quando aplicavel. | requests/craft |

@@ -479,6 +479,50 @@ export type FinalizeEventResult = {
   attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
 };
 
+export type EventFinalizationChecklist = {
+  eventId: string;
+  eventName: string;
+  eventType: EventType;
+  status: EventRecord['status'];
+  dkpPerPlayer: number;
+  totalDkp: number;
+  presentCount: number;
+  absentCount: number;
+  activePlayerCount: number;
+  presentPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'>>;
+  absentPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'>>;
+  currentBoss: {
+    id: string;
+    name: string;
+    type: EventType;
+    startsAt: string;
+    attendanceBatchId?: string;
+    batchOrder?: number;
+  };
+  nextBatchEvent: {
+    id: string;
+    name: string;
+    type: EventType;
+    startsAt: string;
+    status: EventRecord['status'];
+    attendanceBatchId?: string;
+    batchOrder?: number;
+    existingAttendanceCount: number;
+  } | null;
+  attendanceCopy: {
+    willCopy: boolean;
+    status: 'WILL_COPY' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
+    targetEventId?: string;
+    targetEventName?: string;
+    copiedCountEstimate: number;
+    messagePt: string;
+  };
+  warnings: Array<{
+    tone: 'info' | 'warning' | 'danger';
+    messagePt: string;
+  }>;
+};
+
 export type EventAttendanceRow = {
   id: string;
   eventId: string;
