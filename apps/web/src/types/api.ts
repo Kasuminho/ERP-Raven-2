@@ -868,6 +868,18 @@ export type AuctionDiagnosticOption = {
   endedAt: string;
 };
 
+export type AuctionTimelineEvent = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  occurredAt: string;
+  tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
+  actorName?: string | null;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: string;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
@@ -884,6 +896,11 @@ export type AuctionDiagnosticSummary = {
     endsAt: string;
     createdAt: string;
     updatedAt: string;
+  };
+  stateReason: {
+    title: string;
+    description: string;
+    tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
   };
   counts: {
     bids: number;

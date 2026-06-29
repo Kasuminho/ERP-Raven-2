@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
-import { useAuctionDiagnosticOptions, useAuctionDiagnostics } from '@/hooks/use-guild-api';
+import { useAuctionDiagnosticOptions, useAuctionDiagnostics, useAuctionTimeline } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { AuctionDiagnosticOption, AuctionDiagnosticSummary } from '@/types/api';
+import type { AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionTimelineEvent } from '@/types/api';
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -69,6 +69,33 @@ function JsonPreview({ value }: { value: Record<string, unknown> | null }) {
   );
 }
 
+function TimelineCard({ events }: { events: AuctionTimelineEvent[] }) {
+  if (!events.length) {
+    return <p className="text-sm text-muted-foreground">Sem eventos suficientes para montar timeline.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {events.map((event) => (
+        <div key={event.id} className="rounded-lg border border-white/10 bg-background/45 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={event.tone}>{event.type}</Badge>
+                <p className="font-semibold">{event.title}</p>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{event.description}</p>
+              {event.actorName ? <p className="mt-1 text-xs text-muted-foreground">Ator: {event.actorName}</p> : null}
+            </div>
+            <p className="shrink-0 text-xs text-muted-foreground">{formatDate(event.occurredAt)}</p>
+          </div>
+          {event.metadata ? <div className="mt-3"><JsonPreview value={event.metadata} /></div> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AuctionDiagnosticsPage() {
   const locale = useLocaleStore((state) => state.locale);
   const router = useRouter();
@@ -77,6 +104,7 @@ export default function AuctionDiagnosticsPage() {
   const [draftId, setDraftId] = useState(auctionId);
   const auctionOptions = useAuctionDiagnosticOptions();
   const diagnostics = useAuctionDiagnostics(auctionId);
+  const timeline = useAuctionTimeline(auctionId);
 
   useEffect(() => {
     setDraftId(auctionId);
@@ -191,6 +219,34 @@ export default function AuctionDiagnosticsPage() {
                 {countRows.map(([label, value]) => (
                   <CountCard key={label} label={String(label)} value={value} />
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={diagnostics.data.stateReason.tone}>{diagnostics.data.auction.status}</Badge>
+                  <p className="font-semibold">{diagnostics.data.stateReason.title}</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{diagnostics.data.stateReason.description}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <CardTitle>Timeline operacional</CardTitle>
+                  {timeline.isFetching ? <Badge tone="blue">Atualizando</Badge> : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {timeline.isError ? (
+                  <p className="text-sm text-muted-foreground">Nao consegui carregar a timeline deste leilao.</p>
+                ) : timeline.isLoading ? (
+                  <p className="text-sm text-muted-foreground">Montando timeline do leilao...</p>
+                ) : (
+                  <TimelineCard events={timeline.data ?? []} />
+                )}
               </CardContent>
             </Card>
 

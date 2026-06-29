@@ -203,6 +203,18 @@ export type AuctionDiagnosticOption = {
   endedAt: Date;
 };
 
+export type AuctionTimelineEvent = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  occurredAt: Date;
+  tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
+  actorName?: string | null;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: Date;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
@@ -219,6 +231,11 @@ export type AuctionDiagnosticSummary = {
     endsAt: Date;
     createdAt: Date;
     updatedAt: Date;
+  };
+  stateReason: {
+    title: string;
+    description: string;
+    tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
   };
   counts: {
     bids: number;

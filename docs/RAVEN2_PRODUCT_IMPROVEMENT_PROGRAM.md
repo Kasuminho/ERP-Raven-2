@@ -1,0 +1,544 @@
+# Programa completo de melhorias Raven2
+
+Documento vivo para transformar as ideias de produto em implementacao rastreavel.
+O objetivo nao e listar desejos soltos, e sim definir entregas completas para a
+guilda operar melhor DKP, loot, presenca, progresso, comunicacao, deploy e
+incidentes.
+
+Este trabalho e interno do produto. Mudancas publicadas para a operacao G3X ainda
+seguem o protocolo normal: validar, publicar, verificar producao e so entao enviar
+changelog Staff quando houver impacto operacional.
+
+## Contexto do jogo e direcao de produto
+
+Raven 2 e um MMORPG centrado em progressao persistente, boss fights, craft,
+conteudo de guilda, Abyss/Rift, dungeons, Field Bosses, Guild Dungeon, PvP/GvG e
+preparacao por classe/equipamento. A propria documentacao oficial lista sistemas
+como Guild, Rankings, Market, Personal Trade, Craft, Field Bosses, Rift, Abyss,
+Ancient Fortress, Dimensional Rift, Transmute, Rune, Relic, Stigmas, Stellas e
+Equipment.
+
+Implicacao para o ERP:
+
+- o Raven2 nao deve ser apenas livro-caixa de DKP;
+- a Staff precisa enxergar prontidao, risco, prioridade e historico operacional;
+- players precisam saber qual acao ajuda a propria conta e a guilda agora;
+- leiloes, interesses, requests, progresso e presenca precisam formar uma historia
+  unica do item/player;
+- o sistema deve reduzir ambiguidade, favoritismo percebido e retrabalho no Discord.
+
+Referencias consultadas em 2026-06-29:
+
+- Guia oficial Netmarble de Raven 2, especialmente sistemas de progressao e
+  conteudo como Guild Dungeon, Guild, Rankings, PvP, Market, Craft, Field Bosses,
+  Rift, Abyss, Ancient Fortress, Dimensional Rift, Transmute, Rune e Relic:
+  `https://guide.netmarble.com/raven2`
+- Entrevista sobre o lancamento ocidental destacando guerra de guilda, conteudo
+  cooperativo pequeno e conteudo massivo de guilda/GvG:
+  `https://massivelyop.com/2025/10/27/interview-raven2-boss-doo-hyun-cho-on-the-western-launch-of-netmarbles-grimdark-fantasy-mmorpg/`
+- Guia BlueStacks de Raven 2 sobre progressao, economia, bosses, recursos e
+  rotina de crescimento:
+  `https://www.bluestacks.com/blog/game-guides/raven-2/rvn2-beginners-guide-en.html`
+
+## Principios de implementacao
+
+- Sigilo de leilao continua absoluto para players ate resultado/entrega.
+- Conteudo Staff permanece PT-BR.
+- Conteudo player permanece PT-BR/EN em blocos separados quando virar webhook.
+- Toda decisao sensivel precisa de rastro auditavel.
+- Primeiro mostrar contexto, depois pedir confirmacao.
+- Toda tela operacional deve responder: o que aconteceu, o que falta, quem esta
+  bloqueado, qual o proximo passo.
+- Preferir endpoints Staff especificos para payloads sensiveis, sem aumentar
+  payload publico.
+- Reaproveitar `operations`, `audit`, `search`, `business-rules` e React Query,
+  mas separar dominios quando o arquivo crescer demais.
+
+## Epico A - Leiloes com timeline, simulacao e dossie
+
+### A1. Timeline de leilao
+
+Objetivo: transformar dados dispersos em historia operacional.
+
+Entrega:
+
+- Endpoint Staff de timeline por leilao.
+- Component `AuctionTimeline`.
+- Exibir na tela de detalhes Staff e no diagnostico Staff.
+- Eventos minimos:
+  - criado;
+  - abriu/reabriu;
+  - bid registrado;
+  - lock criado;
+  - cancelamento solicitado/aprovado/rejeitado;
+  - invalidacao de bid;
+  - fim planejado;
+  - automacao processou;
+  - review iniciado;
+  - voto Staff;
+  - vencedor aprovado;
+  - relist/camada expandida;
+  - `AUCTION_WIN` criado;
+  - lock liberado;
+  - entrega registrada.
+- Cada evento deve ter horario, ator quando houver, resumo, alvo e link interno.
+
+Validacao:
+
+- teste unitario para ordenacao e mapeamento;
+- smoke manual com leilao `OPEN`, `PENDING_REVIEW`, `FINISHED` e `RELISTED`.
+
+### A2. Motivo visual do estado
+
+Objetivo: explicar por que o leilao esta em determinado status.
+
+Entrega:
+
+- Campo calculado `stateReason` em endpoint Staff:
+  - `OPEN`: ainda nao venceu, venceu e aguarda automacao, ou reaberto;
+  - `PENDING_REVIEW`: modo exige Staff, ALL_IN, quorum, ou decisao manual;
+  - `FINISHED`: vencedor e transacao encontrados;
+  - `RELISTED`: sem vencedor apto apos regra de camada;
+  - `CANCELLED`: cancelado manualmente.
+- UI com badge e texto curto.
+- No diagnostico, mostrar a regra usada para chegar ali.
+
+### A3. Previa de finalizacao
+
+Objetivo: permitir que a Staff simule o fechamento sem executar.
+
+Entrega:
+
+- Endpoint Staff `GET /operations/staff/auction-diagnostics/:id/finalization-preview`.
+- Retornar:
+  - acao provavel: finalizar, review, expandir camada, relistar, nenhuma;
+  - candidato vencedor quando autorizado;
+  - locks que seriam consumidos ou liberados;
+  - bids desconsiderados e motivo;
+  - regra de camada T4 aplicada;
+  - riscos encontrados.
+- UI com botao "Simular fechamento agora" no diagnostico.
+
+Validacao:
+
+- cobrir STANDARD, ALL_IN, T4 com camada minima, sem bids, bids sem lock e review.
+
+### A4. Fila de entrega com urgencia
+
+Objetivo: impedir drop vencido esquecido.
+
+Entrega:
+
+- Enriquecer entregas pendentes com idade, prioridade e motivo.
+- Filtro Staff: hoje, atrasado, sem prova, por player, por tier.
+- Mostrar no dashboard Staff e meeting.
+- Changelog Staff quando publicar.
+
+### A5. Dossie de leilao
+
+Objetivo: resolver treta de loot sem abrir 8 abas.
+
+Entrega:
+
+- Botao "Montar dossie" no diagnostico.
+- Payload com timeline, issues, bids Staff-only, locks, votos, AUCTION_WIN, entrega,
+  audit logs e links.
+- UI copiavel em Markdown Staff-only.
+- Nunca expor em rota player.
+
+## Epico B - Central Staff orientada por jornada
+
+### B1. Reorganizar hub Staff por trabalho
+
+Objetivo: Staff pensa em tarefa, nao modulo.
+
+Entrega:
+
+- Manter cards atuais, mas agrupar em abas ou secoes:
+  - Resolver agora;
+  - Auditar;
+  - Configurar;
+  - Comunicar;
+  - Operar deploy.
+- Cada grupo mostra contadores e proximas acoes.
+
+### B2. Resumo matinal Staff
+
+Objetivo: abrir o dia da guilda com prioridade clara.
+
+Entrega:
+
+- Endpoint `GET /operations/staff/morning-briefing`.
+- Dados:
+  - leiloes vencidos/perto de vencer;
+  - reviews pendentes;
+  - entregas pendentes;
+  - progressos aguardando;
+  - eventos abertos;
+  - requests urgentes;
+  - interesses fechados/votando;
+  - anomalias de locks/DKP;
+  - saude de webhooks.
+- Tela Staff e opcional post Staff manual.
+
+### B3. Modo reuniao completo
+
+Objetivo: transformar `/dashboard/staff/meeting` em pauta decisoria.
+
+Entrega:
+
+- Pauta com secoes:
+  - Decisoes de loot;
+  - Pendencias travadas;
+  - Economia DKP;
+  - Players sensiveis;
+  - Progresso de boss/lote;
+  - Comunicados a preparar;
+  - Acoes ate proxima reuniao.
+- Itens marcaveis como resolvidos com audit log.
+- Exportar resumo Staff em Markdown.
+
+## Epico C - Dashboard player: "o que eu faco agora?"
+
+### C1. Cards acionaveis
+
+Objetivo: o player entrar e saber a melhor acao.
+
+Entrega:
+
+- Endpoint `GET /operations/me/action-plan`.
+- Cards:
+  - bid ativo e DKP travado;
+  - leilao que pode participar;
+  - interesse aberto sem declaracao;
+  - request precisando print;
+  - progresso comentado pela Staff;
+  - entrega ou codex aguardando confirmacao;
+  - evento proximo.
+- Cada card tem `href`, prioridade e motivo.
+
+### C2. Elegibilidade antes do bid
+
+Objetivo: reduzir duvida e reclamacao.
+
+Entrega:
+
+- Na pagina do leilao, antes do bid:
+  - pode participar;
+  - motivo de inelegibilidade;
+  - camada exigida;
+  - DKP disponivel;
+  - attendance considerada;
+  - Staff Review obrigatorio quando aplicavel.
+- Para players, nunca mostrar ranking nem concorrentes.
+
+### C3. Historico pessoal narrado
+
+Objetivo: trocar extrato frio por narrativa compreensivel.
+
+Entrega:
+
+- Feed pessoal com DKP, drops, bids, locks, progresso, codex e requests.
+- Filtros por tipo e periodo.
+- Textos PT-BR/EN na UI conforme locale.
+
+## Epico D - Requests e craft com previsao operacional
+
+### D1. Previsao de fila
+
+Objetivo: mostrar expectativa e reduzir pergunta no Discord.
+
+Entrega:
+
+- Para cada request:
+  - posicao;
+  - quantas entregas faltam antes;
+  - ultima entrega desse item/material;
+  - idade da propria atualizacao;
+  - se precisa print novo.
+- Staff ve fila completa; player ve propria posicao e explicacao sem dados
+  indevidos.
+
+### D2. Sugestao de troca
+
+Objetivo: ajudar progressao da guilda quando uma fila esta congestionada.
+
+Entrega:
+
+- Sugerir itens requestaveis alternativos do mesmo tipo/tier/categoria.
+- Mostrar trade-off: fila menor, menos prioridade, falta material, etc.
+- Somente sugestao; troca continua fluxo controlado.
+
+### D3. Transparencia da prioridade T3
+
+Objetivo: explicar quando Quintessencia perde prioridade para craft T3.
+
+Entrega:
+
+- Badge em request afetado por prioridade de material.
+- Texto operacional Staff e texto player simplificado.
+- Audit log quando prioridade impactar ordenacao/entrega.
+
+## Epico E - Interesses com decisao comparavel
+
+### E1. Comparador Staff dos interessados
+
+Objetivo: reduzir decisao por feeling.
+
+Entrega:
+
+- Na tela Staff de interesses, comparar:
+  - camada;
+  - classe;
+  - presenca;
+  - DKP atual;
+  - ultimo drop;
+  - requests ativos;
+  - notas Staff relevantes;
+  - historico recente do item/tipo.
+- Sem expor essa comparacao para players.
+
+### E2. Declaracao de interesse em lote
+
+Objetivo: facilitar quando varios itens parecidos abrem juntos.
+
+Entrega:
+
+- Tela player para declarar interesse em multiplos posts abertos.
+- Permitir print por item quando necessario.
+- Confirmacao unica com resumo.
+- Manter validacoes atuais de cada interesse.
+
+## Epico F - Eventos, presenca e lote de bosses
+
+### F1. Checklist de finalizacao de evento
+
+Objetivo: evitar finalize errado.
+
+Entrega:
+
+- Modal antes de finalizar:
+  - presentes;
+  - ausentes;
+  - DKP por pessoa;
+  - DKP total;
+  - boss atual;
+  - proximo boss do lote;
+  - se copiara presenca;
+  - alertas de presenca incomum.
+
+### F2. Painel visual de lote
+
+Objetivo: operar `BOSSES T4` como trilha, nao como eventos soltos.
+
+Entrega:
+
+- Tela Staff por `attendanceBatchId`.
+- Mostrar ordem, status, presenca, DKP distribuido, proximo boss, cancelados e
+  eventos pulados.
+- Acao direta para abrir/finalizar o proximo evento.
+
+### F3. Prontidao de boss/guilda
+
+Objetivo: conectar progressao do player ao que a guilda vai fazer.
+
+Entrega:
+
+- Visao Staff por evento/boss:
+  - jogadores ativos por camada;
+  - classes presentes;
+  - CP informado/aprovado;
+  - gaps de healer/tank/DPS por classe;
+  - players sem status recente.
+- Nao automatizar decisao de composicao; apenas informar.
+
+## Epico G - Discord e comunicacao operacional
+
+### G1. Previa real de webhook
+
+Objetivo: ver antes de postar.
+
+Entrega:
+
+- Preview de embeds para anuncios, leiloes, interesses, drops e updates.
+- Mostrar blocos PT-BR/EN quando player-facing.
+- Usar mesmo builder de embeds ou payload equivalente.
+
+### G2. Fila de webhooks
+
+Objetivo: auditar falhas sem entrar em log.
+
+Entrega:
+
+- Tela Staff com ultimos envios, status, retry, canal/logical target, erro
+  resumido e payload seguro.
+- Nunca mostrar URL de webhook.
+- Acao para reenviar apenas quando idempotente/seguro.
+
+### G3. Atualizar guias funcionais
+
+Objetivo: remover drift documental.
+
+Entrega:
+
+- Reescrever guias Staff/player atuais com encoding correto.
+- Remover espanhol dos guias operacionais correntes se nao for mais lingua ativa
+  de comunicacao.
+- Corrigir identidade de webhook para `Aristolfo, 570 anos de webhook`.
+- Separar guias historicos de guias atuais.
+
+## Epico H - Auditoria e incidentes
+
+### H1. Dossie universal
+
+Objetivo: qualquer entidade sensivel gerar contexto auditavel.
+
+Entrega:
+
+- Dossie para player, leilao, request, interesse, drop e evento.
+- Markdown copiavel Staff-only.
+- Links internos e audit logs.
+- Sem segredo, sem webhook URL, sem payload privado desnecessario.
+
+### H2. Modo manutencao
+
+Objetivo: bloquear escrita sensivel durante restore/incidente.
+
+Entrega:
+
+- Regra/config `maintenanceMode`.
+- Bloquear mutacoes sensiveis: bids, finalizacao, entrega, ajustes DKP,
+  progresso, requests, anuncios.
+- Permitir leitura e health.
+- Banner claro na Web.
+- Audit log ao ativar/desativar.
+
+## Epico I - Deploy e operacao
+
+### I1. Painel Staff de deploy
+
+Objetivo: tirar deploy do ritual manual.
+
+Entrega:
+
+- Tela Staff com:
+  - versao atual da API;
+  - versao esperada do ultimo push;
+  - health publico/privado;
+  - ultimo smoke publico;
+  - ultimo changelog Staff enviado;
+  - checklist do protocolo;
+  - link para Actions quando disponivel.
+- Sem tokens GitHub no frontend.
+
+### I2. Smoke autenticado pos-deploy
+
+Objetivo: validar fluxo real sem depender do navegador humano.
+
+Entrega:
+
+- Script ou endpoint operacional que valida:
+  - auth/me com token de automacao;
+  - central Staff;
+  - diagnostico de leilao;
+  - entregas pendentes;
+  - health privado.
+- Documentar variaveis sem valores.
+
+### I3. Backup novo no health privado
+
+Objetivo: Staff saber se backup morreu.
+
+Entrega:
+
+- Health privado com idade do ultimo backup verificado.
+- Integrar com monitor externo quando existir.
+
+## Epico J - Arquitetura e manutencao necessaria para sustentar tudo
+
+### J1. Separar `operations.service.ts`
+
+Objetivo: reduzir risco de mudancas cruzadas.
+
+Entrega:
+
+- Serviços menores por dominio:
+  - `StaffSummaryService`;
+  - `AuctionDiagnosticsService`;
+  - `IntegrityService`;
+  - `MeetingService`;
+  - `WeeklySummaryService`;
+  - `OperationalBriefingService`.
+- Manter controller compativel.
+- Testes de regressao para endpoints existentes.
+
+### J2. Separar `use-guild-api.ts`
+
+Objetivo: facilitar manutencao Web.
+
+Entrega:
+
+- Hooks por dominio:
+  - `use-auctions-api`;
+  - `use-staff-operations-api`;
+  - `use-items-api`;
+  - `use-requests-api`;
+  - `use-events-api`;
+  - `use-profile-api`.
+- Reexport temporario para preservar imports, depois migrar telas.
+
+### J3. Contratos compartilhados
+
+Objetivo: evitar divergencia API/Web.
+
+Entrega:
+
+- Escolher estrategia: OpenAPI gerado pelo Nest ou pacote shared real.
+- Migrar tipos criticos primeiro: auctions, operations, player tasks, requests,
+  events.
+- CI deve falhar se tipos gerados estiverem desatualizados.
+
+### J4. DTOs com validacao forte
+
+Objetivo: permitir `whitelist`/`forbidNonWhitelisted` por modulo.
+
+Entrega:
+
+- Inventario de DTOs sem decorators.
+- Migrar modulo por modulo.
+- Teste de contrato antes de endurecer.
+- Ativar whitelisting localmente nos controllers migrados.
+
+### J5. Rate limit distribuivel
+
+Objetivo: preparar escala.
+
+Entrega:
+
+- Abstracao de rate limit com provider em memoria e Redis/gateway futuro.
+- Documentar que instancia unica pode usar memoria; multi-replica precisa Redis.
+
+## Ordem sugerida de execucao
+
+1. Documentar programa e alinhar WIKI.
+2. Separar servico de diagnostico de leilao ou criar servico novo sem mover tudo.
+3. Implementar timeline + stateReason + dossie de leilao.
+4. Implementar preview de finalizacao.
+5. Implementar action plan do player.
+6. Implementar meeting/briefing Staff.
+7. Implementar checklist de evento e painel de lote.
+8. Implementar comparador de interesses.
+9. Implementar requests com previsao/sugestao/prioridade T3 visivel.
+10. Implementar preview/fila de webhooks.
+11. Implementar painel de deploy e smoke autenticado.
+12. Refatorar hooks/API por dominio.
+13. Migrar DTOs e contratos compartilhados.
+14. Atualizar guias funcionais e docs de produto.
+
+## Definicao de pronto por fatia
+
+- API e Web implementadas quando houver contrato novo.
+- Testes proporcionais ao risco.
+- `WIKI.md` atualizado quando muda fluxo/contrato.
+- `git diff --check`, Prisma validate/generate, lint e builds conforme escopo.
+- Producao verificada por sinal especifico antes de changelog.

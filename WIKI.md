@@ -88,7 +88,8 @@ Automacao ativa:
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
 - A central Staff em `/dashboard/staff` prioriza os grupos de ferramentas no topo da pagina, com cards mais espacados; contadores, pendencias, saude e auditoria ficam abaixo.
-- O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo.
+- O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo. A tela tambem mostra motivo visual do estado atual e timeline operacional Staff-only derivada de leilao, bids, locks, cancelamentos, votos, transacoes, entrega e audit logs.
+- O programa completo de melhorias de produto/UX/processo fica em `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`, com epicos para leiloes, Staff, players, requests, interesses, eventos, Discord, auditoria, deploy e arquitetura.
 
 ## Leiloes e sigilo
 
@@ -231,6 +232,7 @@ npm.cmd run discord:configure-webhooks
 - `docs/ICP_DOCKER_IMAGES.md`: deploy por imagens e Watchtower.
 - `docs/SAAS_SINGLE_TENANT_ROADMAP.md`: plano para empacotar o Raven como SaaS por instancia Docker isolada por guilda.
 - `docs/SAAS_GUILD_COMPOSE_GUIDE.md`: guia pratico para Compose por guilda e database PostgreSQL isolada.
+- `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`: programa completo de melhorias de produto, UX, operacao e arquitetura.
 - `docs/DEPLOY_ICP.md`: contexto de deploy ICP.
 - `docs/DISCORD_WEBHOOK_VOICE.md`: identidade, idioma e tom.
 - `docs/staff-guide-2026-06-04.md`: guia funcional da Staff.
@@ -241,6 +243,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Criado programa completo de melhorias Raven2 e iniciado o epico de leiloes com motivo visual de estado e timeline operacional no diagnostico Staff. | produto/UX/leiloes |
 | 2026-06-29 | Quarta rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-06-29 | Diagnostico Staff de leilao ganhou selecao de todos os leiloes por item, vencedor quando houver e data, sem exigir colar ID manualmente. | leiloes/diagnostico |
 | 2026-06-28 | Regra T4 ajustada: rejeicao/invalidacao sem bids desce camadas ate a 1; somente apos falhar na camada 1 o leilao relista para camada 4 em 7 dias desde a abertura original. Justificativas em modais deixaram de perder foco ao digitar. | leiloes/relist |

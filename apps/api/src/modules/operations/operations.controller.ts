@@ -9,6 +9,7 @@ import {
   IntegritySummary,
   AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
+  AuctionTimelineEvent,
   LegacyAuditSummary,
   LootFairnessSummary,
   NoticeBoardItem,
@@ -113,6 +114,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async auctionDiagnostics(@Param('auctionId') auctionId: string): Promise<AuctionDiagnosticSummary> {
     return this.service.getAuctionDiagnostics(auctionId);
+  }
+
+  @Get('staff/auction-diagnostics/:auctionId/timeline')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async auctionTimeline(@Param('auctionId') auctionId: string): Promise<AuctionTimelineEvent[]> {
+    return this.service.getAuctionTimeline(auctionId);
   }
 
   @Get('staff/fairness')
