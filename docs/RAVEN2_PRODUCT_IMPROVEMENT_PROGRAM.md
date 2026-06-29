@@ -107,6 +107,8 @@ Entrega:
 
 Objetivo: permitir que a Staff simule o fechamento sem executar.
 
+Estado em 2026-06-29: implementado no diagnostico Staff de leilao.
+
 Entrega:
 
 - Endpoint Staff `GET /operations/staff/auction-diagnostics/:id/finalization-preview`.
@@ -117,7 +119,11 @@ Entrega:
   - bids desconsiderados e motivo;
   - regra de camada T4 aplicada;
   - riscos encontrados.
-- UI com botao "Simular fechamento agora" no diagnostico.
+- UI no diagnostico com acao prevista, candidato, proximo estado, locks,
+  bids ignorados e riscos.
+- A regra T4 do diagnostico acompanha a ordem real da finalizacao: quando a
+  camada minima atual e maior que 1 e nao ha bid apto nessa camada, a previa
+  indica expansao de camada antes de relist.
 
 Validacao:
 
@@ -138,9 +144,12 @@ Entrega:
 
 Objetivo: resolver treta de loot sem abrir 8 abas.
 
+Estado em 2026-06-29: implementado no diagnostico Staff de leilao.
+
 Entrega:
 
-- Botao "Montar dossie" no diagnostico.
+- Endpoint Staff `GET /operations/staff/auction-diagnostics/:id/dossier`.
+- Card "Dossie Staff" no diagnostico com Markdown copiavel.
 - Payload com timeline, issues, bids Staff-only, locks, votos, AUCTION_WIN, entrega,
   audit logs e links.
 - UI copiavel em Markdown Staff-only.

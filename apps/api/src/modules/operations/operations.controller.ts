@@ -4,11 +4,13 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OperationsService } from './operations.service';
 import {
+  AuctionDossier,
   DiscordTemplateSummary,
   GuildRulesSummary,
   IntegritySummary,
   AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
+  AuctionFinalizationPreview,
   AuctionTimelineEvent,
   LegacyAuditSummary,
   LootFairnessSummary,
@@ -114,6 +116,20 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async auctionDiagnostics(@Param('auctionId') auctionId: string): Promise<AuctionDiagnosticSummary> {
     return this.service.getAuctionDiagnostics(auctionId);
+  }
+
+  @Get('staff/auction-diagnostics/:auctionId/finalization-preview')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async auctionFinalizationPreview(@Param('auctionId') auctionId: string): Promise<AuctionFinalizationPreview> {
+    return this.service.getAuctionFinalizationPreview(auctionId);
+  }
+
+  @Get('staff/auction-diagnostics/:auctionId/dossier')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async auctionDossier(@Param('auctionId') auctionId: string): Promise<AuctionDossier> {
+    return this.service.getAuctionDossier(auctionId);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')

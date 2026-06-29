@@ -880,6 +880,60 @@ export type AuctionTimelineEvent = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type AuctionFinalizationPreview = {
+  generatedAt: string;
+  auctionId: string;
+  action: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
+  actionLabel: string;
+  description: string;
+  candidate?: {
+    bidId: string;
+    playerId: string;
+    nickname: string;
+    bidAmount: number;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+  } | null;
+  locksToConsume: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    amount: number;
+  }>;
+  locksToRelease: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    amount: number;
+  }>;
+  ignoredBids: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    bidAmount: number;
+    reason: string;
+  }>;
+  nextState?: {
+    status: string;
+    minimumLayer?: number | null;
+    endsAt?: string | null;
+    reopensAt?: string | null;
+  };
+  risks: Array<{
+    severity: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    metadata?: Record<string, unknown>;
+  }>;
+};
+
+export type AuctionDossier = {
+  generatedAt: string;
+  auctionId: string;
+  title: string;
+  markdown: string;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: string;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';

@@ -17,7 +17,15 @@ import { BusinessRulesService } from '../business-rules/business-rules.service';
 import { bilingualBlocks, pickVoiceLine } from '../discord/bot/embeds/webhook-voice';
 import { NotificationService } from '../discord/services/notification.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
-import { AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionTimelineEvent, IntegrityIssue, IntegritySummary } from './operations.types';
+import {
+  AuctionDiagnosticOption,
+  AuctionDiagnosticSummary,
+  AuctionDossier,
+  AuctionFinalizationPreview,
+  AuctionTimelineEvent,
+  IntegrityIssue,
+  IntegritySummary,
+} from './operations.types';
 import { SeasonMonthlySummary, StaffDayViewSummary, WeeklyGuildSummary } from './operations.types';
 import {
   DiscordTemplateSummary,
@@ -37,6 +45,7 @@ type PriorityThreshold = {
 
 const HOURS = 60 * 60 * 1000;
 const DAYS = 24 * HOURS;
+const AUCTION_RELIST_DELAY_DAYS = 7;
 
 function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
   return request.itemCatalog?.category === 'creature';
@@ -1556,6 +1565,182 @@ export class OperationsService {
     });
   }
 
+  async getAuctionFinalizationPreview(auctionId: string): Promise<AuctionFinalizationPreview> {
+    const diagnostics = await this.getAuctionDiagnostics(auctionId);
+    const auction = diagnostics.auction;
+    const now = new Date();
+    const activeLocks = diagnostics.locks.filter((lock) => !lock.released);
+    const activeLockByPlayer = new Map(activeLocks.map((lock) => [lock.playerId, lock]));
+    const minimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : null);
+    const eligibleBids = diagnostics.bids
+      .filter((bid) => bid.isValid)
+      .filter((bid) => activeLockByPlayer.has(bid.playerId))
+      .filter((bid) => !minimumLayer || auction.itemTier !== ItemTier.T4 || bid.dimensionalLayer >= minimumLayer)
+      .sort((left, right) => (
+        right.bidAmount - left.bidAmount
+        || right.dimensionalLayer - left.dimensionalLayer
+        || right.attendancePercentage - left.attendancePercentage
+        || new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+      ));
+    const candidate = eligibleBids[0] ?? null;
+    const winnerLock = candidate ? activeLockByPlayer.get(candidate.playerId) : undefined;
+    const ignoredBids = diagnostics.bids.flatMap((bid) => {
+      if (!bid.isValid) {
+        return [{ id: bid.id, playerId: bid.playerId, nickname: bid.nickname, bidAmount: bid.bidAmount, reason: 'Bid ja invalidado.' }];
+      }
+      if (!activeLockByPlayer.has(bid.playerId)) {
+        return [{ id: bid.id, playerId: bid.playerId, nickname: bid.nickname, bidAmount: bid.bidAmount, reason: 'Bid valido sem lock ativo.' }];
+      }
+      if (minimumLayer && auction.itemTier === ItemTier.T4 && bid.dimensionalLayer < minimumLayer) {
+        return [{
+          id: bid.id,
+          playerId: bid.playerId,
+          nickname: bid.nickname,
+          bidAmount: bid.bidAmount,
+          reason: `Player abaixo da camada minima atual (${minimumLayer}).`,
+        }];
+      }
+      return [];
+    });
+    const topBidAmount = eligibleBids[0]?.bidAmount;
+    const topBidTies = topBidAmount ? eligibleBids.filter((bid) => bid.bidAmount === topBidAmount) : [];
+    const risks: AuctionFinalizationPreview['risks'] = [...diagnostics.issues];
+
+    if (topBidTies.length > 1) {
+      risks.push({
+        severity: 'medium',
+        title: 'Empate no maior bid apto',
+        description: `${topBidTies.length} bids aptos estao no maior valor. A review da Staff deve conferir prioridade antes da entrega.`,
+        metadata: { bidIds: topBidTies.map((bid) => bid.id) },
+      });
+    }
+
+    if ((diagnostics.outcome === 'FINISH_STANDARD' || diagnostics.outcome === 'PENDING_REVIEW') && !candidate) {
+      risks.push({
+        severity: 'high',
+        title: 'Sem candidato apto para a acao prevista',
+        description: 'O diagnostico encontrou acao de fechamento, mas nenhum bid com lock ativo e camada compativel foi selecionado.',
+      });
+    }
+
+    const actionLabels: Record<AuctionFinalizationPreview['action'], string> = {
+      NO_ACTION: 'Sem acao automatica agora',
+      FINISH_STANDARD: 'Fechamento padrao previsto',
+      PENDING_REVIEW: 'Vai para review da Staff',
+      EXPAND_LAYER: 'Expande camada T4',
+      RELIST: 'Relista leilao',
+    };
+    const descriptions: Record<AuctionFinalizationPreview['action'], string> = {
+      NO_ACTION: auction.status === AuctionStatus.OPEN && auction.endsAt > now
+        ? 'O leilao ainda nao venceu; a automacao nao deve processar agora.'
+        : 'O estado atual nao pede uma acao automatica de finalizacao.',
+      FINISH_STANDARD: 'Existe bid apto para fechamento padrao; confira candidato e locks antes da decisao final.',
+      PENDING_REVIEW: 'A automacao colocaria o leilao em review para a Staff decidir o vencedor e a entrega.',
+      EXPAND_LAYER: 'Leilao T4 vencido sem bid apto na camada minima atual; a regra desce uma camada e prorroga o encerramento.',
+      RELIST: 'Leilao vencido sem bid valido restante; locks ativos seriam liberados e o ciclo aguardaria reabertura.',
+    };
+
+    return {
+      generatedAt: now,
+      auctionId,
+      action: diagnostics.outcome,
+      actionLabel: actionLabels[diagnostics.outcome],
+      description: descriptions[diagnostics.outcome],
+      candidate: candidate
+        ? {
+            bidId: candidate.id,
+            playerId: candidate.playerId,
+            nickname: candidate.nickname,
+            bidAmount: candidate.bidAmount,
+            dimensionalLayer: candidate.dimensionalLayer,
+            attendancePercentage: candidate.attendancePercentage,
+          }
+        : null,
+      locksToConsume: diagnostics.outcome === 'FINISH_STANDARD' && winnerLock
+        ? [{
+            id: winnerLock.id,
+            playerId: winnerLock.playerId,
+            nickname: winnerLock.nickname,
+            amount: winnerLock.amount,
+          }]
+        : [],
+      locksToRelease: diagnostics.outcome === 'RELIST'
+        ? activeLocks.map((lock) => ({ id: lock.id, playerId: lock.playerId, nickname: lock.nickname, amount: lock.amount }))
+        : diagnostics.outcome === 'FINISH_STANDARD'
+          ? activeLocks
+              .filter((lock) => lock.playerId !== candidate?.playerId)
+              .map((lock) => ({ id: lock.id, playerId: lock.playerId, nickname: lock.nickname, amount: lock.amount }))
+          : [],
+      ignoredBids,
+      nextState: this.getAuctionPreviewNextState(diagnostics),
+      risks,
+    };
+  }
+
+  async getAuctionDossier(auctionId: string): Promise<AuctionDossier> {
+    const [diagnostics, timeline, preview] = await Promise.all([
+      this.getAuctionDiagnostics(auctionId),
+      this.getAuctionTimeline(auctionId),
+      this.getAuctionFinalizationPreview(auctionId),
+    ]);
+    const lines = [
+      `# Dossie Staff - ${diagnostics.auction.itemName}`,
+      '',
+      `Gerado em: ${preview.generatedAt.toISOString()}`,
+      `Leilao: ${diagnostics.auction.id}`,
+      `Status: ${diagnostics.auction.status}`,
+      `Modo: ${diagnostics.auction.auctionMode}`,
+      `Tier/tipo: ${diagnostics.auction.itemTier} / ${diagnostics.auction.itemType}`,
+      `Encerramento: ${diagnostics.auction.endsAt.toISOString()}`,
+      `Camada minima: ${diagnostics.auction.minimumLayer ?? '-'}`,
+      '',
+      '## Estado',
+      `${diagnostics.stateReason.title}: ${diagnostics.stateReason.description}`,
+      '',
+      '## Previa de finalizacao',
+      `Acao: ${preview.actionLabel}`,
+      `Descricao: ${preview.description}`,
+      preview.candidate
+        ? `Candidato: ${preview.candidate.nickname} (${preview.candidate.bidAmount} DKP, layer ${preview.candidate.dimensionalLayer}, presenca ${preview.candidate.attendancePercentage.toFixed(2)}%)`
+        : 'Candidato: -',
+      preview.nextState
+        ? `Proximo estado previsto: ${preview.nextState.status}, camada ${preview.nextState.minimumLayer ?? '-'}, fim ${preview.nextState.endsAt?.toISOString() ?? '-'}, reabre ${preview.nextState.reopensAt?.toISOString() ?? '-'}`
+        : 'Proximo estado previsto: -',
+      '',
+      '## Contadores',
+      `Bids: ${diagnostics.counts.bids} (${diagnostics.counts.validBids} validos, ${diagnostics.counts.invalidBids} invalidos)`,
+      `Locks ativos: ${diagnostics.counts.activeLocks}`,
+      `Bids validos com lock: ${diagnostics.counts.validBidsWithActiveLocks}`,
+      `Bids na camada minima: ${diagnostics.counts.validBidsAtMinimumLayer}`,
+      `Cancelamentos: ${diagnostics.counts.cancellationRequests}`,
+      `Votos review: ${diagnostics.counts.approvalVotes} aprovacao / ${diagnostics.counts.rejectionVotes} rejeicao`,
+      `Votos invalidacao: ${diagnostics.counts.invalidationVotes}`,
+      `Audit logs relacionados: ${diagnostics.counts.auditLogs}`,
+      '',
+      '## Riscos e problemas',
+      ...this.markdownList(preview.risks.map((risk) => `[${risk.severity}] ${risk.title}: ${risk.description}`)),
+      '',
+      '## Bids',
+      ...this.markdownList(diagnostics.bids.map((bid) => `${bid.nickname}: ${bid.bidAmount} DKP, layer ${bid.dimensionalLayer}, presenca ${bid.attendancePercentage.toFixed(2)}%, valido=${bid.isValid ? 'sim' : 'nao'}, lock=${bid.hasActiveLock ? `${bid.activeLockAmount ?? 0} DKP` : 'nao'}`)),
+      '',
+      '## Locks ativos que a previa liberaria/consumiria',
+      ...this.markdownList([
+        ...preview.locksToConsume.map((lock) => `Consumir: ${lock.nickname} - ${lock.amount} DKP`),
+        ...preview.locksToRelease.map((lock) => `Liberar: ${lock.nickname} - ${lock.amount} DKP`),
+      ]),
+      '',
+      '## Timeline resumida',
+      ...this.markdownList(timeline.slice(-20).map((event) => `${event.occurredAt.toISOString()} - ${event.type} - ${event.title}: ${event.description}`)),
+    ];
+
+    return {
+      generatedAt: preview.generatedAt,
+      auctionId,
+      title: `Dossie Staff - ${diagnostics.auction.itemName}`,
+      markdown: lines.join('\n'),
+    };
+  }
+
   async getAuctionDiagnostics(auctionId: string): Promise<AuctionDiagnosticSummary> {
     const auction = await this.prisma.auction.findUnique({
       where: { id: auctionId },
@@ -1717,10 +1902,10 @@ export class OperationsService {
 
     let outcome: AuctionDiagnosticSummary['outcome'] = 'NO_ACTION';
     if (auction.status === AuctionStatus.OPEN && auction.endsAt <= now) {
-      if (validBids.length === 0) {
-        outcome = 'RELIST';
-      } else if (auction.itemTier === ItemTier.T4 && minimumLayer && minimumLayer > 1 && validBidsAtMinimumLayer.length === 0) {
+      if (auction.itemTier === ItemTier.T4 && minimumLayer && minimumLayer > 1 && validBidsAtMinimumLayer.length === 0) {
         outcome = 'EXPAND_LAYER';
+      } else if (validBids.length === 0) {
+        outcome = 'RELIST';
       } else if (auction.requiresStaffReview || auction.auctionMode !== AuctionMode.STANDARD) {
         outcome = 'PENDING_REVIEW';
       } else {
@@ -1867,6 +2052,67 @@ export class OperationsService {
   private userLabel(user?: { discordNickname?: string | null; discordUsername: string } | null): string | null {
     if (!user) return null;
     return user.discordNickname ?? user.discordUsername;
+  }
+
+  private getAuctionPreviewNextState(diagnostics: AuctionDiagnosticSummary): AuctionFinalizationPreview['nextState'] {
+    const { auction, outcome } = diagnostics;
+    const minimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : null);
+
+    if (outcome === 'EXPAND_LAYER' && minimumLayer && minimumLayer > 1) {
+      return {
+        status: AuctionStatus.OPEN,
+        minimumLayer: minimumLayer - 1,
+        endsAt: this.addDays(auction.endsAt, 1),
+        reopensAt: null,
+      };
+    }
+
+    if (outcome === 'RELIST') {
+      if (auction.itemTier === ItemTier.T4) {
+        return {
+          status: AuctionStatus.RELISTED,
+          minimumLayer: 4,
+          endsAt: auction.endsAt,
+          reopensAt: this.addDays(auction.createdAt, AUCTION_RELIST_DELAY_DAYS),
+        };
+      }
+
+      return {
+        status: AuctionStatus.RELISTED,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: this.addDays(new Date(), AUCTION_RELIST_DELAY_DAYS),
+      };
+    }
+
+    if (outcome === 'PENDING_REVIEW') {
+      return {
+        status: AuctionStatus.PENDING_REVIEW,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: null,
+      };
+    }
+
+    if (outcome === 'FINISH_STANDARD') {
+      return {
+        status: AuctionStatus.FINISHED,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: null,
+      };
+    }
+
+    return undefined;
+  }
+
+  private addDays(date: Date, days: number): Date {
+    return new Date(date.getTime() + days * DAYS);
+  }
+
+  private markdownList(items: string[]): string[] {
+    if (items.length === 0) return ['- Nenhum registro.'];
+    return items.map((item) => `- ${item}`);
   }
 
   private getAuctionStateReason(

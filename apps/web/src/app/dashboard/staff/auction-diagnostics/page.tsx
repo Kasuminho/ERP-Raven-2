@@ -3,17 +3,18 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clipboard, FileText, Search } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
-import { useAuctionDiagnosticOptions, useAuctionDiagnostics, useAuctionTimeline } from '@/hooks/use-guild-api';
+import { notifyToast } from '@/components/ui/toaster';
+import { useAuctionDiagnosticOptions, useAuctionDiagnostics, useAuctionDossier, useAuctionFinalizationPreview, useAuctionTimeline } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionTimelineEvent } from '@/types/api';
+import type { AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent } from '@/types/api';
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -96,6 +97,103 @@ function TimelineCard({ events }: { events: AuctionTimelineEvent[] }) {
   );
 }
 
+function PreviewCard({ preview }: { preview: AuctionFinalizationPreview }) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Previa de finalizacao</CardTitle>
+          <Badge tone={preview.action === 'NO_ACTION' ? 'green' : preview.action === 'RELIST' ? 'red' : 'gold'}>
+            {preview.actionLabel}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">{preview.description}</p>
+        <div className="grid gap-3 md:grid-cols-3">
+          <CountCard label="Locks a consumir" value={preview.locksToConsume.length} />
+          <CountCard label="Locks a liberar" value={preview.locksToRelease.length} />
+          <CountCard label="Bids ignorados" value={preview.ignoredBids.length} />
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="rounded-lg border border-white/10 bg-background/45 p-4">
+            <p className="text-sm font-semibold">Candidato previsto</p>
+            {preview.candidate ? (
+              <div className="mt-2 text-sm text-muted-foreground">
+                <p>{preview.candidate.nickname} - {preview.candidate.bidAmount} DKP</p>
+                <p>Layer {preview.candidate.dimensionalLayer} - {preview.candidate.attendancePercentage.toFixed(2)}% presenca</p>
+                <p className="mt-1 font-mono text-xs">{shortId(preview.candidate.bidId)}</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">Nenhum candidato selecionado pela previa.</p>
+            )}
+          </div>
+          <div className="rounded-lg border border-white/10 bg-background/45 p-4">
+            <p className="text-sm font-semibold">Proximo estado</p>
+            {preview.nextState ? (
+              <div className="mt-2 text-sm text-muted-foreground">
+                <p>Status: {preview.nextState.status}</p>
+                <p>Camada: {preview.nextState.minimumLayer ?? '-'}</p>
+                <p>Fim: {formatDate(preview.nextState.endsAt)}</p>
+                <p>Reabre: {formatDate(preview.nextState.reopensAt)}</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">Sem transicao prevista agora.</p>
+            )}
+          </div>
+        </div>
+        {preview.risks.length ? (
+          <div className="space-y-2">
+            {preview.risks.slice(0, 5).map((risk, index) => (
+              <div key={`${risk.title}-${index}`} className="rounded-lg border border-white/10 bg-background/45 p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-primary" />
+                  <p className="font-semibold">{risk.title}</p>
+                  <Badge tone={issueTone(risk.severity)}>{risk.severity}</Badge>
+                </div>
+                <p className="mt-1 text-muted-foreground">{risk.description}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DossierCard({ dossier }: { dossier: AuctionDossier }) {
+  async function copyDossier() {
+    try {
+      await navigator.clipboard.writeText(dossier.markdown);
+      notifyToast({ title: 'Dossie copiado', description: 'Markdown Staff pronto para colar no atendimento.', tone: 'success' });
+    } catch {
+      notifyToast({ title: 'Nao consegui copiar', description: 'O navegador bloqueou o clipboard desta vez.', tone: 'error' });
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <CardTitle>Dossie Staff</CardTitle>
+          </div>
+          <Button type="button" variant="secondary" className="gap-2" onClick={() => void copyDossier()}>
+            <Clipboard className="h-4 w-4" />
+            Copiar
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/25 p-4 text-xs text-muted-foreground">
+          {dossier.markdown}
+        </pre>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AuctionDiagnosticsPage() {
   const locale = useLocaleStore((state) => state.locale);
   const router = useRouter();
@@ -105,6 +203,8 @@ export default function AuctionDiagnosticsPage() {
   const auctionOptions = useAuctionDiagnosticOptions();
   const diagnostics = useAuctionDiagnostics(auctionId);
   const timeline = useAuctionTimeline(auctionId);
+  const preview = useAuctionFinalizationPreview(auctionId);
+  const dossier = useAuctionDossier(auctionId);
 
   useEffect(() => {
     setDraftId(auctionId);
@@ -231,6 +331,27 @@ export default function AuctionDiagnosticsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">{diagnostics.data.stateReason.description}</p>
               </CardContent>
             </Card>
+
+            {preview.isError ? (
+              <Card className="border-red-400/35 bg-red-500/10">
+                <CardContent className="pt-5">
+                  <p className="font-semibold">Nao consegui montar a previa de finalizacao.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">O diagnostico principal continua disponivel para investigar manualmente.</p>
+                </CardContent>
+              </Card>
+            ) : preview.data ? (
+              <PreviewCard preview={preview.data} />
+            ) : null}
+
+            {dossier.isError ? (
+              <Card className="border-red-400/35 bg-red-500/10">
+                <CardContent className="pt-5">
+                  <p className="font-semibold">Nao consegui gerar o dossie Staff.</p>
+                </CardContent>
+              </Card>
+            ) : dossier.data ? (
+              <DossierCard dossier={dossier.data} />
+            ) : null}
 
             <Card>
               <CardHeader>
