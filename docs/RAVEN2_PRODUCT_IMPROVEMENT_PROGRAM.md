@@ -256,11 +256,18 @@ Entrega:
 
 Objetivo: trocar extrato frio por narrativa compreensivel.
 
+Estado em 2026-06-29: implementado em `/dashboard/timeline`.
+
 Entrega:
 
 - Feed pessoal com DKP, drops, bids, locks, progresso, codex e requests.
 - Filtros por tipo e periodo.
 - Textos PT-BR/EN na UI conforme locale.
+- `GET /players/me/history` manteve o payload historico e passou a enriquecer
+  `timeline` com `titleEn`, `descriptionEn`, `tone`, `href` e metadados seguros.
+- Eventos de leilao no feed do player continuam limitados ao proprio bid e ao
+  status do leilao, sem ranking, concorrentes, locks de terceiros ou identidade
+  de outros participantes.
 
 ## Epico D - Requests e craft com previsao operacional
 

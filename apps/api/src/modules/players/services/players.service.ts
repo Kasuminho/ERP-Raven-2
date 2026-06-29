@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PlayerClass, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
+import { DKPTransactionType, PlayerClass, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PlayersRepository } from '../repositories/players.repository';
@@ -25,6 +25,16 @@ type AuditIdentity = {
   dropsCount: number;
   requestsCount: number;
   lastActivityAt?: Date | null;
+};
+
+type PlayerTimelineTone = 'gold' | 'green' | 'red' | 'blue' | 'muted';
+
+type PlayerTimelineCopy = {
+  title: string;
+  description: string;
+  titleEn: string;
+  descriptionEn: string;
+  tone: PlayerTimelineTone;
 };
 
 @Injectable()
@@ -702,61 +712,292 @@ export class PlayersService {
         id: row.id,
         type: 'DROP_DELIVERED',
         title: row.itemName ?? row.itemCatalog?.namePt ?? 'Drop entregue',
-        description: 'Drop registrado no historico do jogador.',
+        description: `Voce recebeu ${row.itemName ?? row.itemCatalog?.namePt ?? 'um drop'} e agora isso esta registrado no seu historico.`,
+        titleEn: row.itemCatalog?.nameEn ?? row.itemName ?? 'Delivered drop',
+        descriptionEn: `You received ${row.itemCatalog?.nameEn ?? row.itemName ?? 'a drop'} and it is now registered in your history.`,
+        tone: 'green' as PlayerTimelineTone,
+        href: '/dashboard/drops',
+        metadata: {
+          itemName: row.itemName,
+          itemCatalogId: row.itemCatalogId,
+        },
         createdAt: row.deliveredAt ?? row.createdAt,
       })),
-      ...progress.map((row) => ({
-        id: row.id,
-        type: 'PROGRESS',
-        title: row.category,
-        description: row.note ?? row.reviewStatus,
-        createdAt: row.createdAt,
-      })),
+      ...progress.map((row) => {
+        const copy = this.progressTimelineCopy(row.category, row.reviewStatus);
+        return {
+          id: row.id,
+          type: 'PROGRESS',
+          ...copy,
+          href: '/dashboard/profile',
+          metadata: {
+            category: row.category,
+            reviewStatus: row.reviewStatus,
+          },
+          createdAt: row.createdAt,
+        };
+      }),
       ...itemRequests.map((row) => ({
         id: row.id,
         type: 'ITEM_REQUEST',
         title: row.itemName,
         description: `Rank #${row.rankPosition} - falta ${row.remainingQuantity}/${row.totalQuantity}.`,
+        titleEn: row.itemCatalog?.nameEn ?? row.itemName,
+        descriptionEn: `Rank #${row.rankPosition} - ${row.remainingQuantity}/${row.totalQuantity} still missing.`,
+        tone: row.remainingQuantity > 0 ? ('blue' as PlayerTimelineTone) : ('green' as PlayerTimelineTone),
+        href: '/dashboard/item-requests',
+        metadata: {
+          rankPosition: row.rankPosition,
+          remainingQuantity: row.remainingQuantity,
+          totalQuantity: row.totalQuantity,
+          updateProofStatus: row.updateProofStatus,
+        },
         createdAt: row.updatedAt,
       })),
-      ...transactions.map((row) => ({
-        id: row.id,
-        type: 'DKP',
-        title: row.type,
-        description: `${row.amount} DKP`,
-        createdAt: row.createdAt,
-      })),
+      ...transactions.map((row) => {
+        const copy = this.dkpTimelineCopy(row.type, row.amount);
+        return {
+          id: row.id,
+          type: 'DKP',
+          ...copy,
+          href: '/dashboard/profile',
+          metadata: {
+            amount: row.amount,
+            transactionType: row.type,
+            referenceId: row.referenceId,
+          },
+          createdAt: row.createdAt,
+        };
+      }),
       ...daoshiReceipts.map((row) => ({
         id: row.id,
         type: 'DAOSHI',
         title: `Daoshi ${row.status}`,
-        description: `${(row.approvedCents ?? row.purchaseCents) / 100} BRL`,
+        description: this.daoshiTimelineDescription(row.status, row.approvedCents ?? row.purchaseCents),
+        titleEn: `Daoshi ${row.status}`,
+        descriptionEn: this.daoshiTimelineDescriptionEn(row.status, row.approvedCents ?? row.purchaseCents),
+        tone: row.status === 'APPROVED' ? ('green' as PlayerTimelineTone) : row.status === 'REJECTED' ? ('red' as PlayerTimelineTone) : ('blue' as PlayerTimelineTone),
+        href: '/dashboard/daoshi',
+        metadata: {
+          status: row.status,
+          cents: row.approvedCents ?? row.purchaseCents,
+        },
         createdAt: row.reviewedAt ?? row.createdAt,
       })),
       ...codexRequests.map((row) => ({
         id: row.id,
         type: 'CODEX',
         title: `Codex ${row.status}`,
-        description: row.note ?? 'Request de codex',
+        description: this.codexTimelineDescription(row.status),
+        titleEn: `Codex ${row.status}`,
+        descriptionEn: this.codexTimelineDescriptionEn(row.status),
+        tone: row.status === 'CONFIRMED' ? ('green' as PlayerTimelineTone) : row.status === 'CANCELLED' ? ('red' as PlayerTimelineTone) : ('blue' as PlayerTimelineTone),
+        href: '/dashboard/codex',
+        metadata: {
+          status: row.status,
+        },
         createdAt: row.updatedAt,
       })),
       ...auctionBids.map((row) => ({
         id: row.id,
         type: 'AUCTION_BID',
         title: row.auction.itemName,
-        description: `${row.bidAmount} DKP - ${row.auction.status}`,
+        description: `Voce registrou ${row.bidAmount} DKP neste leilao. Estado atual: ${row.auction.status}.`,
+        titleEn: row.auction.itemName,
+        descriptionEn: `You placed ${row.bidAmount} DKP in this auction. Current status: ${row.auction.status}.`,
+        tone: row.auction.status === 'FINISHED' ? ('green' as PlayerTimelineTone) : row.auction.status === 'CANCELLED' || row.auction.status === 'RELISTED' ? ('red' as PlayerTimelineTone) : ('gold' as PlayerTimelineTone),
+        href: `/dashboard/auctions/${row.auctionId}`,
+        metadata: {
+          bidAmount: row.bidAmount,
+          auctionId: row.auctionId,
+          auctionStatus: row.auction.status,
+          isValid: row.isValid,
+        },
         createdAt: row.createdAt,
       })),
       ...attendances.map((row) => ({
         id: row.id,
         type: 'ATTENDANCE',
         title: row.event.name,
-        description: row.attended ? 'Presente' : 'Ausente',
+        description: row.attended ? 'Presenca confirmada para este evento.' : 'Ausencia registrada para este evento.',
+        titleEn: row.event.name,
+        descriptionEn: row.attended ? 'Attendance confirmed for this event.' : 'Absence registered for this event.',
+        tone: row.attended ? ('green' as PlayerTimelineTone) : ('muted' as PlayerTimelineTone),
+        href: '/dashboard/attendance',
+        metadata: {
+          eventId: row.eventId,
+          attended: row.attended,
+          eventType: row.event.type,
+        },
         createdAt: row.createdAt,
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return { discordId, player, drops, progress, itemRequests, transactions, daoshiReceipts, codexRequests, auctionBids, attendances, timeline };
+  }
+
+  private dkpTimelineCopy(type: DKPTransactionType, amount: number): PlayerTimelineCopy {
+    const absoluteAmount = Math.abs(amount);
+    const signedAmount = amount > 0 ? `+${amount}` : `${amount}`;
+
+    if (type === DKPTransactionType.EVENT_REWARD) {
+      return {
+        title: 'DKP ganho em evento',
+        description: `Voce ganhou ${absoluteAmount} DKP por participar da operacao da guilda.`,
+        titleEn: 'DKP earned from event',
+        descriptionEn: `You earned ${absoluteAmount} DKP by joining the guild operation.`,
+        tone: 'green',
+      };
+    }
+
+    if (type === DKPTransactionType.AUCTION_LOCK) {
+      return {
+        title: 'DKP reservado para leilao',
+        description: `${absoluteAmount} DKP ficaram travados enquanto seu lance disputa o item.`,
+        titleEn: 'DKP locked for auction',
+        descriptionEn: `${absoluteAmount} DKP was locked while your bid competes for the item.`,
+        tone: 'gold',
+      };
+    }
+
+    if (type === DKPTransactionType.AUCTION_REFUND) {
+      return {
+        title: 'DKP devolvido',
+        description: `${absoluteAmount} DKP voltaram para voce depois do ciclo do leilao.`,
+        titleEn: 'DKP refunded',
+        descriptionEn: `${absoluteAmount} DKP returned to you after the auction cycle.`,
+        tone: 'green',
+      };
+    }
+
+    if (type === DKPTransactionType.AUCTION_WIN) {
+      return {
+        title: 'DKP consumido em vitoria',
+        description: `${absoluteAmount} DKP foram consumidos pela vitoria no leilao.`,
+        titleEn: 'DKP spent on auction win',
+        descriptionEn: `${absoluteAmount} DKP was spent on the auction win.`,
+        tone: 'red',
+      };
+    }
+
+    return {
+      title: 'Ajuste manual de DKP',
+      description: `A Staff ajustou seu saldo em ${signedAmount} DKP.`,
+      titleEn: 'Manual DKP adjustment',
+      descriptionEn: `Staff adjusted your balance by ${signedAmount} DKP.`,
+      tone: amount >= 0 ? 'green' : 'red',
+    };
+  }
+
+  private progressTimelineCopy(category: ProgressCategory, status: ProgressReviewStatus): PlayerTimelineCopy {
+    const categoryLabel = this.progressCategoryLabel(category);
+    const categoryLabelEn = this.progressCategoryLabelEn(category);
+
+    if (status === ProgressReviewStatus.APPROVED) {
+      return {
+        title: `${categoryLabel} aprovado`,
+        description: `A Staff aprovou seu progresso em ${categoryLabel}. Bom, agora nao da pra fingir que nao evoluiu.`,
+        titleEn: `${categoryLabelEn} approved`,
+        descriptionEn: `Staff approved your ${categoryLabelEn} progress.`,
+        tone: 'green',
+      };
+    }
+
+    if (status === ProgressReviewStatus.REJECTED) {
+      return {
+        title: `${categoryLabel} rejeitado`,
+        description: `A Staff rejeitou essa atualizacao de ${categoryLabel}. Revise o print e tente de novo.`,
+        titleEn: `${categoryLabelEn} rejected`,
+        descriptionEn: `Staff rejected this ${categoryLabelEn} update. Review the proof and try again.`,
+        tone: 'red',
+      };
+    }
+
+    if (status === ProgressReviewStatus.PENDING) {
+      return {
+        title: `${categoryLabel} em review`,
+        description: `Sua atualizacao de ${categoryLabel} entrou na fila de review da Staff.`,
+        titleEn: `${categoryLabelEn} under review`,
+        descriptionEn: `Your ${categoryLabelEn} update entered the Staff review queue.`,
+        tone: 'blue',
+      };
+    }
+
+    return {
+      title: `${categoryLabel} registrado`,
+      description: `Seu progresso em ${categoryLabel} foi registrado no historico.`,
+      titleEn: `${categoryLabelEn} registered`,
+      descriptionEn: `Your ${categoryLabelEn} progress was registered in history.`,
+      tone: 'muted',
+    };
+  }
+
+  private progressCategoryLabel(category: ProgressCategory): string {
+    const labels: Record<ProgressCategory, string> = {
+      STELLAS_AMPLIFICATION: 'Amplificacao de Stellas',
+      EQUIPMENT: 'Equipamento',
+      RELICS: 'Reliquias',
+      STIGMA: 'Stigma',
+      ITEM_COLLECTION: 'Colecao de itens',
+      SKILLS: 'Skills',
+      PARADISE_STONES: 'Pedras do Paraiso',
+      STATUS: 'Status/CP',
+      DIMENSIONAL_RIFT: 'Fenda Dimensional',
+      RUNES: 'Runas',
+    };
+
+    return labels[category] ?? category;
+  }
+
+  private progressCategoryLabelEn(category: ProgressCategory): string {
+    const labels: Record<ProgressCategory, string> = {
+      STELLAS_AMPLIFICATION: 'Stellas Amplification',
+      EQUIPMENT: 'Equipment',
+      RELICS: 'Relics',
+      STIGMA: 'Stigma',
+      ITEM_COLLECTION: 'Item Collection',
+      SKILLS: 'Skills',
+      PARADISE_STONES: 'Paradise Stones',
+      STATUS: 'Status/CP',
+      DIMENSIONAL_RIFT: 'Dimensional Rift',
+      RUNES: 'Runes',
+    };
+
+    return labels[category] ?? category;
+  }
+
+  private daoshiTimelineDescription(status: string, cents: number): string {
+    const amount = this.formatBrl(cents);
+    if (status === 'APPROVED') return `Recibo aprovado com ${amount} validados para Daoshi.`;
+    if (status === 'REJECTED') return `Recibo rejeitado pela Staff. Valor informado: ${amount}.`;
+    return `Recibo enviado para review da Staff. Valor informado: ${amount}.`;
+  }
+
+  private daoshiTimelineDescriptionEn(status: string, cents: number): string {
+    const amount = this.formatBrl(cents);
+    if (status === 'APPROVED') return `Receipt approved with ${amount} validated for Daoshi.`;
+    if (status === 'REJECTED') return `Receipt rejected by Staff. Submitted amount: ${amount}.`;
+    return `Receipt sent to Staff review. Submitted amount: ${amount}.`;
+  }
+
+  private codexTimelineDescription(status: string): string {
+    if (status === 'CONFIRMED') return 'Codex confirmado como entregue.';
+    if (status === 'SENT') return 'Codex enviado, aguardando confirmacao.';
+    if (status === 'NEEDS_RETRY') return 'Codex precisa de nova tentativa.';
+    if (status === 'CANCELLED') return 'Request de codex cancelado.';
+    return 'Request de codex entrou na fila.';
+  }
+
+  private codexTimelineDescriptionEn(status: string): string {
+    if (status === 'CONFIRMED') return 'Codex confirmed as delivered.';
+    if (status === 'SENT') return 'Codex sent, waiting for confirmation.';
+    if (status === 'NEEDS_RETRY') return 'Codex needs another attempt.';
+    if (status === 'CANCELLED') return 'Codex request cancelled.';
+    return 'Codex request entered the queue.';
+  }
+
+  private formatBrl(cents: number): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
   }
 
   private normalizeProgressCategory(category?: ProgressCategory): ProgressCategory {

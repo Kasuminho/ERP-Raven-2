@@ -624,6 +624,19 @@ export type PlayerProgressComment = {
   };
 };
 
+export type PlayerTimelineEntry = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  titleEn?: string;
+  descriptionEn?: string;
+  tone?: 'gold' | 'green' | 'red' | 'blue' | 'muted';
+  href?: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+};
+
 export type PlayerHistory = {
   discordId?: string;
   player?: PlayerProfile & { user?: { discordId: string; discordUsername: string; preferredLocale?: string } };
@@ -635,7 +648,7 @@ export type PlayerHistory = {
   codexRequests?: CodexRequest[];
   auctionBids?: AuctionBid[];
   attendances?: Array<{ id: string; attended: boolean; createdAt: string; event: EventRecord }>;
-  timeline?: Array<{ id: string; type: string; title: string; description: string; createdAt: string }>;
+  timeline?: PlayerTimelineEntry[];
 };
 
 export type AuditIdentity = {
