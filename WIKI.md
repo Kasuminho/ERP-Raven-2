@@ -89,6 +89,7 @@ Automacao ativa:
 - A pagina de leilao para player mostra um painel "antes do bid" com elegibilidade propria: camada atual/exigida, DKP disponivel/exigido, attendance, modo do leilao e se a entrega passa por review Staff. O endpoint `GET /eligibility/player/:playerId/auction/:auctionId` inclui esses campos apenas para o player consultado e nao expõe ranking, concorrentes ou bids de terceiros.
 - No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
+- A tela player de interesses em `/dashboard/interests` permite selecionar varios posts abertos e declarar em lote. Cada post mantem nota, print ou transmutar proprio; a confirmacao unica envia cada declaracao pelo endpoint existente para preservar validacoes de duplicidade, janela aberta e print obrigatorio.
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam os grupos de ferramentas, contadores, pendencias, saude e auditoria.
@@ -251,6 +252,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Player pode declarar interesse em lote, mantendo print/nota/transmutar por post e uma confirmacao unica antes de enviar. | interesses/player |
 | 2026-06-29 | Interesses Staff ganharam comparador por interessado com classe, camada, presenca, DKP, requests ativos, nota Staff e historico de loot em endpoint Staff-only. | interesses/Staff |
 | 2026-06-29 | Requests ganharam transparencia da prioridade de material T3 sobre Quintessencia, com badge, texto Staff/player e bloqueio auditado de entrega quando aplicavel. | requests/craft |
 | 2026-06-29 | Requests passaram a sugerir alternativas comparaveis com fila menor, mostrando trade-off sem trocar automaticamente. | requests/UX |

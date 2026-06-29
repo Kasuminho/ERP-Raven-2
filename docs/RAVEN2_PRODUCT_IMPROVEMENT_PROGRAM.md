@@ -358,12 +358,19 @@ Entrega:
 
 Objetivo: facilitar quando varios itens parecidos abrem juntos.
 
+Estado em 2026-06-29: implementado em `/dashboard/interests`.
+
 Entrega:
 
 - Tela player para declarar interesse em multiplos posts abertos.
 - Permitir print por item quando necessario.
 - Confirmacao unica com resumo.
 - Manter validacoes atuais de cada interesse.
+- O lote usa o endpoint existente de declaracao, enviando cada post
+  individualmente para preservar as validacoes atuais de post aberto, player
+  principal, duplicidade e print/transmutar.
+- Cada card continua com nota, print ou transmutar proprio; o painel superior
+  seleciona itens prontos, aponta pendencias e confirma todos juntos.
 
 ## Epico F - Eventos, presenca e lote de bosses
 

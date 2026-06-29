@@ -605,7 +605,25 @@ export function useDeclareItemInterest() {
         imageUrl: data.imageUrl,
         isTransmuteRequest: data.isTransmuteRequest,
       })).data,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+  });
+}
+
+export function useDeclareBulkItemInterests() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: Array<{ postId: string; note?: string; imageUrl?: string; isTransmuteRequest?: boolean }>) => {
+      const declared = [];
+      for (const row of rows) {
+        declared.push((await api.post(`/item-interests/${row.postId}/declare`, {
+          note: row.note,
+          imageUrl: row.imageUrl,
+          isTransmuteRequest: row.isTransmuteRequest,
+        })).data);
+      }
+      return declared;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
   });
 }
 

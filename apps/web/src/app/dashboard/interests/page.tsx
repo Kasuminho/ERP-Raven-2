@@ -9,7 +9,7 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useDeclareItemInterest, useItemInterests, useMarkItemInterestSeen, useUploadImage } from '@/hooks/use-guild-api';
+import { useDeclareBulkItemInterests, useDeclareItemInterest, useItemInterests, useMarkItemInterestSeen, useUploadImage } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -41,10 +41,13 @@ export default function ItemInterestsPage() {
   const locale = useLocaleStore((state) => state.locale);
   const posts = useItemInterests('OPEN');
   const declareInterest = useDeclareItemInterest();
+  const declareBulkInterests = useDeclareBulkItemInterests();
   const markSeen = useMarkItemInterestSeen();
   const uploadImage = useUploadImage();
   const [forms, setForms] = useState<Record<string, InterestForm>>({});
   const [transmuteConfirmationPostId, setTransmuteConfirmationPostId] = useState<string>();
+  const [batchConfirmationOpen, setBatchConfirmationOpen] = useState(false);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<'ALL' | ItemType>('ALL');
   const [createdDateFilter, setCreatedDateFilter] = useState('');
   const [hideDeclared, setHideDeclared] = useState(false);
@@ -73,6 +76,29 @@ export default function ItemInterestsPage() {
     );
   };
 
+  const formForPost = (postId: string): InterestForm => forms[postId] ?? { note: '', imageUrl: '', useTransmute: false };
+
+  const declarationPayloadForPost = (postId: string) => {
+    const form = formForPost(postId);
+    return {
+      postId,
+      note: form.note,
+      imageUrl: form.useTransmute ? TRANSMUTE_IMAGE_URL : form.imageUrl,
+      isTransmuteRequest: form.useTransmute,
+    };
+  };
+
+  const canDeclarePost = (postId: string): boolean => {
+    const form = formForPost(postId);
+    return form.useTransmute || Boolean(form.imageUrl);
+  };
+
+  const toggleBatchSelection = (postId: string, checked: boolean) => {
+    setSelectedPostIds((current) => checked
+      ? [...new Set([...current, postId])]
+      : current.filter((id) => id !== postId));
+  };
+
   const filteredPosts = (posts.data ?? []).filter((post: ItemInterestPost) => {
     if (typeFilter !== 'ALL' && post.itemCatalog?.itemType !== typeFilter) return false;
     if (createdDateFilter && localDateKey(post.createdAt) !== createdDateFilter) return false;
@@ -81,6 +107,9 @@ export default function ItemInterestsPage() {
 
     return true;
   });
+  const selectedPosts = filteredPosts.filter((post) => selectedPostIds.includes(post.id) && !post.viewerHasDeclared);
+  const selectedReadyPosts = selectedPosts.filter((post) => canDeclarePost(post.id));
+  const selectedMissingProof = selectedPosts.length - selectedReadyPosts.length;
 
   return (
     <div className="space-y-6">
@@ -128,6 +157,40 @@ export default function ItemInterestsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
+          <div>
+            <p className="font-semibold">{t(locale, 'batchInterests')}</p>
+            <p className="text-sm text-muted-foreground">{t(locale, 'batchInterestsHelp')}</p>
+          </div>
+          <Badge tone={selectedPosts.length > 0 ? 'blue' : 'muted'}>{selectedPosts.length} {t(locale, 'selectedInterests')}</Badge>
+          <Button
+            variant="secondary"
+            onClick={() => setSelectedPostIds(filteredPosts.filter((post) => !post.viewerHasDeclared && canDeclarePost(post.id)).map((post) => post.id))}
+          >
+            {t(locale, 'selectReadyInterests')}
+          </Button>
+          <Button variant="secondary" onClick={() => setSelectedPostIds([])}>{t(locale, 'clearSelection')}</Button>
+          {selectedMissingProof > 0 && (
+            <p className="text-sm text-yellow-200 lg:col-span-4">{selectedMissingProof} {t(locale, 'batchMissingProof')}</p>
+          )}
+          {selectedPosts.length > 0 && (
+            <div className="flex flex-wrap gap-2 lg:col-span-4">
+              {selectedPosts.map((post) => (
+                <Badge key={post.id} tone={canDeclarePost(post.id) ? 'green' : 'gold'}>{post.title}</Badge>
+              ))}
+            </div>
+          )}
+          <Button
+            className="lg:col-start-4"
+            disabled={selectedPosts.length === 0 || selectedMissingProof > 0 || declareBulkInterests.isPending || uploadImage.isPending}
+            onClick={() => setBatchConfirmationOpen(true)}
+          >
+            {t(locale, 'declareSelectedInterests')}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-2">
         {filteredPosts.map((post) => {
           const form = forms[post.id] ?? { note: '', imageUrl: '', useTransmute: false };
@@ -160,6 +223,17 @@ export default function ItemInterestsPage() {
                 <p className="text-sm text-muted-foreground">{t(locale, 'closesAt')} {new Date(post.closesAt).toLocaleString()}</p>
                 {post.status === 'OPEN' && (
                   <div className="space-y-3">
+                    {!post.viewerHasDeclared && (
+                      <label className="flex items-center gap-2 rounded-md border bg-background/35 px-3 py-2 text-sm text-muted-foreground">
+                        <input
+                          className="h-4 w-4 accent-primary"
+                          type="checkbox"
+                          checked={selectedPostIds.includes(post.id)}
+                          onChange={(event) => toggleBatchSelection(post.id, event.target.checked)}
+                        />
+                        {t(locale, 'selectForBatch')}
+                      </label>
+                    )}
                     <Input placeholder={t(locale, 'optionalNote')} value={form.note} onChange={(event) => updateForm(post.id, { note: event.target.value })} />
                     {isEquipment && (
                       <label className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
@@ -227,6 +301,32 @@ export default function ItemInterestsPage() {
         onClose={() => setTransmuteConfirmationPostId(undefined)}
         onConfirm={() => {
           if (transmuteConfirmationPostId) declarePostInterest(transmuteConfirmationPostId);
+        }}
+      />
+      <ConfirmationDialog
+        open={batchConfirmationOpen}
+        title={t(locale, 'batchConfirmTitle')}
+        description={`${t(locale, 'batchConfirmDescription')} ${selectedReadyPosts.map((post) => post.title).join(', ')}`}
+        confirmLabel={t(locale, 'declareSelectedInterests')}
+        pending={declareBulkInterests.isPending}
+        tone="primary"
+        onClose={() => setBatchConfirmationOpen(false)}
+        onConfirm={() => {
+          const rows = selectedReadyPosts.map((post) => declarationPayloadForPost(post.id));
+          declareBulkInterests.mutate(rows, {
+            onSuccess: () => {
+              setForms((current) => {
+                const next = { ...current };
+                for (const row of rows) {
+                  next[row.postId] = { note: '', imageUrl: '', useTransmute: false };
+                }
+                return next;
+              });
+              setSelectedPostIds((current) => current.filter((id) => !rows.some((row) => row.postId === id)));
+              setBatchConfirmationOpen(false);
+              notifyToast({ title: t(locale, 'batchDeclaredSuccess'), tone: 'success' });
+            },
+          });
         }}
       />
       {!posts.isLoading && filteredPosts.length === 0 && (
