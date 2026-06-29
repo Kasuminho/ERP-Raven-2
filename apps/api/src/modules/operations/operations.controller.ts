@@ -16,6 +16,7 @@ import {
   LootFairnessSummary,
   NoticeBoardItem,
   OperationalHealthSummary,
+  PlayerActionPlan,
   PlayerComparisonSummary,
   PlayerOperationsSummary,
   SeasonMonthlySummary,
@@ -42,6 +43,11 @@ export class OperationsController {
   @Get('me/notices')
   async notices(@Req() req: AuthRequest): Promise<NoticeBoardItem[]> {
     return this.service.getNoticeBoard(req.user.userId);
+  }
+
+  @Get('me/action-plan')
+  async actionPlan(@Req() req: AuthRequest): Promise<PlayerActionPlan> {
+    return this.service.getPlayerActionPlan(req.user.userId);
   }
 
   @Get('rules')

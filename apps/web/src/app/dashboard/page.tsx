@@ -1,20 +1,87 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { AuctionCard } from '@/components/dashboard/auction-card';
 import { AttendanceCard } from '@/components/dashboard/attendance-card';
 import { DKPCard } from '@/components/dashboard/dkp-card';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAttendanceStats, useAuctions, useDkpLeaderboard, useDkpSummary, useEvents, useItemRequests, useMyNotifications, usePlayerId, usePlayerOperations } from '@/hooks/use-guild-api';
+import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { useAttendanceStats, useAuctions, useDkpLeaderboard, useDkpSummary, useEvents, useItemRequests, useMyNotifications, usePlayerActionPlan, usePlayerId, usePlayerOperations } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
+import type { PlayerActionPlan } from '@/types/api';
 
 function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
   return request.itemCatalog?.category === 'creature';
+}
+
+const actionTone = {
+  high: 'red',
+  medium: 'gold',
+  low: 'blue',
+} as const;
+
+function ActionPlanPanel({ plan }: { plan?: PlayerActionPlan }) {
+  if (!plan) {
+    return <Skeleton className="h-44" />;
+  }
+
+  return (
+    <Card className="border-primary/25 bg-card/70">
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <CardTitle>{plan.headline}</CardTitle>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">{plan.summary}</p>
+          </div>
+          <p className="text-xs text-muted-foreground">{new Date(plan.generatedAt).toLocaleString()}</p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {plan.cards.length ? (
+          <div className="grid gap-3 xl:grid-cols-2">
+            {plan.cards.map((card) => (
+              <div key={`${card.type}-${card.id}`} className="rounded-lg border border-white/10 bg-background/45 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{card.title}</p>
+                      <Badge tone={actionTone[card.priority]}>{card.priority}</Badge>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{card.description}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Motivo: {card.reason}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Impacto: {card.impact}</p>
+                    {card.dueAt ? <p className="mt-1 text-xs text-muted-foreground">Prazo: {new Date(card.dueAt).toLocaleString()}</p> : null}
+                  </div>
+                  <Link href={card.href} className="shrink-0">
+                    <Button variant="secondary" className="gap-2">
+                      {card.actionLabel}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-emerald-200" />
+            Sem acao urgente agora. Da ate para respirar antes do proximo boss.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function DashboardPage() {
@@ -27,6 +94,7 @@ export default function DashboardPage() {
   const leaderboard = useDkpLeaderboard();
   const itemRequests = useItemRequests();
   const operations = usePlayerOperations();
+  const actionPlan = usePlayerActionPlan();
   const notifications = useMyNotifications();
   const requestsNeedingUpdate = (itemRequests.data ?? []).filter((request) => !isBossRequest(request) && request.rankPosition === 1 && (request.warned3d || request.warned4d));
   const upcomingEvents = (events.data ?? [])
@@ -82,6 +150,7 @@ export default function DashboardPage() {
           <AttendanceCard percentage={attendance.data?.attendancePercentage} participated={attendance.data?.participatedEvents} eligible={attendance.data?.eligibleEvents} />
         )}
       </div>
+      <ActionPlanPanel plan={actionPlan.data} />
       {requestsNeedingUpdate.length > 0 && (
         <Card className="border-primary/45 bg-primary/10">
           <CardHeader><CardTitle>{t(locale, 'requestUpdateToastTitle')}</CardTitle></CardHeader>

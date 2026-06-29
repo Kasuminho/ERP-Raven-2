@@ -216,6 +216,8 @@ Entrega:
 
 Objetivo: o player entrar e saber a melhor acao.
 
+Estado em 2026-06-29: implementado no dashboard do player.
+
 Entrega:
 
 - Endpoint `GET /operations/me/action-plan`.
@@ -228,6 +230,8 @@ Entrega:
   - entrega ou codex aguardando confirmacao;
   - evento proximo.
 - Cada card tem `href`, prioridade e motivo.
+- Cada card tambem mostra impacto esperado e acao direta, sem expor ranking,
+  bids ou concorrentes de outros players.
 
 ### C2. Elegibilidade antes do bid
 

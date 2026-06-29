@@ -23,6 +23,25 @@ export type PlayerOperationsSummary = {
   };
 };
 
+export type PlayerActionPlan = {
+  generatedAt: Date;
+  headline: string;
+  summary: string;
+  cards: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    actionLabel: string;
+    href: string;
+    priority: OperationPriority;
+    reason: string;
+    impact: string;
+    dueAt?: Date | string | null;
+    metadata?: Record<string, unknown>;
+  }>;
+};
+
 export type StaffOperationsSummary = {
   tasks: OperationTask[];
   counts: {

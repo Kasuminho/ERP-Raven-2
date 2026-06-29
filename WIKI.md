@@ -84,6 +84,7 @@ Automacao ativa:
 - Acoes destrutivas e financeiras usam `ConfirmationDialog` acessivel, sem `window.confirm` ou `window.prompt`.
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
 - A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
+- O dashboard do player em `/dashboard` consulta `GET /operations/me/action-plan` e mostra cards acionaveis com proximo passo, motivo, impacto, prioridade e link direto para codex, progresso, requests, bids proprios, interesses, leiloes disponiveis e eventos proximos. O payload nao inclui ranking, bids nem concorrentes de outros players.
 - No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
@@ -243,6 +244,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Dashboard do player ganhou action plan com proximo passo, motivo, impacto e links diretos sem expor informacao sigilosa de leilao. | player/UX |
 | 2026-06-29 | Central Staff ganhou resumo matinal com pauta acionavel, leiloes vencidos/proximos, riscos de integridade/saude e Markdown copiavel. | Staff/operacao |
 | 2026-06-29 | Diagnostico Staff de leilao ganhou previa read-only de finalizacao, dossie Markdown copiavel e correcao da previsao T4 para expandir camada antes de relistar quando aplicavel. | leiloes/diagnostico |
 | 2026-06-29 | Criado programa completo de melhorias Raven2 e iniciado o epico de leiloes com motivo visual de estado e timeline operacional no diagnostico Staff. | produto/UX/leiloes |

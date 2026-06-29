@@ -16,7 +16,7 @@ import { PrismaService } from '@database/prisma.service';
 import { BusinessRulesService } from '../business-rules/business-rules.service';
 import { bilingualBlocks, pickVoiceLine } from '../discord/bot/embeds/webhook-voice';
 import { NotificationService } from '../discord/services/notification.service';
-import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, StaffMorningBriefing, OperationPriority, OperationTask } from './operations.types';
+import { PlayerActionPlan, PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, StaffMorningBriefing, OperationPriority, OperationTask } from './operations.types';
 import {
   AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
@@ -627,6 +627,305 @@ export class OperationsService {
           detail: 'Cron interno do Nest habilitado no modulo Automation.',
         },
       ],
+    };
+  }
+
+  async getPlayerActionPlan(userId: string): Promise<PlayerActionPlan> {
+    const player = await this.prisma.player.findFirst({
+      where: { userId, isActive: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+    const now = new Date();
+
+    if (!player) {
+      return {
+        generatedAt: now,
+        headline: 'Plano indisponivel',
+        summary: 'Nao encontrei um player ativo vinculado a esta conta.',
+        cards: [],
+      };
+    }
+
+    const [
+      requests,
+      codexRequests,
+      bids,
+      openInterests,
+      myInterestEntries,
+      pendingProgress,
+      progressesWithComments,
+      upcomingEvents,
+      activeAuctions,
+      locks,
+    ] = await Promise.all([
+      this.prisma.itemRequest.findMany({
+        where: { playerId: player.id, remainingQuantity: { gt: 0 } },
+        include: { itemCatalog: true },
+        orderBy: [{ rankPosition: 'asc' }, { updatedAt: 'asc' }],
+        take: 8,
+      }),
+      this.prisma.codexRequest.findMany({
+        where: {
+          playerId: player.id,
+          status: { in: [CodexRequestStatus.PENDING, CodexRequestStatus.NEEDS_RETRY, CodexRequestStatus.SENT] },
+        },
+        orderBy: [{ queuedAt: 'asc' }, { createdAt: 'asc' }],
+        take: 8,
+      }),
+      this.prisma.auctionBid.findMany({
+        where: {
+          playerId: player.id,
+          isValid: true,
+          auction: { status: { in: [AuctionStatus.OPEN, AuctionStatus.PENDING_REVIEW] } },
+        },
+        include: { auction: true },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      }),
+      this.prisma.itemInterestPost.findMany({
+        where: { status: ItemInterestStatus.OPEN, closesAt: { gt: now } },
+        include: { itemCatalog: true },
+        orderBy: { closesAt: 'asc' },
+        take: 12,
+      }),
+      this.prisma.itemInterestEntry.findMany({
+        where: { playerId: player.id, post: { status: ItemInterestStatus.OPEN } },
+        select: { postId: true },
+      }),
+      this.prisma.playerProgress.findMany({
+        where: { playerId: player.id, reviewStatus: ProgressReviewStatus.PENDING },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+      this.prisma.playerProgress.findMany({
+        where: {
+          playerId: player.id,
+          comments: {
+            some: {
+              author: {
+                players: {
+                  some: {
+                    roles: {
+                      some: {
+                        role: { name: { in: ['STAFF', 'ADMIN'] } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          comments: {
+            include: {
+              author: {
+                select: {
+                  players: {
+                    select: {
+                      roles: { select: { role: { select: { name: true } } } },
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+      this.prisma.event.findMany({
+        where: {
+          status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] },
+          startsAt: { gte: now },
+        },
+        orderBy: { startsAt: 'asc' },
+        take: 3,
+      }),
+      this.prisma.auction.findMany({
+        where: { status: AuctionStatus.OPEN, endsAt: { gt: now } },
+        orderBy: { endsAt: 'asc' },
+        take: 12,
+      }),
+      this.prisma.dKPLock.findMany({
+        where: { playerId: player.id, released: false },
+        select: { auctionId: true, amount: true },
+      }),
+    ]);
+
+    const declaredInterestIds = new Set(myInterestEntries.map((entry) => entry.postId));
+    const bidAuctionIds = new Set(bids.map((bid) => bid.auctionId));
+    const lockByAuctionId = new Map(locks.map((lock) => [lock.auctionId, lock.amount]));
+    const cards: PlayerActionPlan['cards'] = [];
+
+    for (const request of codexRequests) {
+      if (request.status === CodexRequestStatus.SENT) {
+        cards.push(this.actionCard({
+          id: request.id,
+          type: 'CODEX_CONFIRMATION',
+          title: 'Confirme seu codex',
+          description: 'A Staff marcou o codex como enviado. Confirme se funcionou ou peca retry.',
+          actionLabel: 'Abrir codex',
+          href: '/dashboard/codex',
+          priority: 'high',
+          reason: 'Confirmacao libera a fila e evita retrabalho da Staff.',
+          impact: 'Mantem sua progressao e limpa uma pendencia operacional.',
+          dueAt: request.sentAt ?? request.updatedAt,
+        }));
+      } else if (request.status === CodexRequestStatus.NEEDS_RETRY) {
+        cards.push(this.actionCard({
+          id: request.id,
+          type: 'CODEX_RETRY',
+          title: 'Codex pediu retry',
+          description: 'Existe um codex com retry solicitado. Revise o envio antes de abrir outro.',
+          actionLabel: 'Ver retry',
+          href: '/dashboard/codex',
+          priority: 'medium',
+          reason: 'Retry parado costuma virar ping perdido no Discord.',
+          impact: 'Ajuda a Staff a fechar a solicitacao correta.',
+          dueAt: request.retryRequestedAt ?? request.updatedAt,
+        }));
+      }
+    }
+
+    const unreadProgressComments = progressesWithComments.filter((row) => row.comments.some((comment) => {
+      const isStaffComment = comment.author.players.some((authorPlayer) => authorPlayer.roles.some((roleRow) => ['STAFF', 'ADMIN'].includes(roleRow.role.name)));
+      const wasRead = row.playerReadCommentsAt && comment.createdAt <= row.playerReadCommentsAt;
+      return isStaffComment && !wasRead;
+    }));
+
+    for (const row of unreadProgressComments.slice(0, 3)) {
+      cards.push(this.actionCard({
+        id: row.id,
+        type: 'PROGRESS_STAFF_COMMENT',
+        title: 'Leia o comentario da Staff',
+        description: `${row.category} recebeu comentario da Staff.`,
+        actionLabel: 'Abrir perfil',
+        href: '/dashboard/profile',
+        priority: 'high',
+        reason: 'Responder o comentario certo evita mandar print errado de novo.',
+        impact: 'Acelera validacao de CP/camada/progresso.',
+        dueAt: row.comments[0]?.createdAt ?? row.createdAt,
+        metadata: { category: row.category },
+      }));
+    }
+
+    for (const request of requests.filter((row) => !isBossRequest(row) && row.rankPosition === 1 && (row.warned3d || row.warned4d)).slice(0, 3)) {
+      cards.push(this.actionCard({
+        id: request.id,
+        type: 'ITEM_REQUEST_UPDATE',
+        title: 'Atualize o print do request',
+        description: `${request.itemName} esta em primeiro na fila e precisa de prova atualizada.`,
+        actionLabel: 'Atualizar request',
+        href: '/dashboard/item-requests',
+        priority: request.warned4d ? 'high' : 'medium',
+        reason: request.warned4d ? 'Ultimo aviso antes de perder prioridade.' : 'Print antigo segura a entrega.',
+        impact: 'Mantem sua posicao e reduz espera da guilda.',
+        dueAt: request.updatedAt,
+        metadata: { itemName: request.itemName, rankPosition: request.rankPosition },
+      }));
+    }
+
+    for (const bid of bids.slice(0, 3)) {
+      const lockAmount = lockByAuctionId.get(bid.auctionId);
+      cards.push(this.actionCard({
+        id: bid.id,
+        type: 'AUCTION_BID',
+        title: 'Acompanhe seu bid',
+        description: `${bid.auction.itemName} esta ${bid.auction.status}. Seu bid: ${bid.bidAmount} DKP.`,
+        actionLabel: 'Abrir leilao',
+        href: `/dashboard/auctions/${bid.auctionId}`,
+        priority: bid.auction.status === AuctionStatus.PENDING_REVIEW ? 'medium' : 'low',
+        reason: lockAmount ? `${lockAmount} DKP seguem travados para este leilao.` : 'Seu bid esta ativo; confira o prazo.',
+        impact: 'Evita surpresa com DKP travado e prazo de resultado.',
+        dueAt: bid.auction.endsAt,
+        metadata: { itemName: bid.auction.itemName, status: bid.auction.status, bidAmount: bid.bidAmount },
+      }));
+    }
+
+    for (const post of openInterests.filter((post) => !declaredInterestIds.has(post.id)).slice(0, 3)) {
+      const closesSoon = post.closesAt.getTime() - now.getTime() <= 6 * HOURS;
+      cards.push(this.actionCard({
+        id: post.id,
+        type: 'OPEN_INTEREST',
+        title: 'Declare interesse aberto',
+        description: `${post.title} fecha em ${post.closesAt.toISOString()}.`,
+        actionLabel: 'Declarar interesse',
+        href: '/dashboard/interests',
+        priority: closesSoon ? 'medium' : 'low',
+        reason: closesSoon ? 'Fecha em poucas horas.' : 'Ainda da tempo de entrar sem correr.',
+        impact: 'Coloca seu nome na avaliacao de loot sem expor concorrentes.',
+        dueAt: post.closesAt,
+        metadata: { title: post.title },
+      }));
+    }
+
+    for (const row of pendingProgress.slice(0, 2)) {
+      cards.push(this.actionCard({
+        id: row.id,
+        type: 'PROGRESS_REVIEW',
+        title: 'Progresso em analise',
+        description: `${row.category} esta aguardando validacao da Staff.`,
+        actionLabel: 'Ver progresso',
+        href: '/dashboard/profile',
+        priority: 'low',
+        reason: 'Enquanto esta em analise, evite mandar duplicado sem necessidade.',
+        impact: 'Mantem a fila de review limpa.',
+        dueAt: row.createdAt,
+        metadata: { category: row.category },
+      }));
+    }
+
+    const suggestedAuction = activeAuctions.find((auction) => !bidAuctionIds.has(auction.id) && (!auction.minimumLayer || player.dimensionalLayer >= auction.minimumLayer));
+    if (suggestedAuction) {
+      cards.push(this.actionCard({
+        id: suggestedAuction.id,
+        type: 'AUCTION_AVAILABLE',
+        title: 'Leilao que voce pode avaliar',
+        description: `${suggestedAuction.itemName} esta aberto ate ${suggestedAuction.endsAt.toISOString()}.`,
+        actionLabel: 'Ver leilao',
+        href: `/dashboard/auctions/${suggestedAuction.id}`,
+        priority: suggestedAuction.endsAt.getTime() - now.getTime() <= 6 * HOURS ? 'medium' : 'low',
+        reason: suggestedAuction.minimumLayer ? `Sua camada ${player.dimensionalLayer} atende a minima ${suggestedAuction.minimumLayer}.` : 'Leilao aberto sem camada minima especifica.',
+        impact: 'Ajuda voce a decidir se vale gastar DKP agora.',
+        dueAt: suggestedAuction.endsAt,
+        metadata: { itemName: suggestedAuction.itemName, itemTier: suggestedAuction.itemTier },
+      }));
+    }
+
+    const nextEvent = upcomingEvents[0];
+    if (nextEvent) {
+      cards.push(this.actionCard({
+        id: nextEvent.id,
+        type: 'UPCOMING_EVENT',
+        title: 'Proximo evento da guilda',
+        description: `${nextEvent.name} comeca em ${nextEvent.startsAt.toISOString()}.`,
+        actionLabel: 'Ver eventos',
+        href: '/dashboard/attendance',
+        priority: nextEvent.startsAt.getTime() - now.getTime() <= 4 * HOURS ? 'medium' : 'low',
+        reason: 'Presenca alimenta DKP, elegibilidade e progressao coletiva.',
+        impact: 'Nao deixar evento passar e basicamente DKP gratis nao jogado fora.',
+        dueAt: nextEvent.startsAt,
+        metadata: { eventType: nextEvent.type },
+      }));
+    }
+
+    const sortedCards = cards.sort((left, right) => {
+      const weight = { high: 0, medium: 1, low: 2 };
+      const priorityDiff = weight[left.priority] - weight[right.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(left.dueAt ?? 0).getTime() - new Date(right.dueAt ?? 0).getTime();
+    }).slice(0, 8);
+
+    return {
+      generatedAt: now,
+      headline: sortedCards.length ? 'Seu proximo passo' : 'Tudo limpo por enquanto',
+      summary: sortedCards.length
+        ? `${sortedCards.length} acao(oes) priorizadas para sua rotina agora.`
+        : 'Sem pendencia pessoal urgente. Aproveita para revisar leiloes, eventos e progresso antes de alguem lembrar de voce.',
+      cards: sortedCards,
     };
   }
 
@@ -2210,6 +2509,10 @@ export class OperationsService {
 
   private morningTask(task: OperationTask): OperationTask {
     return task;
+  }
+
+  private actionCard(card: PlayerActionPlan['cards'][number]): PlayerActionPlan['cards'][number] {
+    return card;
   }
 
   private buildMorningBriefingSummary(counts: StaffMorningBriefing['counts']): string {

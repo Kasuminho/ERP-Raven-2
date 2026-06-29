@@ -720,6 +720,25 @@ export type PlayerOperationsSummary = {
   };
 };
 
+export type PlayerActionPlan = {
+  generatedAt: string;
+  headline: string;
+  summary: string;
+  cards: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    actionLabel: string;
+    href: string;
+    priority: OperationPriority;
+    reason: string;
+    impact: string;
+    dueAt?: string | null;
+    metadata?: Record<string, unknown>;
+  }>;
+};
+
 export type StaffOperationsSummary = {
   tasks: OperationTask[];
   counts: {
