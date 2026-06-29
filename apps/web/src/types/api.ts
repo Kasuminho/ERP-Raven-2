@@ -375,6 +375,14 @@ export type EligibilityResponse = {
   eligibilityStatus: EligibilityRow['eligibilityStatus'];
   eligibilityReason: string;
   requiresStaffReview: boolean;
+  playerLayer?: number;
+  requiredLayer?: number;
+  availableDKP?: number;
+  requiredDKP?: number;
+  attendancePercentage?: number;
+  auctionMode?: string;
+  itemTier?: string;
+  itemType?: string;
 };
 
 export type EventRecord = {

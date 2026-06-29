@@ -7,4 +7,12 @@ export class EligibilityValidationResponseDto {
   eligibilityStatus!: EligibilityStatus;
   eligibilityReason!: string;
   requiresStaffReview!: boolean;
+  playerLayer?: number;
+  requiredLayer?: number;
+  availableDKP?: number;
+  requiredDKP?: number;
+  attendancePercentage?: number;
+  auctionMode?: string;
+  itemTier?: string;
+  itemType?: string;
 }

@@ -17,6 +17,114 @@ import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
+import type { EligibilityResponse } from '@/types/api';
+
+function formatPercent(value?: number) {
+  if (value === undefined) return '-';
+  return `${value.toFixed(2)}%`;
+}
+
+function EligibilityPanel({ eligibility }: { eligibility?: EligibilityResponse }) {
+  const locale = useLocaleStore((state) => state.locale);
+  const text = locale === 'pt'
+    ? {
+        title: 'Antes do bid',
+        loading: 'Carregando elegibilidade...',
+        current: 'Atual',
+        required: 'Exigido',
+        layer: 'Camada',
+        dkp: 'DKP disponivel',
+        attendance: 'Presenca',
+        review: 'Review',
+        staffReview: 'Staff decide',
+        automatic: 'Automatico',
+        ranking: 'Ranking Staff',
+        blocks: 'bloqueia',
+        ok: 'ok',
+        info: 'info',
+        reviewHelp: 'Este leilao permite participar, mas a entrega final passa por review da Staff. Nao aparece ranking nem concorrente para player.',
+      }
+    : {
+        title: 'Before bidding',
+        loading: 'Loading eligibility...',
+        current: 'Current',
+        required: 'Required',
+        layer: 'Layer',
+        dkp: 'Available DKP',
+        attendance: 'Attendance',
+        review: 'Review',
+        staffReview: 'Staff decides',
+        automatic: 'Automatic',
+        ranking: 'Staff ranking',
+        blocks: 'blocks',
+        ok: 'ok',
+        info: 'info',
+        reviewHelp: 'This auction lets you participate, but final delivery goes through Staff review. Player view never shows ranking or competitors.',
+      };
+  const checks = [
+    {
+      label: text.layer,
+      current: eligibility?.playerLayer ?? '-',
+      required: eligibility?.requiredLayer ? `${eligibility.requiredLayer}+` : '-',
+      ok: eligibility?.playerLayer !== undefined && eligibility?.requiredLayer !== undefined
+        ? eligibility.playerLayer >= eligibility.requiredLayer
+        : undefined,
+    },
+    {
+      label: text.dkp,
+      current: eligibility?.availableDKP ?? '-',
+      required: eligibility?.requiredDKP ?? '-',
+      ok: eligibility?.availableDKP !== undefined && eligibility?.requiredDKP !== undefined
+        ? eligibility.availableDKP >= eligibility.requiredDKP
+        : undefined,
+    },
+    {
+      label: text.attendance,
+      current: formatPercent(eligibility?.attendancePercentage),
+      required: text.ranking,
+      ok: undefined,
+    },
+    {
+      label: text.review,
+      current: eligibility?.requiresStaffReview ? text.staffReview : text.automatic,
+      required: eligibility?.auctionMode ?? '-',
+      ok: eligibility?.requiresStaffReview ? undefined : true,
+    },
+  ];
+
+  return (
+    <div className="space-y-3 rounded-lg border border-white/10 bg-background/45 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-semibold">{text.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{eligibility?.eligibilityReason ?? text.loading}</p>
+        </div>
+        <EligibilityBadge status={eligibility?.eligibilityStatus} />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {checks.map((check) => (
+          <div key={check.label} className="rounded-md border border-white/10 bg-black/15 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs uppercase text-muted-foreground">{check.label}</p>
+              <Badge tone={check.ok === false ? 'red' : check.ok === true ? 'green' : 'gold'}>
+                {check.ok === false ? text.blocks : check.ok === true ? text.ok : text.info}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm">
+              {text.current}: <span className="font-semibold">{check.current}</span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{text.required}: {check.required}</p>
+          </div>
+        ))}
+      </div>
+      {eligibility?.requiresStaffReview ? (
+        <p className="text-xs text-muted-foreground">
+          {text.reviewHelp}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -116,12 +224,11 @@ export default function AuctionDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t(locale, 'participation')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-md border bg-background/40 p-3"><p className="text-muted-foreground">{t(locale, 'available')}</p><p className="text-xl font-bold">{dkp.data?.available ?? 0}</p></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-md border bg-background/40 p-3"><p className="text-muted-foreground">{t(locale, 'available')}</p><p className="text-xl font-bold">{dkp.data?.available ?? eligibility.data?.availableDKP ?? 0}</p></div>
               <div className="rounded-md border bg-background/40 p-3"><p className="text-muted-foreground">{t(locale, 'locked')}</p><p className="text-xl font-bold">{dkp.data?.locked ?? 0}</p></div>
-              <div className="rounded-md border bg-background/40 p-3"><p className="text-muted-foreground">{t(locale, 'eligibility')}</p><EligibilityBadge status={eligibility.data?.eligibilityStatus} /></div>
             </div>
-            <p className="text-sm text-muted-foreground">{eligibility.data?.eligibilityReason}</p>
+            <EligibilityPanel eligibility={eligibility.data} />
             {auction.data.status === 'OPEN' && (
               <div className="space-y-3">
                 <BidModal

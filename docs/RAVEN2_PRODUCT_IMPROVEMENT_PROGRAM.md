@@ -237,6 +237,8 @@ Entrega:
 
 Objetivo: reduzir duvida e reclamacao.
 
+Estado em 2026-06-29: implementado na pagina do leilao para players.
+
 Entrega:
 
 - Na pagina do leilao, antes do bid:
@@ -247,6 +249,8 @@ Entrega:
   - attendance considerada;
   - Staff Review obrigatorio quando aplicavel.
 - Para players, nunca mostrar ranking nem concorrentes.
+- Endpoint de elegibilidade do proprio player retorna os campos operacionais
+  necessarios para o painel sem expor outros participantes.
 
 ### C3. Historico pessoal narrado
 

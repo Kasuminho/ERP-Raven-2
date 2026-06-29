@@ -78,19 +78,20 @@ export class EligibilityService {
   ): Promise<EligibilityValidationResponseDto> {
     const { auction, player } = await this.getAuctionAndPlayer(playerId, auctionId, client);
     const rules = await this.getEffectiveRules(auction, client);
+    const details = await this.buildEligibilityDetails(playerId, player, auction, rules, client);
 
     if (!player.isActive) {
-      return this.ineligible(playerId, auctionId, auction.requiresStaffReview, 'Player is not active.');
+      return this.ineligible(playerId, auctionId, auction.requiresStaffReview, 'Player is not active.', details);
     }
 
     if (!this.isValidLayer(player.dimensionalLayer)) {
-      return this.ineligible(playerId, auctionId, rules.requiresStaffReview, 'Player dimensional layer is outside 1-10.');
+      return this.ineligible(playerId, auctionId, rules.requiresStaffReview, 'Player dimensional layer is outside 1-10.', details);
     }
 
     const classCompatibility = this.validateClassCompatibility(player, auction);
 
     if (!classCompatibility.compatible) {
-      return this.ineligible(playerId, auctionId, rules.requiresStaffReview, classCompatibility.reason);
+      return this.ineligible(playerId, auctionId, rules.requiresStaffReview, classCompatibility.reason, details);
     }
 
     if (player.dimensionalLayer < rules.minimumLayer) {
@@ -99,17 +100,17 @@ export class EligibilityService {
         auctionId,
         rules.requiresStaffReview,
         `Player requires dimensional layer ${rules.minimumLayer}+ for this auction.`,
+        details,
       );
     }
 
-    const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(playerId, client);
-
-    if (availableDKP < rules.minimumDKP) {
+    if (details.availableDKP < rules.minimumDKP) {
       return this.ineligible(
         playerId,
         auctionId,
         rules.requiresStaffReview,
         `Player requires at least ${rules.minimumDKP} available DKP for this auction.`,
+        details,
       );
     }
 
@@ -122,6 +123,7 @@ export class EligibilityService {
         ? 'Player can participate, but final selection requires staff review.'
         : 'Player is eligible to bid.',
       requiresStaffReview: rules.requiresStaffReview,
+      ...details,
     };
   }
 
@@ -625,11 +627,36 @@ export class EligibilityService {
     return Number.isInteger(layer) && layer >= 1 && layer <= 10;
   }
 
+  private async buildEligibilityDetails(
+    playerId: string,
+    player: Pick<Player, 'dimensionalLayer' | 'attendancePercentage'>,
+    auction: Pick<Auction, 'auctionMode' | 'itemTier' | 'itemType'>,
+    rules: EligibilityRuleConfig,
+    client: Prisma.TransactionClient,
+  ): Promise<Required<Pick<
+    EligibilityValidationResponseDto,
+    'playerLayer' | 'requiredLayer' | 'availableDKP' | 'requiredDKP' | 'attendancePercentage' | 'auctionMode' | 'itemTier' | 'itemType'
+  >>> {
+    const availableDKP = await this.dkpService.calculateAvailableDKPWithinTransaction(playerId, client);
+
+    return {
+      playerLayer: player.dimensionalLayer,
+      requiredLayer: rules.minimumLayer,
+      availableDKP,
+      requiredDKP: rules.minimumDKP,
+      attendancePercentage: player.attendancePercentage,
+      auctionMode: auction.auctionMode,
+      itemTier: auction.itemTier,
+      itemType: auction.itemType,
+    };
+  }
+
   private ineligible(
     playerId: string,
     auctionId: string,
     requiresStaffReview: boolean,
     reason: string,
+    details?: Partial<EligibilityValidationResponseDto>,
   ): EligibilityValidationResponseDto {
     return {
       playerId,
@@ -638,6 +665,7 @@ export class EligibilityService {
       eligibilityStatus: 'INELIGIBLE',
       eligibilityReason: reason,
       requiresStaffReview,
+      ...details,
     };
   }
 
