@@ -861,6 +861,13 @@ export type OperationalHealthSummary = StaffHealthSummary & {
   pendingQueueApproximation: number;
 };
 
+export type AuctionDiagnosticOption = {
+  id: string;
+  itemName: string;
+  winnerName?: string | null;
+  endedAt: string;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: string;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';

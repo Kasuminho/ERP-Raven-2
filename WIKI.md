@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-28
+**Ultima revisao:** 2026-06-29
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -88,6 +88,7 @@ Automacao ativa:
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
 - A central Staff em `/dashboard/staff` prioriza os grupos de ferramentas no topo da pagina, com cards mais espacados; contadores, pendencias, saude e auditoria ficam abaixo.
+- O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo.
 
 ## Leiloes e sigilo
 
@@ -240,6 +241,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Diagnostico Staff de leilao ganhou selecao de todos os leiloes por item, vencedor quando houver e data, sem exigir colar ID manualmente. | leiloes/diagnostico |
 | 2026-06-28 | Regra T4 ajustada: rejeicao/invalidacao sem bids desce camadas ate a 1; somente apos falhar na camada 1 o leilao relista para camada 4 em 7 dias desde a abertura original. Justificativas em modais deixaram de perder foco ao digitar. | leiloes/relist |
 | 2026-06-26 | Terceira rotacao automatica renovou os bancos de zoeira dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mexer em payloads nem regras. | webhook-joke-rotation |
 | 2026-06-26 | Interesses de transmutar passaram a ter flag persistida, backfill da print fixa e sorteio automatico com limite diario por player quando todos os pedidos sao de transmutar. | interesses/transmutar |

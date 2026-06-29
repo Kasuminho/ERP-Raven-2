@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, Search } from 'lucide-react';
@@ -9,11 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
-import { useAuctionDiagnostics } from '@/hooks/use-guild-api';
+import { Select } from '@/components/ui/select';
+import { useAuctionDiagnosticOptions, useAuctionDiagnostics } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { AuctionDiagnosticSummary } from '@/types/api';
+import type { AuctionDiagnosticOption, AuctionDiagnosticSummary } from '@/types/api';
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -22,6 +22,14 @@ function formatDate(value?: string | null) {
 
 function shortId(value: string) {
   return value.slice(0, 8);
+}
+
+function formatOptionDate(value: string) {
+  return new Date(value).toLocaleDateString();
+}
+
+function optionLabel(option: AuctionDiagnosticOption) {
+  return `${option.itemName} / ${option.winnerName ?? 'Sem vencedor registrado'} / ${formatOptionDate(option.endedAt)}`;
 }
 
 function issueTone(severity: AuctionDiagnosticSummary['issues'][number]['severity']) {
@@ -67,7 +75,12 @@ export default function AuctionDiagnosticsPage() {
   const searchParams = useSearchParams();
   const auctionId = searchParams.get('auctionId')?.trim() ?? '';
   const [draftId, setDraftId] = useState(auctionId);
+  const auctionOptions = useAuctionDiagnosticOptions();
   const diagnostics = useAuctionDiagnostics(auctionId);
+
+  useEffect(() => {
+    setDraftId(auctionId);
+  }, [auctionId]);
 
   const countRows = useMemo(() => {
     if (!diagnostics.data) return [];
@@ -106,12 +119,28 @@ export default function AuctionDiagnosticsPage() {
         <Card>
           <CardContent className="pt-5">
             <form className="flex flex-col gap-3 md:flex-row" onSubmit={submit}>
-              <Input
+              <Select
                 value={draftId}
                 onChange={(event) => setDraftId(event.target.value)}
-                placeholder="Cole o ID do leilao"
-                className="font-mono"
-              />
+                disabled={auctionOptions.isLoading || auctionOptions.isError || !(auctionOptions.data?.length)}
+                aria-label="Selecionar leilao"
+                className="md:flex-1"
+              >
+                <option value="">
+                  {auctionOptions.isLoading
+                    ? 'Carregando leiloes...'
+                    : auctionOptions.isError
+                      ? 'Nao consegui carregar os leiloes'
+                      : (auctionOptions.data?.length ?? 0) === 0
+                        ? 'Nenhum leilao encontrado'
+                        : 'Selecione um leilao'}
+                </option>
+                {(auctionOptions.data ?? []).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {optionLabel(option)}
+                  </option>
+                ))}
+              </Select>
               <Button type="submit" className="gap-2">
                 <Search className="h-4 w-4" />
                 Consultar
@@ -121,7 +150,7 @@ export default function AuctionDiagnosticsPage() {
         </Card>
 
         {!auctionId ? (
-          <EmptyState title="Nenhum leilao selecionado">Cole o ID de um leilao para abrir o diagnostico.</EmptyState>
+          <EmptyState title="Nenhum leilao selecionado">Selecione um leilao para abrir o diagnostico.</EmptyState>
         ) : null}
 
         {diagnostics.isError ? (

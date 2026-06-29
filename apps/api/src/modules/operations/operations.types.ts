@@ -196,6 +196,13 @@ export type AuctionDiagnosticIssue = {
   metadata?: Record<string, unknown>;
 };
 
+export type AuctionDiagnosticOption = {
+  id: string;
+  itemName: string;
+  winnerName?: string | null;
+  endedAt: Date;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: Date;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';

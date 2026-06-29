@@ -7,6 +7,7 @@ import {
   DiscordTemplateSummary,
   GuildRulesSummary,
   IntegritySummary,
+  AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
   LegacyAuditSummary,
   LootFairnessSummary,
@@ -98,6 +99,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async integrity(): Promise<IntegritySummary> {
     return this.service.getIntegritySummary();
+  }
+
+  @Get('staff/auction-diagnostics/options')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async auctionDiagnosticOptions(): Promise<AuctionDiagnosticOption[]> {
+    return this.service.getAuctionDiagnosticOptions();
   }
 
   @Get('staff/auction-diagnostics/:auctionId')

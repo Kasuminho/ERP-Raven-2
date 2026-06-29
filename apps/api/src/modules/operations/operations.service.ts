@@ -17,7 +17,7 @@ import { BusinessRulesService } from '../business-rules/business-rules.service';
 import { bilingualBlocks, pickVoiceLine } from '../discord/bot/embeds/webhook-voice';
 import { NotificationService } from '../discord/services/notification.service';
 import { PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, OperationPriority, OperationTask } from './operations.types';
-import { AuctionDiagnosticSummary, IntegrityIssue, IntegritySummary } from './operations.types';
+import { AuctionDiagnosticOption, AuctionDiagnosticSummary, IntegrityIssue, IntegritySummary } from './operations.types';
 import { SeasonMonthlySummary, StaffDayViewSummary, WeeklyGuildSummary } from './operations.types';
 import {
   DiscordTemplateSummary,
@@ -1188,6 +1188,44 @@ export class OperationsService {
         { key: 'daoshi', channel: 'updates', title: 'Daoshi', preview: 'Regras do cupom AACD, comprovantes e sorteio mensal.' },
       ],
     };
+  }
+
+  async getAuctionDiagnosticOptions(): Promise<AuctionDiagnosticOption[]> {
+    const auctions = await this.prisma.auction.findMany({
+      select: {
+        id: true,
+        itemName: true,
+        endsAt: true,
+      },
+      orderBy: { endsAt: 'desc' },
+      take: 100,
+    });
+
+    const auctionIds = auctions.map((auction) => auction.id);
+    const wins = auctionIds.length
+      ? await this.prisma.dKPTransaction.findMany({
+          where: {
+            type: DKPTransactionType.AUCTION_WIN,
+            referenceId: { in: auctionIds },
+          },
+          include: {
+            player: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+    const winnerByAuctionId = new Map(wins.map((win) => [win.referenceId, win.player.nickname]));
+
+    return auctions.map((auction) => ({
+      id: auction.id,
+      itemName: auction.itemName,
+      winnerName: winnerByAuctionId.get(auction.id) ?? null,
+      endedAt: auction.endsAt,
+    }));
   }
 
   async getAuctionDiagnostics(auctionId: string): Promise<AuctionDiagnosticSummary> {
