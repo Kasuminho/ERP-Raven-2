@@ -571,6 +571,13 @@ export function useItemInterests(status?: ItemInterestStatus) {
   });
 }
 
+export function useStaffItemInterests(status?: ItemInterestStatus) {
+  return useQuery({
+    queryKey: ['item-interests', 'staff', status ?? 'all'],
+    queryFn: async () => (await api.get<ItemInterestPost[]>('/item-interests/staff/list', { params: status ? { status } : undefined })).data,
+  });
+}
+
 export function useCreateItemInterest() {
   const queryClient = useQueryClient();
   return useMutation({

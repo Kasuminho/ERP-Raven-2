@@ -18,6 +18,13 @@ export class ItemInterestsController {
     return this.service.listPosts(status, req.user.userId);
   }
 
+  @Get('staff/list')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async listStaff(@Query('status') status: ItemInterestStatus | undefined): Promise<ItemInterestDetails[]> {
+    return this.service.listPostsForStaff(status);
+  }
+
   @Get(':id')
   async detail(@Param('id') id: string): Promise<ItemInterestDetails> {
     return this.service.getPost(id);

@@ -334,6 +334,8 @@ Entrega:
 
 Objetivo: reduzir decisao por feeling.
 
+Estado em 2026-06-29: implementado em `/dashboard/staff/interests`.
+
 Entrega:
 
 - Na tela Staff de interesses, comparar:
@@ -346,6 +348,11 @@ Entrega:
   - notas Staff relevantes;
   - historico recente do item/tipo.
 - Sem expor essa comparacao para players.
+- Endpoint Staff-only `GET /item-interests/staff/list` retorna `staffComparison`
+  por interessado, com classe, camada, presenca, DKP total/travado/disponivel,
+  requests ativos, ultima nota Staff, historico de loot e sinais operacionais.
+- A tela Staff mostra uma tabela comparativa por post antes dos cards de voto,
+  mantendo a declaracao de player no endpoint normal sem o comparador sensivel.
 
 ### E2. Declaracao de interesse em lote
 

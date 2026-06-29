@@ -226,6 +226,39 @@ export type ItemInterestEntry = {
     sameTypeDrops: number;
     lastDropAt?: string | null;
   };
+  staffComparison?: {
+    playerClass: string;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    totalDkp: number;
+    lockedDkp: number;
+    availableDkp: number;
+    activeRequests: Array<{
+      id: string;
+      itemName: string;
+      remainingQuantity: number;
+      totalQuantity: number;
+      rankPosition: number;
+      category?: string | null;
+      itemTier?: ItemTier | null;
+      itemType?: ItemType | null;
+    }>;
+    latestStaffNote?: {
+      severity: string;
+      body: string;
+      createdAt: string;
+      authorName: string;
+    } | null;
+    recentLoot: {
+      queueDays: number;
+      totalDrops: number;
+      sameItemDrops: number;
+      sameTypeDrops: number;
+      lastDropAt?: string | null;
+    };
+    decisionSignalsPt: string[];
+    summaryPt: string;
+  };
   player?: {
     id: string;
     nickname: string;

@@ -11,7 +11,7 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelItemInterest, useCloseItemInterest, useDeliverItemInterest, useItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
+import { useCancelItemInterest, useCloseItemInterest, useDeliverItemInterest, useStaffItemInterests, useStartItemInterestTieBreak, useUploadImage, useVoteItemInterest } from '@/hooks/use-guild-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
@@ -82,10 +82,71 @@ function itemTypeLabel(type: ItemType): string {
   return type.replace('_', ' ');
 }
 
+function shortDate(value?: string | null): string {
+  return value ? new Date(value).toLocaleDateString('pt-BR') : 'sem registro';
+}
+
+function truncate(value: string, max = 90): string {
+  return value.length > max ? `${value.slice(0, max - 3)}...` : value;
+}
+
+function StaffComparisonTable({ entries }: { entries: ItemInterestEntry[] }) {
+  const comparable = entries.filter((entry) => entry.staffComparison);
+
+  if (comparable.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border bg-background/35">
+      <table className="w-full min-w-[920px] text-left text-xs">
+        <thead className="border-b bg-muted/30 text-muted-foreground">
+          <tr>
+            <th className="p-2 font-semibold">Player</th>
+            <th className="p-2 font-semibold">Classe / camada</th>
+            <th className="p-2 font-semibold">Presenca</th>
+            <th className="p-2 font-semibold">DKP disp.</th>
+            <th className="p-2 font-semibold">Historico loot</th>
+            <th className="p-2 font-semibold">Requests</th>
+            <th className="p-2 font-semibold">Nota / sinal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comparable.map((entry) => {
+            const comparison = entry.staffComparison!;
+            const firstSignal = comparison.decisionSignalsPt[0] ?? 'Sem alerta automatico.';
+            return (
+              <tr key={entry.id} className="border-b last:border-0">
+                <td className="p-2 font-semibold text-primary">{entry.player?.nickname}</td>
+                <td className="p-2">{comparison.playerClass} / C{comparison.dimensionalLayer}</td>
+                <td className="p-2">{Math.round(comparison.attendancePercentage)}%</td>
+                <td className="p-2">{comparison.availableDkp} <span className="text-muted-foreground">(lock {comparison.lockedDkp})</span></td>
+                <td className="p-2">
+                  <span className="block">Ultimo: {shortDate(comparison.recentLoot.lastDropAt)}</span>
+                  <span className="text-muted-foreground">Mesmo item {comparison.recentLoot.sameItemDrops} / tipo {comparison.recentLoot.sameTypeDrops}</span>
+                </td>
+                <td className="p-2">{comparison.activeRequests.length}</td>
+                <td className="p-2">
+                  <span className="block">{truncate(firstSignal)}</span>
+                  {comparison.latestStaffNote ? (
+                    <span className="text-muted-foreground">{comparison.latestStaffNote.severity}: {truncate(comparison.latestStaffNote.body, 70)}</span>
+                  ) : (
+                    <span className="text-muted-foreground">Sem nota Staff recente</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function StaffInterestsPage() {
   const locale = useLocaleStore((state) => state.locale);
   const userId = useAuthStore((state) => state.userId);
-  const posts = useItemInterests();
+  const posts = useStaffItemInterests();
   const closeInterest = useCloseItemInterest();
   const cancelInterest = useCancelItemInterest();
   const deliverInterest = useDeliverItemInterest();
@@ -206,9 +267,11 @@ export default function StaffInterestsPage() {
                     Liberado para entrega: <strong>{selectedEntry.player?.nickname}</strong>
                   </div>
                 )}
+                <StaffComparisonTable entries={orderedEntries} />
                 <div className="grid gap-2 md:grid-cols-2">
                   {orderedEntries.map((entry, index) => {
                     const printUrl = displayImageUrl(entry.imageUrl);
+                    const comparison = entry.staffComparison;
                     const isWinner = post.selectedEntryId === entry.id;
                     const isRestrictedOut = restrictedCandidateIds.length > 0 && !restrictedCandidateIds.includes(entry.id);
                     const votes = voteCounts.get(entry.id) ?? 0;
@@ -243,6 +306,25 @@ export default function StaffInterestsPage() {
                             <span className="block text-muted-foreground">
                               {t(locale, 'layer')} {entry.player?.dimensionalLayer} - {t(locale, 'attendance')} {entry.player?.attendancePercentage}%
                             </span>
+                            {comparison && (
+                              <div className="mt-2 grid gap-1 rounded-md border border-violet-300/20 bg-violet-500/10 p-2 text-xs text-muted-foreground sm:grid-cols-2">
+                                <span>Classe: {comparison.playerClass}</span>
+                                <span>DKP disp.: {comparison.availableDkp}</span>
+                                <span>Requests ativos: {comparison.activeRequests.length}</span>
+                                <span>Ultimo drop: {shortDate(comparison.recentLoot.lastDropAt)}</span>
+                                <span className="sm:col-span-2 text-violet-100">{comparison.summaryPt}</span>
+                                {comparison.activeRequests.length > 0 && (
+                                  <span className="sm:col-span-2">
+                                    Requests: {comparison.activeRequests.slice(0, 3).map((request) => `${request.itemName} #${request.rankPosition}`).join(', ')}
+                                  </span>
+                                )}
+                                {comparison.latestStaffNote && (
+                                  <span className="sm:col-span-2">
+                                    Nota {comparison.latestStaffNote.severity}: {truncate(comparison.latestStaffNote.body, 120)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {entry.lootStats && (
                               <div className="mt-2 grid gap-1 rounded-md border border-border/70 bg-background/40 p-2 text-xs text-muted-foreground sm:grid-cols-2">
                                 <span>Fila: {entry.lootStats.queueDays} dia(s)</span>

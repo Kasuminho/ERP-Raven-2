@@ -49,6 +49,7 @@ export type ItemInterestDetails = ItemInterestPost & {
       sameTypeDrops: number;
       lastDropAt: Date | null;
     };
+    staffComparison?: ItemInterestStaffComparison;
   }>;
   votes: Array<{
     id: string;
@@ -61,6 +62,40 @@ export type ItemInterestDetails = ItemInterestPost & {
   }>;
   viewerHasDeclared?: boolean;
   viewerSeenAt?: Date | null;
+};
+
+export type ItemInterestStaffComparison = {
+  playerClass: string;
+  dimensionalLayer: number;
+  attendancePercentage: number;
+  totalDkp: number;
+  lockedDkp: number;
+  availableDkp: number;
+  activeRequests: Array<{
+    id: string;
+    itemName: string;
+    remainingQuantity: number;
+    totalQuantity: number;
+    rankPosition: number;
+    category?: string | null;
+    itemTier?: string | null;
+    itemType?: string | null;
+  }>;
+  latestStaffNote?: {
+    severity: string;
+    body: string;
+    createdAt: Date;
+    authorName: string;
+  } | null;
+  recentLoot: {
+    queueDays: number;
+    totalDrops: number;
+    sameItemDrops: number;
+    sameTypeDrops: number;
+    lastDropAt: Date | null;
+  };
+  decisionSignalsPt: string[];
+  summaryPt: string;
 };
 
 const criteriaTexts: Record<string, { pt: string; en: string }> = {
@@ -111,6 +146,16 @@ export class ItemInterestsService {
     });
 
     return this.withViewerState(await this.enrichLootStats(posts), viewerPlayer?.id);
+  }
+
+  async listPostsForStaff(status?: ItemInterestStatus): Promise<ItemInterestDetails[]> {
+    const posts = await this.prisma.itemInterestPost.findMany({
+      where: status ? { status } : undefined,
+      include: this.includeDetails(),
+      orderBy: [{ status: 'asc' }, { closesAt: 'asc' }],
+    });
+
+    return this.withStaffComparison(await this.enrichLootStats(posts));
   }
 
   async getPost(id: string): Promise<ItemInterestDetails> {
@@ -787,6 +832,197 @@ export class ItemInterestsService {
         }),
       };
     });
+  }
+
+  private async withStaffComparison(posts: ItemInterestDetails[]): Promise<ItemInterestDetails[]> {
+    const playerIds = [...new Set(posts.flatMap((post) => post.entries.map((entry) => entry.playerId)))];
+
+    if (playerIds.length === 0) {
+      return posts;
+    }
+
+    const [players, dkpTotals, activeLocks, activeRequests, staffNotes] = await Promise.all([
+      this.prisma.player.findMany({
+        where: { id: { in: playerIds } },
+        select: {
+          id: true,
+          class: true,
+          dimensionalLayer: true,
+          attendancePercentage: true,
+        },
+      }),
+      this.prisma.dKPTransaction.groupBy({
+        by: ['playerId'],
+        where: { playerId: { in: playerIds } },
+        _sum: { amount: true },
+      }),
+      this.prisma.dKPLock.groupBy({
+        by: ['playerId'],
+        where: { playerId: { in: playerIds }, released: false },
+        _sum: { amount: true },
+      }),
+      this.prisma.itemRequest.findMany({
+        where: { playerId: { in: playerIds }, remainingQuantity: { gt: 0 } },
+        include: {
+          itemCatalog: {
+            select: {
+              category: true,
+              itemTier: true,
+              itemType: true,
+            },
+          },
+        },
+        orderBy: [{ playerId: 'asc' }, { rankPosition: 'asc' }],
+      }),
+      this.prisma.playerStaffNote.findMany({
+        where: { playerId: { in: playerIds } },
+        include: {
+          author: {
+            select: {
+              discordUsername: true,
+              discordNickname: true,
+            },
+          },
+        },
+        orderBy: [{ playerId: 'asc' }, { createdAt: 'desc' }],
+        take: 500,
+      }),
+    ]);
+
+    const playersById = new Map(players.map((player) => [player.id, player]));
+    const totalDkpByPlayer = new Map(dkpTotals.map((row) => [row.playerId, row._sum.amount ?? 0]));
+    const lockedDkpByPlayer = new Map(activeLocks.map((row) => [row.playerId, row._sum.amount ?? 0]));
+    const requestsByPlayer = new Map<string, typeof activeRequests>();
+    const latestNoteByPlayer = new Map<string, (typeof staffNotes)[number]>();
+
+    for (const request of activeRequests) {
+      const requests = requestsByPlayer.get(request.playerId ?? '') ?? [];
+      requests.push(request);
+      if (request.playerId) {
+        requestsByPlayer.set(request.playerId, requests);
+      }
+    }
+
+    for (const note of staffNotes) {
+      if (!latestNoteByPlayer.has(note.playerId)) {
+        latestNoteByPlayer.set(note.playerId, note);
+      }
+    }
+
+    return posts.map((post) => ({
+      ...post,
+      entries: post.entries.map((entry) => {
+        const player = playersById.get(entry.playerId);
+        const totalDkp = totalDkpByPlayer.get(entry.playerId) ?? 0;
+        const lockedDkp = lockedDkpByPlayer.get(entry.playerId) ?? 0;
+        const activePlayerRequests = requestsByPlayer.get(entry.playerId) ?? [];
+        const latestNote = latestNoteByPlayer.get(entry.playerId);
+        const recentLoot = {
+          queueDays: entry.lootStats?.queueDays ?? 0,
+          totalDrops: entry.lootStats?.totalDrops ?? 0,
+          sameItemDrops: entry.lootStats?.sameItemDrops ?? 0,
+          sameTypeDrops: entry.lootStats?.sameTypeDrops ?? 0,
+          lastDropAt: entry.lootStats?.lastDropAt ?? null,
+        };
+
+        return {
+          ...entry,
+          staffComparison: {
+            playerClass: player?.class ?? 'UNKNOWN',
+            dimensionalLayer: player?.dimensionalLayer ?? entry.player.dimensionalLayer,
+            attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
+            totalDkp,
+            lockedDkp,
+            availableDkp: totalDkp - lockedDkp,
+            activeRequests: activePlayerRequests.map((request) => ({
+              id: request.id,
+              itemName: request.itemName,
+              remainingQuantity: request.remainingQuantity,
+              totalQuantity: request.totalQuantity,
+              rankPosition: request.rankPosition,
+              category: request.itemCatalog?.category,
+              itemTier: request.itemCatalog?.itemTier,
+              itemType: request.itemCatalog?.itemType,
+            })),
+            latestStaffNote: latestNote
+              ? {
+                  severity: latestNote.severity,
+                  body: latestNote.body,
+                  createdAt: latestNote.createdAt,
+                  authorName: latestNote.author.discordNickname || latestNote.author.discordUsername,
+                }
+              : null,
+            recentLoot,
+            decisionSignalsPt: this.interestDecisionSignalsPt({
+              attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
+              availableDkp: totalDkp - lockedDkp,
+              activeRequestsCount: activePlayerRequests.length,
+              latestNoteSeverity: latestNote?.severity,
+              recentLoot,
+            }),
+            summaryPt: this.interestComparisonSummaryPt(entry.player.nickname, {
+              playerClass: player?.class ?? 'UNKNOWN',
+              dimensionalLayer: player?.dimensionalLayer ?? entry.player.dimensionalLayer,
+              attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
+              availableDkp: totalDkp - lockedDkp,
+              activeRequestsCount: activePlayerRequests.length,
+              recentLoot,
+            }),
+          },
+        };
+      }),
+    }));
+  }
+
+  private interestDecisionSignalsPt(data: {
+    attendancePercentage: number;
+    availableDkp: number;
+    activeRequestsCount: number;
+    latestNoteSeverity?: string;
+    recentLoot: ItemInterestStaffComparison['recentLoot'];
+  }): string[] {
+    const signals: string[] = [];
+
+    if (data.attendancePercentage >= 75) {
+      signals.push('Presenca forte para boss/rotina.');
+    } else if (data.attendancePercentage < 40) {
+      signals.push('Presenca baixa; revisar contexto antes de votar.');
+    }
+
+    if (data.availableDkp <= 0) {
+      signals.push('DKP disponivel zerado/negativo.');
+    }
+
+    if (data.recentLoot.sameItemDrops > 0) {
+      signals.push('Ja recebeu este mesmo item no historico.');
+    } else if (data.recentLoot.sameTypeDrops === 0) {
+      signals.push('Sem drop recente do mesmo tipo registrado.');
+    }
+
+    if (data.activeRequestsCount > 0) {
+      signals.push(`${data.activeRequestsCount} request(s) ativo(s) podem indicar outra prioridade de progressao.`);
+    }
+
+    if (data.latestNoteSeverity === 'WARNING' || data.latestNoteSeverity === 'STRIKE') {
+      signals.push(`Nota Staff ${data.latestNoteSeverity} recente pede leitura antes da decisao.`);
+    }
+
+    return signals.length ? signals : ['Sem alerta automatico; decidir pelo criterio do post e conversa da Staff.'];
+  }
+
+  private interestComparisonSummaryPt(
+    playerName: string,
+    data: {
+      playerClass: string;
+      dimensionalLayer: number;
+      attendancePercentage: number;
+      availableDkp: number;
+      activeRequestsCount: number;
+      recentLoot: ItemInterestStaffComparison['recentLoot'];
+    },
+  ): string {
+    const lastDrop = data.recentLoot.lastDropAt ? data.recentLoot.lastDropAt.toISOString().slice(0, 10) : 'sem drop registrado';
+    return `${playerName}: ${data.playerClass}, camada ${data.dimensionalLayer}, presenca ${Math.round(data.attendancePercentage)}%, DKP disp. ${data.availableDkp}, ${data.activeRequestsCount} request(s), ultimo drop ${lastDrop}.`;
   }
 
   private async notifyCreatedPost(post: ItemInterestPost, item: ItemCatalog, mode: string, actorId: string): Promise<void> {
