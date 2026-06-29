@@ -181,6 +181,17 @@ export type ItemRequest = {
     tradeoffPt: string;
     tradeoffEn: string;
   }>;
+  materialPriority?: {
+    affected: boolean;
+    reason: 'NONE' | 'T3_CRAFT_PRIORITY' | 'T3_CRAFT_OVER_QUINTESSENCE';
+    materialKey?: string | null;
+    blockingCraftRequests: number;
+    blockingRequestIds: string[];
+    blockingItemNames: string[];
+    summaryPt: string;
+    summaryEn: string;
+    staffSummaryPt: string;
+  };
 };
 
 export type ItemInterestStatus = 'OPEN' | 'CLOSED' | 'VOTING' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';

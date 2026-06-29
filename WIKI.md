@@ -150,6 +150,8 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - A regra existe para elevar primeiro quem ainda esta abaixo na progressao e melhorar o resultado coletivo da guilda.
 - Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
 - Requests tambem podem receber `swapSuggestions`: ate tres itens requestaveis ativos da mesma categoria e, quando aplicavel, mesmo tier/tipo, com fila menor. A UI mostra posicao estimada, unidades na fila e trade-off PT-BR/EN; a troca continua manual/controlada pela Staff.
+- Requests tambem recebem `materialPriority`: requests de craft T3 mostram selo de prioridade operacional, e requests de Quintessencia afetados por craft T3 do mesmo material inferido mostram aviso simplificado para player e texto operacional para Staff.
+- A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
 
 ## Deploy e producao
 
@@ -248,6 +250,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Requests ganharam transparencia da prioridade de material T3 sobre Quintessencia, com badge, texto Staff/player e bloqueio auditado de entrega quando aplicavel. | requests/craft |
 | 2026-06-29 | Requests passaram a sugerir alternativas comparaveis com fila menor, mostrando trade-off sem trocar automaticamente. | requests/UX |
 | 2026-06-29 | Requests ganharam previsao operacional de fila com pedidos/unidades antes, idade do update, ultima entrega e resumo PT-BR/EN. | requests/UX |
 | 2026-06-29 | Timeline do player ganhou historico narrado PT-BR/EN com filtros por tipo/periodo, links de acao e sigilo preservado em leiloes. | player/UX |

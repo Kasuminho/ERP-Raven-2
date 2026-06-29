@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, ClipboardList, Clock3, PackageCheck, Trash2, TrendingDown } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Clock3, PackageCheck, ShieldAlert, Trash2, TrendingDown } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -124,6 +124,34 @@ function SwapSuggestionsPanel({ request }: { request: ItemRequest }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MaterialPriorityPanel({ request, staff = false }: { request: ItemRequest; staff?: boolean }) {
+  const locale = useLocaleStore((state) => state.locale);
+  const priority = request.materialPriority;
+
+  if (!priority || priority.reason === 'NONE') {
+    return null;
+  }
+
+  const isBlocked = priority.affected;
+  const text = staff ? priority.staffSummaryPt : locale === 'pt' ? priority.summaryPt : priority.summaryEn;
+
+  if (!text) {
+    return null;
+  }
+
+  return (
+    <div className={`rounded-md border p-3 text-sm ${isBlocked ? 'border-amber-400/30 bg-amber-500/10' : 'border-violet-400/20 bg-violet-500/10'}`}>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <ShieldAlert className={`h-4 w-4 ${isBlocked ? 'text-amber-200' : 'text-violet-200'}`} />
+        <p className={`font-semibold ${isBlocked ? 'text-amber-100' : 'text-violet-100'}`}>{t(locale, 'materialPriority')}</p>
+        <Badge tone={isBlocked ? 'gold' : 'blue'}>{isBlocked ? t(locale, 'quintessenceBehindT3') : t(locale, 't3CraftPriority')}</Badge>
+      </div>
+      <p className="text-muted-foreground">{text}</p>
+      {staff && priority.materialKey ? <p className="mt-1 text-xs text-muted-foreground">{t(locale, 'material')}: {priority.materialKey}</p> : null}
     </div>
   );
 }
@@ -263,6 +291,7 @@ function PlayerItemRequestsPanel() {
                 </div>
               </div>
               <QueueForecastPanel request={request} />
+              <MaterialPriorityPanel request={request} />
               <SwapSuggestionsPanel request={request} />
               {!isBossRequest(request) && request.updateProofImageUrl && (
                 <div className="flex items-center gap-3 rounded-md border bg-background/35 p-2 text-sm">
@@ -343,6 +372,9 @@ function PlayerItemRequestsPanel() {
                     <Badge tone={smartQueueLabel(locale, request).tone}>{smartQueueLabel(locale, request).label}</Badge>
                     <div className="w-full">
                       <QueueForecastPanel request={request} />
+                      <div className="mt-2">
+                        <MaterialPriorityPanel request={request} />
+                      </div>
                       <div className="mt-2">
                         <SwapSuggestionsPanel request={request} />
                       </div>
@@ -543,6 +575,7 @@ function StaffItemRequestsPanel() {
             <CardContent className="space-y-3 pt-5">
               {group.rows.map((request) => {
                 const qty = deliveryQty[request.id] ?? 1;
+                const priorityBlocksDelivery = Boolean(request.materialPriority?.affected);
                 return (
                   <div key={request.id} className="grid gap-3 rounded-md border bg-background/45 p-3 xl:grid-cols-[1fr_auto]">
                     <div className="min-w-0">
@@ -570,6 +603,9 @@ function StaffItemRequestsPanel() {
                       </div>
                       <QueueForecastPanel request={request} staff />
                       <div className="mt-2">
+                        <MaterialPriorityPanel request={request} staff />
+                      </div>
+                      <div className="mt-2">
                         <SwapSuggestionsPanel request={request} />
                       </div>
                     </div>
@@ -584,7 +620,7 @@ function StaffItemRequestsPanel() {
                       />
                       <Button
                         variant="secondary"
-                        disabled={deliverRequest.isPending}
+                        disabled={deliverRequest.isPending || priorityBlocksDelivery}
                         onClick={() => setConfirmation({ kind: 'deliver', requestId: request.id, quantity: qty })}
                       >
                         <PackageCheck className="h-4 w-4" /> {t(locale, 'deliver')}

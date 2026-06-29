@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ItemCatalog, ItemRequest, ItemRequestUpdateStatus, Prisma } from '@prisma/client';
+import { ItemCatalog, ItemRequest, ItemRequestUpdateStatus, ItemTier, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { getRequestableCatalogKey, requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
@@ -44,9 +44,22 @@ export type ItemRequestSwapSuggestion = {
   tradeoffEn: string;
 };
 
+export type ItemRequestMaterialPriority = {
+  affected: boolean;
+  reason: 'NONE' | 'T3_CRAFT_PRIORITY' | 'T3_CRAFT_OVER_QUINTESSENCE';
+  materialKey?: string | null;
+  blockingCraftRequests: number;
+  blockingRequestIds: string[];
+  blockingItemNames: string[];
+  summaryPt: string;
+  summaryEn: string;
+  staffSummaryPt: string;
+};
+
 export type ItemRequestDetailsWithForecast = ItemRequestDetails & {
   queueForecast: ItemRequestQueueForecast;
   swapSuggestions: ItemRequestSwapSuggestion[];
+  materialPriority: ItemRequestMaterialPriority;
 };
 
 @Injectable()
@@ -330,6 +343,8 @@ export class ItemRequestsService {
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new BadRequestException('Quantity must be a positive integer.');
     }
+
+    await this.assertMaterialPriorityAllowsDelivery(id, actorId);
 
     let completedImageUrl: string | undefined;
     let completedUpdateProofUrl: string | undefined;
@@ -742,6 +757,7 @@ export class ItemRequestsService {
     }
 
     const forecasts = new Map<string, ItemRequestQueueForecast>();
+    const materialPriorities = this.materialPrioritiesForRows(allRows);
     const now = new Date();
 
     for (const [itemName, rows] of groups.entries()) {
@@ -780,7 +796,105 @@ export class ItemRequestsService {
       ...request,
       queueForecast: forecasts.get(request.id) ?? this.emptyQueueForecast(request),
       swapSuggestions: this.swapSuggestionsForRequest(request, groups, requestableCatalogs),
+      materialPriority: materialPriorities.get(request.id) ?? this.emptyMaterialPriority(),
     }));
+  }
+
+  private async assertMaterialPriorityAllowsDelivery(id: string, actorId?: string): Promise<void> {
+    const request = await this.repository.findById(id);
+
+    if (!request) {
+      return;
+    }
+
+    const priorities = this.materialPrioritiesForRows(await this.repository.findMany());
+    const priority = priorities.get(id);
+
+    if (!priority?.affected) {
+      return;
+    }
+
+    await this.audit('ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED', id, actorId, {
+      itemName: request.itemName,
+      playerName: request.playerName,
+      materialKey: priority.materialKey ?? null,
+      blockingCraftRequests: priority.blockingCraftRequests,
+      blockingRequestIds: priority.blockingRequestIds,
+      blockingItemNames: priority.blockingItemNames,
+      reason: priority.reason,
+    });
+
+    throw new BadRequestException(priority.staffSummaryPt);
+  }
+
+  private materialPrioritiesForRows(rows: ItemRequestDetails[]): Map<string, ItemRequestMaterialPriority> {
+    const priorities = new Map<string, ItemRequestMaterialPriority>();
+    const craftRows = rows.filter((request) => this.isT3CraftPriorityRequest(request));
+
+    for (const request of rows) {
+      if (this.isQuintessenceRequest(request)) {
+        const materialKey = this.materialPriorityKey(request);
+        const blockingRows = craftRows.filter((candidate) => candidate.id !== request.id && this.materialPriorityKey(candidate) === materialKey);
+
+        if (blockingRows.length > 0) {
+          priorities.set(request.id, this.quintessenceBlockedPriority(request, materialKey, blockingRows));
+          continue;
+        }
+      }
+
+      if (this.isT3CraftPriorityRequest(request)) {
+        priorities.set(request.id, this.t3CraftPriority(request));
+        continue;
+      }
+
+      priorities.set(request.id, this.emptyMaterialPriority());
+    }
+
+    return priorities;
+  }
+
+  private quintessenceBlockedPriority(request: ItemRequestDetails, materialKey: string, blockingRows: ItemRequestDetails[]): ItemRequestMaterialPriority {
+    const itemNames = [...new Set(blockingRows.map((row) => row.itemName))];
+    return {
+      affected: true,
+      reason: 'T3_CRAFT_OVER_QUINTESSENCE',
+      materialKey,
+      blockingCraftRequests: blockingRows.length,
+      blockingRequestIds: blockingRows.map((row) => row.id),
+      blockingItemNames: itemNames,
+      summaryPt: `Este pedido de Quintessencia fica atras de ${blockingRows.length} pedido(s) de craft T3 do mesmo material.`,
+      summaryEn: `This Quintessence request is behind ${blockingRows.length} T3 craft request(s) for the same material.`,
+      staffSummaryPt: `Prioridade T3 aplicada: ${request.playerName} so deve receber Quintessencia depois de resolver ${blockingRows.length} pedido(s) de craft T3 do mesmo material (${itemNames.join(', ')}).`,
+    };
+  }
+
+  private t3CraftPriority(request: ItemRequestDetails): ItemRequestMaterialPriority {
+    const materialKey = this.materialPriorityKey(request);
+    return {
+      affected: false,
+      reason: 'T3_CRAFT_PRIORITY',
+      materialKey,
+      blockingCraftRequests: 0,
+      blockingRequestIds: [],
+      blockingItemNames: [],
+      summaryPt: 'Pedido ligado a craft T3; quando disputar material com Quintessencia, este craft tem prioridade operacional.',
+      summaryEn: 'This request is tied to T3 craft; when it competes with Quintessence for the same material, T3 craft has operational priority.',
+      staffSummaryPt: `Pedido de craft T3 em prioridade de material (${materialKey}).`,
+    };
+  }
+
+  private emptyMaterialPriority(): ItemRequestMaterialPriority {
+    return {
+      affected: false,
+      reason: 'NONE',
+      materialKey: null,
+      blockingCraftRequests: 0,
+      blockingRequestIds: [],
+      blockingItemNames: [],
+      summaryPt: '',
+      summaryEn: '',
+      staffSummaryPt: '',
+    };
   }
 
   private swapSuggestionsForRequest(
@@ -840,6 +954,60 @@ export class ItemRequestsService {
     }
 
     return this.itemKey(current) !== this.itemKey(candidate);
+  }
+
+  private isT3CraftPriorityRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): boolean {
+    const item = request.itemCatalog;
+
+    if (item?.itemTier === ItemTier.T3) {
+      return true;
+    }
+
+    const text = this.prioritySearchText(request);
+    return text.includes('t3')
+      || text.includes('craft')
+      || text.includes('crafting')
+      || text.includes('blueprint')
+      || text.includes('fragment')
+      || text.includes('fragmento');
+  }
+
+  private isQuintessenceRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): boolean {
+    return this.prioritySearchText(request).includes('quintess');
+  }
+
+  private materialPriorityKey(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): string {
+    const item = request.itemCatalog;
+    const materialSource = item?.typePt
+      || item?.typeEn
+      || item?.category
+      || request.itemName;
+
+    return this.normalizePriorityText(materialSource);
+  }
+
+  private prioritySearchText(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): string {
+    const item = request.itemCatalog;
+    return this.normalizePriorityText([
+      request.itemName,
+      item?.namePt,
+      item?.nameEn,
+      item?.nameEs,
+      item?.typePt,
+      item?.typeEn,
+      item?.typeEs,
+      item?.category,
+      item?.itemTier,
+      item?.itemType,
+    ].filter(Boolean).join(' '));
+  }
+
+  private normalizePriorityText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 
   private swapSuggestionTradeoffPt(queueSize: number, unitsInQueue: number, currentQueueSize: number, currentUnits: number): string {

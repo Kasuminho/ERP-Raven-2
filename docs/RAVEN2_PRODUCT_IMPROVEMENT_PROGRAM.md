@@ -313,11 +313,20 @@ Entrega:
 
 Objetivo: explicar quando Quintessencia perde prioridade para craft T3.
 
+Estado em 2026-06-29: implementado em `/dashboard/item-requests`.
+
 Entrega:
 
 - Badge em request afetado por prioridade de material.
 - Texto operacional Staff e texto player simplificado.
 - Audit log quando prioridade impactar ordenacao/entrega.
+- Os endpoints existentes de Item Request retornam `materialPriority`, calculado
+  a partir da fila ativa e do catalogo do item.
+- Requests de craft T3 aparecem com selo de prioridade operacional.
+- Requests de Quintessencia afetados por craft T3 do mesmo material inferido
+  exibem aviso para player e texto detalhado para Staff.
+- A entrega Staff de um request de Quintessencia bloqueado pela prioridade T3 e
+  impedida com audit log `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED`.
 
 ## Epico E - Interesses com decisao comparavel
 
