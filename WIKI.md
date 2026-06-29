@@ -59,7 +59,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
-- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-06-26 para evitar reciclar as frases das duas revisoes anteriores.
+- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-06-29 para evitar reciclar as frases das revisoes anteriores.
 
 ## Seguranca, sessao e uploads
 
@@ -241,6 +241,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-06-29 | Quarta rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-06-29 | Diagnostico Staff de leilao ganhou selecao de todos os leiloes por item, vencedor quando houver e data, sem exigir colar ID manualmente. | leiloes/diagnostico |
 | 2026-06-28 | Regra T4 ajustada: rejeicao/invalidacao sem bids desce camadas ate a 1; somente apos falhar na camada 1 o leilao relista para camada 4 em 7 dias desde a abertura original. Justificativas em modais deixaram de perder foco ao digitar. | leiloes/relist |
 | 2026-06-26 | Terceira rotacao automatica renovou os bancos de zoeira dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mexer em payloads nem regras. | webhook-joke-rotation |

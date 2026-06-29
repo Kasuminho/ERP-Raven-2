@@ -76,23 +76,23 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
       ? pickStaffVoice([
-        'Healthcheck voltou pro eixo. Aristolfo guardou a sirene.',
-        'Healthcheck verde outra vez. O servidor parou de baitar susto.',
-        'Healthcheck normalizado. O plantao saiu do jumpscare ranked.',
-        'Healthcheck estabilizado. A stack quitou do modo novela.',
+        'Healthcheck voltou pro verde. Aristolfo desligou o modo plantao tenso.',
+        'Healthcheck normalizado. O servidor parou de fazer cosplay de susto.',
+        'Healthcheck no eixo de novo. A stack largou o drama e voltou ao expediente.',
+        'Healthcheck estabilizado. O F5 pode sair do cardio por enquanto.',
       ], report.status, report.checkedAt)
       : report.status === 'degraded'
         ? pickStaffVoice([
-          'Healthcheck em amarelo e sem glamour',
-          'Healthcheck chiando no radar',
-          'Healthcheck pedindo cautela, nao reza',
-          'Healthcheck amarelou e chamou atencao',
+          'Healthcheck amarelo, sem tapete vermelho',
+          'Healthcheck rangendo no painel',
+          'Healthcheck pediu cautela, nao corrente de oracao',
+          'Healthcheck amarelou e levantou plaquinha',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
         : pickStaffVoice([
-          'Healthcheck critico. Boss do plantao spawnou.',
-          'Healthcheck vermelho. Paciencia em low HP.',
-          'Healthcheck entrou em caos deluxe.',
-          'Healthcheck abriu a porta do apocalipse burocratico.',
+          'Healthcheck critico. Plantao ganhou boss sem aviso.',
+          'Healthcheck vermelho. A paciencia entrou em modo economia.',
+          'Healthcheck em caos premium. Sem upgrade incluso.',
+          'Healthcheck abriu chamado com cheiro de segunda-feira.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
@@ -101,10 +101,10 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
         color,
         description: report.status === 'ok'
           ? pickStaffVoice([
-            '**Servico voltou.** A infra respirou e o plantao pode largar o F5 com menos odio.',
-            '**Tudo recuperado.** A stack saiu do roguelike e voltou pro mapa oficial.',
-            '**Recuperacao confirmada.** O susto quitou e o Jenga da infra ficou em pe.',
-            '**Plataforma normalizada.** O drama caiu de elo e o servidor lembrou como trabalha.',
+            '**Servico voltou.** A infra respirou e o plantao pode soltar o F5 sem rancor.',
+            '**Tudo recuperado.** A stack saiu do modo survival e achou a porta certa.',
+            '**Recuperacao confirmada.** O susto deslogou e a infra ficou de pe.',
+            '**Plataforma normalizada.** O drama perdeu rank e o servidor lembrou do contrato.',
           ], report.status, report.checkedAt)
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [

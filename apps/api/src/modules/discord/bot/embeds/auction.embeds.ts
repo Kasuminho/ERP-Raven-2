@@ -27,16 +27,16 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setColor(0x2f80ed)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Leilao abriu.** Entra com o DKP contado; lance freestyle so rende compilado de vergonha.',
-        '**Drop na mesa.** Confere o saldo antes do clique, porque matematica em choque e fake news premium.',
-        '**Janela de bid no ar.** Se for mirar, mira com valor certo; remendo pos-lock e patch triste.',
-        '**Item spawnou.** Abre a carteira de DKP sem inventar speedrun de calculo no ultimo segundo.',
+        '**Leilao aberto.** Confere o DKP antes do clique; calculadora em panico so farma meme ruim.',
+        '**Drop caiu na vitrine.** Bid com saldo certo, porque chute economico aqui vira cosplay de loss.',
+        '**Janela de lance online.** Mira direito; corrigir depois do lock e jogar ranked com mouse invertido.',
+        '**Item apareceu.** Entra com numero pensado, nao com fe de lan house em dia de chuva.',
       ],
       en: [
-        '**Auction is open.** Bring counted DKP; freestyle bidding only makes a cringe compilation.',
-        '**Drop is on the table.** Check your balance before clicking, because panic math is premium fake news.',
-        '**The bid window is live.** If you are aiming, aim with the right number; post-lock patchwork is just sad.',
-        '**The item spawned.** Open the DKP wallet without starting a last-second math speedrun.',
+        '**Auction is open.** Check DKP before clicking; panic math only farms bad memes.',
+        '**Drop hit the showcase.** Bid with real balance, because economy guesses turn into loss cosplay here.',
+        '**The bid window is online.** Aim properly; fixing it after the lock is ranked with inverted mouse.',
+        '**The item appeared.** Enter with a thought-out number, not internet-cafe faith on a storm day.',
       ],
     }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
@@ -57,16 +57,16 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
     .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `**${playerName} cravou o drop.** O DKP evaporou da conta e o "quase" voltou pro matchmaking.`,
-        `**${playerName} levou a call.** Item garantido; o resto e comentario atrasado com latencia de museu.`,
-        `**${playerName} fechou a conta.** O lock virou gasto real e o choro perdeu prioridade de fila.`,
-        `**${playerName} encaixou o bid final.** O item mudou de dono e o lobby do arrependimento lotou.`,
+        `**${playerName} levou o drop.** O DKP saiu de casa e o "quase ganhei" foi mutado pelo log.`,
+        `**${playerName} fechou a call.** Item definido; replay de arrependimento agora e conteudo extra.`,
+        `**${playerName} ganhou no martelo.** O lock virou cobranca real e o chat perdeu poder de rewrite.`,
+        `**${playerName} acertou o bid final.** Item com dono, drama sem vaga e planilha sem fanfic.`,
       ],
       en: [
-        `**${playerName} locked the drop.** The DKP vanished from the account and "almost" went back to matchmaking.`,
-        `**${playerName} made the call.** Item secured; the rest is late commentary with museum-grade latency.`,
-        `**${playerName} closed the deal.** The lock became a real spend and the crying lost queue priority.`,
-        `**${playerName} landed the final bid.** The item changed hands and the regret lobby filled up.`,
+        `**${playerName} took the drop.** The DKP left home and "almost won" got muted by the log.`,
+        `**${playerName} closed the call.** Item decided; regret replay is bonus content now.`,
+        `**${playerName} won at the hammer.** The lock became a real charge and chat lost rewrite power.`,
+        `**${playerName} landed the final bid.** Item has an owner, drama has no slot, spreadsheet has no fanfic.`,
       ],
     }, itemName, playerName))
     .setColor(0x27ae60)
@@ -84,16 +84,16 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `Entrega confirmada para **${playerName}**. Print salvo e o CSI do loot ficou desempregado.`,
-        `**${playerName}** recebeu e ja ficou no log. O "manda a prova" morreu na tela de loading.`,
-        `Drop entregue para **${playerName}**. Replay anexado antes que o chat tente editar canon.`,
-        `Tudo entregue a **${playerName}**. Prova no cofre e teorico do multiverso sem patch notes.`,
+        `Entrega confirmada para **${playerName}**. Print guardado antes que o chat abra pericia de boteco.`,
+        `**${playerName}** recebeu e entrou no log. O "tem comprovante?" tomou disconnect.`,
+        `Drop entregue para **${playerName}**. Prova anexada antes do roteiro paralelo ganhar like.`,
+        `Tudo entregue a **${playerName}**. Registro feito e o debate freestyle perdeu o palco.`,
       ],
       en: [
-        `Delivery confirmed for **${playerName}**. Screenshot saved and the loot CSI got laid off.`,
-        `**${playerName}** received it and it is already in the log. The "show the proof" arc died on the loading screen.`,
-        `Drop delivered to **${playerName}**. Replay attached before chat could rewrite canon.`,
-        `Everything reached **${playerName}**. Proof is in the vault and the multiverse theorists lost their patch notes.`,
+        `Delivery confirmed for **${playerName}**. Screenshot stored before chat opened bar-counter forensics.`,
+        `**${playerName}** received it and it entered the log. The "got proof?" arc got disconnected.`,
+        `Drop delivered to **${playerName}**. Proof attached before the parallel script farmed likes.`,
+        `Everything reached **${playerName}**. Record made and the freestyle debate lost the stage.`,
       ],
     }, itemName, playerName))
     .setColor(0xf2c94c)

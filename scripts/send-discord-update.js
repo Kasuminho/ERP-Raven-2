@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo largou o changelog na mesa. Se der ruim agora, a realidade entrou de smurf.*',
-    '*Aristolfo bateu o martelo. Se nascer bug novo, ele veio de invite vazado.*',
-    '*Aristolfo publicou com checksum. O resto agora e PvP entre deploy e destino.*',
-    '*Aristolfo assinou a ata. Se pipocar caos novo, pelo menos ele chega registrado.*',
-    '*Aristolfo soltou a nota sem filtro. Se quebrar agora, foi jumpscare da vida real.*',
+    '*Aristolfo carimbou o changelog. Se algo chiar agora, entra na fila com senha e cara de bug.*',
+    '*Aristolfo publicou a ata. O deploy foi; o caos que abra ticket sem gritar no corredor.*',
+    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, vai ter log pra depor.*',
+    '*Aristolfo fechou a nota. Quem discordar dos fatos que leve print e stamina.*',
+    '*Aristolfo mandou o changelog. A planilha viu, fingiu costume e seguiu andando.*',
   ],
   EN: [
-    '*Aristolfo dropped the changelog on the table. If it breaks now, reality queued as a smurf.*',
-    '*Aristolfo brought the hammer down. If a new bug spawns, it came from a leaked invite.*',
-    '*Aristolfo published with checksum. The rest is PvP between deploy and destiny.*',
-    '*Aristolfo signed the record. If new chaos pops off, at least it arrives documented.*',
-    '*Aristolfo released the note raw. If it breaks now, that was a real-life jumpscare.*',
+    '*Aristolfo stamped the changelog. If anything squeaks now, it can queue with a number and a bug face.*',
+    '*Aristolfo published the minutes. Deploy went out; chaos can open a ticket without yelling in the hallway.*',
+    '*Aristolfo sent the note with a receipt. If reality improvises, the log can testify.*',
+    '*Aristolfo closed the note. Whoever disputes the facts should bring screenshots and stamina.*',
+    '*Aristolfo shipped the changelog. The spreadsheet saw it, pretended this was normal, and kept walking.*',
   ],
 };
 

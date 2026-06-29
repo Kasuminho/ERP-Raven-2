@@ -947,16 +947,16 @@ export class OperationsService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo fechou a semana no debugger. Se a planilha chiar agora, e so ghost de tilt antigo.',
-          'Resumo semanal carimbado. Numero bateu antes do chat abrir react de teoria.',
-          'Aristolfo passou pano nao; passou auditoria. O saldo fechou sem cosplay de fanfic.',
-          'Semana quitada no extrato. Se nascer duvida nova, ela ja vem de spawn ilegal.',
+          'Aristolfo fechou a semana no extrato. Se a planilha reclamar, e lag de orgulho.',
+          'Resumo semanal carimbado. Numero bateu antes do chat tentar speedrun de teoria.',
+          'Aristolfo nao passou pano; passou pente fino. O saldo saiu sem maquiagem de fanfic.',
+          'Semana quitada no registro. Duvida nova agora precisa entrar na fila como todo mundo.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo closed the week in the debugger. If the spreadsheet complains now, that is just old tilt ghosting.',
-          'Weekly summary stamped. The numbers matched before chat could open theory reactions.',
-          'Aristolfo did not glaze it; he audited it. The balance closed without fanfic cosplay.',
-          'Week settled on the ledger. Any new doubt is spawning off-script.',
+          'Aristolfo closed the week on the ledger. If the spreadsheet complains, that is pride lag.',
+          'Weekly summary stamped. The numbers matched before chat could theory-speedrun.',
+          'Aristolfo did not gloss over it; he fine-combed it. The balance left without fanfic makeup.',
+          'Week settled in the record. Any new doubt must queue like everyone else.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

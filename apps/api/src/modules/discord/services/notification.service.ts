@@ -44,16 +44,16 @@ export class NotificationService {
         localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon' }),
         pickBilingualVoice({
           'pt-BR': [
-            `**${data.itemName}** entrou nos ultimos minutos. Bid agora ou prepara o "eu tava abrindo a pagina".`,
-            `**${data.itemName}** caiu no clutch final. Quem moscar vai clipar so a propria desculpa.`,
-            `**${data.itemName}** ja esta fechando a janela. Se o bid nao sair agora, depois vira figurinha de arrependimento.`,
-            `**${data.itemName}** esta no ultimo round. Se ainda quer jogo, o clique e agora, nao no react tardio.`,
+            `**${data.itemName}** entrou nos minutos finais. Bid agora; depois o "tava carregando" chega sem audiencia.`,
+            `**${data.itemName}** esta no clutch. Quem piscar vai assistir o proprio vacilo em 1080p.`,
+            `**${data.itemName}** ja esta fechando a janela. Se quer lance, e clique agora, nao documentario depois.`,
+            `**${data.itemName}** chegou no ultimo round. Vontade sem bid nao pontua no placar.`,
           ],
           en: [
-            `**${data.itemName}** is in its final minutes. Bid now or prepare the classic "I was opening the page".`,
-            `**${data.itemName}** is in the final clutch. Miss it now and only your excuse gets clipped.`,
-            `**${data.itemName}** is already closing the window. If the bid does not go in now, it becomes regret stickers.`,
-            `**${data.itemName}** is on the last round. If you still want in, click now, not during the late reaction.`,
+            `**${data.itemName}** is in the final minutes. Bid now; "it was loading" arrives with no audience later.`,
+            `**${data.itemName}** is in clutch. Blink now and watch your own miss in 1080p.`,
+            `**${data.itemName}** is already closing the window. If you want a bid, click now, not a documentary later.`,
+            `**${data.itemName}** reached the last round. Intent without a bid does not score.`,
           ],
         }, data.auctionId, data.itemName),
       )],
@@ -67,16 +67,16 @@ export class NotificationService {
           'Bid superado / Bid outbid',
           pickBilingualVoice({
             'pt-BR': [
-              `Passaram seu bid em **${data.itemName}**. Reage agora ou assiste o replay do lado de fora.`,
-              `Tomaram a dianteira em **${data.itemName}**. Se ainda quer jogo, responde ja e nao no pos-derrota.`,
-              `Seu bid em **${data.itemName}** caiu pra segundo lugar. Decide rapido antes da janela virar aba esquecida.`,
-              `Superaram voce em **${data.itemName}**. Ou responde agora, ou o VOD vira aula pratica de atraso.`,
+              `Passaram seu bid em **${data.itemName}**. Reage agora ou vira espectador com ingresso caro.`,
+              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes da tela de derrota.`,
+              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba vire fossil.`,
+              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD vira curso de atraso.`,
             ],
             en: [
-              `Your bid on **${data.itemName}** got passed. React now or watch the replay from outside the lobby.`,
-              `Someone took the lead on **${data.itemName}**. If you still want in, answer now and not after the loss screen.`,
-              `Your bid on **${data.itemName}** dropped to second place. Decide fast before the window becomes a forgotten tab.`,
-              `Someone moved ahead on **${data.itemName}**. Either answer now or let the VOD become a delay tutorial.`,
+              `Your bid on **${data.itemName}** got passed. React now or become a spectator with an expensive ticket.`,
+              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the defeat screen.`,
+              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab becomes a fossil.`,
+              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD become a delay course.`,
             ],
           }, data.auctionId, data.itemName, data.discordId),
         )],
@@ -265,16 +265,16 @@ export class NotificationService {
     }[data.stage];
     const actionText = data.stage === 'dropped'
       ? pickStaffVoice([
-        'Rank ajustado no automatico. Falta so garantir que o player entenda o debuff.',
-        'A fila ja puniu sozinha. Agora vale alinhar o player sem abrir serie derivada.',
-        'O rank desceu no cron. Melhor avisar antes que a contestacao venha em 240p.',
-        'A queda ja entrou no log. Falta so avisar o player antes que o chat roteirize drama.',
+        'Rank ajustado no automatico. Agora e avisar antes que o player descubra pelo susto.',
+        'A fila aplicou o debuff sozinha. Vale alinhar o player antes do drama pedir microfone.',
+        'O cron derrubou uma posicao. Melhor explicar antes que a contestacao chegue de chinelo.',
+        'A queda ja entrou no log. Falta avisar o player antes que o chat escreva lore.',
       ], data.requestId, data.itemName, data.playerName, data.stage)
       : pickStaffVoice([
-        'Cobrar update do player com print novo no site.',
-        'Puxar o player para atualizar o request sem parkour de justificativa.',
-        'Lembrar o player de subir prova nova antes do cron voltar com sangue nos olhos.',
-        'Cutucar o player para atualizar o request antes que o lembrete vire franquia.',
+        'Cobrar print novo no site; request parado nao ganha imunidade diplomatica.',
+        'Puxar o player para atualizar o request antes que a justificativa vire parkour.',
+        'Lembrar o player de subir prova nova antes que o cron volte de cara fechada.',
+        'Cutucar o player hoje; amanha esse lembrete tenta virar temporada.',
       ], data.requestId, data.itemName, data.playerName, data.stage);
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,

@@ -11,16 +11,16 @@ export function buildAttendanceStartedEmbed(eventName: string, startsAt: Date, l
     .setTitle(localeCopy(locale, { 'pt-BR': `Presenca aberta: ${eventName}`, en: `Attendance open: ${eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Check-in no ar.** Marca a presenca antes que o cron te classifique como lenda do "to chegando".',
-        '**Presenca abriu.** Quem bater ponto leva DKP; quem enrolar vira clip do "cinco min e to ai".',
-        '**Janela de check-in viva.** Faz o registro agora; depois nao adianta culpar lag espiritual.',
-        '**Presenca liberada.** Entra no site antes que a raid siga e teu nome fique AFK premium.',
+        '**Check-in aberto.** Marca agora antes que o cron te coloque no hall do "ja ja eu entro".',
+        '**Presenca valendo.** DKP nao fareja intencao; clica no site e evita novela no final.',
+        '**Janela de presenca no ar.** Registra logo; lag metafisico nao passa na auditoria.',
+        '**Ponto liberado.** Entra no site antes que a raid avance e teu nome vire figurante AFK.',
       ],
       en: [
-        '**Check-in is live.** Mark attendance before the cron files you under "on my way".',
-        '**Attendance is open.** Tap in for DKP; stall now and you become the "five minutes" clip.',
-        '**The check-in window is alive.** Register now; blaming spiritual lag later will not land.',
-        '**Attendance is unlocked.** Hit the site before the raid moves on and your name goes AFK premium.',
+        '**Check-in is open.** Mark it now before the cron puts you in the "joining soon" hall.',
+        '**Attendance counts now.** DKP cannot smell intent; click the site and avoid endgame drama.',
+        '**The attendance window is live.** Register early; metaphysical lag fails the audit.',
+        '**Clock-in is unlocked.** Hit the site before the raid moves and your name becomes AFK background.',
       ],
     }, eventName, startsAt))
     .addFields({ name: localeCopy(locale, { 'pt-BR': 'Inicio', en: 'Starts' }), value: `${discordTimestamp(startsAt, 'F')}\n${discordTimestamp(startsAt, 'R')}`, inline: false })
@@ -39,16 +39,16 @@ export function buildEventFinalizedEmbed(data: {
     .setTitle(localeCopy(locale, { 'pt-BR': `Evento fechado: ${data.eventName}`, en: `Event closed: ${data.eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Raid fechada e DKP pingou.** A conta saiu reta; a planilha hoje nao pediu respawn.',
-        '**Distribuicao concluida.** Quem colou recebeu, quem faltou ganhou so a nostalgia do loot.',
-        '**Resumo quitado.** Os numeros bateram sem combo de calculadora nervosa.',
-        '**Evento encerrado.** DKP entregue e a planilha saiu menos tiltada que ontem.',
+        '**Raid fechada e DKP pago.** A conta bateu; milagre raro, mas dessa vez com recibo.',
+        '**Distribuicao concluida.** Quem veio recebeu, quem faltou farmou so saudade do loot.',
+        '**Resumo liquidado.** Numero alinhado sem invocar calculadora em modo desespero.',
+        '**Evento encerrado.** DKP entregue e a planilha saiu andando sem pedir atendimento.',
       ],
       en: [
-        '**Raid closed and DKP landed.** The math stayed straight and the spreadsheet skipped the respawn screen.',
-        '**Distribution complete.** Everyone who showed up got paid; everyone else got loot nostalgia.',
-        '**Wrap-up settled.** The numbers matched without any panic-calculator combo.',
-        '**Event locked in.** DKP is delivered and the spreadsheet is less tilted than yesterday.',
+        '**Raid closed and DKP paid.** The math matched; rare miracle, this time with a receipt.',
+        '**Distribution complete.** Whoever showed got paid; whoever missed farmed loot nostalgia.',
+        '**Wrap-up settled.** Numbers aligned without summoning panic-calculator mode.',
+        '**Event closed.** DKP delivered and the spreadsheet walked out without asking for support.',
       ],
     }, data.eventName, data.rewardPerPlayer, data.totalDkp, data.presentCount, data.absentCount))
     .addFields(
