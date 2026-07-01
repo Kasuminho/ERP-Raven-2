@@ -102,6 +102,11 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
             timestamp: new Date().toISOString(),
           }],
           allowedMentions: { parse: [] },
+        }, {
+          webhookKey: 'dkp',
+          channelLabel: 'DKP-LOG',
+          action: 'DISCORD_DKP_LOG_SENT',
+          targetId: this.stateId,
         });
 
         await this.prisma.discordDkpLogDelivery.createMany({

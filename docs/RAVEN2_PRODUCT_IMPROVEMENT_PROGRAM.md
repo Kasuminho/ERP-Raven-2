@@ -463,12 +463,21 @@ Entrega:
 
 Objetivo: auditar falhas sem entrar em log.
 
+Estado em 2026-07-01: implementado em `/dashboard/staff/discord-webhooks`
+via `GET /operations/staff/discord-webhooks` e
+`POST /operations/staff/discord-webhooks/:deliveryId/retry`.
+
 Entrega:
 
 - Tela Staff com ultimos envios, status, retry, canal/logical target, erro
   resumido e payload seguro.
 - Nunca mostrar URL de webhook.
 - Acao para reenviar apenas quando idempotente/seguro.
+- A fila persiste `DiscordWebhookDelivery` com `webhookKey`, canal logico,
+  action, target, tentativas, payload sanitizado, erro resumido e datas de
+  fila/envio/falha/retry.
+- O retry manual so aceita entregas `FAILED` e `retryable`, buscando a URL pelo
+  `webhookKey` configurado no servidor sem expor segredo na API ou na Web.
 
 ### G3. Atualizar guias funcionais
 

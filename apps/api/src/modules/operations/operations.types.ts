@@ -250,6 +250,34 @@ export type DiscordTemplateSummary = {
   }>;
 };
 
+export type DiscordWebhookDeliveryStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'RETRYING';
+
+export type DiscordWebhookDeliveryItem = {
+  id: string;
+  webhookKey: string;
+  channelLabel: string;
+  action?: string;
+  targetId?: string;
+  status: DiscordWebhookDeliveryStatus;
+  attempts: number;
+  maxAttempts: number;
+  retryable: boolean;
+  payloadPreview: unknown;
+  payloadSummary: string;
+  lastError?: string;
+  queuedAt: string;
+  startedAt?: string;
+  sentAt?: string;
+  failedAt?: string;
+  retriedAt?: string;
+};
+
+export type DiscordWebhookQueueSummary = {
+  generatedAt: string;
+  counts: Record<DiscordWebhookDeliveryStatus, number>;
+  deliveries: DiscordWebhookDeliveryItem[];
+};
+
 export type OperationalHealthSummary = StaffHealthSummary & {
   discordFailures24h: number;
   latestAutomationAudit?: Date | null;

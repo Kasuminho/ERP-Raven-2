@@ -124,6 +124,14 @@ enum AuctionBidCancellationStatus {
   REJECTED
 }
 
+enum DiscordWebhookDeliveryStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  RETRYING
+}
+
 enum ProgressCategory {
   STELLAS_AMPLIFICATION
   EQUIPMENT
@@ -412,6 +420,32 @@ model DiscordDkpLogDelivery {
   transaction   DKPTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
   @@index([sentAt])
+}
+
+model DiscordWebhookDelivery {
+  id             String                       @id @default(uuid())
+  webhookKey     String
+  channelLabel   String
+  action         String?
+  targetId       String?
+  status         DiscordWebhookDeliveryStatus @default(PENDING)
+  attempts       Int                          @default(0)
+  maxAttempts    Int                          @default(5)
+  retryable      Boolean                      @default(true)
+  payloadPreview Json
+  lastError      String?
+  queuedAt       DateTime                     @default(now())
+  startedAt      DateTime?
+  sentAt         DateTime?
+  failedAt       DateTime?
+  retriedAt      DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  @@index([status, queuedAt])
+  @@index([webhookKey, queuedAt])
+  @@index([action])
+  @@index([targetId])
 }
 
 model DKPLock {

@@ -53,6 +53,7 @@ Fonte detalhada: `docs/DISCORD_WEBHOOK_VOICE.md`.
 - Changelog da Staff e enviado com `npm.cmd run discord:update -- ARQUIVO --staff`.
 - Avisos extraordinarios para players podem ser redigidos/revisados no chat Codex e publicados com `npm.cmd run discord:update -- ARQUIVO --announcements`; fazer `--dry-run` antes, manter PT-BR/EN em blocos separados e exigir confirmacao humana antes do envio.
 - A tela Staff `/dashboard/staff/discord-templates` consome `GET /operations/staff/discord-templates` e mostra preview real sanitizado de webhooks para anuncios, leiloes, interesses, drops, presenca, requests e review Staff. O payload inclui `username`, `avatar_url`, `content`, `embeds` e `allowed_mentions`, nunca a URL do webhook. Templates player-facing exibem PT-BR e EN; Staff-only fica PT-BR.
+- A tela Staff `/dashboard/staff/discord-webhooks` consome `GET /operations/staff/discord-webhooks` e lista entregas persistidas em `DiscordWebhookDelivery`: alvo logico, canal, action, target, status, tentativas, erro resumido e payload sanitizado. `POST /operations/staff/discord-webhooks/:deliveryId/retry` reenvia apenas entregas `FAILED` e `retryable`, buscando a URL pelo `webhookKey` no servidor sem expor segredo.
 - Nunca documentar URLs completas de webhook.
 
 Automacao ativa:
@@ -264,6 +265,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Staff ganhou fila persistente de webhooks com status, payload seguro, erro resumido e retry manual controlado. | Discord/Staff |
 | 2026-07-01 | Staff ganhou preview real sanitizado de webhooks com payload/embed PT-BR/EN quando player-facing, sem expor URL de webhook. | Discord/Staff |
 | 2026-07-01 | Sorteio de interesses 100% transmutar passou a bloquear no limite diario apenas o player vencedor do dia, nao todos os participantes do post premiado. | interesses/transmutar |
 | 2026-07-01 | Eventos Staff ganharam prontidao por boss com camadas, classes, roles, CP aprovado e players sem STATUS recente. | eventos/Staff |

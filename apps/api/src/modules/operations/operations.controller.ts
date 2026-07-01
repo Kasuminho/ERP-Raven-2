@@ -6,6 +6,7 @@ import { OperationsService } from './operations.service';
 import {
   AuctionDossier,
   DiscordTemplateSummary,
+  DiscordWebhookQueueSummary,
   GuildRulesSummary,
   IntegritySummary,
   AuctionDiagnosticOption,
@@ -186,6 +187,20 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async discordTemplates(): Promise<DiscordTemplateSummary> {
     return this.service.getDiscordTemplates();
+  }
+
+  @Get('staff/discord-webhooks')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async discordWebhookQueue(@Query('limit') limit?: string): Promise<DiscordWebhookQueueSummary> {
+    return this.service.getDiscordWebhookQueue(Number(limit) || 50);
+  }
+
+  @Post('staff/discord-webhooks/:deliveryId/retry')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async retryDiscordWebhookDelivery(@Param('deliveryId') deliveryId: string): Promise<DiscordWebhookQueueSummary> {
+    return this.service.retryDiscordWebhookDelivery(deliveryId);
   }
 
   @Get('staff/audit')

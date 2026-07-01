@@ -113,6 +113,11 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
           { name: 'Verificado em', value: report.checkedAt, inline: false },
         ],
       }],
+    }, {
+      webhookKey: 'staffUpdates',
+      channelLabel: 'Updates Staff',
+      action: 'HEALTHCHECK_ALERT_SENT',
+      targetId: 'health',
     });
 
     await this.auditService.log({

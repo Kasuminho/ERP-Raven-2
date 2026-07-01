@@ -19,6 +19,7 @@ import { buildAuctionCreatedEmbed, buildAuctionDeliveryEmbed } from '../discord/
 import { buildAnnouncementEmbed, buildItemInterestCreatedEmbed, buildRequestReminderEmbed } from '../discord/bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../discord/bot/embeds/staff-review.embeds';
 import { bilingualBlocks, pickVoiceLine } from '../discord/bot/embeds/webhook-voice';
+import { DiscordWebhookQueueService, DiscordWebhookDeliverySummary as QueueDeliverySummary } from '../discord/services/discord-webhook-queue.service';
 import { NotificationService } from '../discord/services/notification.service';
 import { PlayerActionPlan, PlayerOperationsSummary, StaffHealthSummary, StaffOperationsSummary, StaffMorningBriefing, OperationPriority, OperationTask } from './operations.types';
 import {
@@ -33,6 +34,8 @@ import {
 import { SeasonMonthlySummary, StaffDayViewSummary, WeeklyGuildSummary } from './operations.types';
 import {
   DiscordTemplateSummary,
+  DiscordWebhookDeliveryStatus,
+  DiscordWebhookQueueSummary,
   GuildRulesSummary,
   LegacyAuditSummary,
   LootFairnessSummary,
@@ -64,6 +67,7 @@ export class OperationsService {
     private readonly config: ConfigService,
     private readonly businessRules: BusinessRulesService,
     private readonly discordNotifications: NotificationService,
+    private readonly discordWebhookQueue: DiscordWebhookQueueService,
   ) {}
 
   async getPlayerSummary(userId: string): Promise<PlayerOperationsSummary> {
@@ -1783,6 +1787,32 @@ export class OperationsService {
     };
   }
 
+  async getDiscordWebhookQueue(limit = 50): Promise<DiscordWebhookQueueSummary> {
+    const deliveries = await this.discordWebhookQueue.listDeliveries(limit);
+    const counts: Record<DiscordWebhookDeliveryStatus, number> = {
+      PENDING: 0,
+      SENDING: 0,
+      SENT: 0,
+      FAILED: 0,
+      RETRYING: 0,
+    };
+
+    for (const delivery of deliveries) {
+      counts[delivery.status] += 1;
+    }
+
+    return {
+      generatedAt: new Date().toISOString(),
+      counts,
+      deliveries: deliveries.map((delivery) => this.mapDiscordWebhookDelivery(delivery)),
+    };
+  }
+
+  async retryDiscordWebhookDelivery(deliveryId: string): Promise<DiscordWebhookQueueSummary> {
+    await this.discordWebhookQueue.retryDelivery(deliveryId);
+    return this.getDiscordWebhookQueue(50);
+  }
+
   async getAuctionDiagnosticOptions(): Promise<AuctionDiagnosticOption[]> {
     const auctions = await this.prisma.auction.findMany({
       select: {
@@ -2763,6 +2793,59 @@ export class OperationsService {
       }),
       allowed_mentions: payload.allowedMentions,
     };
+  }
+
+  private mapDiscordWebhookDelivery(delivery: QueueDeliverySummary): DiscordWebhookQueueSummary['deliveries'][number] {
+    return {
+      id: delivery.id,
+      webhookKey: delivery.webhookKey,
+      channelLabel: delivery.channelLabel,
+      action: delivery.action,
+      targetId: delivery.targetId,
+      status: delivery.status,
+      attempts: delivery.attempts,
+      maxAttempts: delivery.maxAttempts,
+      retryable: delivery.retryable,
+      payloadPreview: delivery.payloadPreview,
+      payloadSummary: this.summarizeDiscordPayload(delivery.payloadPreview),
+      lastError: delivery.lastError,
+      queuedAt: delivery.queuedAt.toISOString(),
+      startedAt: delivery.startedAt?.toISOString(),
+      sentAt: delivery.sentAt?.toISOString(),
+      failedAt: delivery.failedAt?.toISOString(),
+      retriedAt: delivery.retriedAt?.toISOString(),
+    };
+  }
+
+  private summarizeDiscordPayload(payload: unknown): string {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return 'Payload sem resumo disponivel.';
+    }
+
+    const data = payload as {
+      content?: string;
+      embeds?: Array<{ title?: string; description?: string; fields?: unknown[] }>;
+    };
+    const parts: string[] = [];
+
+    if (data.content) {
+      parts.push(`content: ${data.content.replace(/\s+/g, ' ').slice(0, 80)}`);
+    }
+
+    const embedTitles = (data.embeds ?? [])
+      .map((embed) => embed.title)
+      .filter(Boolean)
+      .slice(0, 2);
+    if (embedTitles.length > 0) {
+      parts.push(`embed: ${embedTitles.join(' | ')}`);
+    }
+
+    if ((data.embeds ?? []).length > 0) {
+      const fieldCount = (data.embeds ?? []).reduce((sum, embed) => sum + (Array.isArray(embed.fields) ? embed.fields.length : 0), 0);
+      parts.push(`${data.embeds?.length ?? 0} embed(s), ${fieldCount} campo(s)`);
+    }
+
+    return parts.length > 0 ? parts.join(' • ') : 'Payload sem texto visivel.';
   }
 
   private getAuctionStateReason(

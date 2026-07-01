@@ -315,7 +315,12 @@ export class NotificationService {
 
     if (webhookUrl) {
       try {
-        await this.sendWebhook(webhookUrl, payload);
+        await this.sendWebhook(webhookUrl, payload, {
+          webhookKey: 'announcements',
+          channelLabel: 'Anuncios',
+          action: 'DISCORD_NOTIFY_OPERATIONAL_WEBHOOK',
+          targetId,
+        });
         await this.audit('DISCORD_NOTIFY_OPERATIONAL_WEBHOOK', targetId, { webhook: 'announcements', title: data.title });
       } catch (error) {
         await this.auditFailure('DISCORD_NOTIFY_OPERATIONAL_WEBHOOK_FAILED', targetId, error, { webhook: 'announcements', title: data.title });
@@ -336,7 +341,12 @@ export class NotificationService {
 
     if (webhookUrl) {
       try {
-        await this.sendWebhook(webhookUrl, { content: message });
+        await this.sendWebhook(webhookUrl, { content: message }, {
+          webhookKey: 'announcements',
+          channelLabel: 'Anuncios',
+          action: 'DISCORD_NOTIFY_OPERATIONAL_WEBHOOK',
+          targetId,
+        });
         await this.audit('DISCORD_NOTIFY_OPERATIONAL_WEBHOOK', targetId, { webhook: 'announcements', message });
       } catch (error) {
         await this.auditFailure('DISCORD_NOTIFY_OPERATIONAL_WEBHOOK_FAILED', targetId, error, { webhook: 'announcements', message });
@@ -352,8 +362,12 @@ export class NotificationService {
     }
   }
 
-  private async sendWebhook(webhookUrl: string, payload: DiscordNotificationPayload): Promise<void> {
-    await this.webhookQueue.send(webhookUrl, payload);
+  private async sendWebhook(
+    webhookUrl: string,
+    payload: DiscordNotificationPayload,
+    context: { webhookKey: string; channelLabel: string; action: string; targetId: string },
+  ): Promise<void> {
+    await this.webhookQueue.send(webhookUrl, payload, context);
   }
 
   private async sendChannel(
@@ -365,7 +379,12 @@ export class NotificationService {
     const webhookUrl = this.config.get<string>(`discord.webhooks.${channelKey}`) ?? '';
     if (webhookUrl) {
       try {
-        await this.sendWebhook(webhookUrl, payload);
+        await this.sendWebhook(webhookUrl, payload, {
+          webhookKey: channelKey,
+          channelLabel: this.webhookChannelLabel(channelKey),
+          action,
+          targetId,
+        });
         await this.audit(action, targetId, { webhook: channelKey });
       } catch (error) {
         await this.auditFailure(`${action}_FAILED`, targetId, error, { webhook: channelKey });
@@ -397,7 +416,12 @@ export class NotificationService {
     }
 
     try {
-      await this.sendWebhook(webhookUrl, payload);
+      await this.sendWebhook(webhookUrl, payload, {
+        webhookKey,
+        channelLabel: this.webhookChannelLabel(webhookKey),
+        action,
+        targetId,
+      });
       await this.audit(action, targetId, { ...metadata, webhook: webhookKey });
     } catch (error) {
       await this.auditFailure(`${action}_FAILED`, targetId, error, { ...metadata, webhook: webhookKey });
@@ -430,6 +454,20 @@ export class NotificationService {
 
     const baseUrl = this.config.get<string>('discord.publicUrl') ?? '';
     return baseUrl ? `${baseUrl.replace(/\/$/, '')}${url}` : undefined;
+  }
+
+  private webhookChannelLabel(webhookKey: string): string {
+    return {
+      announcements: 'Anuncios',
+      auctions: 'Leiloes',
+      drops: 'Drops entregues',
+      attendance: 'Presenca',
+      staffReview: 'Review Staff',
+      dkp: 'DKP-LOG',
+      interests: 'Interesses',
+      itemRequests: 'Item Requests',
+      staffRequests: 'Requests Staff',
+    }[webhookKey] ?? webhookKey;
   }
 
   private async audit(action: string, targetId: string, metadata: Prisma.InputJsonObject): Promise<void> {
