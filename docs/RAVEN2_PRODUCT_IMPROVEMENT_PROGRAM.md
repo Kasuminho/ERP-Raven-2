@@ -403,12 +403,20 @@ Entrega:
 
 Objetivo: operar `BOSSES T4` como trilha, nao como eventos soltos.
 
+Estado em 2026-07-01: implementado em `/dashboard/admin/events` com endpoint
+Staff-only `GET /events/batches/:batchId`.
+
 Entrega:
 
 - Tela Staff por `attendanceBatchId`.
 - Mostrar ordem, status, presenca, DKP distribuido, proximo boss, cancelados e
   eventos pulados.
 - Acao direta para abrir/finalizar o proximo evento.
+- O painel aparece ao selecionar qualquer evento com `attendanceBatchId`, mostra
+  progresso do lote, total de DKP ja distribuido, eventos pendentes/cancelados,
+  presenca por boss e destaca o proximo evento ativo.
+- A acao principal seleciona o proximo boss quando ele ainda nao esta aberto na
+  tela; quando ele ja esta selecionado e possui presenca, abre a finalizacao.
 
 ### F3. Prontidao de boss/guilda
 

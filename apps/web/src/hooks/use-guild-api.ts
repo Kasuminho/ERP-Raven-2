@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventDetails, EventFinalizationChecklist, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DiscordTemplateSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, WeeklyGuildSummary } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -1275,6 +1275,7 @@ export function useRegisterAttendance() {
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-batch-panel'] }),
       ]);
     },
   });
@@ -1289,6 +1290,7 @@ export function useRemoveAttendance() {
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-batch-panel'] }),
       ]);
     },
   });
@@ -1303,6 +1305,7 @@ export function useFinalizeEvent() {
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-batch-panel'] }),
       ];
 
       if (data.nextEvent) {
@@ -1324,6 +1327,7 @@ export function useCancelEvent() {
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['event-attendance', variables.eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event-finalization-checklist', variables.eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event-batch-panel'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
       ]);
     },
@@ -1343,6 +1347,14 @@ export function useEventFinalizationChecklist(eventId: string) {
     queryKey: ['event-finalization-checklist', eventId],
     queryFn: async () => (await api.get<EventFinalizationChecklist>(`/events/${eventId}/finalization-checklist`)).data,
     enabled: Boolean(eventId),
+  });
+}
+
+export function useEventBatchPanel(batchId: string) {
+  return useQuery({
+    queryKey: ['event-batch-panel', batchId],
+    queryFn: async () => (await api.get<EventBatchPanel>(`/events/batches/${batchId}`)).data,
+    enabled: Boolean(batchId),
   });
 }
 

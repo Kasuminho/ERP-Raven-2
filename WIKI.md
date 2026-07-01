@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-06-29
+**Ultima revisao:** 2026-07-01
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -122,6 +122,10 @@ Criacao em lote:
 - Cada evento fica independente: `BOSSES T4 - LUNOS`, `BOSSES T4 - RIGRETO`, etc.
 - `Event.attendanceBatchId` identifica o lote pelo ID do anuncio.
 - `Event.batchOrder` persiste a ordem.
+- A tela Staff de eventos mostra um painel de lote quando o evento selecionado
+  possui `attendanceBatchId`. O painel consome `GET /events/batches/:batchId`,
+  exibe ordem, status, presentes, ausentes, DKP distribuido, cancelados/pulados,
+  proximo boss ativo e acao para abrir/finalizar o proximo evento.
 
 Encadeamento de presenca:
 
@@ -253,6 +257,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Eventos Staff ganharam painel visual de lote por `attendanceBatchId`, com trilha de bosses, proximo boss ativo, presenca, DKP e acao direta. | eventos/Staff |
 | 2026-06-29 | Finalizacao de evento ganhou checklist Staff com presentes, ausentes, DKP, proximo boss do lote, previsao de copia e alertas antes de confirmar. | eventos/Staff |
 | 2026-06-29 | Player pode declarar interesse em lote, mantendo print/nota/transmutar por post e uma confirmacao unica antes de enviar. | interesses/player |
 | 2026-06-29 | Interesses Staff ganharam comparador por interessado com classe, camada, presenca, DKP, requests ativos, nota Staff e historico de loot em endpoint Staff-only. | interesses/Staff |

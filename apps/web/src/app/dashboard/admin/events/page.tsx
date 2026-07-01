@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelEvent, useCreateEvent, useEventAttendance, useEventFinalizationChecklist, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
+import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -54,6 +54,8 @@ export default function AdminEventsPage() {
   const attendance = useEventAttendance(selectedEventId);
   const finalizationChecklist = useEventFinalizationChecklist(selectedEventId);
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
+  const selectedBatchId = selectedEvent?.attendanceBatchId ?? '';
+  const batchPanel = useEventBatchPanel(selectedBatchId);
   const visibleEvents = useMemo(
     () => (events.data ?? []).filter((event) => !hideFinalized || !['FINALIZED', 'CANCELLED'].includes(event.status)),
     [events.data, hideFinalized],
@@ -129,6 +131,20 @@ export default function AdminEventsPage() {
         notifyToast({ title: `Evento finalizado. ${result.copiedAttendanceCount} presencas copiadas para ${result.nextEvent.name}; revise e confirme.`, tone: 'success' });
       },
     });
+  }
+
+  function openBatchAction() {
+    const nextEvent = batchPanel.data?.nextActionEvent;
+    if (!nextEvent) return;
+
+    if (nextEvent.id !== selectedEventId) {
+      setSelectedEventId(nextEvent.id);
+      return;
+    }
+
+    if (nextEvent.presentCount > 0) {
+      setConfirmation('finalize');
+    }
   }
 
   return (
@@ -239,6 +255,67 @@ export default function AdminEventsPage() {
                       <p className="text-lg font-semibold">{absentCount}</p>
                     </div>
                   </div>
+                  {selectedBatchId && (
+                    <div className="space-y-3 rounded-md border bg-background/35 p-3">
+                      {batchPanel.isLoading || !batchPanel.data ? (
+                        <p className="text-sm text-muted-foreground">Carregando trilha do lote...</p>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs uppercase text-muted-foreground">Lote de bosses</p>
+                              <h3 className="font-[var(--font-cinzel)] text-lg font-semibold">{batchPanel.data.title}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {batchPanel.data.finalizedEvents}/{batchPanel.data.totalEvents} finalizados - {batchPanel.data.cancelledEvents} cancelados - {batchPanel.data.totalDkpDistributed} DKP distribuido
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge tone={batchPanel.data.pendingEvents > 0 ? 'gold' : 'green'}>
+                                {batchPanel.data.pendingEvents > 0 ? `${batchPanel.data.pendingEvents} pendente(s)` : 'Lote encerrado'}
+                              </Badge>
+                              {batchPanel.data.nextActionEvent && (
+                                <Button className="h-8 px-3 text-xs" onClick={openBatchAction}>
+                                  {batchPanel.data.nextActionEvent.id === selectedEventId && batchPanel.data.nextActionEvent.presentCount > 0
+                                    ? 'Finalizar proximo'
+                                    : batchPanel.data.nextActionEvent.actionPt}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid gap-2 xl:grid-cols-2">
+                            {batchPanel.data.events.map((batchEvent) => (
+                              <button
+                                key={batchEvent.id}
+                                onClick={() => setSelectedEventId(batchEvent.id)}
+                                className={`rounded-md border p-3 text-left transition hover:border-primary ${batchEvent.id === selectedEventId ? 'border-primary bg-primary/10' : batchEvent.isNextAction ? 'border-amber-400/45 bg-amber-500/10' : 'bg-background/45'}`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs uppercase text-muted-foreground">#{(batchEvent.batchOrder ?? 0) + 1} - {batchEvent.type}</p>
+                                    <p className="font-semibold">{batchEvent.name}</p>
+                                  </div>
+                                  <Badge tone={batchEvent.status === 'FINALIZED' ? 'green' : batchEvent.status === 'CANCELLED' ? 'red' : batchEvent.isNextAction ? 'gold' : 'muted'}>
+                                    {batchEvent.isNextAction ? 'PROXIMO' : batchEvent.status}
+                                  </Badge>
+                                </div>
+                                <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                                  <span>{batchEvent.presentCount} presentes</span>
+                                  <span>{batchEvent.absentCount} ausentes</span>
+                                  <span>{batchEvent.totalDkp} DKP</span>
+                                </div>
+                                <div className="mt-2 h-1.5 overflow-hidden rounded bg-muted">
+                                  <div
+                                    className={`h-full ${batchEvent.status === 'FINALIZED' ? 'bg-emerald-400' : batchEvent.status === 'CANCELLED' ? 'bg-red-400' : 'bg-primary'}`}
+                                    style={{ width: `${Math.min(100, Math.round((batchEvent.presentCount / Math.max(batchPanel.data.activePlayerCount, 1)) * 100))}%` }}
+                                  />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {activePlayers.map((player) => {
                       const present = presentPlayerIds.has(player.id);

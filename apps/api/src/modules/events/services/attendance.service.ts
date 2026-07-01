@@ -75,6 +75,44 @@ export type EventFinalizationChecklist = {
   }>;
 };
 
+export type EventBatchPanel = {
+  batchId: string;
+  title: string;
+  startsAt: Date | null;
+  totalEvents: number;
+  finalizedEvents: number;
+  cancelledEvents: number;
+  pendingEvents: number;
+  activePlayerCount: number;
+  totalDkpDistributed: number;
+  nextActionEvent: {
+    id: string;
+    name: string;
+    type: EventType;
+    status: EventStatus;
+    batchOrder: number | null;
+    presentCount: number;
+    actionPt: string;
+  } | null;
+  events: Array<{
+    id: string;
+    name: string;
+    type: EventType;
+    status: EventStatus;
+    startsAt: Date;
+    finalizedAt: Date | null;
+    dkpReward: number;
+    dkpDistributedAt: Date | null;
+    batchOrder: number | null;
+    presentCount: number;
+    absentCount: number;
+    totalDkp: number;
+    dkpDistributed: boolean;
+    skipped: boolean;
+    isNextAction: boolean;
+  }>;
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -494,6 +532,78 @@ export class AttendanceService {
           : null,
         attendanceCopy,
         warnings,
+      };
+    });
+  }
+
+  async getBatchPanel(batchId: string): Promise<EventBatchPanel> {
+    return this.repository.client.$transaction(async (tx) => {
+      const events = await tx.event.findMany({
+        where: { attendanceBatchId: batchId },
+        include: {
+          attendances: {
+            where: { attended: true },
+            select: { id: true },
+          },
+        },
+        orderBy: [{ batchOrder: 'asc' }, { startsAt: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      if (events.length === 0) {
+        throw new EventNotFoundException(batchId);
+      }
+
+      const [activePlayerCount, announcement] = await Promise.all([
+        tx.player.count({ where: { isActive: true } }),
+        tx.announcement.findUnique({ where: { id: batchId } }),
+      ]);
+      const nextAction = events.find((event) => event.status === EventStatus.OPEN || event.status === EventStatus.ATTENDANCE_REGISTRATION) ?? null;
+      const panelEvents = events.map((event) => {
+        const presentCount = event.attendances.length;
+        const dkpDistributed = event.status === EventStatus.FINALIZED && Boolean(event.dkpDistributedAt);
+        const totalDkp = dkpDistributed ? presentCount * event.dkpReward : 0;
+
+        return {
+          id: event.id,
+          name: event.name,
+          type: event.type,
+          status: event.status,
+          startsAt: event.startsAt,
+          finalizedAt: event.finalizedAt,
+          dkpReward: event.dkpReward,
+          dkpDistributedAt: event.dkpDistributedAt,
+          batchOrder: event.batchOrder,
+          presentCount,
+          absentCount: Math.max(activePlayerCount - presentCount, 0),
+          totalDkp,
+          dkpDistributed,
+          skipped: event.status === EventStatus.CANCELLED,
+          isNextAction: event.id === nextAction?.id,
+        };
+      });
+
+      return {
+        batchId,
+        title: announcement?.title ?? events[0]?.name ?? batchId,
+        startsAt: announcement?.eventTime ?? events[0]?.startsAt ?? null,
+        totalEvents: events.length,
+        finalizedEvents: events.filter((event) => event.status === EventStatus.FINALIZED).length,
+        cancelledEvents: events.filter((event) => event.status === EventStatus.CANCELLED).length,
+        pendingEvents: events.filter((event) => event.status === EventStatus.OPEN || event.status === EventStatus.ATTENDANCE_REGISTRATION).length,
+        activePlayerCount,
+        totalDkpDistributed: panelEvents.reduce((sum, event) => sum + event.totalDkp, 0),
+        nextActionEvent: nextAction
+          ? {
+              id: nextAction.id,
+              name: nextAction.name,
+              type: nextAction.type,
+              status: nextAction.status,
+              batchOrder: nextAction.batchOrder,
+              presentCount: nextAction.attendances.length,
+              actionPt: nextAction.attendances.length > 0 ? 'Revisar e finalizar' : 'Abrir chamada',
+            }
+          : null,
+        events: panelEvents,
       };
     });
   }

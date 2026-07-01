@@ -523,6 +523,44 @@ export type EventFinalizationChecklist = {
   }>;
 };
 
+export type EventBatchPanel = {
+  batchId: string;
+  title: string;
+  startsAt?: string | null;
+  totalEvents: number;
+  finalizedEvents: number;
+  cancelledEvents: number;
+  pendingEvents: number;
+  activePlayerCount: number;
+  totalDkpDistributed: number;
+  nextActionEvent: {
+    id: string;
+    name: string;
+    type: EventType;
+    status: EventRecord['status'];
+    batchOrder?: number | null;
+    presentCount: number;
+    actionPt: string;
+  } | null;
+  events: Array<{
+    id: string;
+    name: string;
+    type: EventType;
+    status: EventRecord['status'];
+    startsAt: string;
+    finalizedAt?: string | null;
+    dkpReward: number;
+    dkpDistributedAt?: string | null;
+    batchOrder?: number | null;
+    presentCount: number;
+    absentCount: number;
+    totalDkp: number;
+    dkpDistributed: boolean;
+    skipped: boolean;
+    isNextAction: boolean;
+  }>;
+};
+
 export type EventAttendanceRow = {
   id: string;
   eventId: string;
