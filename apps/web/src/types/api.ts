@@ -1228,6 +1228,26 @@ export type AuctionDossier = {
   markdown: string;
 };
 
+export type UniversalDossierType = 'player' | 'auction' | 'request' | 'interest' | 'drop' | 'event';
+
+export type UniversalDossier = {
+  generatedAt: string;
+  type: UniversalDossierType;
+  id: string;
+  title: string;
+  summary: Array<{ label: string; value: string }>;
+  internalLinks: Array<{ label: string; href: string }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    targetType: string;
+    targetId?: string | null;
+    actorName?: string | null;
+    createdAt: string;
+  }>;
+  markdown: string;
+};
+
 export type AuctionDiagnosticSummary = {
   generatedAt: string;
   outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';

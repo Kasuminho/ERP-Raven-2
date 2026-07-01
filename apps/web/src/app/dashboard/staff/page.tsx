@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -30,6 +30,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/fairness', titleKey: 'lootFairness', descriptionKey: 'lootFairnessDescription', icon: Scale },
   { href: '/dashboard/staff/compare', titleKey: 'playerCompare', descriptionKey: 'playerCompareDescription', icon: UsersRound },
   { href: '/dashboard/staff/legacy-audit', titleKey: 'legacyAudit', descriptionKey: 'legacyAuditDescription', icon: Database },
+  { href: '/dashboard/staff/dossier', titleKey: 'universalDossier', descriptionKey: 'universalDossierDescription', icon: FileText },
   { href: '/dashboard/staff/discord-templates', titleKey: 'discordTemplates', descriptionKey: 'discordTemplatesDescription', icon: MessageSquareText },
   { href: '/dashboard/staff/discord-webhooks', titleKey: 'discordWebhooks', descriptionKey: 'discordWebhooksDescription', icon: Send },
   { href: '/dashboard/staff/health', titleKey: 'operationalHealth', descriptionKey: 'operationalHealthDescription', icon: Activity },
@@ -57,7 +58,7 @@ const toolGroups = [
   { label: 'Operacao de hoje', hrefs: ['/dashboard/staff/day', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/admin/announcements'] },
   { label: 'Loot e economia', hrefs: ['/dashboard/staff/dkp', '/dashboard/staff/economy', '/dashboard/staff/interests', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/admin/items', '/dashboard/staff/daoshi', '/dashboard/staff/codex'] },
   { label: 'Players e temporada', hrefs: ['/dashboard/staff/players', '/dashboard/staff/progress', '/dashboard/staff/compare', '/dashboard/staff/fairness', '/dashboard/staff/season'] },
-  { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/discord-templates', '/dashboard/staff/discord-webhooks'] },
+  { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/discord-templates', '/dashboard/staff/discord-webhooks'] },
 ];
 
 const morningTone = {

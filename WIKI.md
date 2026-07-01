@@ -95,6 +95,7 @@ Automacao ativa:
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam os grupos de ferramentas, contadores, pendencias, saude e auditoria.
+- O dossie universal Staff em `/dashboard/staff/dossier` consome `GET /operations/staff/dossiers/:type/:id` e gera contexto auditavel com resumo, links internos, audit logs e Markdown copiavel para `player`, `auction`, `request`, `interest`, `drop` e `event`. O endpoint e Staff-only e nao retorna segredos, URLs de webhook ou payload privado desnecessario.
 - O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo. A tela tambem mostra motivo visual do estado atual, previa de finalizacao Staff-only, dossie Markdown copiavel e timeline operacional derivada de leilao, bids, locks, cancelamentos, votos, transacoes, entrega e audit logs. Endpoints sensiveis: `GET /operations/staff/auction-diagnostics/:auctionId/finalization-preview` e `GET /operations/staff/auction-diagnostics/:auctionId/dossier`.
 - O programa completo de melhorias de produto/UX/processo fica em `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`, com epicos para leiloes, Staff, players, requests, interesses, eventos, Discord, auditoria, deploy e arquitetura.
 
@@ -266,6 +267,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
 | 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |
 | 2026-07-01 | Staff ganhou fila persistente de webhooks com status, payload seguro, erro resumido e retry manual controlado. | Discord/Staff |
 | 2026-07-01 | Staff ganhou preview real sanitizado de webhooks com payload/embed PT-BR/EN quando player-facing, sem expor URL de webhook. | Discord/Staff |

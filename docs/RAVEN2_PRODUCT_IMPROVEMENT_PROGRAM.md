@@ -503,12 +503,19 @@ Entrega:
 
 Objetivo: qualquer entidade sensivel gerar contexto auditavel.
 
+Estado em 2026-07-01: implementado em `/dashboard/staff/dossier` via
+`GET /operations/staff/dossiers/:type/:id`.
+
 Entrega:
 
 - Dossie para player, leilao, request, interesse, drop e evento.
 - Markdown copiavel Staff-only.
 - Links internos e audit logs.
 - Sem segredo, sem webhook URL, sem payload privado desnecessario.
+- Tipos suportados: `player`, `auction`, `request`, `interest`, `drop`,
+  `event`.
+- Leiloes reaproveitam o dossie operacional existente e o formato universal
+  adiciona resumo, links internos e audit logs.
 
 ### H2. Modo manutencao
 

@@ -26,6 +26,8 @@ import {
   StaffHealthSummary,
   StaffMeetingSummary,
   StaffOperationsSummary,
+  UniversalDossier,
+  UniversalDossierType,
   WeeklyGuildSummary,
 } from './operations.types';
 
@@ -145,6 +147,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async auctionDossier(@Param('auctionId') auctionId: string): Promise<AuctionDossier> {
     return this.service.getAuctionDossier(auctionId);
+  }
+
+  @Get('staff/dossiers/:type/:id')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async universalDossier(@Param('type') type: UniversalDossierType, @Param('id') id: string): Promise<UniversalDossier> {
+    return this.service.getUniversalDossier(type, id);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')
