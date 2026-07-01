@@ -1,3 +1,5 @@
+> Historico: este guia foi substituido por `docs/staff-guide-current.md` em 2026-07-01. Mantenha este arquivo apenas como registro do estado antigo.
+
 **PT-BR**
 
 🛡️ **Guia da Staff - Plataforma G3X**

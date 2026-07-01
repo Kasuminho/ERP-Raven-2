@@ -257,14 +257,16 @@ npm.cmd run discord:configure-webhooks
 - `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`: programa completo de melhorias de produto, UX, operacao e arquitetura.
 - `docs/DEPLOY_ICP.md`: contexto de deploy ICP.
 - `docs/DISCORD_WEBHOOK_VOICE.md`: identidade, idioma e tom.
-- `docs/staff-guide-2026-06-04.md`: guia funcional da Staff.
-- `docs/player-guide-2026-06-04.md`: guia funcional dos players.
+- `docs/staff-guide-current.md`: guia funcional atual da Staff, somente PT-BR.
+- `docs/player-guide-current.md`: guia funcional atual dos players, com blocos PT-BR e EN.
+- `docs/staff-guide-2026-06-04.md` e `docs/player-guide-2026-06-04.md`: guias historicos, substituidos em 2026-07-01.
 - `docs/discord-*.md`: historico de comunicacoes e mudancas.
 
 ## Historico recente
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |
 | 2026-07-01 | Staff ganhou fila persistente de webhooks com status, payload seguro, erro resumido e retry manual controlado. | Discord/Staff |
 | 2026-07-01 | Staff ganhou preview real sanitizado de webhooks com payload/embed PT-BR/EN quando player-facing, sem expor URL de webhook. | Discord/Staff |
 | 2026-07-01 | Sorteio de interesses 100% transmutar passou a bloquear no limite diario apenas o player vencedor do dia, nao todos os participantes do post premiado. | interesses/transmutar |

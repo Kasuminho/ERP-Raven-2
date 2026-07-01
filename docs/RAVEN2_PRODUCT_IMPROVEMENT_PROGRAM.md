@@ -483,6 +483,10 @@ Entrega:
 
 Objetivo: remover drift documental.
 
+Estado em 2026-07-01: implementado com `docs/staff-guide-current.md` e
+`docs/player-guide-current.md`; os guias de 2026-06-04 foram marcados como
+historicos.
+
 Entrega:
 
 - Reescrever guias Staff/player atuais com encoding correto.
@@ -490,6 +494,8 @@ Entrega:
   de comunicacao.
 - Corrigir identidade de webhook para `Aristolfo, 570 anos de webhook`.
 - Separar guias historicos de guias atuais.
+- Guia Staff atual fica somente PT-BR.
+- Guia player atual fica em blocos separados PT-BR e EN.
 
 ## Epico H - Auditoria e incidentes
 
