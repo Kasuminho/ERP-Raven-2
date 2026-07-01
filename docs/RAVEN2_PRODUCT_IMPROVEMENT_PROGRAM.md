@@ -446,11 +446,18 @@ Entrega:
 
 Objetivo: ver antes de postar.
 
+Estado em 2026-07-01: implementado em `/dashboard/staff/discord-templates`
+via `GET /operations/staff/discord-templates`.
+
 Entrega:
 
 - Preview de embeds para anuncios, leiloes, interesses, drops e updates.
 - Mostrar blocos PT-BR/EN quando player-facing.
 - Usar mesmo builder de embeds ou payload equivalente.
+- O endpoint retorna payload sanitizado com `username`, `avatar_url`, `content`,
+  `embeds` e `allowed_mentions`, sem expor URL de webhook.
+- Templates player-facing mostram previews PT-BR e EN lado a lado; Staff-only
+  mostra apenas PT-BR.
 
 ### G2. Fila de webhooks
 

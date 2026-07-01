@@ -1096,6 +1096,26 @@ export type DiscordTemplateSummary = {
     channel: string;
     title: string;
     preview: string;
+    playerFacing: boolean;
+    previews: Array<{
+      locale: 'pt-BR' | 'en';
+      label: string;
+      payload: {
+        username: string;
+        avatar_url?: string;
+        content?: string;
+        embeds?: Array<{
+          title?: string;
+          description?: string;
+          color?: number;
+          fields?: Array<{ name: string; value: string; inline?: boolean }>;
+          image?: { url?: string };
+          thumbnail?: { url?: string };
+          timestamp?: string;
+        }>;
+        allowed_mentions?: unknown;
+      };
+    }>;
   }>;
 };
 
