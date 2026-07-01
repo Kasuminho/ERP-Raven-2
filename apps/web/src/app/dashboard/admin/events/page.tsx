@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
+import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEventReadiness, useEvents, useFinalizeEvent, usePlayers, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-guild-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -53,6 +53,7 @@ export default function AdminEventsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const attendance = useEventAttendance(selectedEventId);
   const finalizationChecklist = useEventFinalizationChecklist(selectedEventId);
+  const readiness = useEventReadiness(selectedEventId);
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
   const selectedBatchId = selectedEvent?.attendanceBatchId ?? '';
   const batchPanel = useEventBatchPanel(selectedBatchId);
@@ -316,6 +317,112 @@ export default function AdminEventsPage() {
                       )}
                     </div>
                   )}
+                  <div className="space-y-3 rounded-md border bg-background/35 p-3">
+                    {readiness.isLoading || !readiness.data ? (
+                      <p className="text-sm text-muted-foreground">Carregando prontidao do boss...</p>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase text-muted-foreground">Prontidao da guilda</p>
+                            <h3 className="font-[var(--font-cinzel)] text-lg font-semibold">{readiness.data.presentCount}/{readiness.data.activePlayerCount} presentes ativos</h3>
+                            <p className="text-xs text-muted-foreground">
+                              CP medio aprovado {readiness.data.cpSummary.averageCombatPower.toLocaleString('pt-BR')} - {readiness.data.cpSummary.withoutCombatPower} sem CP aprovado
+                            </p>
+                          </div>
+                          <Badge tone={readiness.data.roleGaps.some((gap) => gap.missing) ? 'red' : 'green'}>
+                            {readiness.data.roleGaps.some((gap) => gap.missing) ? 'Com gaps' : 'Base ok'}
+                          </Badge>
+                        </div>
+
+                        <div className="grid gap-2 md:grid-cols-3">
+                          {readiness.data.roleGaps.map((gap) => (
+                            <div key={gap.role} className={`rounded-md border p-3 ${gap.missing ? 'border-red-400/35 bg-red-500/10' : 'bg-background/45'}`}>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-semibold">{gap.labelPt}</p>
+                                <Badge tone={gap.missing ? 'red' : 'green'}>{gap.present}/{gap.required}</Badge>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{gap.notePt}</p>
+                              {gap.backup > 0 && <p className="mt-1 text-xs text-amber-100">{gap.backup} apoio(s) fora da funcao principal</p>}
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid gap-3 xl:grid-cols-2">
+                          <div className="rounded-md border bg-background/45 p-3">
+                            <p className="mb-2 text-xs uppercase text-muted-foreground">Camadas ativas</p>
+                            <div className="space-y-2">
+                              {readiness.data.activeByLayer.map((layer) => (
+                                <div key={layer.layer} className="grid grid-cols-[64px_1fr_auto] items-center gap-2 text-xs">
+                                  <span className="font-semibold">L{layer.layer}</span>
+                                  <div className="h-2 overflow-hidden rounded bg-muted">
+                                    <div
+                                      className="h-full bg-primary"
+                                      style={{ width: `${Math.min(100, Math.round((layer.presentCount / Math.max(layer.activeCount, 1)) * 100))}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-muted-foreground">{layer.presentCount}/{layer.activeCount}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="rounded-md border bg-background/45 p-3">
+                            <p className="mb-2 text-xs uppercase text-muted-foreground">Classes presentes</p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {readiness.data.classPresence.map((row) => (
+                                <div key={row.class} className="rounded border bg-background/40 p-2 text-xs">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-semibold">{playerClassLabel(row.class, locale)}</span>
+                                    <Badge tone={row.presentCount > 0 ? 'blue' : 'muted'}>{row.presentCount}/{row.activeCount}</Badge>
+                                  </div>
+                                  <p className="mt-1 text-muted-foreground">
+                                    {row.role === 'TANK' ? 'Tank' : row.role === 'HEALER' ? 'Healer' : row.role === 'SUPPORT' ? 'Suporte' : 'DPS'} - L{row.maxLayer || '-'} - CP {row.averageCombatPower.toLocaleString('pt-BR')}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 xl:grid-cols-2">
+                          <div className="rounded-md border bg-background/45 p-3">
+                            <p className="mb-2 text-xs uppercase text-muted-foreground">Top CP aprovado</p>
+                            <div className="space-y-2">
+                              {readiness.data.cpSummary.topPlayers.slice(0, 6).map((player) => (
+                                <div key={player.id} className="flex items-center justify-between gap-2 rounded border bg-background/40 px-2 py-1.5 text-xs">
+                                  <span className="font-medium">{player.nickname}</span>
+                                  <span className="text-muted-foreground">{player.combatPower.toLocaleString('pt-BR')} CP {player.isPresent ? '- presente' : '- fora'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="rounded-md border bg-background/45 p-3">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <p className="text-xs uppercase text-muted-foreground">Status desatualizado</p>
+                              <Badge tone={readiness.data.staleStatusPlayers.length > 0 ? 'gold' : 'green'}>{readiness.data.staleStatusPlayers.length}</Badge>
+                            </div>
+                            <div className="max-h-36 space-y-2 overflow-y-auto">
+                              {readiness.data.staleStatusPlayers.slice(0, 12).map((player) => (
+                                <div key={player.id} className="flex items-center justify-between gap-2 rounded border bg-background/40 px-2 py-1.5 text-xs">
+                                  <span className="font-medium">{player.nickname}</span>
+                                  <span className="text-muted-foreground">{player.daysSinceStatus === null ? 'sem STATUS' : `${player.daysSinceStatus}d`} {player.isPresent ? '- presente' : ''}</span>
+                                </div>
+                              ))}
+                              {readiness.data.staleStatusPlayers.length === 0 && (
+                                <p className="text-xs text-muted-foreground">Todo mundo com STATUS recente. Milagre auditavel.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {readiness.data.notesPt.map((note) => (
+                            <p key={note} className="rounded-md border bg-background/45 p-2 text-xs text-muted-foreground">{note}</p>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {activePlayers.map((player) => {
                       const present = presentPlayerIds.has(player.id);

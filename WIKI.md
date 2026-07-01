@@ -126,6 +126,12 @@ Criacao em lote:
   possui `attendanceBatchId`. O painel consome `GET /events/batches/:batchId`,
   exibe ordem, status, presentes, ausentes, DKP distribuido, cancelados/pulados,
   proximo boss ativo e acao para abrir/finalizar o proximo evento.
+- A mesma tela mostra prontidao do boss via `GET /events/:id/readiness`,
+  cruzando presenca, players ativos, camadas, classes, CP aprovado e ultimo
+  progresso `STATUS`. STATUS ausente ou com mais de 14 dias entra como
+  desatualizado. Roles operacionais: `VANGUARD` tank, `DIVINE_CASTER` healer,
+  `DEATHBRINGER` suporte/off-heal e demais classes DPS. O painel informa gaps,
+  mas nao decide composicao automaticamente.
 
 Encadeamento de presenca:
 
@@ -257,6 +263,8 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Sorteio de interesses 100% transmutar passou a bloquear no limite diario apenas o player vencedor do dia, nao todos os participantes do post premiado. | interesses/transmutar |
+| 2026-07-01 | Eventos Staff ganharam prontidao por boss com camadas, classes, roles, CP aprovado e players sem STATUS recente. | eventos/Staff |
 | 2026-07-01 | Eventos Staff ganharam painel visual de lote por `attendanceBatchId`, com trilha de bosses, proximo boss ativo, presenca, DKP e acao direta. | eventos/Staff |
 | 2026-06-29 | Finalizacao de evento ganhou checklist Staff com presentes, ausentes, DKP, proximo boss do lote, previsao de copia e alertas antes de confirmar. | eventos/Staff |
 | 2026-06-29 | Player pode declarar interesse em lote, mantendo print/nota/transmutar por post e uma confirmacao unica antes de enviar. | interesses/player |

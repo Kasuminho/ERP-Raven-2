@@ -561,6 +561,54 @@ export type EventBatchPanel = {
   }>;
 };
 
+export type EventReadinessReport = {
+  event: Pick<EventRecord, 'id' | 'name' | 'type' | 'status' | 'startsAt'>;
+  generatedAt: string;
+  activePlayerCount: number;
+  presentCount: number;
+  activeByLayer: Array<{
+    layer: number;
+    activeCount: number;
+    presentCount: number;
+    approvedCpAverage: number;
+  }>;
+  classPresence: Array<{
+    class: PlayerClass;
+    role: 'TANK' | 'HEALER' | 'DPS' | 'SUPPORT';
+    activeCount: number;
+    presentCount: number;
+    averageCombatPower: number;
+    maxLayer: number;
+  }>;
+  roleGaps: Array<{
+    role: 'TANK' | 'HEALER' | 'DPS';
+    labelPt: string;
+    required: number;
+    present: number;
+    backup: number;
+    missing: boolean;
+    classHints: PlayerClass[];
+    notePt: string;
+  }>;
+  cpSummary: {
+    withCombatPower: number;
+    withoutCombatPower: number;
+    averageCombatPower: number;
+    topPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'> & {
+      combatPower: number;
+      isPresent: boolean;
+    }>;
+  };
+  staleStatusPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'> & {
+    combatPower: number;
+    isPresent: boolean;
+    lastStatusAt?: string | null;
+    lastStatusReviewStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_REQUIRED' | null;
+    daysSinceStatus?: number | null;
+  }>;
+  notesPt: string[];
+};
+
 export type EventAttendanceRow = {
   id: string;
   eventId: string;

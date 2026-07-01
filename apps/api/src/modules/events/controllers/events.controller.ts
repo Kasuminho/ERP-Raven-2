@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto } from '../dto';
 import { EventDetails } from '../repositories/events.repository';
-import { AttendanceService, EventBatchPanel, EventFinalizationChecklist, FinalizeEventResult } from '../services/attendance.service';
+import { AttendanceService, EventBatchPanel, EventFinalizationChecklist, EventReadinessReport, FinalizeEventResult } from '../services/attendance.service';
 import { EventsService } from '../services/events.service';
 
 type AuthRequest = { user?: { userId?: string } };
@@ -63,6 +63,13 @@ export class EventsController {
   @Roles('STAFF', 'ADMIN')
   async finalizationChecklist(@Param('id') eventId: string): Promise<EventFinalizationChecklist> {
     return this.attendanceService.getFinalizationChecklist(eventId);
+  }
+
+  @Get('events/:id/readiness')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async readiness(@Param('id') eventId: string): Promise<EventReadinessReport> {
+    return this.attendanceService.getReadinessReport(eventId);
   }
 
   @Get('events/batches/:batchId')

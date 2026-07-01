@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { DKPTransactionType, Event, EventStatus, EventType, Prisma } from '@prisma/client';
+import { DKPTransactionType, Event, EventStatus, EventType, PlayerClass, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
@@ -111,6 +111,70 @@ export type EventBatchPanel = {
     skipped: boolean;
     isNextAction: boolean;
   }>;
+};
+
+type EventTacticalRole = 'TANK' | 'HEALER' | 'DPS' | 'SUPPORT';
+
+export type EventReadinessReport = {
+  event: {
+    id: string;
+    name: string;
+    type: EventType;
+    status: EventStatus;
+    startsAt: Date;
+  };
+  generatedAt: Date;
+  activePlayerCount: number;
+  presentCount: number;
+  activeByLayer: Array<{
+    layer: number;
+    activeCount: number;
+    presentCount: number;
+    approvedCpAverage: number;
+  }>;
+  classPresence: Array<{
+    class: PlayerClass;
+    role: EventTacticalRole;
+    activeCount: number;
+    presentCount: number;
+    averageCombatPower: number;
+    maxLayer: number;
+  }>;
+  roleGaps: Array<{
+    role: 'TANK' | 'HEALER' | 'DPS';
+    labelPt: string;
+    required: number;
+    present: number;
+    backup: number;
+    missing: boolean;
+    classHints: PlayerClass[];
+    notePt: string;
+  }>;
+  cpSummary: {
+    withCombatPower: number;
+    withoutCombatPower: number;
+    averageCombatPower: number;
+    topPlayers: Array<{
+      id: string;
+      nickname: string;
+      class: PlayerClass;
+      dimensionalLayer: number;
+      combatPower: number;
+      isPresent: boolean;
+    }>;
+  };
+  staleStatusPlayers: Array<{
+    id: string;
+    nickname: string;
+    class: PlayerClass;
+    dimensionalLayer: number;
+    combatPower: number;
+    isPresent: boolean;
+    lastStatusAt: Date | null;
+    lastStatusReviewStatus: ProgressReviewStatus | null;
+    daysSinceStatus: number | null;
+  }>;
+  notesPt: string[];
 };
 
 @Injectable()
@@ -608,6 +672,142 @@ export class AttendanceService {
     });
   }
 
+  async getReadinessReport(eventId: string): Promise<EventReadinessReport> {
+    return this.repository.client.$transaction(async (tx) => {
+      const event = await this.requireEvent(eventId, tx);
+      const [details, activePlayers] = await Promise.all([
+        this.repository.findDetails(eventId, tx),
+        tx.player.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            nickname: true,
+            class: true,
+            dimensionalLayer: true,
+            combatPower: true,
+          },
+          orderBy: [{ dimensionalLayer: 'desc' }, { combatPower: 'desc' }, { nickname: 'asc' }],
+        }),
+      ]);
+
+      if (!details) {
+        throw new EventNotFoundException(eventId);
+      }
+
+      const activePlayerIds = activePlayers.map((player) => player.id);
+      const statusUpdates = await tx.playerProgress.findMany({
+        where: {
+          playerId: { in: activePlayerIds },
+          category: ProgressCategory.STATUS,
+        },
+        select: {
+          playerId: true,
+          createdAt: true,
+          reviewedAt: true,
+          reviewStatus: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      const latestStatusByPlayer = new Map<string, (typeof statusUpdates)[number]>();
+
+      for (const status of statusUpdates) {
+        if (!latestStatusByPlayer.has(status.playerId)) {
+          latestStatusByPlayer.set(status.playerId, status);
+        }
+      }
+
+      const presentPlayerIds = new Set(details.attendances.filter((attendance) => attendance.attended).map((attendance) => attendance.playerId));
+      const presentActivePlayers = activePlayers.filter((player) => presentPlayerIds.has(player.id));
+      const activeByLayer = Array.from({ length: 10 }, (_, index) => index + 1)
+        .map((layer) => {
+          const playersInLayer = activePlayers.filter((player) => player.dimensionalLayer === layer);
+          const presentInLayer = playersInLayer.filter((player) => presentPlayerIds.has(player.id));
+
+          return {
+            layer,
+            activeCount: playersInLayer.length,
+            presentCount: presentInLayer.length,
+            approvedCpAverage: this.average(playersInLayer.map((player) => player.combatPower).filter((value) => value > 0)),
+          };
+        })
+        .filter((row) => row.activeCount > 0 || row.presentCount > 0)
+        .sort((left, right) => right.layer - left.layer);
+      const classPresence = Object.values(PlayerClass).map((playerClass) => {
+        const playersInClass = activePlayers.filter((player) => player.class === playerClass);
+        const presentInClass = playersInClass.filter((player) => presentPlayerIds.has(player.id));
+
+        return {
+          class: playerClass,
+          role: this.tacticalRoleForClass(playerClass),
+          activeCount: playersInClass.length,
+          presentCount: presentInClass.length,
+          averageCombatPower: this.average(presentInClass.map((player) => player.combatPower).filter((value) => value > 0)),
+          maxLayer: Math.max(0, ...presentInClass.map((player) => player.dimensionalLayer)),
+        };
+      }).filter((row) => row.activeCount > 0 || row.presentCount > 0);
+      const topPlayers = [...activePlayers]
+        .filter((player) => player.combatPower > 0)
+        .sort((left, right) => right.combatPower - left.combatPower)
+        .slice(0, 8)
+        .map((player) => ({
+          id: player.id,
+          nickname: player.nickname,
+          class: player.class,
+          dimensionalLayer: player.dimensionalLayer,
+          combatPower: player.combatPower,
+          isPresent: presentPlayerIds.has(player.id),
+        }));
+      const statusFreshAfter = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      const staleStatusPlayers = activePlayers
+        .map((player) => {
+          const latestStatus = latestStatusByPlayer.get(player.id);
+          const lastStatusAt = latestStatus?.reviewedAt ?? latestStatus?.createdAt ?? null;
+          const daysSinceStatus = lastStatusAt ? Math.floor((Date.now() - lastStatusAt.getTime()) / (24 * 60 * 60 * 1000)) : null;
+
+          return {
+            id: player.id,
+            nickname: player.nickname,
+            class: player.class,
+            dimensionalLayer: player.dimensionalLayer,
+            combatPower: player.combatPower,
+            isPresent: presentPlayerIds.has(player.id),
+            lastStatusAt,
+            lastStatusReviewStatus: latestStatus?.reviewStatus ?? null,
+            daysSinceStatus,
+          };
+        })
+        .filter((player) => !player.lastStatusAt || player.lastStatusAt.getTime() < statusFreshAfter)
+        .sort((left, right) => Number(right.isPresent) - Number(left.isPresent) || right.dimensionalLayer - left.dimensionalLayer || left.nickname.localeCompare(right.nickname))
+        .slice(0, 30);
+      const roleGaps = this.buildRoleGaps(presentActivePlayers);
+      const cpValues = activePlayers.map((player) => player.combatPower).filter((value) => value > 0);
+
+      return {
+        event: {
+          id: event.id,
+          name: event.name,
+          type: event.type,
+          status: event.status,
+          startsAt: event.startsAt,
+        },
+        generatedAt: new Date(),
+        activePlayerCount: activePlayers.length,
+        presentCount: presentActivePlayers.length,
+        activeByLayer,
+        classPresence,
+        roleGaps,
+        cpSummary: {
+          withCombatPower: cpValues.length,
+          withoutCombatPower: Math.max(activePlayers.length - cpValues.length, 0),
+          averageCombatPower: this.average(cpValues),
+          topPlayers,
+        },
+        staleStatusPlayers,
+        notesPt: this.buildReadinessNotes(roleGaps, staleStatusPlayers.length, presentActivePlayers.length),
+      };
+    });
+  }
+
   async getEventAttendance(eventId: string): Promise<EventDetails> {
     const event = await this.repository.findDetails(eventId);
 
@@ -897,6 +1097,102 @@ export class AttendanceService {
     }
 
     return warnings;
+  }
+
+  private tacticalRoleForClass(playerClass: PlayerClass): EventTacticalRole {
+    if (playerClass === PlayerClass.VANGUARD) return 'TANK';
+    if (playerClass === PlayerClass.DIVINE_CASTER) return 'HEALER';
+    if (playerClass === PlayerClass.DEATHBRINGER) return 'SUPPORT';
+
+    return 'DPS';
+  }
+
+  private buildRoleGaps(
+    presentPlayers: Array<{ class: PlayerClass }>,
+  ): EventReadinessReport['roleGaps'] {
+    const tankCount = presentPlayers.filter((player) => player.class === PlayerClass.VANGUARD).length;
+    const healerCount = presentPlayers.filter((player) => player.class === PlayerClass.DIVINE_CASTER).length;
+    const healerBackupCount = presentPlayers.filter((player) => player.class === PlayerClass.DEATHBRINGER).length;
+    const dpsCount = presentPlayers.filter((player) => this.tacticalRoleForClass(player.class) === 'DPS').length;
+
+    return [
+      {
+        role: 'TANK',
+        labelPt: 'Tank',
+        required: 1,
+        present: tankCount,
+        backup: 0,
+        missing: tankCount < 1,
+        classHints: [PlayerClass.VANGUARD],
+        notePt: tankCount > 0 ? 'Vanguard presente.' : 'Sem Vanguard presente para segurar pancada.',
+      },
+      {
+        role: 'HEALER',
+        labelPt: 'Healer',
+        required: 1,
+        present: healerCount,
+        backup: healerBackupCount,
+        missing: healerCount < 1,
+        classHints: [PlayerClass.DIVINE_CASTER, PlayerClass.DEATHBRINGER],
+        notePt: healerCount > 0
+          ? 'Divine Caster presente.'
+          : healerBackupCount > 0
+            ? 'Sem Divine Caster; Deathbringer cobre so como apoio.'
+            : 'Sem Divine Caster nem Deathbringer presente.',
+      },
+      {
+        role: 'DPS',
+        labelPt: 'DPS',
+        required: 3,
+        present: dpsCount,
+        backup: 0,
+        missing: dpsCount < 3,
+        classHints: [
+          PlayerClass.GUNSLINGER,
+          PlayerClass.BERSERKER,
+          PlayerClass.DESTROYER,
+          PlayerClass.ASSASSIN,
+          PlayerClass.NIGHT_RANGER,
+          PlayerClass.ELEMENTALIST,
+          PlayerClass.WARLORD,
+        ],
+        notePt: dpsCount >= 3 ? 'DPS minimo presente.' : 'Pouco DPS confirmado para boss em grupo.',
+      },
+    ];
+  }
+
+  private buildReadinessNotes(
+    roleGaps: EventReadinessReport['roleGaps'],
+    staleStatusCount: number,
+    presentCount: number,
+  ): string[] {
+    const notes: string[] = [];
+
+    if (presentCount === 0) {
+      notes.push('Sem presenca marcada ainda; prontidao so reflete cadastro ativo.');
+    }
+
+    for (const gap of roleGaps.filter((row) => row.missing)) {
+      notes.push(gap.notePt);
+    }
+
+    if (staleStatusCount > 0) {
+      notes.push(`${staleStatusCount} player(s) ativo(s) estao sem STATUS recente nos ultimos 14 dias.`);
+    }
+
+    if (notes.length === 0) {
+      notes.push('Composicao minima sem alerta obvio. Ainda vale olhar mecanica e horario, porque boss nao assina recibo.');
+    }
+
+    return notes;
+  }
+
+  private average(values: number[]): number {
+    if (values.length === 0) {
+      return 0;
+    }
+
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
   }
 
   private getAttendanceAdjustmentReference(action: 'attendance-add' | 'attendance-remove', eventId: string, attendanceId: string): string {

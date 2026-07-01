@@ -422,6 +422,9 @@ Entrega:
 
 Objetivo: conectar progressao do player ao que a guilda vai fazer.
 
+Estado em 2026-07-01: implementado em `/dashboard/admin/events` com endpoint
+Staff-only `GET /events/:id/readiness`.
+
 Entrega:
 
 - Visao Staff por evento/boss:
@@ -431,6 +434,11 @@ Entrega:
   - gaps de healer/tank/DPS por classe;
   - players sem status recente.
 - Nao automatizar decisao de composicao; apenas informar.
+- A prontidao cruza presenca do evento com players ativos, CP/camada aprovados
+  no perfil e ultimo progresso `STATUS`; STATUS com mais de 14 dias ou ausente
+  aparece como desatualizado.
+- Roles operacionais: `VANGUARD` como tank, `DIVINE_CASTER` como healer,
+  `DEATHBRINGER` como suporte/off-heal e demais classes como DPS.
 
 ## Epico G - Discord e comunicacao operacional
 
