@@ -11,8 +11,10 @@ import {
   businessRuleDefaults,
   defaultAuctionTierRules,
   defaultEventRewardRules,
+  defaultMaintenanceModeRules,
   defaultPriorityScoreRules,
   defaultStaffPendingThresholdRules,
+  MaintenanceModeRules,
 } from './business-rules.defaults';
 
 @Injectable()
@@ -37,6 +39,9 @@ export class BusinessRulesService {
       throw new BadRequestException(`Unknown business rule: ${key}`);
     }
 
+    const previous = key === 'maintenanceMode'
+      ? await this.getMaintenanceMode().catch(() => defaultMaintenanceModeRules)
+      : undefined;
     const normalizedValue = this.normalizeRuleValue(key, value);
     const updated = await this.prisma.businessRule.upsert({
       where: { key },
@@ -66,6 +71,23 @@ export class BusinessRulesService {
         value: normalizedValue,
       },
     });
+
+    if (key === 'maintenanceMode') {
+      const current = normalizedValue as unknown as MaintenanceModeRules;
+      if (previous?.enabled !== current.enabled) {
+        await this.auditService.log({
+          actorId,
+          action: current.enabled ? 'MAINTENANCE_MODE_ENABLED' : 'MAINTENANCE_MODE_DISABLED',
+          targetType: 'BusinessRule',
+          targetId: updated.id,
+          metadata: {
+            key,
+            enabled: current.enabled,
+            message: current.message,
+          },
+        });
+      }
+    }
 
     return updated;
   }
@@ -132,10 +154,14 @@ export class BusinessRulesService {
     return this.mergeStaffPendingThresholds(await this.getRuleValue('staffPendingThresholds'), defaultStaffPendingThresholdRules);
   }
 
+  async getMaintenanceMode(): Promise<MaintenanceModeRules> {
+    return this.mergeMaintenanceMode(await this.getRuleValue('maintenanceMode'), defaultMaintenanceModeRules);
+  }
+
   private async ensureDefaults(): Promise<void> {
     const count = await this.prisma.businessRule.count();
 
-    if (count === 0) {
+    if (count < businessRuleDefaults.length) {
       await this.seedDefaults();
     }
   }
@@ -163,6 +189,8 @@ export class BusinessRulesService {
         return this.mergePriorityScoreRules(value, defaultPriorityScoreRules) as unknown as Prisma.InputJsonValue;
       case 'staffPendingThresholds':
         return this.mergeStaffPendingThresholds(value, defaultStaffPendingThresholdRules) as Prisma.InputJsonValue;
+      case 'maintenanceMode':
+        return this.mergeMaintenanceMode(value, defaultMaintenanceModeRules) as unknown as Prisma.InputJsonValue;
       default:
         throw new BadRequestException(`Unknown business rule: ${key}`);
     }
@@ -242,6 +270,18 @@ export class BusinessRulesService {
   private numberOr(value: unknown, fallback: number): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+  }
+
+  private mergeMaintenanceMode(value: unknown, fallback: MaintenanceModeRules): MaintenanceModeRules {
+    const input = this.asRecord(value);
+    const message = typeof input.message === 'string' && input.message.trim().length > 0
+      ? input.message.trim().slice(0, 240)
+      : fallback.message;
+
+    return {
+      enabled: typeof input.enabled === 'boolean' ? input.enabled : fallback.enabled,
+      message,
+    };
   }
 
   private asRecord(value: unknown): Record<string, unknown> {

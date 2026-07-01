@@ -25,6 +25,11 @@ export type StaffPendingThresholdRule = {
 
 export type StaffPendingThresholdRules = Record<string, StaffPendingThresholdRule>;
 
+export type MaintenanceModeRules = {
+  enabled: boolean;
+  message: string;
+};
+
 export const defaultEventRewardRules: EventRewardRules = {
   [EventType.LUNOS]: 20,
   [EventType.RIGRETO]: 20,
@@ -93,6 +98,11 @@ export const defaultStaffPendingThresholdRules: StaffPendingThresholdRules = {
   itemRequest: { mediumAfterMs: 2 * DAYS, highAfterMs: 5 * DAYS },
 };
 
+export const defaultMaintenanceModeRules: MaintenanceModeRules = {
+  enabled: false,
+  message: 'Operacao em manutencao. Leituras continuam liberadas; acoes sensiveis ficam pausadas ate a Staff liberar.',
+};
+
 export const businessRuleDefaults = [
   {
     key: 'eventRewards',
@@ -121,5 +131,12 @@ export const businessRuleDefaults = [
     label: 'Severidade da central de pendencias',
     description: 'Controla quando uma pendencia vira media ou alta.',
     value: defaultStaffPendingThresholdRules,
+  },
+  {
+    key: 'maintenanceMode',
+    category: 'operations',
+    label: 'Modo manutencao',
+    description: 'Bloqueia mutacoes sensiveis durante restore, incidente ou janela operacional controlada.',
+    value: defaultMaintenanceModeRules,
   },
 ] as const;

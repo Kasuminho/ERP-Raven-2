@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@database/database.module';
 import appConfig from './config/app.config';
@@ -28,6 +29,7 @@ import { HealthModule } from './modules/health/health.module';
 import { BusinessRulesModule } from './modules/business-rules/business-rules.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SearchModule } from './modules/search/search.module';
+import { MaintenanceModeGuard } from './common/guards/maintenance-mode.guard';
 
 @Module({
   imports: [
@@ -59,6 +61,12 @@ import { SearchModule } from './modules/search/search.module';
     DaoshiModule,
     HealthModule,
     SearchModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: MaintenanceModeGuard,
+    },
   ],
 })
 export class AppModule {}

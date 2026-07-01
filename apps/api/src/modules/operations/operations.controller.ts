@@ -15,6 +15,7 @@ import {
   AuctionTimelineEvent,
   LegacyAuditSummary,
   LootFairnessSummary,
+  MaintenanceModeSummary,
   NoticeBoardItem,
   OperationalHealthSummary,
   PlayerActionPlan,
@@ -56,6 +57,11 @@ export class OperationsController {
   @Get('rules')
   async rules(): Promise<GuildRulesSummary> {
     return this.service.getGuildRules();
+  }
+
+  @Get('maintenance')
+  async maintenance(): Promise<MaintenanceModeSummary> {
+    return this.service.getMaintenanceMode();
   }
 
   @Get('staff')

@@ -521,6 +521,9 @@ Entrega:
 
 Objetivo: bloquear escrita sensivel durante restore/incidente.
 
+Estado em 2026-07-01: implementado por regra `maintenanceMode`, guard global
+de mutacoes sensiveis e banner no layout autenticado.
+
 Entrega:
 
 - Regra/config `maintenanceMode`.
@@ -529,6 +532,9 @@ Entrega:
 - Permitir leitura e health.
 - Banner claro na Web.
 - Audit log ao ativar/desativar.
+- `PATCH /business-rules/maintenanceMode` continua liberado durante a
+  manutencao para a Staff poder desativar o modo.
+- `GET /operations/maintenance` retorna `enabled` e `message` para a Web.
 
 ## Epico I - Deploy e operacao
 

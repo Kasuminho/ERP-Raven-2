@@ -39,6 +39,7 @@ import {
   GuildRulesSummary,
   LegacyAuditSummary,
   LootFairnessSummary,
+  MaintenanceModeSummary,
   NoticeBoardItem,
   OperationalHealthSummary,
   PlayerComparisonSummary,
@@ -435,6 +436,10 @@ export class OperationsService {
         announcements: announcements.length,
       },
     };
+  }
+
+  async getMaintenanceMode(): Promise<MaintenanceModeSummary> {
+    return this.businessRules.getMaintenanceMode();
   }
 
   async getStaffMorningBriefing(): Promise<StaffMorningBriefing> {

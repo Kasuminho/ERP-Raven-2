@@ -946,6 +946,11 @@ export type PlayerOperationsSummary = {
   };
 };
 
+export type MaintenanceModeSummary = {
+  enabled: boolean;
+  message: string;
+};
+
 export type PlayerActionPlan = {
   generatedAt: string;
   headline: string;

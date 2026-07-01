@@ -8,7 +8,7 @@ import { GlobalSearch } from '@/components/dashboard/global-search';
 import { ProfileLocaleSync } from '@/components/dashboard/profile-locale-sync';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Button } from '@/components/ui/button';
-import { useUnreadNotificationsCount } from '@/hooks/use-guild-api';
+import { useMaintenanceMode, useUnreadNotificationsCount } from '@/hooks/use-guild-api';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
@@ -48,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const locale = useLocaleStore((state) => state.locale);
   const isStaff = hasRole(['STAFF', 'ADMIN']);
   const unreadNotifications = useUnreadNotificationsCount();
+  const maintenance = useMaintenanceMode();
   const unreadCount = unreadNotifications.data?.count ?? 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const primaryNav = nav.filter((item) => mobilePrimaryHrefs.has(item.href));
@@ -115,7 +116,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="sticky top-0 z-10 hidden border-b border-white/10 bg-background/72 px-8 py-3 backdrop-blur lg:block">
             <div className="ml-auto max-w-sm"><GlobalSearch /></div>
           </div>
-          <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl p-4 pb-28 outline-none sm:p-6 sm:pb-28 lg:p-8">{children}</main>
+          <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl p-4 pb-28 outline-none sm:p-6 sm:pb-28 lg:p-8">
+            {maintenance.data?.enabled ? (
+              <div className="mb-5 rounded-md border border-primary/35 bg-primary/10 p-4 text-sm text-primary">
+                <div className="flex flex-wrap items-start gap-2">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Modo manutencao ativo</p>
+                    <p className="mt-1 text-primary/85">{maintenance.data.message}</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {children}
+          </main>
         </div>
         <nav className="fixed bottom-0 left-0 right-0 z-30 flex snap-x gap-1 overflow-x-auto border-t border-white/10 bg-background/94 px-2 py-2 shadow-[0_-18px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden">
           {primaryNav.map((item) => (

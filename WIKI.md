@@ -69,6 +69,7 @@ Automacao ativa:
 - JWT nao passa em query string e nao fica em localStorage ou acessivel ao JavaScript.
 - `GET /auth/me` hidrata o perfil; `POST /auth/logout` encerra a sessao. Bearer token continua aceito para automacoes e smoke autenticado.
 - A API aplica headers defensivos, HSTS em producao, limite de body, rate limit para OAuth/upload, CORS com credenciais e `ValidationPipe` com transformacao.
+- O modo manutencao usa a regra de negocio `maintenanceMode` com `{ enabled, message }`. Quando ativo, um guard global bloqueia mutacoes sensiveis em leiloes, finalizacao/automacao, entregas/drops, ajustes DKP, progresso, requests, anuncios, interesses, eventos, Codex, Daoshi, uploads e webhooks operacionais; leituras e health continuam liberados. `PATCH /business-rules/maintenanceMode` permanece liberado para Staff desativar o modo, e `GET /operations/maintenance` alimenta o banner da Web.
 - Nao habilitar `whitelist`/`forbidNonWhitelisted` globalmente enquanto os DTOs legados forem classes sem decorators; isso remove ou rejeita campos validos. A migracao deve ser feita por modulo, com teste do contrato antes de endurecer o pipe.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
@@ -267,6 +268,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
 | 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |
 | 2026-07-01 | Staff ganhou fila persistente de webhooks com status, payload seguro, erro resumido e retry manual controlado. | Discord/Staff |
