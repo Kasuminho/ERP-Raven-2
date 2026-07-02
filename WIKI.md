@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-01
+**Ultima revisao:** 2026-07-02
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -41,9 +41,10 @@ Modulos principais da API:
 No modulo `operations`, o controller encaminha rotas Staff de resumo, briefing,
 weekly/season, integridade, meeting e diagnostico/dossie de leilao para servicos
 de dominio em `apps/api/src/modules/operations/services`. `IntegrityService` ja
-possui implementacao propria para integridade e legacy audit; os demais dominios
-ainda delegam ao `OperationsService` legado e devem ser migrados em fases para
-reduzir risco.
+possui implementacao propria para integridade e legacy audit, e
+`WeeklySummaryService` ja calcula resumo semanal/mensal e publica o resumo
+operacional sem depender do `OperationsService` legado. Os demais dominios ainda
+delegam ao servico legado e devem ser migrados em fases para reduzir risco.
 
 ## Regras de comunicacao
 
@@ -277,6 +278,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
 | 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao; integridade/legacy audit ja sairam para `IntegrityService`. | arquitetura/API |
 | 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |

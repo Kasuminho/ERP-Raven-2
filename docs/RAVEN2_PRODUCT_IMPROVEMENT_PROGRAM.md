@@ -616,12 +616,14 @@ Entrega:
 
 Objetivo: reduzir risco de mudancas cruzadas.
 
-Estado em 2026-07-01: fase 1 implementada. O controller de `operations` passou
+Estado em 2026-07-02: fase 1 implementada. O controller de `operations` passou
 a depender de servicos de dominio para Staff summary, briefing operacional,
 weekly/season, integridade, meeting e diagnostico/dossie de leilao, mantendo os
-contratos HTTP compativeis. A implementacao pesada ainda fica no servico legado e
-sera movida em fases menores. A fase 2 moveu a implementacao de integridade e
-legacy audit para `IntegrityService`.
+contratos HTTP compativeis. A implementacao pesada ainda fica parcialmente no
+servico legado e sera movida em fases menores. A fase 2 moveu a implementacao de
+integridade e legacy audit para `IntegrityService`. A fase 3 moveu o calculo de
+resumo semanal/mensal e a publicacao do resumo operacional para
+`WeeklySummaryService`.
 
 Entrega:
 

@@ -24,20 +24,65 @@ describe('Operations domain services', () => {
     assert.deepEqual(await service.getStaffDayView(), { urgentTasks: [] });
   });
 
-  it('keeps briefing, weekly and meeting services on the existing contract', async () => {
+  it('keeps briefing and meeting services on the existing contract', async () => {
     const operations = {
       getStaffMorningBriefing: mock.fn(async () => ({ title: 'briefing' })),
-      getSeasonSummary: mock.fn(async (month?: string) => ({ month })),
-      getWeeklySummary: mock.fn(async () => ({ weekStart: '2026-07-01' })),
-      postWeeklySummary: mock.fn(async () => ({ posted: true, summary: { weekStart: '2026-07-01' } })),
       getStaffMeetingSummary: mock.fn(async () => ({ urgentTasks: [] })),
     };
 
     assert.equal((await new OperationalBriefingService(operations as never).getStaffMorningBriefing()).title, 'briefing');
-    assert.equal((await new WeeklySummaryService(operations as never).getSeasonSummary('2026-07')).month, '2026-07');
-    assert.equal((await new WeeklySummaryService(operations as never).getWeeklySummary()).weekStart, '2026-07-01');
-    assert.equal((await new WeeklySummaryService(operations as never).postWeeklySummary()).posted, true);
     assert.deepEqual(await new MeetingService(operations as never).getStaffMeetingSummary(), { urgentTasks: [] });
+  });
+
+  it('calculates season summaries inside the weekly domain service', async () => {
+    const prisma = {
+      dKPTransaction: {
+        findMany: mock.fn(async () => [
+          { amount: 120, player: { id: 'p1', nickname: 'Aiko' } },
+          { amount: -40, player: { id: 'p1', nickname: 'Aiko' } },
+          { amount: 80, player: { id: 'p2', nickname: 'Brann' } },
+        ]),
+      },
+      eventAttendance: {
+        findMany: mock.fn(async () => [
+          { eventId: 'e1', player: { id: 'p1', nickname: 'Aiko' } },
+          { eventId: 'e2', player: { id: 'p1', nickname: 'Aiko' } },
+          { eventId: 'e1', player: { id: 'p2', nickname: 'Brann' } },
+        ]),
+      },
+      dropHistory: {
+        findMany: mock.fn(async () => [
+          { player: { id: 'p2', nickname: 'Brann' } },
+          { player: { id: 'p1', nickname: 'Aiko' } },
+        ]),
+      },
+      daoshiCashReceipt: {
+        findMany: mock.fn(async () => [
+          { approvedCents: 2500, player: { id: 'p2', nickname: 'Brann' } },
+        ]),
+      },
+      itemRequest: {
+        count: mock.fn(async () => 3),
+      },
+    };
+    const service = new WeeklySummaryService(
+      prisma as never,
+      { sendOperationalNotification: mock.fn(async () => undefined) } as never,
+      { getStaffSummary: mock.fn(async () => ({ counts: { reviews: 0, deliveries: 0, codex: 0, interests: 0 } })) } as never,
+    );
+
+    const summary = await service.getSeasonSummary('2026-07');
+
+    assert.equal(summary.month, '2026-07');
+    assert.equal(summary.dkpEarned, 200);
+    assert.equal(summary.dkpSpent, 40);
+    assert.equal(summary.attendanceEvents, 2);
+    assert.equal(summary.dropsDelivered, 2);
+    assert.equal(summary.daoshiApprovedCents, 2500);
+    assert.equal(summary.itemRequestsDelivered, 3);
+    assert.equal(summary.topPlayers[0].nickname, 'Aiko');
+    assert.equal(summary.topPlayers[1].nickname, 'Brann');
+    assert.equal(prisma.dKPTransaction.findMany.mock.calls.length, 1);
   });
 
   it('keeps auction diagnostics methods behind the auction domain service', async () => {
