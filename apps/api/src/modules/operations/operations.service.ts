@@ -62,7 +62,7 @@ const HOURS = 60 * 60 * 1000;
 const DAYS = 24 * HOURS;
 const AUCTION_RELIST_DELAY_DAYS = 7;
 const PUBLIC_SMOKE_PATHS = ['/health', '/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
-const DEPLOYMENT_ACTIONS_URL = 'https://github.com/Kasuminho/ERP-Raven-2/actions/workflows/build-docker-images.yml';
+const DEPLOYMENT_ACTIONS_URL = 'https://github.com/Kasuminho/ERP-Raven-2/actions/workflows/docker-images.yml';
 
 function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
   return request.itemCatalog?.category === 'creature';
