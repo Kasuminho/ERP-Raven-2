@@ -632,7 +632,8 @@ e health operacional para `StaffSummaryService`. A fase 9 moveu o painel Staff
 de deploy para `StaffSummaryService`. A fase 10 removeu a injecao do
 `OperationsService` legado em `StaffSummaryService`. A fase 11 iniciou a
 migracao de `AuctionDiagnosticsService`, movendo a lista de selecao de leiloes
-do diagnostico Staff.
+do diagnostico Staff. A fase 12 moveu a timeline operacional de leilao para
+`AuctionDiagnosticsService`.
 
 Entrega:
 

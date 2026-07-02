@@ -289,19 +289,86 @@ describe('Operations domain services', () => {
       getAuctionFinalizationPreview: mock.fn(async (auctionId: string) => ({ auctionId })),
       getAuctionDossier: mock.fn(async (auctionId: string) => ({ auctionId })),
       getUniversalDossier: mock.fn(async (type: string, id: string) => ({ type, id })),
-      getAuctionTimeline: mock.fn(async (auctionId: string) => [{ auctionId }]),
     };
+    const createdAt = new Date('2026-07-02T00:00:00.000Z');
+    const endsAt = new Date('2026-07-02T03:00:00.000Z');
     const prisma = {
       auction: {
+        findUnique: mock.fn(async () => ({
+          id: 'auction-1',
+          itemName: 'Cajado',
+          minimumBid: 100,
+          auctionMode: 'STANDARD',
+          itemTier: 'T4',
+          itemType: 'WEAPON',
+          minimumLayer: 4,
+          requiresStaffReview: false,
+          createdAt,
+          updatedAt: createdAt,
+          endsAt,
+          status: 'OPEN',
+          createdBy: { discordUsername: 'staff-user', discordNickname: 'Staff' },
+          bids: [{
+            id: 'bid-1',
+            playerId: 'player-1',
+            bidAmount: 150,
+            isValid: true,
+            createdAt: new Date('2026-07-02T00:10:00.000Z'),
+            player: { id: 'player-1', nickname: 'Aiko' },
+          }],
+          dkpLocks: [{
+            id: 'lock-1',
+            playerId: 'player-1',
+            amount: 150,
+            released: false,
+            createdAt: new Date('2026-07-02T00:11:00.000Z'),
+            player: { id: 'player-1', nickname: 'Aiko' },
+          }],
+          bidCancellationRequests: [],
+          reviewVotes: [],
+          bidInvalidationVotes: [],
+          dropHistory: {
+            id: 'drop-1',
+            playerId: 'player-1',
+            nicknameIngame: null,
+            itemName: 'Cajado',
+            deliveredAt: new Date('2026-07-02T02:00:00.000Z'),
+            createdAt: new Date('2026-07-02T02:00:00.000Z'),
+            staffDiscordId: 'staff-1',
+            proofImageUrl: 'proof.png',
+            player: { id: 'player-1', nickname: 'Aiko' },
+          },
+        })),
         findMany: mock.fn(async () => [
           { id: 'auction-1', itemName: 'Cajado', endsAt: new Date('2026-07-02T01:00:00.000Z') },
           { id: 'auction-2', itemName: 'Arco', endsAt: new Date('2026-07-02T02:00:00.000Z') },
         ]),
       },
       dKPTransaction: {
-        findMany: mock.fn(async () => [
-          { referenceId: 'auction-1', player: { nickname: 'Aiko' } },
-        ]),
+        findMany: mock.fn(async (args: { where: { referenceId?: string } }) => (
+          args.where.referenceId === 'auction-1'
+            ? [{
+                id: 'tx-1',
+                type: 'AUCTION_WIN',
+                amount: -150,
+                playerId: 'player-1',
+                createdAt: new Date('2026-07-02T01:00:00.000Z'),
+                player: { id: 'player-1', nickname: 'Aiko' },
+                createdBy: { discordUsername: 'staff-user', discordNickname: null },
+              }]
+            : [{ referenceId: 'auction-1', player: { nickname: 'Aiko' } }]
+        )),
+      },
+      auditLog: {
+        findMany: mock.fn(async () => [{
+          id: 'audit-1',
+          action: 'AUCTION_TEST',
+          targetType: 'Auction',
+          targetId: 'auction-1',
+          createdAt: new Date('2026-07-02T02:30:00.000Z'),
+          metadata: { auctionId: 'auction-1' },
+          actor: { discordUsername: 'auditor', discordNickname: null },
+        }]),
       },
     };
     const service = new AuctionDiagnosticsService(operations as never, prisma as never);
@@ -314,6 +381,11 @@ describe('Operations domain services', () => {
     assert.equal((await service.getAuctionFinalizationPreview('auction-1')).auctionId, 'auction-1');
     assert.equal((await service.getAuctionDossier('auction-1')).auctionId, 'auction-1');
     assert.deepEqual(await service.getUniversalDossier('auction', 'auction-1'), { type: 'auction', id: 'auction-1' });
-    assert.equal((await service.getAuctionTimeline('auction-1'))[0].auctionId, 'auction-1');
+    const timeline = await service.getAuctionTimeline('auction-1');
+    assert.equal(timeline[0].type, 'AUCTION_CREATED');
+    assert.ok(timeline.some((event) => event.type === 'BID_CREATED'));
+    assert.ok(timeline.some((event) => event.type === 'AUCTION_WIN'));
+    assert.ok(timeline.some((event) => event.type === 'DROP_DELIVERED'));
+    assert.ok(timeline.some((event) => event.type === 'AUDIT_LOG'));
   });
 });

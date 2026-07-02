@@ -57,7 +57,8 @@ documentado e protocolo; este dominio nao injeta mais o `OperationsService`
 legado.
 `AuctionDiagnosticsService` ja monta diretamente a lista de selecao de leiloes
 do diagnostico Staff, incluindo item, vencedor quando houver e data de fim; os
-detalhes pesados de diagnostico, timeline e dossies ainda delegam ao legado.
+detalhes pesados de timeline operacional tambem ja sairam para esse dominio. O
+raio-x completo, preview de finalizacao e dossies ainda delegam ao legado.
 
 ## Regras de comunicacao
 
@@ -291,6 +292,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Timeline operacional do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`. | arquitetura/API |
 | 2026-07-02 | Lista de selecao do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`. | arquitetura/API |
 | 2026-07-02 | `StaffSummaryService` deixou de injetar `OperationsService`; resumo Staff, dia, health e deploy estao desacoplados do legado. | arquitetura/API |
 | 2026-07-02 | Painel Staff de deploy de `operations` saiu da delegacao e passou a ser montado em `StaffSummaryService`, preservando versao, health publico, smoke, changelog documentado e protocolo. | arquitetura/API |
