@@ -5,6 +5,7 @@ import { DiscordOperationsService } from '../src/modules/operations/services/dis
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
 import { OperationsRulesService } from '../src/modules/operations/services/operations-rules.service';
+import { PlayerOperationsService } from '../src/modules/operations/services/player-operations.service';
 import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
 import { StaffSummaryService } from '../src/modules/operations/services/staff-summary.service';
 import { WeeklySummaryService } from '../src/modules/operations/services/weekly-summary.service';
@@ -328,6 +329,106 @@ describe('Operations domain services', () => {
     assert.deepEqual(rules.sections.map((section) => section.key), ['dkp', 'auctions', 'interests', 'attendance', 'daoshi']);
     assert.ok(rules.sections.find((section) => section.key === 'auctions')?.bullets.join(' ').includes('T4 minimo 450'));
     assert.ok(rules.sections.find((section) => section.key === 'attendance')?.bullets.join(' ').includes('BOSS=10'));
+  });
+
+  it('builds player summary, notices and action plan inside the player operations domain service', async () => {
+    const now = new Date();
+    const player = {
+      id: 'player-1',
+      userId: 'user-1',
+      nickname: 'PlayerDemo',
+      dimensionalLayer: 5,
+      joinedAt: now,
+      isActive: true,
+    };
+    const request = {
+      id: 'request-1',
+      playerId: player.id,
+      itemName: 'Cristal T3',
+      rankPosition: 1,
+      remainingQuantity: 1,
+      totalQuantity: 1,
+      warned3d: true,
+      warned4d: false,
+      updatedAt: new Date('2026-07-02T00:00:00.000Z'),
+      itemCatalog: { category: 'material' },
+    };
+    const codexRequest = {
+      id: 'codex-1',
+      playerId: player.id,
+      status: 'SENT',
+      sentAt: new Date('2026-07-02T00:05:00.000Z'),
+      updatedAt: new Date('2026-07-02T00:04:00.000Z'),
+      queuedAt: new Date('2026-07-02T00:03:00.000Z'),
+    };
+    const bid = {
+      id: 'bid-1',
+      playerId: player.id,
+      auctionId: 'auction-1',
+      bidAmount: 450,
+      createdAt: new Date('2026-07-02T00:10:00.000Z'),
+      auction: {
+        id: 'auction-1',
+        itemName: 'Espada T4',
+        status: 'OPEN',
+        endsAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      },
+    };
+    const openInterest = {
+      id: 'interest-1',
+      title: 'Skill T4',
+      status: 'OPEN',
+      closesAt: new Date(Date.now() + 5 * 60 * 60 * 1000),
+      createdAt: new Date('2026-07-02T00:15:00.000Z'),
+      itemCatalog: { category: 'skill' },
+    };
+    const suggestedAuction = {
+      id: 'auction-2',
+      itemName: 'Arco T4',
+      itemTier: 'T4',
+      status: 'OPEN',
+      minimumLayer: 4,
+      endsAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+      createdAt: new Date('2026-07-02T00:20:00.000Z'),
+    };
+    const prisma = {
+      player: {
+        findFirst: mock.fn(async (args: { select?: unknown }) => (args.select ? { id: player.id } : player)),
+      },
+      itemRequest: { findMany: mock.fn(async () => [request]) },
+      codexRequest: { findMany: mock.fn(async () => [codexRequest]) },
+      auctionBid: { findMany: mock.fn(async () => [bid]) },
+      itemInterestPost: { findMany: mock.fn(async () => [openInterest]) },
+      itemInterestEntry: { findMany: mock.fn(async () => []) },
+      playerProgress: { findMany: mock.fn(async () => []) },
+      event: {
+        findMany: mock.fn(async () => [{
+          id: 'event-1',
+          name: 'BOSSES T4',
+          type: 'BOSS',
+          status: 'OPEN',
+          startsAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        }]),
+      },
+      auction: { findMany: mock.fn(async () => [suggestedAuction]) },
+      dKPLock: { findMany: mock.fn(async () => [{ auctionId: bid.auctionId, amount: 450 }]) },
+      daoshiCashReceipt: { aggregate: mock.fn(async () => ({ _count: 1 })) },
+    };
+    const service = new PlayerOperationsService(prisma as never);
+
+    const summary = await service.getPlayerSummary('user-1');
+    assert.equal(summary.counts.requests, 1);
+    assert.equal(summary.tasks.some((task) => task.type === 'CODEX_CONFIRMATION'), true);
+    assert.equal(JSON.stringify(summary).includes('concorrente'), false);
+
+    const actionPlan = await service.getPlayerActionPlan('user-1');
+    assert.equal(actionPlan.cards.some((card) => card.type === 'AUCTION_BID'), true);
+    assert.equal(actionPlan.cards.some((card) => card.type === 'AUCTION_AVAILABLE' && card.id === suggestedAuction.id), true);
+    assert.equal(JSON.stringify(actionPlan).includes('ranking'), false);
+
+    const notices = await service.getNoticeBoard('user-1');
+    assert.equal(notices.some((notice) => notice.type === 'DAOSHI_PENDING'), true);
+    assert.equal(notices.some((notice) => notice.type === 'AUCTION_ENDING'), true);
   });
 
   it('builds morning briefing inside the briefing domain service', async () => {

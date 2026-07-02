@@ -671,7 +671,9 @@ rotas que dependiam do legado. A fase 14 moveu previews de webhooks, fila de
 entregas e retry manual para `DiscordOperationsService`, deixando a comunicacao
 operacional Staff fora do legado. A fase 15 moveu regras da guilda e leitura do
 modo manutencao para `OperationsRulesService`, reduzindo o legado tambem nas
-rotas de configuracao operacional compartilhadas.
+rotas de configuracao operacional compartilhadas. A fase 16 moveu o resumo
+player, notices e action plan para `PlayerOperationsService`, mantendo o
+contrato das rotas `me/*` e o sigilo de leilao para players.
 
 Entrega:
 
@@ -684,7 +686,8 @@ Entrega:
   - `OperationalBriefingService`;
   - `StaffInsightsService`;
   - `DiscordOperationsService`;
-  - `OperationsRulesService`.
+  - `OperationsRulesService`;
+  - `PlayerOperationsService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 

@@ -72,6 +72,9 @@ comunicacao do `OperationsService` legado.
 `OperationsRulesService` calcula o resumo de regras da guilda e le o modo
 manutencao diretamente de `BusinessRulesService`, removendo essas rotas de
 configuracao operacional do legado.
+`PlayerOperationsService` calcula o resumo player, notices e action plan de
+`operations/me/*`, mantendo o payload sem ranking, concorrentes, locks ou bids
+de terceiros para players.
 
 ## Regras de comunicacao
 
@@ -312,6 +315,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Resumo player, notices e action plan de `operations/me/*` sairam do `OperationsService` legado para `PlayerOperationsService`. | arquitetura/API |
 | 2026-07-02 | Regras da guilda e leitura do modo manutencao sairam do `OperationsService` legado para `OperationsRulesService`. | arquitetura/API |
 | 2026-07-02 | Previews de webhooks, fila sanitizada e retry manual sairam do `OperationsService` legado para `DiscordOperationsService`. | arquitetura/API |
 | 2026-07-02 | Insights Staff de fairness de loot e comparacao de players sairam do `OperationsService` legado para `StaffInsightsService`. | arquitetura/API |

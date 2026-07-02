@@ -9,6 +9,7 @@ import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
 import { OperationsRulesService } from './services/operations-rules.service';
+import { PlayerOperationsService } from './services/player-operations.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
@@ -56,6 +57,7 @@ export class OperationsController {
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
     private readonly operationsRules: OperationsRulesService,
+    private readonly playerOperations: PlayerOperationsService,
     private readonly staffInsights: StaffInsightsService,
     private readonly staffSummary: StaffSummaryService,
     private readonly weeklySummary: WeeklySummaryService,
@@ -63,17 +65,17 @@ export class OperationsController {
 
   @Get('me')
   async me(@Req() req: AuthRequest): Promise<PlayerOperationsSummary> {
-    return this.service.getPlayerSummary(req.user.userId);
+    return this.playerOperations.getPlayerSummary(req.user.userId);
   }
 
   @Get('me/notices')
   async notices(@Req() req: AuthRequest): Promise<NoticeBoardItem[]> {
-    return this.service.getNoticeBoard(req.user.userId);
+    return this.playerOperations.getNoticeBoard(req.user.userId);
   }
 
   @Get('me/action-plan')
   async actionPlan(@Req() req: AuthRequest): Promise<PlayerActionPlan> {
-    return this.service.getPlayerActionPlan(req.user.userId);
+    return this.playerOperations.getPlayerActionPlan(req.user.userId);
   }
 
   @Get('rules')
