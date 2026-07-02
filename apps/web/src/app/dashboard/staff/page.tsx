@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Rocket, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
@@ -20,6 +21,8 @@ type StaffTool = {
   descriptionKey: Parameters<typeof t>[1];
   icon: typeof UsersRound;
 };
+
+type StaffWorkGroupKey = 'resolve' | 'audit' | 'configure' | 'communicate' | 'deploy';
 
 const tools: StaffTool[] = [
   { href: '/dashboard/staff/day', titleKey: 'staffDay', descriptionKey: 'staffDayDescription', icon: CalendarCheck },
@@ -55,12 +58,42 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/drops', titleKey: 'drops', descriptionKey: 'staffDropsDescription', icon: Gem },
 ];
 
-const toolGroups = [
-  { label: 'Operacao de hoje', hrefs: ['/dashboard/staff/day', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/admin/announcements'] },
-  { label: 'Loot e economia', hrefs: ['/dashboard/staff/dkp', '/dashboard/staff/economy', '/dashboard/staff/interests', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/admin/items', '/dashboard/staff/daoshi', '/dashboard/staff/codex'] },
-  { label: 'Players e temporada', hrefs: ['/dashboard/staff/players', '/dashboard/staff/progress', '/dashboard/staff/compare', '/dashboard/staff/fairness', '/dashboard/staff/season'] },
-  { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/discord-templates', '/dashboard/staff/discord-webhooks'] },
-  { label: 'Operar deploy', hrefs: ['/dashboard/staff/deploy'] },
+const toolGroups: Array<{
+  key: StaffWorkGroupKey;
+  label: string;
+  description: string;
+  hrefs: string[];
+}> = [
+  {
+    key: 'resolve',
+    label: 'Resolver agora',
+    description: 'Pendencias, entregas, reviews, eventos e filas que pedem acao.',
+    hrefs: ['/dashboard/staff/day', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/staff/interests', '/dashboard/staff/codex', '/dashboard/staff/progress'],
+  },
+  {
+    key: 'audit',
+    label: 'Auditar',
+    description: 'Diagnosticos, dossies, historico de drops, integridade e comparacoes.',
+    hrefs: ['/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/integrity', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/staff/fairness', '/dashboard/staff/compare'],
+  },
+  {
+    key: 'configure',
+    label: 'Configurar',
+    description: 'Regras, catalogo, players, economia, DKP e Daoshi.',
+    hrefs: ['/dashboard/staff/rules', '/dashboard/admin/items', '/dashboard/staff/players', '/dashboard/staff/dkp', '/dashboard/staff/economy', '/dashboard/staff/daoshi'],
+  },
+  {
+    key: 'communicate',
+    label: 'Comunicar',
+    description: 'Anuncios, temporada e payloads Discord antes de postar.',
+    hrefs: ['/dashboard/admin/announcements', '/dashboard/staff/season', '/dashboard/staff/discord-templates', '/dashboard/staff/discord-webhooks'],
+  },
+  {
+    key: 'deploy',
+    label: 'Operar deploy',
+    description: 'Versao, health, smoke e protocolo de publicacao.',
+    hrefs: ['/dashboard/staff/deploy', '/dashboard/staff/health'],
+  },
 ];
 
 const morningTone = {
@@ -167,6 +200,23 @@ export default function StaffHubPage() {
   const health = useStaffHealth();
   const audit = useRecentAudit(12);
   const counts = operations.data?.counts;
+  const [activeGroupKey, setActiveGroupKey] = useState<StaffWorkGroupKey>('resolve');
+  const activeGroup = toolGroups.find((group) => group.key === activeGroupKey) ?? toolGroups[0];
+  const groupStats: Record<StaffWorkGroupKey, number> = {
+    resolve: (counts?.reviews ?? 0) + (counts?.deliveries ?? 0) + (counts?.codex ?? 0) + (counts?.interests ?? 0) + (counts?.progress ?? 0) + (counts?.events ?? 0),
+    audit: (briefing.data?.counts.integrityHigh ?? 0) + (briefing.data?.counts.healthAlerts ?? 0),
+    configure: 0,
+    communicate: counts?.announcements ?? 0,
+    deploy: briefing.data?.counts.healthAlerts ?? 0,
+  };
+  const actionItems = useMemo(() => {
+    const briefingTasks = (briefing.data?.sections ?? []).flatMap((section) => section.tasks);
+    const tasks = [...(operations.data?.tasks ?? []), ...briefingTasks]
+      .filter((task) => activeGroup.hrefs.some((href) => task.href.startsWith(href)))
+      .filter((task, index, list) => list.findIndex((candidate) => candidate.id === task.id && candidate.type === task.type) === index);
+
+    return tasks.slice(0, 4);
+  }, [activeGroup, briefing.data, operations.data]);
 
   return (
     <div className="space-y-8 pt-3 sm:pt-4 lg:pt-6">
@@ -175,15 +225,34 @@ export default function StaffHubPage() {
         <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'staffTools')}</h1>
       </div>
       <MorningBriefingPanel briefing={briefing.data} />
-      <div className="space-y-8">
-        {toolGroups.map((group) => (
-          <section key={group.label} className="scroll-mt-24 space-y-4">
+      <section className="space-y-4">
+        <div>
+          <p className="page-kicker">Ferramentas por jornada</p>
+          <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">Escolha o trabalho da vez</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {toolGroups.map((group) => (
+            <Button
+              key={group.key}
+              type="button"
+              variant={activeGroup.key === group.key ? 'primary' : 'secondary'}
+              className="h-auto min-h-10 px-3 py-2"
+              onClick={() => setActiveGroupKey(group.key)}
+            >
+              <span>{group.label}</span>
+              <Badge tone={groupStats[group.key] > 0 ? 'gold' : 'muted'}>{groupStats[group.key]}</Badge>
+            </Button>
+          ))}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="space-y-4">
             <div>
               <p className="page-kicker">Ferramentas</p>
-              <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{group.label}</h2>
+              <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{activeGroup.label}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{activeGroup.description}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {tools.filter((tool) => group.hrefs.includes(tool.href)).map((tool) => (
+              {tools.filter((tool) => activeGroup.hrefs.includes(tool.href)).map((tool) => (
                 <Link key={tool.href} href={tool.href} className="block h-full">
                   <Card className="h-full min-h-36 transition hover:border-primary/55 hover:bg-card">
                     <CardContent className="flex h-full flex-col gap-5 p-5 sm:p-6">
@@ -198,8 +267,30 @@ export default function StaffHubPage() {
               ))}
             </div>
           </section>
-        ))}
-      </div>
+          <aside className="space-y-3 rounded-md border bg-card/60 p-4">
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Proximas acoes</p>
+              <h3 className="text-lg font-semibold">{activeGroup.label}</h3>
+            </div>
+            <div className="space-y-2">
+              {actionItems.map((task) => (
+                <Link key={`${task.type}-${task.id}`} href={task.href} className="block rounded-md border bg-background/35 p-3 text-sm transition hover:border-primary/40">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold">{task.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
+                    </div>
+                    <Badge tone={morningTone[task.priority]}>{task.priority}</Badge>
+                  </div>
+                </Link>
+              ))}
+              {actionItems.length === 0 ? (
+                <p className="rounded-md border bg-background/35 p-3 text-sm text-muted-foreground">Nenhuma acao prioritaria neste grupo agora.</p>
+              ) : null}
+            </div>
+          </aside>
+        </div>
+      </section>
       <div className="grid gap-3 md:grid-cols-4">
         {[
           ['Reviews', counts?.reviews ?? 0],

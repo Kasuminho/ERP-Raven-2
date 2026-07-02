@@ -181,6 +181,9 @@ Entrega:
 
 Objetivo: Staff pensa em tarefa, nao modulo.
 
+Estado em 2026-07-02: implementado em `/dashboard/staff` com abas de jornada,
+contadores e proximas acoes por grupo.
+
 Entrega:
 
 - Manter cards atuais, mas agrupar em abas ou secoes:
@@ -190,6 +193,8 @@ Entrega:
   - Comunicar;
   - Operar deploy.
 - Cada grupo mostra contadores e proximas acoes.
+- As abas filtram os cards existentes sem remover rotas e usam tarefas do resumo
+  Staff/resumo matinal para listar ate quatro proximas acoes contextualizadas.
 
 ### B2. Resumo matinal Staff
 

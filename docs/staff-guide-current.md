@@ -23,7 +23,8 @@ Use a central para:
 
 - ver urgencias, leiloes vencidos/proximos, reviews, entregas, integridade e saude;
 - copiar a pauta em Markdown para reuniao;
-- navegar por grupos: operacao de hoje, loot/economia, players/temporada, governanca/diagnostico;
+- navegar por jornadas: `Resolver agora`, `Auditar`, `Configurar`, `Comunicar` e `Operar deploy`;
+- usar contadores e proximas acoes de cada jornada para decidir onde clicar primeiro;
 - acompanhar pendencias e auditoria recente.
 
 ## 3. Dia, reuniao e temporada
