@@ -24,14 +24,6 @@ describe('Operations domain services', () => {
     assert.deepEqual(await service.getStaffDayView(), { urgentTasks: [] });
   });
 
-  it('keeps briefing service on the existing contract', async () => {
-    const operations = {
-      getStaffMorningBriefing: mock.fn(async () => ({ title: 'briefing' })),
-    };
-
-    assert.equal((await new OperationalBriefingService(operations as never).getStaffMorningBriefing()).title, 'briefing');
-  });
-
   it('calculates season summaries inside the weekly domain service', async () => {
     const prisma = {
       dKPTransaction: {
@@ -81,6 +73,87 @@ describe('Operations domain services', () => {
     assert.equal(summary.topPlayers[0].nickname, 'Aiko');
     assert.equal(summary.topPlayers[1].nickname, 'Brann');
     assert.equal(prisma.dKPTransaction.findMany.mock.calls.length, 1);
+  });
+
+  it('builds morning briefing inside the briefing domain service', async () => {
+    const now = new Date();
+    const expiredAt = new Date(now.getTime() - 60_000);
+    const endingAt = new Date(now.getTime() + 60_000);
+    const prisma = {
+      auction: {
+        findMany: mock.fn(async (_args: unknown) => {
+          if (prisma.auction.findMany.mock.calls.length === 1) {
+            return [{ id: 'expired-1', itemName: 'Machado', endsAt: expiredAt }];
+          }
+          return [{ id: 'ending-1', itemName: 'Arco', endsAt: endingAt }];
+        }),
+      },
+    };
+    const staffSummary = {
+      getStaffSummary: mock.fn(async () => ({
+        tasks: [
+          {
+            id: 'review-1',
+            type: 'STAFF_REVIEW',
+            title: 'Review pendente',
+            description: 'Decidir leilao.',
+            href: '/dashboard/staff/reviews',
+            priority: 'high',
+            createdAt: now,
+          },
+          {
+            id: 'drop-1',
+            type: 'DROP_DELIVERY',
+            title: 'Entrega pendente',
+            description: 'Confirmar print.',
+            href: '/dashboard/staff/deliveries',
+            priority: 'medium',
+            createdAt: now,
+          },
+        ],
+        counts: {
+          reviews: 1,
+          codex: 0,
+          itemRequests: 0,
+          interests: 0,
+          deliveries: 1,
+          progress: 0,
+          events: 0,
+          announcements: 0,
+        },
+      })),
+      getStaffHealth: mock.fn(async () => ({
+        generatedAt: now,
+        checks: [{ key: 'backup', label: 'Backup verificado', ready: false, detail: 'Sem marcador.' }],
+      })),
+    };
+    const integrity = {
+      getIntegritySummary: mock.fn(async () => ({
+        generatedAt: now,
+        counts: { high: 1, medium: 0, low: 0, total: 1 },
+        issues: [{
+          id: 'issue-1',
+          type: 'FINALIZED_EVENT_WITHOUT_DKP',
+          severity: 'high',
+          title: 'Evento sem DKP',
+          description: 'Falta transacao.',
+          href: '/dashboard/admin/events',
+          createdAt: now,
+        }],
+      })),
+    };
+    const service = new OperationalBriefingService(prisma as never, staffSummary as never, integrity as never);
+
+    const briefing = await service.getStaffMorningBriefing();
+
+    assert.equal(briefing.title, 'Resumo matinal Staff');
+    assert.equal(briefing.counts.expiredOpenAuctions, 1);
+    assert.equal(briefing.counts.endingAuctions24h, 1);
+    assert.equal(briefing.counts.healthAlerts, 1);
+    assert.equal(briefing.counts.integrityHigh, 1);
+    assert.equal(briefing.sections.find((section) => section.key === 'auctions')?.tasks.length, 3);
+    assert.match(briefing.markdown, /Resumo matinal Staff/);
+    assert.equal(prisma.auction.findMany.mock.calls.length, 2);
   });
 
   it('builds meeting summaries inside the meeting domain service', async () => {

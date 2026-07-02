@@ -624,7 +624,8 @@ servico legado e sera movida em fases menores. A fase 2 moveu a implementacao de
 integridade e legacy audit para `IntegrityService`. A fase 3 moveu o calculo de
 resumo semanal/mensal e a publicacao do resumo operacional para
 `WeeklySummaryService`. A fase 4 moveu a composicao do modo reuniao Staff para
-`MeetingService`.
+`MeetingService`. A fase 5 moveu a composicao do resumo matinal Staff para
+`OperationalBriefingService`.
 
 Entrega:
 
