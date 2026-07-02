@@ -726,10 +726,17 @@ Entrega:
 
 Objetivo: preparar escala.
 
+Estado em 2026-07-02: fase 1 implementada. O rate limit saiu do `main.ts` e
+passou para `apps/api/src/common/rate-limit`, com `RateLimitStore`,
+`InMemoryRateLimitStore` e middleware configuravel por regras. Redis/gateway
+continua como provider futuro por tras da mesma interface.
+
 Entrega:
 
 - Abstracao de rate limit com provider em memoria e Redis/gateway futuro.
 - Documentar que instancia unica pode usar memoria; multi-replica precisa Redis.
+- Health Staff mostra check `rate-limit` indicando provider em memoria local e
+  limite operacional para multi-replica.
 
 ## Ordem sugerida de execucao
 

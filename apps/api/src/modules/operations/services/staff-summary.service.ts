@@ -248,6 +248,12 @@ export class StaffSummaryService {
           ready: true,
           detail: 'Cron interno do Nest habilitado no modulo Automation.',
         },
+        {
+          key: 'rate-limit',
+          label: 'Rate limit',
+          ready: true,
+          detail: 'Provider em memoria local para OAuth/upload; multi-replica exige Redis ou gateway compartilhado.',
+        },
         backupCheck,
       ],
     };

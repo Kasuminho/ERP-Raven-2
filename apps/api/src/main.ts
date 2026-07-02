@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
 import { createGlobalValidationPipe } from './common/pipes/global-validation.pipe';
+import { createRateLimiter } from './common/rate-limit/rate-limit.middleware';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
@@ -41,29 +42,6 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   await app.listen(config.get<number>('app.port', 3000));
-}
-
-function createRateLimiter(): (req: Request, res: Response, next: NextFunction) => void {
-  const attempts = new Map<string, { count: number; resetAt: number }>();
-  return (req, res, next) => {
-    const isAuth = /\/auth\/discord(?:\/login)?\/?$/.test(req.path);
-    const isUpload = /\/uploads\/image\/?$/.test(req.path);
-    if (!isAuth && !isUpload) return next();
-
-    const windowMs = 15 * 60 * 1000;
-    const limit = isAuth ? 30 : 60;
-    const now = Date.now();
-    const key = `${isAuth ? 'auth' : 'upload'}:${req.ip}`;
-    const current = attempts.get(key);
-    const entry = !current || current.resetAt <= now ? { count: 0, resetAt: now + windowMs } : current;
-    entry.count += 1;
-    attempts.set(key, entry);
-    res.setHeader('RateLimit-Limit', String(limit));
-    res.setHeader('RateLimit-Remaining', String(Math.max(0, limit - entry.count)));
-    res.setHeader('RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
-    if (entry.count > limit) return res.status(429).json({ statusCode: 429, message: 'Too many requests. Try again later.' });
-    next();
-  };
 }
 
 void bootstrap();

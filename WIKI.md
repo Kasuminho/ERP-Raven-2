@@ -95,6 +95,7 @@ Automacao ativa:
 - JWT nao passa em query string e nao fica em localStorage ou acessivel ao JavaScript.
 - `GET /auth/me` hidrata o perfil; `POST /auth/logout` encerra a sessao. Bearer token continua aceito para automacoes e smoke autenticado.
 - A API aplica headers defensivos, HSTS em producao, limite de body, rate limit para OAuth/upload, CORS com credenciais e `ValidationPipe` com transformacao.
+- O rate limit de OAuth/upload usa `apps/api/src/common/rate-limit`: `createRateLimiter`, regras por rota e `RateLimitStore`. O provider atual e `InMemoryRateLimitStore`, adequado para instancia unica; multi-replica deve trocar por Redis/gateway preservando a interface. O health Staff mostra check `rate-limit` com essa condicao operacional.
 - O modo manutencao usa a regra de negocio `maintenanceMode` com `{ enabled, message }`. Quando ativo, um guard global bloqueia mutacoes sensiveis em leiloes, finalizacao/automacao, entregas/drops, ajustes DKP, progresso, requests, anuncios, interesses, eventos, Codex, Daoshi, uploads e webhooks operacionais; leituras e health continuam liberados. `PATCH /business-rules/maintenanceMode` permanece liberado para Staff desativar o modo, e `GET /operations/maintenance` alimenta o banner da Web.
 - Nao habilitar `whitelist`/`forbidNonWhitelisted` globalmente enquanto os DTOs legados forem classes sem decorators; isso remove ou rejeita campos validos. A migracao deve ser feita por modulo, com teste do contrato antes de endurecer o pipe.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
@@ -279,7 +280,7 @@ npm.cmd run discord:configure-webhooks
 - O lint possui um warning preexistente em `eligibility.service.ts:467` sobre `client` nao usado.
 - `.env`, `.env.production`, tokens e URLs de webhooks nunca entram em documentacao ou resposta publica.
 - O audit de 2026-06-21 ficou em 0 criticas e 8 altas conhecidas; o gate impede regressao, mas upgrades maiores de Nest/Discord devem continuar em sprint controlada.
-- O rate limit atual e local ao processo. Se a API escalar para varias replicas, migrar o contador para Redis ou gateway compartilhado.
+- O rate limit atual usa provider em memoria local por tras de `RateLimitStore`. Se a API escalar para varias replicas, implementar provider Redis ou delegar ao gateway compartilhado.
 
 ## Documentos de referencia
 
@@ -299,6 +300,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Rate limit de OAuth/upload saiu do bootstrap e passou para abstracao `RateLimitStore` com provider em memoria e caminho preparado para Redis/gateway. | arquitetura/API |
 | 2026-07-02 | Hooks Web sairam do arquivo gigante `use-guild-api.ts` para arquivos por dominio, com barrel temporario e telas migradas para imports diretos. | arquitetura/Web |
 | 2026-07-02 | Modo reuniao Staff virou pauta decisoria por secoes com Markdown copiavel e marcacao auditavel de item resolvido por dia operacional. | Staff/reuniao |
 | 2026-07-02 | Central Staff passou a organizar ferramentas por jornada com abas, contadores e proximas acoes por grupo: resolver agora, auditar, configurar, comunicar e operar deploy. | UX Staff |
