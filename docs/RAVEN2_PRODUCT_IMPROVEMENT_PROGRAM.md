@@ -627,7 +627,8 @@ resumo semanal/mensal e a publicacao do resumo operacional para
 `MeetingService`. A fase 5 moveu a composicao do resumo matinal Staff para
 `OperationalBriefingService`. A fase 6 moveu o resumo do dia Staff para
 `StaffSummaryService`. A fase 7 moveu o resumo Staff principal, suas filas,
-thresholds e contadores para `StaffSummaryService`.
+thresholds e contadores para `StaffSummaryService`. A fase 8 moveu health Staff
+e health operacional para `StaffSummaryService`.
 
 Entrega:
 

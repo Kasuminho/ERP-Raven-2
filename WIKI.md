@@ -49,8 +49,10 @@ do legado. `OperationalBriefingService` ja monta o resumo matinal Staff com
 pendencias, leiloes vencidos/proximos, saude e integridade sem depender do
 legado. `StaffSummaryService` ja calcula o resumo do dia Staff (`staff/day`)
 e o resumo Staff completo com filas de review, Codex, requests, interesses,
-entregas, progresso, eventos e anuncios; health e deploy ainda delegam ao
-servico legado e devem ser migrados em fases para reduzir risco.
+entregas, progresso, eventos e anuncios. `StaffSummaryService` tambem calcula
+health Staff e health operacional com banco, storage, webhooks, automacao,
+backup verificado, falhas recentes e aproximacao de fila; deploy ainda delega
+ao servico legado e deve ser migrado em fase propria.
 
 ## Regras de comunicacao
 
@@ -284,6 +286,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Health Staff e health operacional de `operations` sairam da delegacao e passaram a ser calculados em `StaffSummaryService`, preservando checks de banco, storage, webhooks, automacao, backup e auditoria recente. | arquitetura/API |
 | 2026-07-02 | Resumo Staff principal de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando filas, thresholds e contadores. | arquitetura/API |
 | 2026-07-02 | Quinta rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-02 | Resumo do dia Staff de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando contadores diarios e tarefas urgentes. | arquitetura/API |

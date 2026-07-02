@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   AnnouncementStatus,
   AuctionStatus,
@@ -9,6 +10,7 @@ import {
   ProgressReviewStatus,
 } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
+import { readFile } from 'node:fs/promises';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { OperationsService } from '../operations.service';
 import {
@@ -21,12 +23,15 @@ import {
   StaffOperationsSummary,
 } from '../operations.types';
 
+const HOURS = 60 * 60 * 1000;
+
 @Injectable()
 export class StaffSummaryService {
   constructor(
     private readonly operations: OperationsService,
     private readonly prisma: PrismaService,
     private readonly businessRules: BusinessRulesService,
+    private readonly config: ConfigService,
   ) {}
 
   async getStaffSummary(): Promise<StaffOperationsSummary> {
@@ -184,12 +189,78 @@ export class StaffSummaryService {
     };
   }
 
-  getStaffHealth(): Promise<StaffHealthSummary> {
-    return this.operations.getStaffHealth();
+  async getStaffHealth(): Promise<StaffHealthSummary> {
+    let dbReady = false;
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      dbReady = true;
+    } catch {
+      dbReady = false;
+    }
+
+    const webhookKeys = [
+      'announcements',
+      'auctions',
+      'drops',
+      'attendance',
+      'staffReview',
+      'dkp',
+      'interests',
+      'itemRequests',
+      'staffRequests',
+    ];
+    const configuredWebhooks = webhookKeys.filter((key) => Boolean(this.config.get<string>(`discord.webhooks.${key}`)?.trim()));
+    const driveProvider = this.config.get<string>('IMAGE_STORAGE_PROVIDER') ?? 'local';
+    const driveReady = driveProvider !== 'google_drive'
+      || Boolean(this.config.get<string>('GOOGLE_DRIVE_FOLDER_ID')?.trim() && this.config.get<string>('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON')?.trim());
+    const backupCheck = await this.getStaffBackupHealthCheck();
+
+    return {
+      generatedAt: new Date(),
+      checks: [
+        { key: 'database', label: 'PostgreSQL', ready: dbReady, detail: dbReady ? 'Conexao respondendo.' : 'Falha ao consultar o banco.' },
+        {
+          key: 'google-drive',
+          label: 'Google Drive',
+          ready: driveReady,
+          detail: driveProvider === 'google_drive' ? 'Provider Google Drive configurado.' : 'Provider local ativo.',
+        },
+        {
+          key: 'discord-webhooks',
+          label: 'Discord Webhooks',
+          ready: configuredWebhooks.length >= 6,
+          detail: `${configuredWebhooks.length}/${webhookKeys.length} webhooks configurados.`,
+        },
+        {
+          key: 'automation',
+          label: 'Automacao',
+          ready: true,
+          detail: 'Cron interno do Nest habilitado no modulo Automation.',
+        },
+        backupCheck,
+      ],
+    };
   }
 
-  getOperationalHealth(): Promise<OperationalHealthSummary> {
-    return this.operations.getOperationalHealth();
+  async getOperationalHealth(): Promise<OperationalHealthSummary> {
+    const base = await this.getStaffHealth();
+    const since = new Date(Date.now() - 24 * HOURS);
+    const [failures, latestFailure, latestAutomation, activeAnnouncements, pendingTasks] = await Promise.all([
+      this.prisma.auditLog.count({ where: { action: { contains: 'FAILED' }, createdAt: { gte: since } } }),
+      this.prisma.auditLog.findFirst({ where: { action: { contains: 'FAILED' } }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.auditLog.findFirst({ where: { action: { contains: 'AUTOMATION' } }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.announcement.count({ where: { status: AnnouncementStatus.ACTIVE } }),
+      this.getStaffSummary(),
+    ]);
+
+    return {
+      ...base,
+      discordFailures24h: failures,
+      latestAutomationAudit: latestAutomation?.createdAt ?? null,
+      latestDiscordFailure: latestFailure?.createdAt ?? null,
+      activeAnnouncements,
+      pendingQueueApproximation: pendingTasks.tasks.length,
+    };
   }
 
   getDeploymentPanel(): Promise<DeploymentPanelSummary> {
@@ -239,5 +310,51 @@ export class StaffSummaryService {
     if (ageMs >= threshold.highAfterMs) return 'high';
     if (ageMs >= threshold.mediumAfterMs) return 'medium';
     return 'low';
+  }
+
+  private async getStaffBackupHealthCheck(): Promise<StaffHealthSummary['checks'][number]> {
+    const statusFile = process.env.BACKUP_STATUS_FILE || '/app/backups/last-verified-backup.json';
+    const maxAgeHours = Number(process.env.BACKUP_MAX_AGE_HOURS ?? 26);
+
+    try {
+      const parsed = JSON.parse(await readFile(statusFile, 'utf8')) as {
+        status?: string;
+        verifiedAt?: string;
+        backupFile?: string;
+      };
+      const verifiedAt = parsed.verifiedAt ? new Date(parsed.verifiedAt) : null;
+
+      if (!verifiedAt || Number.isNaN(verifiedAt.getTime())) {
+        return {
+          key: 'verified-backup',
+          label: 'Backup verificado',
+          ready: false,
+          detail: 'Marcador de backup existe, mas nao tem verifiedAt valido.',
+        };
+      }
+
+      const ageHours = (Date.now() - verifiedAt.getTime()) / HOURS;
+      const ready = parsed.status === 'verified' && ageHours <= maxAgeHours;
+
+      return {
+        key: 'verified-backup',
+        label: 'Backup verificado',
+        ready,
+        detail: ready
+          ? `Ultimo restore de teste ha ${Math.round(ageHours)}h (${parsed.backupFile ?? 'arquivo nao informado'}).`
+          : `Ultimo backup verificado ha ${Math.round(ageHours)}h; limite atual ${maxAgeHours}h.`,
+      };
+    } catch (error) {
+      return {
+        key: 'verified-backup',
+        label: 'Backup verificado',
+        ready: false,
+        detail: `Marcador nao encontrado ou ilegivel: ${this.errorMessage(error)}`,
+      };
+    }
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Erro desconhecido.';
   }
 }

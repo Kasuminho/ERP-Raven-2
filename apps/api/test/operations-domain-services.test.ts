@@ -7,14 +7,13 @@ import { StaffSummaryService } from '../src/modules/operations/services/staff-su
 import { WeeklySummaryService } from '../src/modules/operations/services/weekly-summary.service';
 
 describe('Operations domain services', () => {
-  it('keeps staff summary endpoints delegated through the domain service', async () => {
+  it('builds staff summary and health inside the staff summary domain service', async () => {
     const now = new Date(Date.now() - 3_600_000);
     const operations = {
-      getStaffHealth: mock.fn(async () => ({ checks: [] })),
-      getOperationalHealth: mock.fn(async () => ({ checks: [], discordFailures24h: 0 })),
       getDeploymentPanel: mock.fn(async () => ({ currentApiVersion: 'test' })),
     };
     const prisma = {
+      $queryRaw: mock.fn(async () => [{ ok: 1 }]),
       auction: { findMany: mock.fn(async () => [{ id: 'auction-1', itemName: 'Lamina', updatedAt: now }]) },
       codexRequest: { findMany: mock.fn(async () => []) },
       itemRequest: { findMany: mock.fn(async () => []) },
@@ -33,6 +32,14 @@ describe('Operations domain services', () => {
         findMany: mock.fn(async () => []),
         count: mock.fn(async () => 2),
       },
+      auditLog: {
+        count: mock.fn(async () => 2),
+        findFirst: mock.fn(async (args: { where: { action: { contains: string } } }) => (
+          args.where.action.contains === 'AUTOMATION'
+            ? { createdAt: new Date('2026-07-02T02:00:00.000Z') }
+            : { createdAt: new Date('2026-07-02T01:00:00.000Z') }
+        )),
+      },
     };
     const businessRules = {
       getStaffPendingThresholds: mock.fn(async () => ({
@@ -46,13 +53,27 @@ describe('Operations domain services', () => {
         eventFinalization: { mediumAfterMs: 1, highAfterMs: 2 },
       })),
     };
-    const service = new StaffSummaryService(operations as never, prisma as never, businessRules as never);
+    const config = {
+      get: mock.fn((key: string) => {
+        if (key === 'IMAGE_STORAGE_PROVIDER') return 'local';
+        if (key.startsWith('discord.webhooks.')) return 'configured';
+        return undefined;
+      }),
+    };
+    const previousBackupStatusFile = process.env.BACKUP_STATUS_FILE;
+    process.env.BACKUP_STATUS_FILE = 'C:/tmp/raven2-missing-backup-marker.json';
+    const service = new StaffSummaryService(operations as never, prisma as never, businessRules as never, config as never);
 
     const staff = await service.getStaffSummary();
     assert.equal(staff.counts.reviews, 1);
     assert.equal(staff.tasks[0].type, 'STAFF_REVIEW');
-    assert.deepEqual(await service.getStaffHealth(), { checks: [] });
-    assert.equal((await service.getOperationalHealth()).discordFailures24h, 0);
+    const health = await service.getStaffHealth();
+    assert.equal(health.checks.find((check) => check.key === 'database')?.ready, true);
+    assert.equal(health.checks.find((check) => check.key === 'discord-webhooks')?.ready, true);
+    assert.equal(health.checks.find((check) => check.key === 'verified-backup')?.ready, false);
+    const operationalHealth = await service.getOperationalHealth();
+    assert.equal(operationalHealth.discordFailures24h, 2);
+    assert.equal(operationalHealth.pendingQueueApproximation, 1);
     assert.equal((await service.getDeploymentPanel()).currentApiVersion, 'test');
     const dayView = await service.getStaffDayView();
     assert.equal(dayView.todaysAnnouncements, 1);
@@ -61,6 +82,11 @@ describe('Operations domain services', () => {
     assert.equal(dayView.pendingDeliveries, 0);
     assert.equal(dayView.pendingProgressReviews, 5);
     assert.equal(dayView.urgentTasks.length, 1);
+    if (previousBackupStatusFile === undefined) {
+      delete process.env.BACKUP_STATUS_FILE;
+    } else {
+      process.env.BACKUP_STATUS_FILE = previousBackupStatusFile;
+    }
   });
 
   it('calculates season summaries inside the weekly domain service', async () => {
