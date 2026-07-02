@@ -729,7 +729,9 @@ review de leilao/cancelamento de bid possuem decorators `class-validator`, e o
 controller usa `ValidationPipe` local com `whitelist` e
 `forbidNonWhitelisted`, sem alterar o pipe global legado. A fase 2 implementou
 o mesmo padrao no modulo `codex`, validando criacao de pedido, comprovante de
-envio e motivo de cancelamento antes de processar o fluxo.
+envio e motivo de cancelamento antes de processar o fluxo. A fase 3 implementou
+o mesmo padrao no modulo `daoshi`, validando recibos, lancamentos manuais e
+revisao Staff antes de processar valores financeiros.
 
 Entrega:
 
