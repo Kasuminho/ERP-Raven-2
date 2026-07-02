@@ -38,10 +38,11 @@ Modulos principais da API:
 - `discord`, `notifications`, `automation`, `audit`, `operations`;
 - `business-rules`, `staff-review`, `daoshi`, `codex`, `health`, `uploads`.
 
-No modulo `operations`, o controller ja encaminha rotas Staff de resumo, briefing,
+No modulo `operations`, o controller encaminha rotas Staff de resumo, briefing,
 weekly/season, integridade, meeting e diagnostico/dossie de leilao para servicos
-de dominio em `apps/api/src/modules/operations/services`. A implementacao pesada
-ainda permanece no `OperationsService` legado e deve ser migrada em fases para
+de dominio em `apps/api/src/modules/operations/services`. `IntegrityService` ja
+possui implementacao propria para integridade e legacy audit; os demais dominios
+ainda delegam ao `OperationsService` legado e devem ser migrados em fases para
 reduzir risco.
 
 ## Regras de comunicacao
@@ -276,7 +277,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
-| 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao mantendo rotas compativeis. | arquitetura/API |
+| 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao; integridade/legacy audit ja sairam para `IntegrityService`. | arquitetura/API |
 | 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |

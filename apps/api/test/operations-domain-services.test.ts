@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 import { AuctionDiagnosticsService } from '../src/modules/operations/services/auction-diagnostics.service';
-import { IntegrityService } from '../src/modules/operations/services/integrity.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
 import { StaffSummaryService } from '../src/modules/operations/services/staff-summary.service';
@@ -25,14 +24,12 @@ describe('Operations domain services', () => {
     assert.deepEqual(await service.getStaffDayView(), { urgentTasks: [] });
   });
 
-  it('keeps briefing, weekly, integrity and meeting services on the existing contract', async () => {
+  it('keeps briefing, weekly and meeting services on the existing contract', async () => {
     const operations = {
       getStaffMorningBriefing: mock.fn(async () => ({ title: 'briefing' })),
       getSeasonSummary: mock.fn(async (month?: string) => ({ month })),
       getWeeklySummary: mock.fn(async () => ({ weekStart: '2026-07-01' })),
       postWeeklySummary: mock.fn(async () => ({ posted: true, summary: { weekStart: '2026-07-01' } })),
-      getIntegritySummary: mock.fn(async () => ({ counts: { total: 0 } })),
-      getLegacyAudit: mock.fn(async () => ({ unlinkedDrops: 0 })),
       getStaffMeetingSummary: mock.fn(async () => ({ urgentTasks: [] })),
     };
 
@@ -40,8 +37,6 @@ describe('Operations domain services', () => {
     assert.equal((await new WeeklySummaryService(operations as never).getSeasonSummary('2026-07')).month, '2026-07');
     assert.equal((await new WeeklySummaryService(operations as never).getWeeklySummary()).weekStart, '2026-07-01');
     assert.equal((await new WeeklySummaryService(operations as never).postWeeklySummary()).posted, true);
-    assert.equal((await new IntegrityService(operations as never).getIntegritySummary()).counts.total, 0);
-    assert.equal((await new IntegrityService(operations as never).getLegacyAudit()).unlinkedDrops, 0);
     assert.deepEqual(await new MeetingService(operations as never).getStaffMeetingSummary(), { urgentTasks: [] });
   });
 
