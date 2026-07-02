@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AuctionStatus, DKPTransactionType, Prisma } from '@prisma/client';
+import { AuctionMode, AuctionStatus, DKPTransactionType, ItemTier, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { OperationsService } from '../operations.service';
 import {
@@ -57,8 +57,279 @@ export class AuctionDiagnosticsService {
     }));
   }
 
-  getAuctionDiagnostics(auctionId: string): Promise<AuctionDiagnosticSummary> {
-    return this.operations.getAuctionDiagnostics(auctionId);
+  async getAuctionDiagnostics(auctionId: string): Promise<AuctionDiagnosticSummary> {
+    const auction = await this.prisma.auction.findUnique({
+      where: { id: auctionId },
+      include: {
+        bids: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                nickname: true,
+                dimensionalLayer: true,
+                attendancePercentage: true,
+              },
+            },
+          },
+          orderBy: [{ isValid: 'desc' }, { bidAmount: 'desc' }, { createdAt: 'asc' }],
+        },
+        dkpLocks: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                nickname: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+        bidCancellationRequests: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                nickname: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        reviewVotes: {
+          include: {
+            voter: {
+              select: {
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
+        bidInvalidationVotes: {
+          include: {
+            voter: {
+              select: {
+                discordUsername: true,
+                discordNickname: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
+      },
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction was not found.');
+    }
+
+    const now = new Date();
+    const bidIds = auction.bids.map((bid) => bid.id);
+    const lockIds = auction.dkpLocks.map((lock) => lock.id);
+    const cancellationIds = auction.bidCancellationRequests.map((request) => request.id);
+    const relatedTargetIds = [auction.id, ...bidIds, ...lockIds, ...cancellationIds];
+    const auditOr: Prisma.AuditLogWhereInput[] = [
+      { targetId: { in: relatedTargetIds } },
+      { metadata: { path: ['auctionId'], equals: auction.id } },
+      ...bidIds.map((bidId) => ({ metadata: { path: ['bidId'], equals: bidId } })),
+      ...lockIds.map((lockId) => ({ metadata: { path: ['releasedLockId'], equals: lockId } })),
+    ];
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: { OR: auditOr },
+      include: {
+        actor: {
+          select: {
+            discordUsername: true,
+            discordNickname: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 80,
+    });
+
+    const activeLocks = auction.dkpLocks.filter((lock) => !lock.released);
+    const activeLockByPlayer = new Map(activeLocks.map((lock) => [lock.playerId, lock]));
+    const validBids = auction.bids.filter((bid) => bid.isValid);
+    const invalidBids = auction.bids.filter((bid) => !bid.isValid);
+    const minimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : null);
+    const validBidsAtMinimumLayer = minimumLayer
+      ? validBids.filter((bid) => bid.player.dimensionalLayer >= minimumLayer)
+      : validBids;
+    const validBidsWithActiveLocks = validBids.filter((bid) => activeLockByPlayer.has(bid.playerId));
+    const issues: AuctionDiagnosticSummary['issues'] = [];
+
+    if (auction.status === AuctionStatus.OPEN && auction.endsAt <= now) {
+      issues.push({
+        severity: 'high',
+        title: 'Leilao OPEN vencido',
+        description: 'Este leilao ja passou do horario de fim e deve ser processado pelo job de finalizacao, nao pelo relist.',
+      });
+    }
+
+    for (const bid of validBids) {
+      const activeLock = activeLockByPlayer.get(bid.playerId);
+      if (!activeLock) {
+        issues.push({
+          severity: 'high',
+          title: 'Bid valido sem lock ativo',
+          description: `${bid.player.nickname} tem bid valido sem DKP travado.`,
+          metadata: { bidId: bid.id, playerId: bid.playerId },
+        });
+      } else if (activeLock.amount !== bid.bidAmount) {
+        issues.push({
+          severity: 'medium',
+          title: 'Lock diferente do bid',
+          description: `${bid.player.nickname} tem lock de ${activeLock.amount} DKP para bid de ${bid.bidAmount} DKP.`,
+          metadata: { bidId: bid.id, lockId: activeLock.id },
+        });
+      }
+    }
+
+    for (const lock of activeLocks) {
+      const validBid = validBids.find((bid) => bid.playerId === lock.playerId);
+      if (!validBid) {
+        issues.push({
+          severity: 'high',
+          title: 'Lock ativo sem bid valido',
+          description: `${lock.player.nickname} tem DKP travado sem bid valido neste leilao.`,
+          metadata: { lockId: lock.id, playerId: lock.playerId },
+        });
+      }
+    }
+
+    if (auction.status === AuctionStatus.PENDING_REVIEW && validBids.length === 0) {
+      issues.push({
+        severity: 'high',
+        title: 'Review sem bid valido',
+        description: 'Este leilao esta em review, mas nao possui nenhum bid valido.',
+      });
+    }
+
+    if (auction.status === AuctionStatus.OPEN && auction.itemTier === ItemTier.T4 && minimumLayer && validBids.length > 0 && validBidsAtMinimumLayer.length === 0) {
+      issues.push({
+        severity: 'medium',
+        title: 'Sem bid na camada minima atual',
+        description: `Camada minima atual ${minimumLayer}. Ao finalizar vencido, a regra expande para a proxima camada.`,
+      });
+    }
+
+    let outcome: AuctionDiagnosticSummary['outcome'] = 'NO_ACTION';
+    if (auction.status === AuctionStatus.OPEN && auction.endsAt <= now) {
+      if (auction.itemTier === ItemTier.T4 && minimumLayer && minimumLayer > 1 && validBidsAtMinimumLayer.length === 0) {
+        outcome = 'EXPAND_LAYER';
+      } else if (validBids.length === 0) {
+        outcome = 'RELIST';
+      } else if (auction.requiresStaffReview || auction.auctionMode !== AuctionMode.STANDARD) {
+        outcome = 'PENDING_REVIEW';
+      } else {
+        outcome = 'FINISH_STANDARD';
+      }
+    }
+    const stateReason = this.getAuctionStateReason({
+      status: auction.status,
+      endsAt: auction.endsAt,
+      auctionMode: auction.auctionMode,
+      requiresStaffReview: auction.requiresStaffReview,
+      minimumLayer,
+      reopensAt: auction.reopensAt,
+      outcome,
+      validBids: validBids.length,
+    }, now);
+
+    return {
+      generatedAt: now,
+      outcome,
+      auction: {
+        id: auction.id,
+        itemName: auction.itemName,
+        itemTier: auction.itemTier,
+        itemType: auction.itemType,
+        auctionMode: auction.auctionMode,
+        status: auction.status,
+        minimumBid: auction.minimumBid,
+        minimumLayer: auction.minimumLayer,
+        requiresStaffReview: auction.requiresStaffReview,
+        endsAt: auction.endsAt,
+        createdAt: auction.createdAt,
+        updatedAt: auction.updatedAt,
+      },
+      stateReason,
+      counts: {
+        bids: auction.bids.length,
+        validBids: validBids.length,
+        invalidBids: invalidBids.length,
+        activeLocks: activeLocks.length,
+        validBidsWithActiveLocks: validBidsWithActiveLocks.length,
+        validBidsAtMinimumLayer: validBidsAtMinimumLayer.length,
+        cancellationRequests: auction.bidCancellationRequests.length,
+        approvalVotes: auction.reviewVotes.filter((vote) => vote.action === 'APPROVE').length,
+        rejectionVotes: auction.reviewVotes.filter((vote) => vote.action === 'REJECT').length,
+        invalidationVotes: auction.bidInvalidationVotes.length,
+        auditLogs: auditLogs.length,
+      },
+      issues,
+      bids: auction.bids.map((bid) => {
+        const activeLock = activeLockByPlayer.get(bid.playerId);
+        return {
+          id: bid.id,
+          playerId: bid.playerId,
+          nickname: bid.player.nickname,
+          dimensionalLayer: bid.player.dimensionalLayer,
+          attendancePercentage: bid.player.attendancePercentage,
+          bidAmount: bid.bidAmount,
+          isValid: bid.isValid,
+          hasActiveLock: Boolean(activeLock),
+          activeLockAmount: activeLock?.amount,
+          createdAt: bid.createdAt,
+        };
+      }),
+      locks: auction.dkpLocks.map((lock) => ({
+        id: lock.id,
+        playerId: lock.playerId,
+        nickname: lock.player.nickname,
+        amount: lock.amount,
+        released: lock.released,
+        createdAt: lock.createdAt,
+      })),
+      cancellationRequests: auction.bidCancellationRequests.map((request) => ({
+        id: request.id,
+        bidId: request.bidId,
+        playerId: request.playerId,
+        playerName: request.player.nickname,
+        reason: request.reason,
+        status: request.status,
+        reviewNote: request.reviewNote,
+        reviewedAt: request.reviewedAt,
+        createdAt: request.createdAt,
+      })),
+      reviewVotes: auction.reviewVotes.map((vote) => ({
+        id: vote.id,
+        action: vote.action,
+        playerId: vote.playerId,
+        voterName: vote.voter.discordNickname ?? vote.voter.discordUsername,
+        reason: vote.reason,
+        updatedAt: vote.updatedAt,
+      })),
+      bidInvalidationVotes: auction.bidInvalidationVotes.map((vote) => ({
+        id: vote.id,
+        bidId: vote.bidId,
+        voterName: vote.voter.discordNickname ?? vote.voter.discordUsername,
+        reason: vote.reason,
+        updatedAt: vote.updatedAt,
+      })),
+      auditLogs: auditLogs.map((log) => ({
+        id: log.id,
+        action: log.action,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        metadata: log.metadata as Record<string, unknown> | null,
+        createdAt: log.createdAt,
+        actorName: log.actor ? log.actor.discordNickname ?? log.actor.discordUsername : null,
+      })),
+    };
   }
 
   getAuctionFinalizationPreview(auctionId: string): Promise<AuctionFinalizationPreview> {
@@ -404,5 +675,78 @@ export class AuctionDiagnosticsService {
   private userLabel(user?: { discordNickname?: string | null; discordUsername: string } | null): string | null {
     if (!user) return null;
     return user.discordNickname ?? user.discordUsername;
+  }
+
+  private getAuctionStateReason(
+    auction: {
+      status: AuctionStatus;
+      endsAt: Date;
+      auctionMode: AuctionMode;
+      requiresStaffReview: boolean;
+      minimumLayer?: number | null;
+      reopensAt?: Date | null;
+      outcome: AuctionDiagnosticSummary['outcome'];
+      validBids: number;
+    },
+    now: Date,
+  ): AuctionDiagnosticSummary['stateReason'] {
+    if (auction.status === AuctionStatus.OPEN && auction.endsAt > now) {
+      return {
+        title: 'Leilao aberto',
+        description: `A automacao ainda nao deve finalizar: encerra em ${auction.endsAt.toISOString()}.`,
+        tone: 'blue',
+      };
+    }
+
+    if (auction.status === AuctionStatus.OPEN && auction.endsAt <= now) {
+      const descriptions: Record<AuctionDiagnosticSummary['outcome'], string> = {
+        NO_ACTION: 'O leilao venceu, mas o diagnostico nao encontrou acao automatica pendente.',
+        FINISH_STANDARD: 'O leilao venceu com bid valido e pode finalizar pelo fluxo STANDARD.',
+        PENDING_REVIEW: auction.requiresStaffReview || auction.auctionMode !== AuctionMode.STANDARD
+          ? 'O leilao venceu e precisa entrar em review por regra de modo/tier.'
+          : 'O leilao venceu e precisa de revisao antes da entrega.',
+        EXPAND_LAYER: `Leilao T4 venceu sem bid apto na camada minima atual ${auction.minimumLayer ?? '-'}; a regra deve expandir a camada.`,
+        RELIST: 'O leilao venceu sem bid valido; a regra deve relistar ou reiniciar o ciclo conforme tier/camada.',
+      };
+      return {
+        title: 'Leilao vencido aguardando processamento',
+        description: descriptions[auction.outcome],
+        tone: auction.outcome === 'FINISH_STANDARD' ? 'green' : 'gold',
+      };
+    }
+
+    if (auction.status === AuctionStatus.PENDING_REVIEW) {
+      return {
+        title: 'Aguardando review da Staff',
+        description: auction.validBids > 0
+          ? `${auction.validBids} bid(s) valido(s) aguardam decisao Staff.`
+          : 'O leilao esta em review, mas o diagnostico nao encontrou bid valido.',
+        tone: auction.validBids > 0 ? 'gold' : 'red',
+      };
+    }
+
+    if (auction.status === AuctionStatus.FINISHED) {
+      return {
+        title: 'Leilao finalizado',
+        description: 'O fluxo de vitoria ja foi processado; confira AUCTION_WIN e entrega na timeline.',
+        tone: 'green',
+      };
+    }
+
+    if (auction.status === AuctionStatus.RELISTED) {
+      return {
+        title: 'Leilao relistado',
+        description: auction.reopensAt
+          ? `O leilao esta aguardando reabertura em ${auction.reopensAt.toISOString()}.`
+          : 'O leilao foi marcado para relist sem horario de reabertura registrado.',
+        tone: 'gold',
+      };
+    }
+
+    return {
+      title: 'Leilao cancelado',
+      description: 'O leilao foi cancelado e nao deve consumir DKP nem gerar entrega.',
+      tone: 'red',
+    };
   }
 }

@@ -283,15 +283,14 @@ describe('Operations domain services', () => {
     assert.equal(prisma.auction.findMany.mock.calls.length, 1);
   });
 
-  it('keeps auction diagnostics methods behind the auction domain service', async () => {
+  it('calculates auction diagnostics inside the auction domain service', async () => {
     const operations = {
-      getAuctionDiagnostics: mock.fn(async (auctionId: string) => ({ auction: { id: auctionId } })),
       getAuctionFinalizationPreview: mock.fn(async (auctionId: string) => ({ auctionId })),
       getAuctionDossier: mock.fn(async (auctionId: string) => ({ auctionId })),
       getUniversalDossier: mock.fn(async (type: string, id: string) => ({ type, id })),
     };
     const createdAt = new Date('2026-07-02T00:00:00.000Z');
-    const endsAt = new Date('2026-07-02T03:00:00.000Z');
+    const endsAt = new Date(Date.now() - 60_000);
     const prisma = {
       auction: {
         findUnique: mock.fn(async () => ({
@@ -314,7 +313,7 @@ describe('Operations domain services', () => {
             bidAmount: 150,
             isValid: true,
             createdAt: new Date('2026-07-02T00:10:00.000Z'),
-            player: { id: 'player-1', nickname: 'Aiko' },
+            player: { id: 'player-1', nickname: 'Aiko', dimensionalLayer: 4, attendancePercentage: 91.5 },
           }],
           dkpLocks: [{
             id: 'lock-1',
@@ -377,7 +376,18 @@ describe('Operations domain services', () => {
     assert.equal(options[0].id, 'auction-1');
     assert.equal(options[0].winnerName, 'Aiko');
     assert.equal(options[1].winnerName, null);
-    assert.equal((await service.getAuctionDiagnostics('auction-1')).auction.id, 'auction-1');
+    const diagnostics = await service.getAuctionDiagnostics('auction-1');
+    assert.equal(diagnostics.auction.id, 'auction-1');
+    assert.equal(diagnostics.outcome, 'FINISH_STANDARD');
+    assert.equal(diagnostics.stateReason.title, 'Leilao vencido aguardando processamento');
+    assert.equal(diagnostics.counts.validBids, 1);
+    assert.equal(diagnostics.counts.validBidsWithActiveLocks, 1);
+    assert.equal(diagnostics.counts.validBidsAtMinimumLayer, 1);
+    assert.equal(diagnostics.counts.auditLogs, 1);
+    assert.equal(diagnostics.bids[0].nickname, 'Aiko');
+    assert.equal(diagnostics.bids[0].hasActiveLock, true);
+    assert.equal(diagnostics.locks[0].amount, 150);
+    assert.equal(diagnostics.auditLogs[0].actorName, 'auditor');
     assert.equal((await service.getAuctionFinalizationPreview('auction-1')).auctionId, 'auction-1');
     assert.equal((await service.getAuctionDossier('auction-1')).auctionId, 'auction-1');
     assert.deepEqual(await service.getUniversalDossier('auction', 'auction-1'), { type: 'auction', id: 'auction-1' });

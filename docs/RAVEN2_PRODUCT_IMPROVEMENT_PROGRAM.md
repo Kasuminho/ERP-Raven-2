@@ -92,6 +92,11 @@ Validacao:
 
 Objetivo: explicar por que o leilao esta em determinado status.
 
+Estado em 2026-07-02: o raio-x Staff completo do diagnostico, incluindo
+`stateReason`, contadores, issues, bids, locks, votos e audit logs, e calculado
+em `AuctionDiagnosticsService`; preview de finalizacao e dossies ainda estao na
+fila de extracao do legado.
+
 Entrega:
 
 - Campo calculado `stateReason` em endpoint Staff:
