@@ -21,7 +21,7 @@ Producao:
 - API: NestJS em `apps/api`.
 - Web: Next.js 15 em `apps/web`.
 - Banco: PostgreSQL via Prisma em `packages/database`.
-- Tipos compartilhados: `packages/shared`.
+- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string` no servidor e `string` no cliente.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
 Qualidade obrigatoria:
@@ -300,6 +300,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Contratos compartilhados de operations/player tasks foram criados em `packages/shared`, e API/Web passaram a derivar `OperationTask` e `PlayerActionPlan` deles. | contratos/shared |
 | 2026-07-02 | Rate limit de OAuth/upload saiu do bootstrap e passou para abstracao `RateLimitStore` com provider em memoria e caminho preparado para Redis/gateway. | arquitetura/API |
 | 2026-07-02 | Hooks Web sairam do arquivo gigante `use-guild-api.ts` para arquivos por dominio, com barrel temporario e telas migradas para imports diretos. | arquitetura/Web |
 | 2026-07-02 | Modo reuniao Staff virou pauta decisoria por secoes com Markdown copiavel e marcacao auditavel de item resolvido por dia operacional. | Staff/reuniao |

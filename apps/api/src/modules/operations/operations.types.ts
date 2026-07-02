@@ -1,15 +1,8 @@
-export type OperationPriority = 'high' | 'medium' | 'low';
+import type { OperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
 
-export type OperationTask = {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  href: string;
-  priority: OperationPriority;
-  createdAt?: Date | string;
-  metadata?: Record<string, unknown>;
-};
+export type { OperationPriority } from '@shared/types/operations';
+
+export type OperationTask = SharedOperationTask<Date | string>;
 
 export type PlayerOperationsSummary = {
   tasks: OperationTask[];
@@ -28,24 +21,7 @@ export type MaintenanceModeSummary = {
   message: string;
 };
 
-export type PlayerActionPlan = {
-  generatedAt: Date;
-  headline: string;
-  summary: string;
-  cards: Array<{
-    id: string;
-    type: string;
-    title: string;
-    description: string;
-    actionLabel: string;
-    href: string;
-    priority: OperationPriority;
-    reason: string;
-    impact: string;
-    dueAt?: Date | string | null;
-    metadata?: Record<string, unknown>;
-  }>;
-};
+export type PlayerActionPlan = SharedPlayerActionPlan<Date | string>;
 
 export type StaffOperationsSummary = {
   tasks: OperationTask[];

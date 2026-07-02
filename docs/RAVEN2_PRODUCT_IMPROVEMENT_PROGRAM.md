@@ -704,6 +704,11 @@ Entrega:
 
 Objetivo: evitar divergencia API/Web.
 
+Estado em 2026-07-02: fase 1 implementada com contratos compartilhados em
+`packages/shared/src/types/operations.ts` para `OperationPriority`,
+`OperationTask`, `PlayerActionPlanCard` e `PlayerActionPlan`. API e Web usam
+aliases derivados desses tipos para preservar serializacao propria de data.
+
 Entrega:
 
 - Escolher estrategia: OpenAPI gerado pelo Nest ou pacote shared real.

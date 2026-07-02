@@ -1,3 +1,5 @@
+import type { OperationPriority as SharedOperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
+
 export type ItemTier = 'T2' | 'T3' | 'T4' | 'LEGENDARY';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CELESTIAL_STONE';
 export type PlayerClass =
@@ -25,7 +27,7 @@ export type ProgressCategory =
 export type ProgressReviewStatus = 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 export type AuctionStatus = 'OPEN' | 'PENDING_REVIEW' | 'FINISHED' | 'CANCELLED' | 'RELISTED';
 export type AuctionMode = 'STANDARD' | 'ALL_IN' | 'STAFF_REVIEW';
-export type OperationPriority = 'high' | 'medium' | 'low';
+export type OperationPriority = SharedOperationPriority;
 export type DeploymentProtocolStepStatus = 'done' | 'pending' | 'blocked' | 'manual';
 export type EventType =
   | 'LUNOS'
@@ -968,16 +970,7 @@ export type AuditLog = {
   };
 };
 
-export type OperationTask = {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  href: string;
-  priority: OperationPriority;
-  createdAt?: string;
-  metadata?: Record<string, unknown>;
-};
+export type OperationTask = SharedOperationTask<string>;
 
 export type GlobalSearchResult = {
   id: string;
@@ -1004,24 +997,7 @@ export type MaintenanceModeSummary = {
   message: string;
 };
 
-export type PlayerActionPlan = {
-  generatedAt: string;
-  headline: string;
-  summary: string;
-  cards: Array<{
-    id: string;
-    type: string;
-    title: string;
-    description: string;
-    actionLabel: string;
-    href: string;
-    priority: OperationPriority;
-    reason: string;
-    impact: string;
-    dueAt?: string | null;
-    metadata?: Record<string, unknown>;
-  }>;
-};
+export type PlayerActionPlan = SharedPlayerActionPlan<string>;
 
 export type StaffOperationsSummary = {
   tasks: OperationTask[];
