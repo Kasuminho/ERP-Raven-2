@@ -3,6 +3,12 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OperationsService } from './operations.service';
+import { AuctionDiagnosticsService } from './services/auction-diagnostics.service';
+import { IntegrityService } from './services/integrity.service';
+import { MeetingService } from './services/meeting.service';
+import { OperationalBriefingService } from './services/operational-briefing.service';
+import { StaffSummaryService } from './services/staff-summary.service';
+import { WeeklySummaryService } from './services/weekly-summary.service';
 import {
   AuctionDossier,
   DiscordTemplateSummary,
@@ -38,7 +44,15 @@ type AuthRequest = { user: { userId: string } };
 @Controller('operations')
 @UseGuards(JwtAuthGuard)
 export class OperationsController {
-  constructor(private readonly service: OperationsService) {}
+  constructor(
+    private readonly service: OperationsService,
+    private readonly auctionDiagnosticsService: AuctionDiagnosticsService,
+    private readonly integrityService: IntegrityService,
+    private readonly meetingService: MeetingService,
+    private readonly operationalBriefing: OperationalBriefingService,
+    private readonly staffSummary: StaffSummaryService,
+    private readonly weeklySummary: WeeklySummaryService,
+  ) {}
 
   @Get('me')
   async me(@Req() req: AuthRequest): Promise<PlayerOperationsSummary> {
@@ -69,112 +83,112 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async staff(): Promise<StaffOperationsSummary> {
-    return this.service.getStaffSummary();
+    return this.staffSummary.getStaffSummary();
   }
 
   @Get('staff/health')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async health(): Promise<StaffHealthSummary> {
-    return this.service.getStaffHealth();
+    return this.staffSummary.getStaffHealth();
   }
 
   @Get('staff/operational-health')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async operationalHealth(): Promise<OperationalHealthSummary> {
-    return this.service.getOperationalHealth();
+    return this.staffSummary.getOperationalHealth();
   }
 
   @Get('staff/deploy')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async deploy(): Promise<DeploymentPanelSummary> {
-    return this.service.getDeploymentPanel();
+    return this.staffSummary.getDeploymentPanel();
   }
 
   @Get('staff/day-view')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async dayView(): Promise<StaffDayViewSummary> {
-    return this.service.getStaffDayView();
+    return this.staffSummary.getStaffDayView();
   }
 
   @Get('staff/morning-briefing')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async morningBriefing(): Promise<StaffMorningBriefing> {
-    return this.service.getStaffMorningBriefing();
+    return this.operationalBriefing.getStaffMorningBriefing();
   }
 
   @Get('staff/season')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async season(@Query('month') month?: string): Promise<SeasonMonthlySummary> {
-    return this.service.getSeasonSummary(month);
+    return this.weeklySummary.getSeasonSummary(month);
   }
 
   @Get('staff/weekly')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async weekly(): Promise<WeeklyGuildSummary> {
-    return this.service.getWeeklySummary();
+    return this.weeklySummary.getWeeklySummary();
   }
 
   @Post('staff/weekly/post')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async postWeekly(): Promise<{ posted: boolean; summary: WeeklyGuildSummary }> {
-    return this.service.postWeeklySummary();
+    return this.weeklySummary.postWeeklySummary();
   }
 
   @Get('staff/integrity')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async integrity(): Promise<IntegritySummary> {
-    return this.service.getIntegritySummary();
+    return this.integrityService.getIntegritySummary();
   }
 
   @Get('staff/auction-diagnostics/options')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async auctionDiagnosticOptions(): Promise<AuctionDiagnosticOption[]> {
-    return this.service.getAuctionDiagnosticOptions();
+    return this.auctionDiagnosticsService.getAuctionDiagnosticOptions();
   }
 
   @Get('staff/auction-diagnostics/:auctionId')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async auctionDiagnostics(@Param('auctionId') auctionId: string): Promise<AuctionDiagnosticSummary> {
-    return this.service.getAuctionDiagnostics(auctionId);
+    return this.auctionDiagnosticsService.getAuctionDiagnostics(auctionId);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/finalization-preview')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async auctionFinalizationPreview(@Param('auctionId') auctionId: string): Promise<AuctionFinalizationPreview> {
-    return this.service.getAuctionFinalizationPreview(auctionId);
+    return this.auctionDiagnosticsService.getAuctionFinalizationPreview(auctionId);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/dossier')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async auctionDossier(@Param('auctionId') auctionId: string): Promise<AuctionDossier> {
-    return this.service.getAuctionDossier(auctionId);
+    return this.auctionDiagnosticsService.getAuctionDossier(auctionId);
   }
 
   @Get('staff/dossiers/:type/:id')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async universalDossier(@Param('type') type: UniversalDossierType, @Param('id') id: string): Promise<UniversalDossier> {
-    return this.service.getUniversalDossier(type, id);
+    return this.auctionDiagnosticsService.getUniversalDossier(type, id);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async auctionTimeline(@Param('auctionId') auctionId: string): Promise<AuctionTimelineEvent[]> {
-    return this.service.getAuctionTimeline(auctionId);
+    return this.auctionDiagnosticsService.getAuctionTimeline(auctionId);
   }
 
   @Get('staff/fairness')
@@ -195,14 +209,14 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async meeting(): Promise<StaffMeetingSummary> {
-    return this.service.getStaffMeetingSummary();
+    return this.meetingService.getStaffMeetingSummary();
   }
 
   @Get('staff/legacy-audit')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async legacyAudit(): Promise<LegacyAuditSummary> {
-    return this.service.getLegacyAudit();
+    return this.integrityService.getLegacyAudit();
   }
 
   @Get('staff/discord-templates')
