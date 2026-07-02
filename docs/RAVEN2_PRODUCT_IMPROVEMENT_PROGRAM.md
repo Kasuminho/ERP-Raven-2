@@ -707,7 +707,11 @@ Objetivo: evitar divergencia API/Web.
 Estado em 2026-07-02: fase 1 implementada com contratos compartilhados em
 `packages/shared/src/types/operations.ts` para `OperationPriority`,
 `OperationTask`, `PlayerActionPlanCard` e `PlayerActionPlan`. API e Web usam
-aliases derivados desses tipos para preservar serializacao propria de data.
+aliases derivados desses tipos para preservar serializacao propria de data. A
+fase 2 adicionou `packages/shared/src/types/auctions.ts` para contratos Staff de
+diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`,
+`AuctionFinalizationPreview`, `AuctionDossier` e `AuctionDiagnosticSummary`),
+com API usando data como `Date` e Web usando data serializada como `string`.
 
 Entrega:
 

@@ -21,7 +21,7 @@ Producao:
 - API: NestJS em `apps/api`.
 - Web: Next.js 15 em `apps/web`.
 - Banco: PostgreSQL via Prisma em `packages/database`.
-- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string` no servidor e `string` no cliente.
+- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
 Qualidade obrigatoria:
@@ -301,6 +301,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Contratos Staff de diagnostico de leilao passaram para `packages/shared/src/types/auctions.ts`, com aliases locais na API e Web para data de servidor/cliente. | contratos/shared |
 | 2026-07-02 | Modulo `staff-review` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Contratos compartilhados de operations/player tasks foram criados em `packages/shared`, e API/Web passaram a derivar `OperationTask` e `PlayerActionPlan` deles. | contratos/shared |
 | 2026-07-02 | Rate limit de OAuth/upload saiu do bootstrap e passou para abstracao `RateLimitStore` com provider em memoria e caminho preparado para Redis/gateway. | arquitetura/API |

@@ -1,3 +1,11 @@
+import type {
+  AuctionDiagnosticIssue as SharedAuctionDiagnosticIssue,
+  AuctionDiagnosticOption as SharedAuctionDiagnosticOption,
+  AuctionDiagnosticSummary as SharedAuctionDiagnosticSummary,
+  AuctionDossier as SharedAuctionDossier,
+  AuctionFinalizationPreview as SharedAuctionFinalizationPreview,
+  AuctionTimelineEvent as SharedAuctionTimelineEvent,
+} from '@shared/types/auctions';
 import type { OperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
 
 export type { OperationPriority } from '@shared/types/operations';
@@ -328,80 +336,15 @@ export type OperationalHealthSummary = StaffHealthSummary & {
   pendingQueueApproximation: number;
 };
 
-export type AuctionDiagnosticIssue = {
-  severity: IntegrityIssueSeverity;
-  title: string;
-  description: string;
-  metadata?: Record<string, unknown>;
-};
+export type AuctionDiagnosticIssue = SharedAuctionDiagnosticIssue;
 
-export type AuctionDiagnosticOption = {
-  id: string;
-  itemName: string;
-  winnerName?: string | null;
-  endedAt: Date;
-};
+export type AuctionDiagnosticOption = SharedAuctionDiagnosticOption<Date>;
 
-export type AuctionTimelineEvent = {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  occurredAt: Date;
-  tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
-  actorName?: string | null;
-  targetId?: string | null;
-  metadata?: Record<string, unknown> | null;
-};
+export type AuctionTimelineEvent = SharedAuctionTimelineEvent<Date>;
 
-export type AuctionFinalizationPreview = {
-  generatedAt: Date;
-  auctionId: string;
-  action: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
-  actionLabel: string;
-  description: string;
-  candidate?: {
-    bidId: string;
-    playerId: string;
-    nickname: string;
-    bidAmount: number;
-    dimensionalLayer: number;
-    attendancePercentage: number;
-  } | null;
-  locksToConsume: Array<{
-    id: string;
-    playerId: string;
-    nickname: string;
-    amount: number;
-  }>;
-  locksToRelease: Array<{
-    id: string;
-    playerId: string;
-    nickname: string;
-    amount: number;
-  }>;
-  ignoredBids: Array<{
-    id: string;
-    playerId: string;
-    nickname: string;
-    bidAmount: number;
-    reason: string;
-  }>;
-  nextState?: {
-    status: string;
-    minimumLayer?: number | null;
-    endsAt?: Date | null;
-    reopensAt?: Date | null;
-  };
-  risks: AuctionDiagnosticIssue[];
-};
+export type AuctionFinalizationPreview = SharedAuctionFinalizationPreview<Date>;
 
-export type AuctionDossier = {
-  generatedAt: Date;
-  auctionId: string;
-  title: string;
-  markdown: string;
-};
+export type AuctionDossier = SharedAuctionDossier<Date>;
 
 export type UniversalDossierType = 'player' | 'auction' | 'request' | 'interest' | 'drop' | 'event';
 
@@ -423,96 +366,4 @@ export type UniversalDossier = {
   markdown: string;
 };
 
-export type AuctionDiagnosticSummary = {
-  generatedAt: Date;
-  outcome: 'NO_ACTION' | 'FINISH_STANDARD' | 'PENDING_REVIEW' | 'EXPAND_LAYER' | 'RELIST';
-  auction: {
-    id: string;
-    itemName: string;
-    itemTier: string;
-    itemType: string;
-    auctionMode: string;
-    status: string;
-    minimumBid: number;
-    minimumLayer?: number | null;
-    requiresStaffReview: boolean;
-    endsAt: Date;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-  stateReason: {
-    title: string;
-    description: string;
-    tone: 'gold' | 'green' | 'red' | 'blue' | 'muted';
-  };
-  counts: {
-    bids: number;
-    validBids: number;
-    invalidBids: number;
-    activeLocks: number;
-    validBidsWithActiveLocks: number;
-    validBidsAtMinimumLayer: number;
-    cancellationRequests: number;
-    approvalVotes: number;
-    rejectionVotes: number;
-    invalidationVotes: number;
-    auditLogs: number;
-  };
-  issues: AuctionDiagnosticIssue[];
-  bids: Array<{
-    id: string;
-    playerId: string;
-    nickname: string;
-    dimensionalLayer: number;
-    attendancePercentage: number;
-    bidAmount: number;
-    isValid: boolean;
-    hasActiveLock: boolean;
-    activeLockAmount?: number;
-    createdAt: Date;
-  }>;
-  locks: Array<{
-    id: string;
-    playerId: string;
-    nickname: string;
-    amount: number;
-    released: boolean;
-    createdAt: Date;
-    releasedAt?: Date | null;
-  }>;
-  cancellationRequests: Array<{
-    id: string;
-    bidId: string;
-    playerId: string;
-    playerName: string;
-    reason: string;
-    status: string;
-    reviewNote?: string | null;
-    reviewedAt?: Date | null;
-    createdAt: Date;
-  }>;
-  reviewVotes: Array<{
-    id: string;
-    action: string;
-    playerId?: string | null;
-    voterName: string;
-    reason?: string | null;
-    updatedAt: Date;
-  }>;
-  bidInvalidationVotes: Array<{
-    id: string;
-    bidId: string;
-    voterName: string;
-    reason: string;
-    updatedAt: Date;
-  }>;
-  auditLogs: Array<{
-    id: string;
-    action: string;
-    targetType: string;
-    targetId?: string | null;
-    metadata?: Record<string, unknown> | null;
-    createdAt: Date;
-    actorName?: string | null;
-  }>;
-};
+export type AuctionDiagnosticSummary = SharedAuctionDiagnosticSummary<Date>;
