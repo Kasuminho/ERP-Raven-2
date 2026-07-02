@@ -63,6 +63,9 @@ o dossie universal do tipo `auction` tambem ja sao calculados no dominio de
 diagnostico. `AuctionDiagnosticsService` nao injeta mais o `OperationsService`
 legado; dossies universais de outros tipos ainda delegam ao legado pelo
 controller.
+`StaffInsightsService` calcula diretamente os insights Staff de fairness de loot
+e comparacao de players, removendo mais duas rotas Staff do `OperationsService`
+legado.
 
 ## Regras de comunicacao
 
@@ -303,6 +306,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Insights Staff de fairness de loot e comparacao de players sairam do `OperationsService` legado para `StaffInsightsService`. | arquitetura/API |
 | 2026-07-02 | Modulo `daoshi` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Modulo `codex` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Contratos Staff de diagnostico de leilao passaram para `packages/shared/src/types/auctions.ts`, com aliases locais na API e Web para data de servidor/cliente. | contratos/shared |

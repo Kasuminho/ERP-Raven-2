@@ -665,7 +665,9 @@ de deploy para `StaffSummaryService`. A fase 10 removeu a injecao do
 `OperationsService` legado em `StaffSummaryService`. A fase 11 iniciou a
 migracao de `AuctionDiagnosticsService`, movendo a lista de selecao de leiloes
 do diagnostico Staff. A fase 12 moveu a timeline operacional de leilao para
-`AuctionDiagnosticsService`.
+`AuctionDiagnosticsService`. A fase 13 moveu os insights Staff de fairness de
+loot e comparacao de players para `StaffInsightsService`, reduzindo mais duas
+rotas que dependiam do legado.
 
 Entrega:
 
@@ -675,7 +677,8 @@ Entrega:
   - `IntegrityService`;
   - `MeetingService`;
   - `WeeklySummaryService`;
-  - `OperationalBriefingService`.
+  - `OperationalBriefingService`;
+  - `StaffInsightsService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 

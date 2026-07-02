@@ -3,6 +3,7 @@ import { describe, it, mock } from 'node:test';
 import { AuctionDiagnosticsService } from '../src/modules/operations/services/auction-diagnostics.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
+import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
 import { StaffSummaryService } from '../src/modules/operations/services/staff-summary.service';
 import { WeeklySummaryService } from '../src/modules/operations/services/weekly-summary.service';
 
@@ -162,6 +163,78 @@ describe('Operations domain services', () => {
     assert.equal(summary.topPlayers[0].nickname, 'Aiko');
     assert.equal(summary.topPlayers[1].nickname, 'Brann');
     assert.equal(prisma.dKPTransaction.findMany.mock.calls.length, 1);
+  });
+
+  it('calculates fairness and player comparison inside the staff insights domain service', async () => {
+    const recent = new Date();
+    const prisma = {
+      player: {
+        findMany: mock.fn(async (args: { where?: { id?: { in?: string[] } } }) => {
+          if (args.where?.id?.in) {
+            return [
+              {
+                id: 'p1',
+                nickname: 'Aiko',
+                class: 'VANGUARD',
+                dimensionalLayer: 4,
+                attendancePercentage: 95,
+                combatPower: 12345,
+              },
+              {
+                id: 'p2',
+                nickname: 'Brann',
+                class: 'DIVINE_CASTER',
+                dimensionalLayer: 3,
+                attendancePercentage: 87,
+                combatPower: 11300,
+              },
+            ];
+          }
+
+          return [
+            { id: 'p1', nickname: 'Aiko', attendancePercentage: 95 },
+            { id: 'p2', nickname: 'Brann', attendancePercentage: 87 },
+          ];
+        }),
+      },
+      dropHistory: {
+        findMany: mock.fn(async () => [
+          { playerId: 'p2', deliveredAt: recent, itemCatalog: { itemTier: 'T4' } },
+          { playerId: 'p2', deliveredAt: new Date(recent.getTime() - 1_000), itemCatalog: { itemTier: 'LEGENDARY' } },
+          { playerId: 'p1', deliveredAt: recent, itemCatalog: { itemTier: 'T3' } },
+        ]),
+        count: mock.fn(async (args: { where: { playerId: string } }) => args.where.playerId === 'p1' ? 2 : 1),
+        findFirst: mock.fn(async (args: { where: { playerId: string } }) => ({ deliveredAt: args.where.playerId === 'p1' ? recent : null })),
+      },
+      dKPTransaction: {
+        groupBy: mock.fn(async () => [
+          { playerId: 'p1', _sum: { amount: 150 } },
+          { playerId: 'p2', _sum: { amount: 60 } },
+        ]),
+        aggregate: mock.fn(async (args: { where: { playerId: string } }) => ({
+          _sum: { amount: args.where.playerId === 'p1' ? 150 : 60 },
+        })),
+      },
+      itemRequest: {
+        count: mock.fn(async (args: { where: { playerId: string } }) => args.where.playerId === 'p1' ? 1 : 0),
+      },
+    };
+    const service = new StaffInsightsService(prisma as never);
+
+    const fairness = await service.getLootFairness(3);
+    assert.equal(fairness.days, 7);
+    assert.equal(fairness.rows[0].playerId, 'p2');
+    assert.equal(fairness.rows[0].dropsCount, 2);
+    assert.equal(fairness.rows[0].t4Drops, 1);
+    assert.equal(fairness.rows[0].legendaryDrops, 1);
+    assert.equal(fairness.rows[1].currentDkp, 150);
+
+    const comparison = await service.comparePlayers(['p1', 'p1', 'p2', 'p3', 'p4', 'p5']);
+    assert.equal(comparison.players.length, 2);
+    assert.equal(comparison.players[0].playerId, 'p1');
+    assert.equal(comparison.players[0].drops30d, 2);
+    assert.equal(comparison.players[0].activeRequests, 1);
+    assert.equal(comparison.players[1].currentDkp, 60);
   });
 
   it('builds morning briefing inside the briefing domain service', async () => {

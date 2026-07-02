@@ -7,6 +7,7 @@ import { AuctionDiagnosticsService } from './services/auction-diagnostics.servic
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
+import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
 import {
@@ -51,6 +52,7 @@ export class OperationsController {
     private readonly integrityService: IntegrityService,
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
+    private readonly staffInsights: StaffInsightsService,
     private readonly staffSummary: StaffSummaryService,
     private readonly weeklySummary: WeeklySummaryService,
   ) {}
@@ -199,14 +201,14 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async fairness(@Query('days') days?: string): Promise<LootFairnessSummary> {
-    return this.service.getLootFairness(Number(days) || 30);
+    return this.staffInsights.getLootFairness(Number(days) || 30);
   }
 
   @Get('staff/compare')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async compare(@Query('playerIds') playerIds?: string): Promise<PlayerComparisonSummary> {
-    return this.service.comparePlayers((playerIds ?? '').split(',').map((id) => id.trim()).filter(Boolean));
+    return this.staffInsights.comparePlayers((playerIds ?? '').split(',').map((id) => id.trim()).filter(Boolean));
   }
 
   @Get('staff/meeting')
