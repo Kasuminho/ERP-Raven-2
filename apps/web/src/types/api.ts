@@ -26,6 +26,7 @@ export type ProgressReviewStatus = 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'RE
 export type AuctionStatus = 'OPEN' | 'PENDING_REVIEW' | 'FINISHED' | 'CANCELLED' | 'RELISTED';
 export type AuctionMode = 'STANDARD' | 'ALL_IN' | 'STAFF_REVIEW';
 export type OperationPriority = 'high' | 'medium' | 'low';
+export type DeploymentProtocolStepStatus = 'done' | 'pending' | 'blocked' | 'manual';
 export type EventType =
   | 'LUNOS'
   | 'RIGRETO'
@@ -44,6 +45,54 @@ export type EventType =
   | 'FLOUD'
   | 'KRATERIUS'
   | 'T3_ROTATION';
+
+export type DeploymentPanelSummary = {
+  generatedAt: string;
+  currentApiVersion: string;
+  expectedVersion: {
+    sha?: string | null;
+    shortSha?: string | null;
+    source: 'github-public-api' | 'env' | 'unavailable';
+    matchesCurrent: boolean | null;
+    checkedAt?: string | null;
+    message?: string | null;
+  };
+  publicHealth: {
+    status: 'ok' | 'degraded' | 'down';
+    checkedAt?: string | null;
+    version?: string | null;
+    latencyMs?: number | null;
+    message?: string | null;
+  };
+  privateHealth: StaffHealthSummary;
+  publicSmoke: {
+    status: 'ok' | 'degraded' | 'down';
+    checkedAt: string;
+    checks: Array<{
+      path: string;
+      ready: boolean;
+      statusCode?: number | null;
+      latencyMs?: number | null;
+      version?: string | null;
+      message?: string | null;
+    }>;
+  };
+  latestStaffChangelog: {
+    title: string;
+    fileName?: string | null;
+    inferredDate?: string | null;
+    source: 'docs' | 'unavailable';
+    sentReceiptAvailable: boolean;
+    note: string;
+  };
+  protocol: Array<{
+    key: string;
+    label: string;
+    detail: string;
+    status: DeploymentProtocolStepStatus;
+  }>;
+  actionsUrl?: string | null;
+};
 
 export type Auction = {
   id: string;

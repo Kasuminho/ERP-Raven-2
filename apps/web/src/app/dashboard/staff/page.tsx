@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Rocket, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -33,6 +33,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/dossier', titleKey: 'universalDossier', descriptionKey: 'universalDossierDescription', icon: FileText },
   { href: '/dashboard/staff/discord-templates', titleKey: 'discordTemplates', descriptionKey: 'discordTemplatesDescription', icon: MessageSquareText },
   { href: '/dashboard/staff/discord-webhooks', titleKey: 'discordWebhooks', descriptionKey: 'discordWebhooksDescription', icon: Send },
+  { href: '/dashboard/staff/deploy', titleKey: 'deploymentPanel', descriptionKey: 'deploymentPanelDescription', icon: Rocket },
   { href: '/dashboard/staff/health', titleKey: 'operationalHealth', descriptionKey: 'operationalHealthDescription', icon: Activity },
   { href: '/dashboard/staff/integrity', titleKey: 'integrityPanel', descriptionKey: 'integrityPanelDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/rules', titleKey: 'businessRules', descriptionKey: 'businessRulesDescription', icon: SlidersHorizontal },
@@ -59,6 +60,7 @@ const toolGroups = [
   { label: 'Loot e economia', hrefs: ['/dashboard/staff/dkp', '/dashboard/staff/economy', '/dashboard/staff/interests', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/admin/items', '/dashboard/staff/daoshi', '/dashboard/staff/codex'] },
   { label: 'Players e temporada', hrefs: ['/dashboard/staff/players', '/dashboard/staff/progress', '/dashboard/staff/compare', '/dashboard/staff/fairness', '/dashboard/staff/season'] },
   { label: 'Governanca e diagnostico', hrefs: ['/dashboard/staff/health', '/dashboard/staff/integrity', '/dashboard/staff/rules', '/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/discord-templates', '/dashboard/staff/discord-webhooks'] },
+  { label: 'Operar deploy', hrefs: ['/dashboard/staff/deploy'] },
 ];
 
 const morningTone = {

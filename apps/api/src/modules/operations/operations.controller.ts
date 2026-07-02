@@ -7,6 +7,7 @@ import {
   AuctionDossier,
   DiscordTemplateSummary,
   DiscordWebhookQueueSummary,
+  DeploymentPanelSummary,
   GuildRulesSummary,
   IntegritySummary,
   AuctionDiagnosticOption,
@@ -83,6 +84,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async operationalHealth(): Promise<OperationalHealthSummary> {
     return this.service.getOperationalHealth();
+  }
+
+  @Get('staff/deploy')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async deploy(): Promise<DeploymentPanelSummary> {
+    return this.service.getDeploymentPanel();
   }
 
   @Get('staff/day-view')

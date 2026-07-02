@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   AnnouncementStatus,
   AuctionStatus,
@@ -36,6 +38,7 @@ import {
   DiscordTemplateSummary,
   DiscordWebhookDeliveryStatus,
   DiscordWebhookQueueSummary,
+  DeploymentPanelSummary,
   GuildRulesSummary,
   LegacyAuditSummary,
   LootFairnessSummary,
@@ -58,6 +61,8 @@ type DiscordPreviewPayload = NonNullable<DiscordTemplateSummary['templates'][num
 const HOURS = 60 * 60 * 1000;
 const DAYS = 24 * HOURS;
 const AUCTION_RELIST_DELAY_DAYS = 7;
+const PUBLIC_SMOKE_PATHS = ['/health', '/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
+const DEPLOYMENT_ACTIONS_URL = 'https://github.com/Kasuminho/ERP-Raven-2/actions/workflows/build-docker-images.yml';
 
 function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
   return request.itemCatalog?.category === 'creature';
@@ -440,6 +445,37 @@ export class OperationsService {
 
   async getMaintenanceMode(): Promise<MaintenanceModeSummary> {
     return this.businessRules.getMaintenanceMode();
+  }
+
+  async getDeploymentPanel(): Promise<DeploymentPanelSummary> {
+    const generatedAt = new Date();
+    const [privateHealth, publicHealth, expectedVersion, publicSmoke, latestStaffChangelog] = await Promise.all([
+      this.getStaffHealth(),
+      this.checkPublicApiHealth(),
+      this.getExpectedDeploymentVersion(),
+      this.runPublicSmoke(),
+      this.getLatestStaffChangelog(),
+    ]);
+    const currentApiVersion = process.env.APP_VERSION ?? 'development';
+
+    return {
+      generatedAt,
+      currentApiVersion,
+      expectedVersion: {
+        ...expectedVersion,
+        matchesCurrent: expectedVersion.shortSha && currentApiVersion !== 'development'
+          ? currentApiVersion.startsWith(expectedVersion.shortSha)
+          : expectedVersion.sha
+            ? false
+            : null,
+      },
+      publicHealth,
+      privateHealth,
+      publicSmoke,
+      latestStaffChangelog,
+      protocol: this.buildDeploymentProtocol(currentApiVersion, expectedVersion.sha, publicHealth.status, publicSmoke.status, latestStaffChangelog.source),
+      actionsUrl: DEPLOYMENT_ACTIONS_URL,
+    };
   }
 
   async getStaffMorningBriefing(): Promise<StaffMorningBriefing> {
@@ -3063,6 +3099,245 @@ export class OperationsService {
 
   private addDays(date: Date, days: number): Date {
     return new Date(date.getTime() + days * DAYS);
+  }
+
+  private async checkPublicApiHealth(): Promise<DeploymentPanelSummary['publicHealth']> {
+    const baseUrl = this.publicApiBaseUrl();
+    if (!baseUrl) {
+      return {
+        status: 'degraded',
+        checkedAt: new Date().toISOString(),
+        message: 'PUBLIC_APP_URL nao esta configurada.',
+      };
+    }
+
+    const startedAt = Date.now();
+    try {
+      const body = await this.fetchJson<{ status?: string; checkedAt?: string; version?: string }>(`${baseUrl}/health`, 6000);
+      const status = body.status === 'ok' || body.status === 'degraded' || body.status === 'down' ? body.status : 'degraded';
+      return {
+        status,
+        checkedAt: body.checkedAt ?? new Date().toISOString(),
+        version: body.version ?? null,
+        latencyMs: Date.now() - startedAt,
+      };
+    } catch (error) {
+      return {
+        status: 'down',
+        checkedAt: new Date().toISOString(),
+        latencyMs: Date.now() - startedAt,
+        message: this.errorMessage(error),
+      };
+    }
+  }
+
+  private async getExpectedDeploymentVersion(): Promise<Omit<DeploymentPanelSummary['expectedVersion'], 'matchesCurrent'>> {
+    const envSha = process.env.DEPLOY_EXPECTED_VERSION || process.env.GITHUB_SHA || process.env.APP_EXPECTED_VERSION;
+    if (envSha) {
+      return {
+        sha: envSha,
+        shortSha: envSha.slice(0, 7),
+        source: 'env',
+        checkedAt: new Date().toISOString(),
+      };
+    }
+
+    try {
+      const commit = await this.fetchJson<{ sha?: string }>('https://api.github.com/repos/Kasuminho/ERP-Raven-2/commits/master', 7000, {
+        accept: 'application/vnd.github+json',
+        'user-agent': 'raven2-deploy-panel',
+      });
+      const sha = commit.sha ?? null;
+      return {
+        sha,
+        shortSha: sha ? sha.slice(0, 7) : null,
+        source: 'github-public-api',
+        checkedAt: new Date().toISOString(),
+        message: sha ? null : 'GitHub respondeu sem SHA do master.',
+      };
+    } catch (error) {
+      return {
+        sha: null,
+        shortSha: null,
+        source: 'unavailable',
+        checkedAt: new Date().toISOString(),
+        message: this.errorMessage(error),
+      };
+    }
+  }
+
+  private async runPublicSmoke(): Promise<DeploymentPanelSummary['publicSmoke']> {
+    const checkedAt = new Date().toISOString();
+    const baseUrl = this.publicApiBaseUrl();
+
+    if (!baseUrl) {
+      return {
+        status: 'degraded',
+        checkedAt,
+        checks: PUBLIC_SMOKE_PATHS.map((path) => ({
+          path,
+          ready: false,
+          message: 'PUBLIC_APP_URL nao esta configurada.',
+        })),
+      };
+    }
+
+    const checks = await Promise.all(PUBLIC_SMOKE_PATHS.map(async (path) => {
+      const startedAt = Date.now();
+      try {
+        const response = await this.fetchWithTimeout(`${baseUrl}${path}`, 6000);
+        const body = path === '/health' ? await response.json().catch(() => undefined) as { version?: string } | undefined : undefined;
+        return {
+          path,
+          ready: response.ok,
+          statusCode: response.status,
+          latencyMs: Date.now() - startedAt,
+          version: body?.version ?? null,
+          message: response.ok ? null : `HTTP ${response.status}`,
+        };
+      } catch (error) {
+        return {
+          path,
+          ready: false,
+          latencyMs: Date.now() - startedAt,
+          message: this.errorMessage(error),
+        };
+      }
+    }));
+
+    return {
+      status: checks.every((check) => check.ready) ? 'ok' : checks.some((check) => check.ready) ? 'degraded' : 'down',
+      checkedAt,
+      checks,
+    };
+  }
+
+  private async getLatestStaffChangelog(): Promise<DeploymentPanelSummary['latestStaffChangelog']> {
+    try {
+      const docsDir = join(process.cwd(), 'docs');
+      const files = (await readdir(docsDir))
+        .filter((file) => /^discord-staff-update-\d{4}-\d{2}-\d{2}.+\.md$/.test(file))
+        .sort((a, b) => b.localeCompare(a));
+      const fileName = files[0];
+
+      if (!fileName) {
+        return {
+          title: 'Nenhum changelog Staff encontrado',
+          fileName: null,
+          inferredDate: null,
+          source: 'unavailable',
+          sentReceiptAvailable: false,
+          note: 'O painel nao encontrou arquivo docs/discord-staff-update-*.md.',
+        };
+      }
+
+      const content = await readFile(join(docsDir, fileName), 'utf8');
+      const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? fileName.replace(/\.md$/, '');
+      const inferredDate = fileName.match(/(\d{4}-\d{2}-\d{2})/)?.[1] ?? null;
+
+      return {
+        title,
+        fileName,
+        inferredDate,
+        source: 'docs',
+        sentReceiptAvailable: false,
+        note: 'Envios por CLI nao gravam recibo no banco; este campo mostra o ultimo changelog Staff documentado no repositorio.',
+      };
+    } catch (error) {
+      return {
+        title: 'Changelog Staff indisponivel',
+        fileName: null,
+        inferredDate: null,
+        source: 'unavailable',
+        sentReceiptAvailable: false,
+        note: this.errorMessage(error),
+      };
+    }
+  }
+
+  private buildDeploymentProtocol(
+    currentApiVersion: string,
+    expectedSha: string | null | undefined,
+    publicHealthStatus: DeploymentPanelSummary['publicHealth']['status'],
+    publicSmokeStatus: DeploymentPanelSummary['publicSmoke']['status'],
+    latestChangelogSource: DeploymentPanelSummary['latestStaffChangelog']['source'],
+  ): DeploymentPanelSummary['protocol'] {
+    const versionMatches = Boolean(expectedSha && currentApiVersion !== 'development' && currentApiVersion.startsWith(expectedSha.slice(0, 7)));
+
+    return [
+      {
+        key: 'validate',
+        label: 'Validar codigo local',
+        detail: 'Prisma validate/generate, lint, builds API/Web e git diff --check antes do commit.',
+        status: 'manual',
+      },
+      {
+        key: 'push',
+        label: 'Commit e push em master',
+        detail: expectedSha ? `GitHub master esperado: ${expectedSha.slice(0, 7)}.` : 'GitHub master nao foi confirmado nesta leitura.',
+        status: expectedSha ? 'done' : 'manual',
+      },
+      {
+        key: 'actions',
+        label: 'GitHub Actions Build Docker images',
+        detail: 'Abrir o workflow e confirmar que a imagem do commit foi publicada.',
+        status: 'manual',
+      },
+      {
+        key: 'watchtower',
+        label: 'Watchtower aplicou imagem',
+        detail: versionMatches ? `API esta em ${currentApiVersion}.` : `API atual: ${currentApiVersion}; compare com o SHA esperado.`,
+        status: versionMatches ? 'done' : expectedSha ? 'pending' : 'manual',
+      },
+      {
+        key: 'public-health',
+        label: 'Health publico',
+        detail: publicHealthStatus === 'ok' ? 'GET /api/v1/health respondeu OK.' : 'Health publico precisa de revisao.',
+        status: publicHealthStatus === 'ok' ? 'done' : 'blocked',
+      },
+      {
+        key: 'public-smoke',
+        label: 'Smoke publico',
+        detail: publicSmokeStatus === 'ok' ? 'Endpoints publicos criticos responderam.' : 'Algum endpoint do smoke publico falhou.',
+        status: publicSmokeStatus === 'ok' ? 'done' : 'blocked',
+      },
+      {
+        key: 'staff-changelog',
+        label: 'Changelog Staff',
+        detail: latestChangelogSource === 'docs' ? 'Ha changelog Staff documentado; envio ainda depende do ritual pos-verificacao.' : 'Nenhum changelog Staff foi localizado nos docs.',
+        status: latestChangelogSource === 'docs' ? 'manual' : 'pending',
+      },
+    ];
+  }
+
+  private publicApiBaseUrl(): string {
+    const publicUrl = this.config.get<string>('discord.publicUrl') || process.env.PUBLIC_APP_URL || 'https://app.guild-g3x.com.br';
+    return `${publicUrl.replace(/\/+$/, '')}/api/v1`;
+  }
+
+  private async fetchJson<T>(url: string, timeoutMs: number, headers?: Record<string, string>): Promise<T> {
+    const response = await this.fetchWithTimeout(url, timeoutMs, headers);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json() as T;
+  }
+
+  private async fetchWithTimeout(url: string, timeoutMs: number, headers?: Record<string, string>): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, { headers, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Erro desconhecido.';
   }
 
   private markdownList(items: string[]): string[] {

@@ -542,6 +542,9 @@ Entrega:
 
 Objetivo: tirar deploy do ritual manual.
 
+Estado em 2026-07-01: implementado em `/dashboard/staff/deploy` via
+`GET /operations/staff/deploy`.
+
 Entrega:
 
 - Tela Staff com:
@@ -553,6 +556,15 @@ Entrega:
   - checklist do protocolo;
   - link para Actions quando disponivel.
 - Sem tokens GitHub no frontend.
+- A API agrega `APP_VERSION`, consulta publica opcional ao GitHub para o SHA do
+  `master`, health publico, health privado Staff, smoke publico dos endpoints
+  criticos, ultimo changelog Staff documentado em `docs/discord-staff-update-*`
+  e checklist operacional.
+- Quando GitHub ou smoke externo falham, a tela mostra estado degradado/manual em
+  vez de quebrar.
+- Como o envio de changelog por CLI nao grava recibo interno nem URL de webhook,
+  o painel explicita que o ultimo changelog vem dos docs e que o recibo interno
+  ainda nao esta disponivel.
 
 ### I2. Smoke autenticado pos-deploy
 

@@ -191,6 +191,7 @@ Confiabilidade:
 - `docker-compose.monitoring.yml` oferece Uptime Kuma independente da API; fonte operacional em `docs/MONITORING.md`.
 - Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `verify-backup.sh` restaura em PostgreSQL temporario para provar integridade.
 - Runbooks de banco, Discord, deploy, leilao e DKP ficam em `docs/OPERATIONS_RUNBOOKS.md`.
+- A tela Staff `/dashboard/staff/deploy` consome `GET /operations/staff/deploy` e centraliza versao atual da API, SHA esperado do `master` quando o GitHub publico responde, health publico, health privado Staff, smoke publico, ultimo changelog Staff documentado e checklist do protocolo. O frontend nao recebe token GitHub nem segredo; o campo de changelog explicita que envios por CLI nao gravam recibo interno.
 
 Imagens:
 
@@ -268,6 +269,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
 | 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |
