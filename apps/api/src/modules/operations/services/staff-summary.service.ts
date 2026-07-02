@@ -143,16 +143,26 @@ export class StaffSummaryService {
           metadata: { dueAt: new Date(baseDate.getTime() + thresholds.interestDelivery.highAfterMs).toISOString() },
         };
       }),
-      ...pendingAuctionDeliveries.slice(0, 5).map((transaction) => ({
-        id: transaction.id,
-        type: 'DROP_DELIVERY',
-        title: 'Entrega de leilao pendente',
-        description: `${transaction.player.nickname} tem drop de leilao para registrar com prova.`,
-        href: '/dashboard/staff/deliveries',
-        priority: this.priorityByAge(transaction.createdAt, thresholds.auctionDropDelivery),
-        createdAt: transaction.createdAt,
-        metadata: { dueAt: new Date(transaction.createdAt.getTime() + thresholds.auctionDropDelivery.highAfterMs).toISOString() },
-      })),
+      ...pendingAuctionDeliveries.slice(0, 5).map((transaction) => {
+        const ageHours = Math.max(0, Math.floor((Date.now() - transaction.createdAt.getTime()) / HOURS));
+        const dueAt = new Date(transaction.createdAt.getTime() + thresholds.auctionDropDelivery.highAfterMs);
+        return {
+          id: transaction.id,
+          type: 'DROP_DELIVERY',
+          title: 'Entrega de leilao pendente',
+          description: `${transaction.player.nickname} tem drop de leilao ha ${ageHours}h para registrar com prova.`,
+          href: '/dashboard/staff/deliveries',
+          priority: this.priorityByAge(transaction.createdAt, thresholds.auctionDropDelivery),
+          createdAt: transaction.createdAt,
+          metadata: {
+            dueAt: dueAt.toISOString(),
+            ageHours,
+            priorityReason: ageHours >= 24
+              ? 'Entrega atrasada desde o AUCTION_WIN.'
+              : 'Entrega ainda dentro do dia operacional, mas precisa comprovante.',
+          },
+        };
+      }),
       ...progress.map((row) => ({
         id: row.id,
         type: 'PROGRESS_REVIEW',

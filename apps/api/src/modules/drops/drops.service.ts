@@ -4,6 +4,10 @@ import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../audit/services/audit.service';
 import { NotificationService } from '../discord/services/notification.service';
 
+const HOURS = 60 * 60 * 1000;
+const DELIVERY_URGENT_AFTER_HOURS = 12;
+const DELIVERY_OVERDUE_AFTER_HOURS = 24;
+
 @Injectable()
 export class DropsService {
   constructor(
@@ -55,6 +59,8 @@ export class DropsService {
     const auctionsById = new Map(auctions.map((auction) => [auction.id, auction]));
     const deliveredAuctionIds = new Set(drops.map((drop) => drop.auctionId).filter(Boolean));
 
+    const now = new Date();
+
     return wins
       .map((win) => {
         const auction = win.referenceId ? auctionsById.get(win.referenceId) : undefined;
@@ -63,10 +69,18 @@ export class DropsService {
           return null;
         }
 
+        const ageHours = Math.max(0, Math.floor((now.getTime() - win.createdAt.getTime()) / HOURS));
+        const deliveryDueAt = new Date(win.createdAt.getTime() + DELIVERY_OVERDUE_AFTER_HOURS * HOURS);
+        const urgency = this.auctionDeliveryUrgency(ageHours);
+
         return {
           auction,
           player: win.player,
           transaction: win,
+          urgency,
+          ageHours,
+          deliveryDueAt,
+          priorityReason: this.auctionDeliveryPriorityReason(urgency, ageHours),
         };
       })
       .filter(Boolean);
@@ -504,5 +518,21 @@ export class DropsService {
       skip: (page - 1) * limit,
       take: limit,
     };
+  }
+
+  private auctionDeliveryUrgency(ageHours: number): 'overdue' | 'urgent' | 'today' {
+    if (ageHours >= DELIVERY_OVERDUE_AFTER_HOURS) return 'overdue';
+    if (ageHours >= DELIVERY_URGENT_AFTER_HOURS) return 'urgent';
+    return 'today';
+  }
+
+  private auctionDeliveryPriorityReason(urgency: 'overdue' | 'urgent' | 'today', ageHours: number): string {
+    if (urgency === 'overdue') {
+      return `Entrega pendente ha ${ageHours}h desde o AUCTION_WIN; virou atrasada e precisa comprovante.`;
+    }
+    if (urgency === 'urgent') {
+      return `Entrega pendente ha ${ageHours}h desde o AUCTION_WIN; resolver ainda hoje evita fila esquecida.`;
+    }
+    return `Entrega criada ha ${ageHours}h pelo AUCTION_WIN; anexar prova e concluir o drop.`;
   }
 }

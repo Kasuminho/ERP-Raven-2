@@ -835,6 +835,10 @@ export type PendingAuctionDelivery = {
     };
   };
   transaction: Transaction;
+  urgency?: 'overdue' | 'urgent' | 'today';
+  ageHours?: number;
+  deliveryDueAt?: string;
+  priorityReason?: string;
 };
 
 export type PlayerProgress = {

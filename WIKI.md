@@ -124,6 +124,7 @@ Automacao ativa:
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam os grupos de ferramentas, contadores, pendencias, saude e auditoria.
 - O dossie universal Staff em `/dashboard/staff/dossier` consome `GET /operations/staff/dossiers/:type/:id` e gera contexto auditavel com resumo, links internos, audit logs e Markdown copiavel para `player`, `auction`, `request`, `interest`, `drop` e `event`. O endpoint e Staff-only e nao retorna segredos, URLs de webhook ou payload privado desnecessario.
 - O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo. A tela tambem mostra motivo visual do estado atual, previa de finalizacao Staff-only, dossie Markdown copiavel e timeline operacional derivada de leilao, bids, locks, cancelamentos, votos, transacoes, entrega e audit logs. Endpoints sensiveis: `GET /operations/staff/auction-diagnostics/:auctionId/finalization-preview` e `GET /operations/staff/auction-diagnostics/:auctionId/dossier`.
+- A tela Staff `/dashboard/staff/deliveries` consome `GET /drops/pending-auction-deliveries`, que preserva `auction`, `player` e `transaction` e adiciona `urgency`, `ageHours`, `deliveryDueAt` e `priorityReason`. A tela mostra contadores, filtros por todos/atrasados/hoje/sem prova, busca por player/item, filtro por tier, badges de urgencia e prazo para impedir drop vencido esquecido. As tarefas Staff `DROP_DELIVERY` tambem carregam idade e motivo de prioridade no metadata para dashboard e meeting.
 - O programa completo de melhorias de produto/UX/processo fica em `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`, com epicos para leiloes, Staff, players, requests, interesses, eventos, Discord, auditoria, deploy e arquitetura.
 
 ## Leiloes e sigilo
@@ -296,6 +297,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Fila Staff de entregas de leilao ganhou urgencia, idade, prazo, motivo operacional, busca por player/item e filtros por atraso/hoje/sem prova/tier; tasks `DROP_DELIVERY` passaram a carregar idade e motivo no metadata. | leiloes/Staff |
 | 2026-07-02 | `AuctionDiagnosticsService` deixou de injetar `OperationsService`; o controller roteia apenas dossie universal `auction` para esse dominio e mantem os demais tipos no legado. | arquitetura/API |
 | 2026-07-02 | Dossie universal Staff do tipo `auction` saiu da delegacao e passou a ser montado em `AuctionDiagnosticsService`, reaproveitando o dossie especifico, resumo, links e audit logs de leilao. | arquitetura/API |
 | 2026-07-02 | Dossie Staff especifico do diagnostico de leilao saiu da delegacao e passou a ser montado em `AuctionDiagnosticsService`, combinando diagnostico, previa, timeline e Markdown copiavel. | arquitetura/API |

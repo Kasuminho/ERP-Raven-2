@@ -139,12 +139,23 @@ Validacao:
 
 Objetivo: impedir drop vencido esquecido.
 
+Estado em 2026-07-02: implementado em `/dashboard/staff/deliveries` e no
+endpoint Staff `GET /drops/pending-auction-deliveries`, com urgencia, idade,
+prazo e motivo operacional por entrega pendente.
+
 Entrega:
 
 - Enriquecer entregas pendentes com idade, prioridade e motivo.
 - Filtro Staff: hoje, atrasado, sem prova, por player, por tier.
 - Mostrar no dashboard Staff e meeting.
 - Changelog Staff quando publicar.
+- O endpoint preserva `auction`, `player` e `transaction` e adiciona `urgency`,
+  `ageHours`, `deliveryDueAt` e `priorityReason`.
+- A tela Staff mostra contadores, filtros `Todos`, `Atrasados`, `Hoje` e
+  `Sem prova`, busca por player/item, filtro por tier, badges de urgencia,
+  prazo e status da prova.
+- O dashboard Staff e o modo reuniao continuam recebendo a tarefa
+  `DROP_DELIVERY`, agora com idade e motivo de prioridade no metadata.
 
 ### A5. Dossie de leilao
 

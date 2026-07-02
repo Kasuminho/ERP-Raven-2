@@ -1,6 +1,6 @@
 # Guia atual da Staff - Raven2 G3X
 
-Ultima revisao: 2026-07-01
+Ultima revisao: 2026-07-02
 
 Este e o guia operacional atual da Staff. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -118,6 +118,14 @@ Diagnostico de leilao:
 - use timeline operacional para bids, locks, cancelamentos, votos, transacoes, entrega e audit logs;
 - use previa de finalizacao read-only antes de agir;
 - copie o dossie Markdown quando precisar discutir na Staff.
+
+Entregas de leilao:
+
+- `/dashboard/staff/deliveries` mostra pendencias geradas por `AUCTION_WIN` ainda sem `DropHistory`;
+- cada pendencia mostra urgencia, idade, prazo e motivo operacional;
+- use os filtros `Todos`, `Atrasados`, `Hoje`, `Sem prova`, busca por player/item e filtro por tier para priorizar a fila;
+- anexe a prova antes de registrar a entrega;
+- pendencias de entrega tambem aparecem como tarefas `DROP_DELIVERY` no dashboard Staff e na pauta de reuniao.
 
 Regra T4:
 
