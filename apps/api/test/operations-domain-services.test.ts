@@ -9,19 +9,35 @@ import { WeeklySummaryService } from '../src/modules/operations/services/weekly-
 describe('Operations domain services', () => {
   it('keeps staff summary endpoints delegated through the domain service', async () => {
     const operations = {
-      getStaffSummary: mock.fn(async () => ({ tasks: [], counts: {} })),
+      getStaffSummary: mock.fn(async () => ({
+        tasks: [
+          { id: 'high-1', type: 'A', title: 'Alta', description: 'Alta', href: '/a', priority: 'high' },
+          { id: 'low-1', type: 'B', title: 'Baixa', description: 'Baixa', href: '/b', priority: 'low' },
+        ],
+        counts: { reviews: 2, interests: 3, deliveries: 4 },
+      })),
       getStaffHealth: mock.fn(async () => ({ checks: [] })),
       getOperationalHealth: mock.fn(async () => ({ checks: [], discordFailures24h: 0 })),
       getDeploymentPanel: mock.fn(async () => ({ currentApiVersion: 'test' })),
-      getStaffDayView: mock.fn(async () => ({ urgentTasks: [] })),
     };
-    const service = new StaffSummaryService(operations as never);
+    const prisma = {
+      announcement: { count: mock.fn(async () => 1) },
+      event: { count: mock.fn(async () => 2) },
+      playerProgress: { count: mock.fn(async () => 5) },
+    };
+    const service = new StaffSummaryService(operations as never, prisma as never);
 
-    assert.deepEqual(await service.getStaffSummary(), { tasks: [], counts: {} });
+    assert.equal((await service.getStaffSummary()).counts.reviews, 2);
     assert.deepEqual(await service.getStaffHealth(), { checks: [] });
     assert.equal((await service.getOperationalHealth()).discordFailures24h, 0);
     assert.equal((await service.getDeploymentPanel()).currentApiVersion, 'test');
-    assert.deepEqual(await service.getStaffDayView(), { urgentTasks: [] });
+    const dayView = await service.getStaffDayView();
+    assert.equal(dayView.todaysAnnouncements, 1);
+    assert.equal(dayView.openEvents, 2);
+    assert.equal(dayView.pendingStaffVotes, 5);
+    assert.equal(dayView.pendingDeliveries, 4);
+    assert.equal(dayView.pendingProgressReviews, 5);
+    assert.equal(dayView.urgentTasks.length, 1);
   });
 
   it('calculates season summaries inside the weekly domain service', async () => {
