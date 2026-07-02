@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useApproveBidCancellation, useApproveWinner, usePendingBidCancellations, usePendingReviews, useRejectBidCancellation, useRejectReview, useRemoveAuctionBid, useStaffReviewDetails } from '@/hooks/use-guild-api';
+import { useApproveBidCancellation, useApproveWinner, usePendingBidCancellations, usePendingReviews, useRejectBidCancellation, useRejectReview, useRemoveAuctionBid, useStaffReviewDetails } from '@/hooks/use-auctions-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 

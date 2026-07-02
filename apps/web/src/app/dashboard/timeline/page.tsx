@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMyHistory } from '@/hooks/use-guild-api';
+import { useMyHistory } from '@/hooks/use-profile-api';
 import { cn } from '@/lib/utils';
 import { useLocaleStore } from '@/store/locale-store';
 import type { PlayerTimelineEntry } from '@/types/api';

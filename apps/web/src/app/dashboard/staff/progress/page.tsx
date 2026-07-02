@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useApproveProgressReview, useCommentProgress, usePendingProgressReviews, useRejectProgressReview } from '@/hooks/use-guild-api';
+import { useApproveProgressReview, useCommentProgress, usePendingProgressReviews, useRejectProgressReview } from '@/hooks/use-profile-api';
 import { progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';

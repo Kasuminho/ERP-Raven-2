@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { notifyToast } from '@/components/ui/toaster';
-import { useBusinessRules, useResetBusinessRule, useUpdateBusinessRule } from '@/hooks/use-guild-api';
+import { useBusinessRules, useResetBusinessRule, useUpdateBusinessRule } from '@/hooks/use-staff-operations-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { BusinessRule } from '@/types/api';

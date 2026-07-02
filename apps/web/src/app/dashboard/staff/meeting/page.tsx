@@ -5,7 +5,7 @@ import { ArrowRight, Check, Clipboard, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useResolveStaffMeetingItem, useStaffMeeting } from '@/hooks/use-guild-api';
+import { useResolveStaffMeetingItem, useStaffMeeting } from '@/hooks/use-staff-operations-api';
 import type { OperationPriority } from '@/types/api';
 
 const priorityTone: Record<OperationPriority, 'red' | 'gold' | 'blue'> = {

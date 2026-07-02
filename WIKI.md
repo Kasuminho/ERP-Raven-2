@@ -109,6 +109,7 @@ Automacao ativa:
 - No mobile ficam quatro destinos principais e o menu `Mais`; a central Staff agrupa ferramentas por contexto operacional.
 - A busca global `Ctrl+K` consulta itens, leiloes e eventos; resultados de players existem apenas no endpoint Staff.
 - Busca possui modulo e hook proprios; novos dominios nao devem ser adicionados ao `operations.service.ts` ou `use-guild-api.ts` quando puderem ter ownership independente.
+- Na Web, `apps/web/src/hooks/use-guild-api.ts` e apenas um barrel temporario. Hooks ficam separados por dominio: `use-profile-api`, `use-dkp-api`, `use-staff-operations-api`, `use-auctions-api`, `use-items-api`, `use-requests-api`, `use-events-api`, `use-codex-api`, `use-daoshi-api` e `use-drops-api`; telas novas devem importar direto do dominio.
 - A central de pendencias filtra por severidade e mostra responsavel, abertura e prazo quando aplicavel. Prazos Staff derivam dos thresholds configuraveis.
 - Acoes destrutivas e financeiras usam `ConfirmationDialog` acessivel, sem `window.confirm` ou `window.prompt`.
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
@@ -298,6 +299,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Hooks Web sairam do arquivo gigante `use-guild-api.ts` para arquivos por dominio, com barrel temporario e telas migradas para imports diretos. | arquitetura/Web |
 | 2026-07-02 | Modo reuniao Staff virou pauta decisoria por secoes com Markdown copiavel e marcacao auditavel de item resolvido por dia operacional. | Staff/reuniao |
 | 2026-07-02 | Central Staff passou a organizar ferramentas por jornada com abas, contadores e proximas acoes por grupo: resolver agora, auditar, configurar, comunicar e operar deploy. | UX Staff |
 | 2026-07-02 | Fila Staff de entregas de leilao ganhou urgencia, idade, prazo, motivo operacional, busca por player/item e filtros por atraso/hoje/sem prova/tier; tasks `DROP_DELIVERY` passaram a carregar idade e motivo no metadata. | leiloes/Staff |

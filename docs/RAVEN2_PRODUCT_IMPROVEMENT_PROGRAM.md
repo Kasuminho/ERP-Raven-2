@@ -683,6 +683,10 @@ Entrega:
 
 Objetivo: facilitar manutencao Web.
 
+Estado em 2026-07-02: implementado. `use-guild-api.ts` virou barrel
+temporario e os hooks foram separados por dominio em `apps/web/src/hooks`.
+As telas foram migradas para importar diretamente dos arquivos de dominio.
+
 Entrega:
 
 - Hooks por dominio:
@@ -693,6 +697,8 @@ Entrega:
   - `use-events-api`;
   - `use-profile-api`.
 - Reexport temporario para preservar imports, depois migrar telas.
+- Dominios extras foram criados para evitar novo arquivo gigante: `use-dkp-api`,
+  `use-codex-api`, `use-daoshi-api` e `use-drops-api`.
 
 ### J3. Contratos compartilhados
 

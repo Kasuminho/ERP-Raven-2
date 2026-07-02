@@ -5,7 +5,8 @@ import { UsersRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
-import { usePlayerComparison, usePlayers } from '@/hooks/use-guild-api';
+import { usePlayerComparison } from '@/hooks/use-staff-operations-api';
+import { usePlayers } from '@/hooks/use-profile-api';
 
 export default function StaffComparePage() {
   const players = usePlayers();

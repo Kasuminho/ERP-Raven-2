@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useRecentAudit, useStaffHealth, useStaffMorningBriefing, useStaffOperations } from '@/hooks/use-guild-api';
+import { useRecentAudit, useStaffHealth, useStaffMorningBriefing, useStaffOperations } from '@/hooks/use-staff-operations-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { StaffMorningBriefing } from '@/types/api';

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { useAuditIdentities, useDiscordHistory, usePlayerHistory } from '@/hooks/use-guild-api';
+import { useAuditIdentities, useDiscordHistory, usePlayerHistory } from '@/hooks/use-profile-api';
 import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';

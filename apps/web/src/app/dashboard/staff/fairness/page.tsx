@@ -6,7 +6,7 @@ import { Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useLootFairness } from '@/hooks/use-guild-api';
+import { useLootFairness } from '@/hooks/use-staff-operations-api';
 
 export default function StaffFairnessPage() {
   const [days, setDays] = useState(30);

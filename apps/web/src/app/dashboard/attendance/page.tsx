@@ -4,7 +4,7 @@ import { AttendanceCard } from '@/components/dashboard/attendance-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAttendanceStats, usePlayerAttendanceHistory, usePlayerId } from '@/hooks/use-guild-api';
+import { useAttendanceStats, usePlayerAttendanceHistory, usePlayerId } from '@/hooks/use-profile-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { PlayerAttendanceHistoryRow } from '@/types/api';

@@ -12,22 +12,9 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import {
-  useApproveItemRequestUpdate,
-  useCreateItemRequest,
-  useCreateMyItemRequest,
-  useDeleteItemRequest,
-  useDeliverItemRequest,
-  useDropItemRequestRank,
-  useItemRequestRankings,
-  useItemRequests,
-  usePlayerUpdateItemRequest,
-  usePlayers,
-  useRequestableItems,
-  useStaffItemRequests,
-  useUpdateItemRequest,
-  useUploadImage,
-} from '@/hooks/use-guild-api';
+import { useApproveItemRequestUpdate, useCreateItemRequest, useCreateMyItemRequest, useDeleteItemRequest, useDeliverItemRequest, useDropItemRequestRank, useItemRequestRankings, useItemRequests, usePlayerUpdateItemRequest, useStaffItemRequests, useUpdateItemRequest } from '@/hooks/use-requests-api';
+import { usePlayers, useUploadImage } from '@/hooks/use-profile-api';
+import { useRequestableItems } from '@/hooks/use-items-api';
 import { displayImageUrl } from '@/lib/images';
 import { itemName } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';

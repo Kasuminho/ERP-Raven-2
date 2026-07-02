@@ -2,7 +2,7 @@
 
 import { ScrollText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useGuildRules } from '@/hooks/use-guild-api';
+import { useGuildRules } from '@/hooks/use-staff-operations-api';
 
 export default function RulesPage() {
   const rules = useGuildRules();

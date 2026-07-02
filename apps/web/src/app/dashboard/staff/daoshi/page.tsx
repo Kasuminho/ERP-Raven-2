@@ -11,7 +11,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useApproveDaoshiReceipt, useCreateManualDaoshiReceipt, usePlayers, useRejectDaoshiReceipt, useRunDaoshiRaffle, useStaffDaoshiReceipts, useStaffDaoshiSummary } from '@/hooks/use-guild-api';
+import { useApproveDaoshiReceipt, useCreateManualDaoshiReceipt, useRejectDaoshiReceipt, useRunDaoshiRaffle, useStaffDaoshiReceipts, useStaffDaoshiSummary } from '@/hooks/use-daoshi-api';
+import { usePlayers } from '@/hooks/use-profile-api';
 import { displayImageUrl } from '@/lib/images';
 import type { DaoshiReceiptStatus } from '@/types/api';
 

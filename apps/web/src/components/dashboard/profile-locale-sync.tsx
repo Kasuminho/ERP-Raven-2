@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useMyHistory } from '@/hooks/use-guild-api';
+import { useMyHistory } from '@/hooks/use-profile-api';
 import { Locale, useLocaleStore } from '@/store/locale-store';
 
 const supportedLocales = new Set<Locale>(['pt', 'en', 'es']);

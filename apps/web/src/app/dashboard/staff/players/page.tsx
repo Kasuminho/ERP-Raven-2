@@ -5,7 +5,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { usePlayers } from '@/hooks/use-guild-api';
+import { usePlayers } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';

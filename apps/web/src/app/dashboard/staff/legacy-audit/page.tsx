@@ -3,7 +3,7 @@
 import { Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLegacyAudit } from '@/hooks/use-guild-api';
+import { useLegacyAudit } from '@/hooks/use-staff-operations-api';
 
 export default function StaffLegacyAuditPage() {
   const audit = useLegacyAudit();

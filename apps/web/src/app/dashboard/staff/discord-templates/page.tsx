@@ -3,7 +3,7 @@
 import { MessageSquareText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDiscordTemplates } from '@/hooks/use-guild-api';
+import { useDiscordTemplates } from '@/hooks/use-staff-operations-api';
 
 export default function StaffDiscordTemplatesPage() {
   const templates = useDiscordTemplates();

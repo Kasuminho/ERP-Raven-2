@@ -3,7 +3,7 @@
 import { BarChart3, Coins, Lock, TrendingDown, TrendingUp, UsersRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDkpEconomy } from '@/hooks/use-guild-api';
+import { useDkpEconomy } from '@/hooks/use-dkp-api';
 
 function number(value?: number) {
   return new Intl.NumberFormat('pt-BR').format(value ?? 0);

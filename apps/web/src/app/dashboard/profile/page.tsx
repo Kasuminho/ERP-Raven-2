@@ -11,24 +11,11 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import {
-  useAttendanceStats,
-  useCommentProgress,
-  useConfirmCodexRequest,
-  useCreateCodexRequest,
-  useCreateMyItemRequest,
-  useCreateProgress,
-  useDkpSummary,
-  useMyCodexRequests,
-  useMyHistory,
-  useMarkProgressCommentsRead,
-  usePlayerId,
-  useRequestableItems,
-  useRetryCodexRequest,
-  useUpdatePlayerProfile,
-  useUpdatePreferences,
-  useUploadImage,
-} from '@/hooks/use-guild-api';
+import { useAttendanceStats, useCommentProgress, useCreateProgress, useMarkProgressCommentsRead, useMyHistory, usePlayerId, useUpdatePlayerProfile, useUpdatePreferences, useUploadImage } from '@/hooks/use-profile-api';
+import { useConfirmCodexRequest, useCreateCodexRequest, useMyCodexRequests, useRetryCodexRequest } from '@/hooks/use-codex-api';
+import { useCreateMyItemRequest } from '@/hooks/use-requests-api';
+import { useDkpSummary } from '@/hooks/use-dkp-api';
+import { useRequestableItems } from '@/hooks/use-items-api';
 import { api } from '@/lib/api';
 import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';

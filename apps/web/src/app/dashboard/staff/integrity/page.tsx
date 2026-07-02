@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useIntegritySummary } from '@/hooks/use-guild-api';
+import { useIntegritySummary } from '@/hooks/use-staff-operations-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 

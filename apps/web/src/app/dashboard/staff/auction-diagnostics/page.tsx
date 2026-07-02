@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuctionDiagnosticOptions, useAuctionDiagnostics, useAuctionDossier, useAuctionFinalizationPreview, useAuctionTimeline } from '@/hooks/use-guild-api';
+import { useAuctionDiagnosticOptions, useAuctionDiagnostics, useAuctionDossier, useAuctionFinalizationPreview, useAuctionTimeline } from '@/hooks/use-auctions-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent } from '@/types/api';

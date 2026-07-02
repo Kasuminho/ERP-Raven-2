@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useUniversalDossier } from '@/hooks/use-guild-api';
+import { useUniversalDossier } from '@/hooks/use-staff-operations-api';
 import type { UniversalDossierType } from '@/types/api';
 
 const dossierTypes: Array<{ value: UniversalDossierType; label: string }> = [

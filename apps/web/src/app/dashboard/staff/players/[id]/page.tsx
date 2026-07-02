@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuditTimeline, useCommentProgress, useCreatePlayerStaffNote, usePlayerHistory, usePlayerStaffNotes } from '@/hooks/use-guild-api';
+import { useAuditTimeline, useCommentProgress, useCreatePlayerStaffNote, usePlayerHistory, usePlayerStaffNotes } from '@/hooks/use-profile-api';
 import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';

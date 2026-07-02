@@ -5,7 +5,7 @@ import { BellRing, CalendarCheck, ClipboardCheck, PackageCheck, ShieldAlert } fr
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useStaffDayView } from '@/hooks/use-guild-api';
+import { useStaffDayView } from '@/hooks/use-staff-operations-api';
 
 function Metric({ title, value, icon: Icon }: { title: string; value?: number; icon: typeof BellRing }) {
   return (

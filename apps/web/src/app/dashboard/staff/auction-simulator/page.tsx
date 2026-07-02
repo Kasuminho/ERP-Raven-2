@@ -7,7 +7,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
-import { useAuctionRanking, useAuctions } from '@/hooks/use-guild-api';
+import { useAuctionRanking, useAuctions } from '@/hooks/use-auctions-api';
 
 export default function StaffAuctionSimulatorPage() {
   const auctions = useAuctions();

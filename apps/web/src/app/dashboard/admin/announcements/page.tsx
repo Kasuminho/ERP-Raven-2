@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAnnouncements, useCancelAnnouncement, useCreateAnnouncement } from '@/hooks/use-guild-api';
+import { useAnnouncements, useCancelAnnouncement, useCreateAnnouncement } from '@/hooks/use-events-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import type { EventType } from '@/types/api';

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { CheckCircle2, Circle, Compass } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMyHistory } from '@/hooks/use-guild-api';
+import { useMyHistory } from '@/hooks/use-profile-api';
 import { useLocaleStore } from '@/store/locale-store';
 
 const copy = {

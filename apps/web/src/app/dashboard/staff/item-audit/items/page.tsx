@@ -6,7 +6,7 @@ import { ClipboardList, Gavel, HandHeart, History, Search, Trophy } from 'lucide
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useItemAuditFull, useItemAuditSummaries } from '@/hooks/use-guild-api';
+import { useItemAuditFull, useItemAuditSummaries } from '@/hooks/use-items-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 import { displayImageUrl } from '@/lib/images';

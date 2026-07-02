@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { AuctionCard } from '@/components/dashboard/auction-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
-import { useAuctions } from '@/hooks/use-guild-api';
+import { useAuctions } from '@/hooks/use-auctions-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 

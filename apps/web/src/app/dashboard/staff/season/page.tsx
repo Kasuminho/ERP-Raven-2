@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { usePostWeeklySummary, useSeasonSummary, useWeeklySummary } from '@/hooks/use-guild-api';
+import { usePostWeeklySummary, useSeasonSummary, useWeeklySummary } from '@/hooks/use-staff-operations-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 

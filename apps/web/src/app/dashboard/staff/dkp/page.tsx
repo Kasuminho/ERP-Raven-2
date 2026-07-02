@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCreateDkpTransaction, usePlayerHistory, useStaffDkpPlayers } from '@/hooks/use-guild-api';
+import { useCreateDkpTransaction, useStaffDkpPlayers } from '@/hooks/use-dkp-api';
+import { usePlayerHistory } from '@/hooks/use-profile-api';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
 

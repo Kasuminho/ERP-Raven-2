@@ -3,7 +3,7 @@
 import { Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOperationalHealth } from '@/hooks/use-guild-api';
+import { useOperationalHealth } from '@/hooks/use-staff-operations-api';
 
 export default function StaffHealthPage() {
   const health = useOperationalHealth();

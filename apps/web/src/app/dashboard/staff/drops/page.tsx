@@ -4,7 +4,7 @@ import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useDeliveredDrops } from '@/hooks/use-guild-api';
+import { useDeliveredDrops } from '@/hooks/use-drops-api';
 import { itemName } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';

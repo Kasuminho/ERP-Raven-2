@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Activity, CheckCircle2, ExternalLink, FileText, GitBranch, RefreshCw, Rocket, ShieldCheck, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDeploymentPanel } from '@/hooks/use-guild-api';
+import { useDeploymentPanel } from '@/hooks/use-staff-operations-api';
 import type { DeploymentPanelSummary, DeploymentProtocolStepStatus } from '@/types/api';
 
 const healthTone: Record<'ok' | 'degraded' | 'down', 'green' | 'gold' | 'red'> = {

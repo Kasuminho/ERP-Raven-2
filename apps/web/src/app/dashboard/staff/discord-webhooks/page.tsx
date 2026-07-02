@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useDiscordWebhookQueue, useRetryDiscordWebhookDelivery } from '@/hooks/use-guild-api';
+import { useDiscordWebhookQueue, useRetryDiscordWebhookDelivery } from '@/hooks/use-staff-operations-api';
 import type { DiscordWebhookDeliveryItem, DiscordWebhookDeliveryStatus } from '@/types/api';
 
 const statusTone: Record<DiscordWebhookDeliveryStatus, 'blue' | 'green' | 'gold' | 'red' | 'muted'> = {
