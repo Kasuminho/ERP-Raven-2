@@ -43,8 +43,10 @@ weekly/season, integridade, meeting e diagnostico/dossie de leilao para servicos
 de dominio em `apps/api/src/modules/operations/services`. `IntegrityService` ja
 possui implementacao propria para integridade e legacy audit, e
 `WeeklySummaryService` ja calcula resumo semanal/mensal e publica o resumo
-operacional sem depender do `OperationsService` legado. Os demais dominios ainda
-delegam ao servico legado e devem ser migrados em fases para reduzir risco.
+operacional sem depender do `OperationsService` legado. `MeetingService` ja
+monta a pauta Staff com dia, reviews, interesses e eventos abertos sem depender
+do legado. Os demais dominios ainda delegam ao servico legado e devem ser
+migrados em fases para reduzir risco.
 
 ## Regras de comunicacao
 
@@ -278,6 +280,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Modo reuniao Staff de `operations` saiu da delegacao e passou a ser montado em `MeetingService`, preservando a pauta de dia, reviews, interesses e eventos. | arquitetura/API |
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
 | 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao; integridade/legacy audit ja sairam para `IntegrityService`. | arquitetura/API |
 | 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |

@@ -623,7 +623,8 @@ contratos HTTP compativeis. A implementacao pesada ainda fica parcialmente no
 servico legado e sera movida em fases menores. A fase 2 moveu a implementacao de
 integridade e legacy audit para `IntegrityService`. A fase 3 moveu o calculo de
 resumo semanal/mensal e a publicacao do resumo operacional para
-`WeeklySummaryService`.
+`WeeklySummaryService`. A fase 4 moveu a composicao do modo reuniao Staff para
+`MeetingService`.
 
 Entrega:
 

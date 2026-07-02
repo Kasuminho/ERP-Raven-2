@@ -24,14 +24,12 @@ describe('Operations domain services', () => {
     assert.deepEqual(await service.getStaffDayView(), { urgentTasks: [] });
   });
 
-  it('keeps briefing and meeting services on the existing contract', async () => {
+  it('keeps briefing service on the existing contract', async () => {
     const operations = {
       getStaffMorningBriefing: mock.fn(async () => ({ title: 'briefing' })),
-      getStaffMeetingSummary: mock.fn(async () => ({ urgentTasks: [] })),
     };
 
     assert.equal((await new OperationalBriefingService(operations as never).getStaffMorningBriefing()).title, 'briefing');
-    assert.deepEqual(await new MeetingService(operations as never).getStaffMeetingSummary(), { urgentTasks: [] });
   });
 
   it('calculates season summaries inside the weekly domain service', async () => {
@@ -83,6 +81,44 @@ describe('Operations domain services', () => {
     assert.equal(summary.topPlayers[0].nickname, 'Aiko');
     assert.equal(summary.topPlayers[1].nickname, 'Brann');
     assert.equal(prisma.dKPTransaction.findMany.mock.calls.length, 1);
+  });
+
+  it('builds meeting summaries inside the meeting domain service', async () => {
+    const day = {
+      generatedAt: new Date('2026-07-02T00:00:00.000Z'),
+      todaysAnnouncements: 1,
+      openEvents: 2,
+      pendingStaffVotes: 3,
+      pendingDeliveries: 4,
+      pendingProgressReviews: 5,
+      urgentTasks: [],
+    };
+    const prisma = {
+      auction: {
+        findMany: mock.fn(async () => [
+          { id: 'a1', itemName: 'Espada', status: 'PENDING_REVIEW', updatedAt: new Date('2026-07-02T01:00:00.000Z') },
+        ]),
+      },
+      itemInterestPost: {
+        findMany: mock.fn(async () => [
+          { id: 'i1', title: 'Cajado', status: 'VOTING', updatedAt: new Date('2026-07-02T02:00:00.000Z'), entries: [{ id: 'e1' }, { id: 'e2' }] },
+        ]),
+      },
+      event: {
+        findMany: mock.fn(async () => [
+          { id: 'ev1', name: 'Boss T4', type: 'BOSS', startsAt: new Date('2026-07-02T03:00:00.000Z'), status: 'OPEN' },
+        ]),
+      },
+    };
+    const service = new MeetingService(prisma as never, { getStaffDayView: mock.fn(async () => day) } as never);
+
+    const summary = await service.getStaffMeetingSummary();
+
+    assert.equal(summary.todaysAnnouncements, 1);
+    assert.equal(summary.reviewAuctions[0].itemName, 'Espada');
+    assert.equal(summary.votingInterests[0].entries, 2);
+    assert.equal(summary.openEventRows[0].name, 'Boss T4');
+    assert.equal(prisma.auction.findMany.mock.calls.length, 1);
   });
 
   it('keeps auction diagnostics methods behind the auction domain service', async () => {
