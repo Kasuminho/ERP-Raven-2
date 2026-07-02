@@ -60,5 +60,10 @@ Teste semanal, usando o backup mais recente escolhido explicitamente:
 20 6 * * 1 cd /caminho/do/projeto && . ./.env.production && scripts/prod/verify-backup.sh /caminho/do/backup.dump.gpg >> logs/backup-verify.log 2>&1
 ```
 
+`verify-backup.sh` grava `last-verified-backup.json` no diretorio do backup, ou em
+`BACKUP_STATUS_FILE` quando definido. Garanta que `${BACKUP_DIR}` esteja montado
+como `/app/backups:ro` na API para o health privado mostrar a idade do ultimo
+backup verificado.
+
 Use `BACKUP_OFFSITE_COMMAND` para enviar artefato e checksum a um destino externo. O
 comando recebe o caminho em `$1`; exemplo: `rclone copy "$1" remote:guild-backups`.

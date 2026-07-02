@@ -29,6 +29,11 @@ alertas para disco e inodes acima de 80%, memoria acima de 90% por 10 minutos,
 container reiniciando ou `unhealthy`, PostgreSQL indisponivel e ausencia de backup novo
 por mais de 26 horas.
 
+O health privado tambem denuncia backup verificado antigo lendo
+`BACKUP_STATUS_FILE` (`/app/backups/last-verified-backup.json` por padrao). Mantenha
+`${BACKUP_DIR}` montado no container da API como read-only para o painel Staff e o
+health privado enxergarem o marcador gerado por `verify-backup.sh`.
+
 O job de backup deve executar `verify-backup.sh` ao menos semanalmente. O destino
 off-site deve alertar independentemente quando nao receber um arquivo no periodo.
 

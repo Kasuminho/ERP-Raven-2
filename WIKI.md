@@ -190,7 +190,7 @@ Confiabilidade:
 - `scripts/prod/deploy-images.sh` e `rollback-images.sh` controlam promocao e retorno de versao.
 - Containers possuem healthcheck e limites configuraveis de CPU/memoria.
 - `docker-compose.monitoring.yml` oferece Uptime Kuma independente da API; fonte operacional em `docs/MONITORING.md`.
-- Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `verify-backup.sh` restaura em PostgreSQL temporario para provar integridade.
+- Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `verify-backup.sh` restaura em PostgreSQL temporario para provar integridade e grava `last-verified-backup.json` sem segredo. A API le `BACKUP_STATUS_FILE` ou `/app/backups/last-verified-backup.json` e mostra idade do ultimo backup verificado no health privado e nos checks Staff; acima de `BACKUP_MAX_AGE_HOURS` (26h padrao) fica degradado.
 - Runbooks de banco, Discord, deploy, leilao e DKP ficam em `docs/OPERATIONS_RUNBOOKS.md`.
 - A tela Staff `/dashboard/staff/deploy` consome `GET /operations/staff/deploy` e centraliza versao atual da API, SHA esperado do `master` quando o GitHub publico responde, health publico, health privado Staff, smoke publico, ultimo changelog Staff documentado e checklist do protocolo. O frontend nao recebe token GitHub nem segredo; o campo de changelog explicita que envios por CLI nao gravam recibo interno.
 
@@ -270,6 +270,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |

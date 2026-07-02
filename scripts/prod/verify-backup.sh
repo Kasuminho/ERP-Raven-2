@@ -44,4 +44,16 @@ docker exec "$CONTAINER" createdb -U "$USER" "$VERIFY_DB"
 docker exec "$CONTAINER" pg_restore -U "$USER" -d "$VERIFY_DB" --no-owner --no-privileges --exit-on-error /tmp/verify.dump
 TABLE_COUNT="$(docker exec "$CONTAINER" psql -U "$USER" -d "$VERIFY_DB" -Atc "select count(*) from pg_catalog.pg_tables where schemaname = 'public';")"
 [ "$TABLE_COUNT" -gt 0 ] || { echo "Restore completed but no public tables were found" >&2; exit 1; }
+STATUS_FILE="${BACKUP_STATUS_FILE:-$(dirname "$BACKUP_FILE")/last-verified-backup.json}"
+STATUS_DIR="$(dirname "$STATUS_FILE")"
+mkdir -p "$STATUS_DIR"
+cat > "$STATUS_FILE" <<EOF
+{
+  "status": "verified",
+  "verifiedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "backupFile": "$(basename "$BACKUP_FILE")",
+  "tableCount": $TABLE_COUNT
+}
+EOF
 echo "Backup verified by temporary restore ($TABLE_COUNT public tables)."
+echo "Backup status ready: $STATUS_FILE"

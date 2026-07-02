@@ -656,6 +656,7 @@ export class OperationsService {
     const driveProvider = this.config.get<string>('IMAGE_STORAGE_PROVIDER') ?? 'local';
     const driveReady = driveProvider !== 'google_drive'
       || Boolean(this.config.get<string>('GOOGLE_DRIVE_FOLDER_ID')?.trim() && this.config.get<string>('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON')?.trim());
+    const backupCheck = await this.getStaffBackupHealthCheck();
 
     return {
       generatedAt: new Date(),
@@ -679,6 +680,7 @@ export class OperationsService {
           ready: true,
           detail: 'Cron interno do Nest habilitado no modulo Automation.',
         },
+        backupCheck,
       ],
     };
   }
@@ -3251,6 +3253,48 @@ export class OperationsService {
         source: 'unavailable',
         sentReceiptAvailable: false,
         note: this.errorMessage(error),
+      };
+    }
+  }
+
+  private async getStaffBackupHealthCheck(): Promise<StaffHealthSummary['checks'][number]> {
+    const statusFile = process.env.BACKUP_STATUS_FILE || '/app/backups/last-verified-backup.json';
+    const maxAgeHours = Number(process.env.BACKUP_MAX_AGE_HOURS ?? 26);
+
+    try {
+      const parsed = JSON.parse(await readFile(statusFile, 'utf8')) as {
+        status?: string;
+        verifiedAt?: string;
+        backupFile?: string;
+      };
+      const verifiedAt = parsed.verifiedAt ? new Date(parsed.verifiedAt) : null;
+
+      if (!verifiedAt || Number.isNaN(verifiedAt.getTime())) {
+        return {
+          key: 'verified-backup',
+          label: 'Backup verificado',
+          ready: false,
+          detail: 'Marcador de backup existe, mas nao tem verifiedAt valido.',
+        };
+      }
+
+      const ageHours = (Date.now() - verifiedAt.getTime()) / HOURS;
+      const ready = parsed.status === 'verified' && ageHours <= maxAgeHours;
+
+      return {
+        key: 'verified-backup',
+        label: 'Backup verificado',
+        ready,
+        detail: ready
+          ? `Ultimo restore de teste ha ${Math.round(ageHours)}h (${parsed.backupFile ?? 'arquivo nao informado'}).`
+          : `Ultimo backup verificado ha ${Math.round(ageHours)}h; limite atual ${maxAgeHours}h.`,
+      };
+    } catch (error) {
+      return {
+        key: 'verified-backup',
+        label: 'Backup verificado',
+        ready: false,
+        detail: `Marcador nao encontrado ou ilegivel: ${this.errorMessage(error)}`,
       };
     }
   }

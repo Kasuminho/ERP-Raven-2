@@ -594,10 +594,21 @@ Entrega:
 
 Objetivo: Staff saber se backup morreu.
 
+Estado em 2026-07-01: implementado em `GET /health/details` e nos checks Staff
+de `GET /operations/staff/health`.
+
 Entrega:
 
 - Health privado com idade do ultimo backup verificado.
 - Integrar com monitor externo quando existir.
+- `scripts/prod/verify-backup.sh` grava `last-verified-backup.json` com
+  `status`, `verifiedAt`, `backupFile` e `tableCount` depois de restaurar o
+  backup em banco temporario.
+- A API le `BACKUP_STATUS_FILE` ou `/app/backups/last-verified-backup.json` por
+  padrao e marca degradado quando o marcador nao existe, esta invalido ou passa
+  de `BACKUP_MAX_AGE_HOURS` (26h por padrao).
+- Os Compose de producao montam `${BACKUP_DIR:-/srv/guild/backups}` em
+  `/app/backups:ro` para a API ler o marcador sem acesso de escrita.
 
 ## Epico J - Arquitetura e manutencao necessaria para sustentar tudo
 

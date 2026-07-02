@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { readFile } from 'node:fs/promises';
 import { PrismaService } from '@database/prisma.service';
 import { HealthCheckResult, HealthReport, HealthState } from '../health.types';
 
@@ -16,6 +17,7 @@ export class HealthService {
       this.checkDiscordConfig(),
       this.checkGoogleDriveConfig(),
       this.checkWebhookConfig(),
+      this.checkVerifiedBackup(),
       this.checkPublicWeb(),
     ]);
 
@@ -131,6 +133,55 @@ export class HealthService {
         configured: required.length - missing.length,
       },
     };
+  }
+
+  private async checkVerifiedBackup(): Promise<HealthCheckResult> {
+    const statusFile = process.env.BACKUP_STATUS_FILE || '/app/backups/last-verified-backup.json';
+    const maxAgeHours = Number(process.env.BACKUP_MAX_AGE_HOURS ?? 26);
+
+    try {
+      const raw = await readFile(statusFile, 'utf8');
+      const parsed = JSON.parse(raw) as {
+        verifiedAt?: string;
+        backupFile?: string;
+        tableCount?: number;
+        status?: string;
+      };
+      const verifiedAt = parsed.verifiedAt ? new Date(parsed.verifiedAt) : null;
+
+      if (!verifiedAt || Number.isNaN(verifiedAt.getTime())) {
+        return {
+          name: 'verifiedBackup',
+          status: 'degraded',
+          message: 'Backup status file does not contain a valid verifiedAt.',
+          metadata: { statusFile, maxAgeHours },
+        };
+      }
+
+      const ageHours = (Date.now() - verifiedAt.getTime()) / (60 * 60 * 1000);
+      const fresh = ageHours <= maxAgeHours && parsed.status === 'verified';
+
+      return {
+        name: 'verifiedBackup',
+        status: fresh ? 'ok' : 'degraded',
+        message: fresh ? undefined : `Last verified backup is ${Math.round(ageHours)}h old.`,
+        metadata: {
+          statusFile,
+          verifiedAt: verifiedAt.toISOString(),
+          ageHours: Math.round(ageHours * 10) / 10,
+          maxAgeHours,
+          backupFile: parsed.backupFile ?? null,
+          tableCount: typeof parsed.tableCount === 'number' ? parsed.tableCount : null,
+        },
+      };
+    } catch (error) {
+      return {
+        name: 'verifiedBackup',
+        status: 'degraded',
+        message: `No verified backup status was found: ${this.errorMessage(error)}`,
+        metadata: { statusFile, maxAgeHours },
+      };
+    }
   }
 
   private async checkPublicWeb(): Promise<HealthCheckResult> {
