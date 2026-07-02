@@ -271,8 +271,27 @@ describe('Operations domain services', () => {
           { id: 'ev1', name: 'Boss T4', type: 'BOSS', startsAt: new Date('2026-07-02T03:00:00.000Z'), status: 'OPEN' },
         ]),
       },
+      dKPTransaction: {
+        findMany: mock.fn(async () => [
+          { id: 'tx1', type: 'ADMIN_ADJUSTMENT', amount: 25, createdAt: new Date('2026-07-02T04:00:00.000Z'), player: { nickname: 'Aiko' } },
+        ]),
+      },
+      playerStaffNote: {
+        findMany: mock.fn(async () => [
+          { id: 'note1', playerId: 'p1', severity: 'WARNING', body: 'Precisa alinhamento.', createdAt: new Date('2026-07-02T05:00:00.000Z'), player: { nickname: 'Brann' } },
+        ]),
+      },
+      announcement: {
+        findMany: mock.fn(async () => [
+          { id: 'ann1', title: 'Raid hoje', type: 'RAID', eventTime: new Date('2026-07-02T06:00:00.000Z'), status: 'ACTIVE' },
+        ]),
+      },
+      auditLog: {
+        findMany: mock.fn(async () => []),
+      },
     };
-    const service = new MeetingService(prisma as never, { getStaffDayView: mock.fn(async () => day) } as never);
+    const audit = { log: mock.fn() };
+    const service = new MeetingService(prisma as never, audit as never, { getStaffDayView: mock.fn(async () => day) } as never);
 
     const summary = await service.getStaffMeetingSummary();
 
@@ -280,7 +299,28 @@ describe('Operations domain services', () => {
     assert.equal(summary.reviewAuctions[0].itemName, 'Espada');
     assert.equal(summary.votingInterests[0].entries, 2);
     assert.equal(summary.openEventRows[0].name, 'Boss T4');
+    assert.equal(summary.sections.length, 7);
+    assert.equal(summary.sections.find((section) => section.key === 'loot')?.items.length, 2);
+    assert.equal(summary.sections.find((section) => section.key === 'dkp')?.items[0]?.title, 'ADMIN_ADJUSTMENT: Aiko');
+    assert.match(summary.markdown, /Pauta Staff/);
     assert.equal(prisma.auction.findMany.mock.calls.length, 1);
+  });
+
+  it('marks meeting items as resolved through audit log', async () => {
+    const prisma = {};
+    const audit = { log: mock.fn(async () => undefined) };
+    const service = new MeetingService(prisma as never, audit as never, { getStaffDayView: mock.fn() } as never);
+
+    await service.resolveMeetingItem('2026-07-02:MEETING_AUCTION_REVIEW:a1', 'user-1', {
+      title: 'Review: Espada',
+      type: 'MEETING_AUCTION_REVIEW',
+      href: '/dashboard/staff/reviews',
+    });
+
+    assert.equal(audit.log.mock.calls.length, 1);
+    assert.equal(audit.log.mock.calls[0].arguments[0].action, 'STAFF_MEETING_ITEM_RESOLVED');
+    assert.equal(audit.log.mock.calls[0].arguments[0].targetType, 'StaffMeetingItem');
+    assert.equal(audit.log.mock.calls[0].arguments[0].targetId, '2026-07-02:MEETING_AUCTION_REVIEW:a1');
   });
 
   it('calculates auction diagnostics inside the auction domain service', async () => {

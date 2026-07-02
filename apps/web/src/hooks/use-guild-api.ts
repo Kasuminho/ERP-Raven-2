@@ -290,6 +290,23 @@ export function useStaffMeeting() {
   });
 }
 
+export function useResolveStaffMeetingItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (item: { meetingItemKey: string; title: string; type: string; href: string }) =>
+      (await api.post<StaffMeetingSummary>(`/operations/staff/meeting/items/${encodeURIComponent(item.meetingItemKey)}/resolve`, {
+        title: item.title,
+        type: item.type,
+        href: item.href,
+      })).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['operations', 'staff', 'meeting'] });
+      await queryClient.invalidateQueries({ queryKey: ['operations', 'staff'] });
+    },
+  });
+}
+
 export function useLegacyAudit() {
   return useQuery({
     queryKey: ['operations', 'staff', 'legacy-audit'],

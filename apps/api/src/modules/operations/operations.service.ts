@@ -1667,6 +1667,10 @@ export class OperationsService {
       reviewAuctions,
       votingInterests: votingInterests.map((post) => ({ ...post, entries: post.entries.length })),
       openEventRows: openEvents,
+      meetingDay: new Date().toISOString().slice(0, 10),
+      sections: [],
+      resolvedItemKeys: [],
+      markdown: '# Pauta Staff\n\nEndpoint legado sem secoes enriquecidas.',
     };
   }
 

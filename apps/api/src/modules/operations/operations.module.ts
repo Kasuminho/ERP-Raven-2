@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
 import { BusinessRulesModule } from '../business-rules/business-rules.module';
 import { DiscordModule } from '../discord/discord.module';
 import { OperationsController } from './operations.controller';
@@ -11,7 +12,7 @@ import { StaffSummaryService } from './services/staff-summary.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
 
 @Module({
-  imports: [BusinessRulesModule, DiscordModule],
+  imports: [AuditModule, BusinessRulesModule, DiscordModule],
   controllers: [OperationsController],
   providers: [
     OperationsService,

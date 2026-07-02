@@ -30,7 +30,7 @@ Use a central para:
 ## 3. Dia, reuniao e temporada
 
 - `/dashboard/staff/day`: visao operacional do dia.
-- `/dashboard/staff/meeting`: pauta para call da Staff.
+- `/dashboard/staff/meeting`: pauta decisoria com loot, travas, DKP, players sensiveis, bosses, comunicados, acoes ate a proxima call, copia Markdown e marcacao auditavel de resolvido.
 - `/dashboard/staff/season`: fechamento mensal com DKP, presenca, drops, requests e Daoshi.
 
 Use essas telas para preparar decisao, nao para esconder decisao. Quando a Staff decidir algo sensivel, registre pelo fluxo correto para gerar auditoria.

@@ -222,6 +222,9 @@ Entrega:
 
 Objetivo: transformar `/dashboard/staff/meeting` em pauta decisoria.
 
+Estado em 2026-07-02: implementado com secoes decisorias, export Markdown e
+marcacao auditavel de item resolvido por dia operacional.
+
 Entrega:
 
 - Pauta com secoes:
@@ -234,6 +237,10 @@ Entrega:
   - Acoes ate proxima reuniao.
 - Itens marcaveis como resolvidos com audit log.
 - Exportar resumo Staff em Markdown.
+- A API preserva o contrato antigo e adiciona `sections`, `meetingDay`,
+  `resolvedItemKeys` e `markdown`; a rota
+  `POST /operations/staff/meeting/items/:itemKey/resolve` grava
+  `STAFF_MEETING_ITEM_RESOLVED` em audit log.
 
 ## Epico C - Dashboard player: "o que eu faco agora?"
 

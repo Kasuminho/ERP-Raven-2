@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -40,6 +40,7 @@ import {
 } from './operations.types';
 
 type AuthRequest = { user: { userId: string } };
+type ResolveMeetingItemBody = { title?: string; type?: string; href?: string };
 
 @Controller('operations')
 @UseGuards(JwtAuthGuard)
@@ -212,6 +213,18 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async meeting(): Promise<StaffMeetingSummary> {
+    return this.meetingService.getStaffMeetingSummary();
+  }
+
+  @Post('staff/meeting/items/:itemKey/resolve')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async resolveMeetingItem(
+    @Param('itemKey') itemKey: string,
+    @Body() body: ResolveMeetingItemBody,
+    @Req() req: AuthRequest,
+  ): Promise<StaffMeetingSummary> {
+    await this.meetingService.resolveMeetingItem(itemKey, req.user.userId, body);
     return this.meetingService.getStaffMeetingSummary();
   }
 

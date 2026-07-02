@@ -263,6 +263,17 @@ export type StaffMeetingSummary = StaffDayViewSummary & {
   reviewAuctions: Array<{ id: string; itemName: string; status: string; updatedAt: Date }>;
   votingInterests: Array<{ id: string; title: string; status: string; entries: number; updatedAt: Date }>;
   openEventRows: Array<{ id: string; name: string; type: string; startsAt: Date; status: string }>;
+  meetingDay: string;
+  sections: Array<{
+    key: string;
+    title: string;
+    description: string;
+    href: string;
+    priority: OperationPriority;
+    items: Array<OperationTask & { meetingItemKey: string; resolved: boolean }>;
+  }>;
+  resolvedItemKeys: string[];
+  markdown: string;
 };
 
 export type LegacyAuditSummary = {
