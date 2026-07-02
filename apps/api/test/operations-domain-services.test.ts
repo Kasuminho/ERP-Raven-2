@@ -9,9 +9,7 @@ import { WeeklySummaryService } from '../src/modules/operations/services/weekly-
 describe('Operations domain services', () => {
   it('builds staff summary and health inside the staff summary domain service', async () => {
     const now = new Date(Date.now() - 3_600_000);
-    const operations = {
-      getDeploymentPanel: mock.fn(async () => ({ currentApiVersion: 'test' })),
-    };
+    const operations = {};
     const prisma = {
       $queryRaw: mock.fn(async () => [{ ok: 1 }]),
       auction: { findMany: mock.fn(async () => [{ id: 'auction-1', itemName: 'Lamina', updatedAt: now }]) },
@@ -61,7 +59,19 @@ describe('Operations domain services', () => {
       }),
     };
     const previousBackupStatusFile = process.env.BACKUP_STATUS_FILE;
+    const previousAppVersion = process.env.APP_VERSION;
+    const previousExpectedVersion = process.env.DEPLOY_EXPECTED_VERSION;
+    const previousFetch = globalThis.fetch;
     process.env.BACKUP_STATUS_FILE = 'C:/tmp/raven2-missing-backup-marker.json';
+    process.env.APP_VERSION = 'abc1234';
+    process.env.DEPLOY_EXPECTED_VERSION = 'abc123456789';
+    globalThis.fetch = mock.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.endsWith('/health')
+        ? { status: 'ok', checkedAt: '2026-07-02T00:00:00.000Z', version: 'abc1234' }
+        : {}),
+    })) as never;
     const service = new StaffSummaryService(operations as never, prisma as never, businessRules as never, config as never);
 
     const staff = await service.getStaffSummary();
@@ -74,7 +84,11 @@ describe('Operations domain services', () => {
     const operationalHealth = await service.getOperationalHealth();
     assert.equal(operationalHealth.discordFailures24h, 2);
     assert.equal(operationalHealth.pendingQueueApproximation, 1);
-    assert.equal((await service.getDeploymentPanel()).currentApiVersion, 'test');
+    const deploy = await service.getDeploymentPanel();
+    assert.equal(deploy.currentApiVersion, 'abc1234');
+    assert.equal(deploy.expectedVersion.matchesCurrent, true);
+    assert.equal(deploy.publicSmoke.status, 'ok');
+    assert.equal(deploy.protocol.find((step) => step.key === 'watchtower')?.status, 'done');
     const dayView = await service.getStaffDayView();
     assert.equal(dayView.todaysAnnouncements, 1);
     assert.equal(dayView.openEvents, 2);
@@ -87,6 +101,17 @@ describe('Operations domain services', () => {
     } else {
       process.env.BACKUP_STATUS_FILE = previousBackupStatusFile;
     }
+    if (previousAppVersion === undefined) {
+      delete process.env.APP_VERSION;
+    } else {
+      process.env.APP_VERSION = previousAppVersion;
+    }
+    if (previousExpectedVersion === undefined) {
+      delete process.env.DEPLOY_EXPECTED_VERSION;
+    } else {
+      process.env.DEPLOY_EXPECTED_VERSION = previousExpectedVersion;
+    }
+    globalThis.fetch = previousFetch;
   });
 
   it('calculates season summaries inside the weekly domain service', async () => {

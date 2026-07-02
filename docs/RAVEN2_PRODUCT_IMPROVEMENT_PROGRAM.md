@@ -628,7 +628,8 @@ resumo semanal/mensal e a publicacao do resumo operacional para
 `OperationalBriefingService`. A fase 6 moveu o resumo do dia Staff para
 `StaffSummaryService`. A fase 7 moveu o resumo Staff principal, suas filas,
 thresholds e contadores para `StaffSummaryService`. A fase 8 moveu health Staff
-e health operacional para `StaffSummaryService`.
+e health operacional para `StaffSummaryService`. A fase 9 moveu o painel Staff
+de deploy para `StaffSummaryService`.
 
 Entrega:
 
