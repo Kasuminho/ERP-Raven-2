@@ -284,11 +284,6 @@ describe('Operations domain services', () => {
   });
 
   it('calculates auction diagnostics inside the auction domain service', async () => {
-    const operations = {
-      getAuctionFinalizationPreview: mock.fn(async (auctionId: string) => ({ auctionId })),
-      getAuctionDossier: mock.fn(async (auctionId: string) => ({ auctionId })),
-      getUniversalDossier: mock.fn(async (type: string, id: string) => ({ type, id })),
-    };
     const createdAt = new Date('2026-07-02T00:00:00.000Z');
     const endsAt = new Date(Date.now() - 60_000);
     const prisma = {
@@ -370,7 +365,7 @@ describe('Operations domain services', () => {
         }]),
       },
     };
-    const service = new AuctionDiagnosticsService(operations as never, prisma as never);
+    const service = new AuctionDiagnosticsService(prisma as never);
 
     const options = await service.getAuctionDiagnosticOptions();
     assert.equal(options[0].id, 'auction-1');
@@ -396,14 +391,12 @@ describe('Operations domain services', () => {
     assert.equal(preview.locksToConsume[0].id, 'lock-1');
     assert.equal(preview.locksToRelease.length, 0);
     assert.equal(preview.nextState?.status, 'FINISHED');
-    assert.equal(operations.getAuctionFinalizationPreview.mock.calls.length, 0);
     const dossier = await service.getAuctionDossier('auction-1');
     assert.equal(dossier.auctionId, 'auction-1');
     assert.equal(dossier.title, 'Dossie Staff - Cajado');
     assert.match(dossier.markdown, /## Previa de finalizacao/);
     assert.match(dossier.markdown, /Candidato: Aiko/);
     assert.match(dossier.markdown, /AUCTION_WIN/);
-    assert.equal(operations.getAuctionDossier.mock.calls.length, 0);
     const universal = await service.getUniversalDossier('auction', 'auction-1');
     assert.equal(universal.type, 'auction');
     assert.equal(universal.id, 'auction-1');
@@ -412,7 +405,6 @@ describe('Operations domain services', () => {
     assert.equal(universal.internalLinks[0].href, '/dashboard/staff/auction-diagnostics?auctionId=auction-1');
     assert.equal(universal.auditLogs[0].action, 'AUCTION_TEST');
     assert.match(universal.markdown, /Dossie Staff - Cajado/);
-    assert.equal(operations.getUniversalDossier.mock.calls.length, 0);
     const timeline = await service.getAuctionTimeline('auction-1');
     assert.equal(timeline[0].type, 'AUCTION_CREATED');
     assert.ok(timeline.some((event) => event.type === 'BID_CREATED'));

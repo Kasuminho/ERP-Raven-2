@@ -60,7 +60,9 @@ do diagnostico Staff, incluindo item, vencedor quando houver e data de fim; os
 detalhes pesados de timeline operacional e o raio-x completo tambem ja sairam
 para esse dominio. A previa read-only de finalizacao, o dossie Staff de leilao e
 o dossie universal do tipo `auction` tambem ja sao calculados no dominio de
-diagnostico. Dossies universais de outros tipos ainda delegam ao legado.
+diagnostico. `AuctionDiagnosticsService` nao injeta mais o `OperationsService`
+legado; dossies universais de outros tipos ainda delegam ao legado pelo
+controller.
 
 ## Regras de comunicacao
 
@@ -294,6 +296,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | `AuctionDiagnosticsService` deixou de injetar `OperationsService`; o controller roteia apenas dossie universal `auction` para esse dominio e mantem os demais tipos no legado. | arquitetura/API |
 | 2026-07-02 | Dossie universal Staff do tipo `auction` saiu da delegacao e passou a ser montado em `AuctionDiagnosticsService`, reaproveitando o dossie especifico, resumo, links e audit logs de leilao. | arquitetura/API |
 | 2026-07-02 | Dossie Staff especifico do diagnostico de leilao saiu da delegacao e passou a ser montado em `AuctionDiagnosticsService`, combinando diagnostico, previa, timeline e Markdown copiavel. | arquitetura/API |
 | 2026-07-02 | Previa read-only de finalizacao do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`, preservando candidato, locks, bids ignorados, riscos e proximo estado. | arquitetura/API |

@@ -181,7 +181,10 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async universalDossier(@Param('type') type: UniversalDossierType, @Param('id') id: string): Promise<UniversalDossier> {
-    return this.auctionDiagnosticsService.getUniversalDossier(type, id);
+    if (type === 'auction') {
+      return this.auctionDiagnosticsService.getUniversalDossier(type, id);
+    }
+    return this.service.getUniversalDossier(type, id);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')

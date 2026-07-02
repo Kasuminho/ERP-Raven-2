@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuctionMode, AuctionStatus, DKPTransactionType, ItemTier, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
-import { OperationsService } from '../operations.service';
 import {
   AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
@@ -19,7 +18,6 @@ const AUCTION_RELIST_DELAY_DAYS = 7;
 @Injectable()
 export class AuctionDiagnosticsService {
   constructor(
-    private readonly operations: OperationsService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -513,40 +511,40 @@ export class AuctionDiagnosticsService {
   }
 
   async getUniversalDossier(type: UniversalDossierType, id: string): Promise<UniversalDossier> {
-    if (type === 'auction') {
-      const [dossier, diagnostics] = await Promise.all([
-        this.getAuctionDossier(id),
-        this.getAuctionDiagnostics(id),
-      ]);
-
-      return {
-        generatedAt: dossier.generatedAt,
-        type,
-        id,
-        title: dossier.title,
-        summary: [
-          { label: 'Item', value: diagnostics.auction.itemName },
-          { label: 'Status', value: diagnostics.auction.status },
-          { label: 'Modo', value: diagnostics.auction.auctionMode },
-          { label: 'Bids validos', value: String(diagnostics.counts.validBids) },
-        ],
-        internalLinks: [
-          { label: 'Diagnostico Staff', href: `/dashboard/staff/auction-diagnostics?auctionId=${id}` },
-          { label: 'Leilao player', href: `/dashboard/auctions/${id}` },
-        ],
-        auditLogs: diagnostics.auditLogs.slice(0, 20).map((log) => ({
-          id: log.id,
-          action: log.action,
-          targetType: log.targetType,
-          targetId: log.targetId,
-          actorName: log.actorName,
-          createdAt: log.createdAt,
-        })),
-        markdown: dossier.markdown,
-      };
+    if (type !== 'auction') {
+      throw new NotFoundException('Tipo de dossie nao suportado pelo dominio de leilao.');
     }
 
-    return this.operations.getUniversalDossier(type, id);
+    const [dossier, diagnostics] = await Promise.all([
+      this.getAuctionDossier(id),
+      this.getAuctionDiagnostics(id),
+    ]);
+
+    return {
+      generatedAt: dossier.generatedAt,
+      type,
+      id,
+      title: dossier.title,
+      summary: [
+        { label: 'Item', value: diagnostics.auction.itemName },
+        { label: 'Status', value: diagnostics.auction.status },
+        { label: 'Modo', value: diagnostics.auction.auctionMode },
+        { label: 'Bids validos', value: String(diagnostics.counts.validBids) },
+      ],
+      internalLinks: [
+        { label: 'Diagnostico Staff', href: `/dashboard/staff/auction-diagnostics?auctionId=${id}` },
+        { label: 'Leilao player', href: `/dashboard/auctions/${id}` },
+      ],
+      auditLogs: diagnostics.auditLogs.slice(0, 20).map((log) => ({
+        id: log.id,
+        action: log.action,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        actorName: log.actorName,
+        createdAt: log.createdAt,
+      })),
+      markdown: dossier.markdown,
+    };
   }
 
   async getAuctionTimeline(auctionId: string): Promise<AuctionTimelineEvent[]> {
