@@ -667,7 +667,9 @@ migracao de `AuctionDiagnosticsService`, movendo a lista de selecao de leiloes
 do diagnostico Staff. A fase 12 moveu a timeline operacional de leilao para
 `AuctionDiagnosticsService`. A fase 13 moveu os insights Staff de fairness de
 loot e comparacao de players para `StaffInsightsService`, reduzindo mais duas
-rotas que dependiam do legado.
+rotas que dependiam do legado. A fase 14 moveu previews de webhooks, fila de
+entregas e retry manual para `DiscordOperationsService`, deixando a comunicacao
+operacional Staff fora do legado.
 
 Entrega:
 
@@ -678,7 +680,8 @@ Entrega:
   - `MeetingService`;
   - `WeeklySummaryService`;
   - `OperationalBriefingService`;
-  - `StaffInsightsService`.
+  - `StaffInsightsService`;
+  - `DiscordOperationsService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 import { AuctionDiagnosticsService } from '../src/modules/operations/services/auction-diagnostics.service';
+import { DiscordOperationsService } from '../src/modules/operations/services/discord-operations.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
 import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
@@ -235,6 +236,68 @@ describe('Operations domain services', () => {
     assert.equal(comparison.players[0].drops30d, 2);
     assert.equal(comparison.players[0].activeRequests, 1);
     assert.equal(comparison.players[1].currentDkp, 60);
+  });
+
+  it('builds Discord previews and queue summaries inside the Discord operations domain service', async () => {
+    const queuedAt = new Date('2026-07-02T00:00:00.000Z');
+    const queue = {
+      listDeliveries: mock.fn(async () => [
+        {
+          id: 'delivery-1',
+          webhookKey: 'auctions',
+          channelLabel: 'Leiloes',
+          action: 'AUCTION_CREATED',
+          targetId: 'auction-1',
+          status: 'FAILED',
+          attempts: 2,
+          maxAttempts: 5,
+          retryable: true,
+          payloadPreview: { content: 'Aviso teste', embeds: [{ title: 'Embed teste', fields: [{ name: 'A', value: 'B' }] }] },
+          lastError: 'HTTP 500',
+          queuedAt,
+        },
+        {
+          id: 'delivery-2',
+          webhookKey: 'drops',
+          channelLabel: 'Drops',
+          status: 'SENT',
+          attempts: 1,
+          maxAttempts: 5,
+          retryable: false,
+          payloadPreview: { embeds: [{ title: 'Drop entregue' }] },
+          queuedAt,
+          sentAt: new Date('2026-07-02T00:01:00.000Z'),
+        },
+      ]),
+      retryDelivery: mock.fn(async () => undefined),
+    };
+    const config = {
+      get: mock.fn((key: string) => {
+        if (key === 'discord.publicUrl') return 'https://app.guild-g3x.com.br/';
+        if (key === 'discord.webhookUsername') return 'Aristolfo, 570 anos de webhook';
+        if (key === 'discord.webhookAvatarUrl') return 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
+        return undefined;
+      }),
+    };
+    const service = new DiscordOperationsService(config as never, queue as never);
+
+    const templates = service.getDiscordTemplates();
+    assert.equal(templates.templates.length, 8);
+    assert.equal(templates.templates.find((template) => template.key === 'auction_created')?.previews.length, 2);
+    assert.equal(templates.templates.find((template) => template.key === 'staff_review')?.previews.length, 1);
+    assert.equal(templates.templates[0].previews[0].payload.username, 'Aristolfo, 570 anos de webhook');
+    assert.ok(JSON.stringify(templates).includes('https://app.guild-g3x.com.br/dashboard/auctions/preview'));
+
+    const summary = await service.getDiscordWebhookQueue(25);
+    assert.equal(queue.listDeliveries.mock.calls[0].arguments[0], 25);
+    assert.equal(summary.counts.FAILED, 1);
+    assert.equal(summary.counts.SENT, 1);
+    assert.equal(summary.deliveries[0].payloadSummary.includes('Aviso teste'), true);
+    assert.equal(summary.deliveries[1].sentAt, '2026-07-02T00:01:00.000Z');
+
+    await service.retryDiscordWebhookDelivery('delivery-1');
+    assert.equal(queue.retryDelivery.mock.calls[0].arguments[0], 'delivery-1');
+    assert.equal(queue.listDeliveries.mock.calls.at(-1)?.arguments[0], 50);
   });
 
   it('builds morning briefing inside the briefing domain service', async () => {

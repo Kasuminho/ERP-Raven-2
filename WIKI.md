@@ -66,6 +66,9 @@ controller.
 `StaffInsightsService` calcula diretamente os insights Staff de fairness de loot
 e comparacao de players, removendo mais duas rotas Staff do `OperationsService`
 legado.
+`DiscordOperationsService` calcula os previews Staff de webhooks, a fila
+sanitizada de entregas e o retry manual de webhook, removendo essas rotas de
+comunicacao do `OperationsService` legado.
 
 ## Regras de comunicacao
 
@@ -306,6 +309,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Previews de webhooks, fila sanitizada e retry manual sairam do `OperationsService` legado para `DiscordOperationsService`. | arquitetura/API |
 | 2026-07-02 | Insights Staff de fairness de loot e comparacao de players sairam do `OperationsService` legado para `StaffInsightsService`. | arquitetura/API |
 | 2026-07-02 | Modulo `daoshi` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Modulo `codex` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |

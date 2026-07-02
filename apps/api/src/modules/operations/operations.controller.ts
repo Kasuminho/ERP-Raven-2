@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OperationsService } from './operations.service';
 import { AuctionDiagnosticsService } from './services/auction-diagnostics.service';
+import { DiscordOperationsService } from './services/discord-operations.service';
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
@@ -49,6 +50,7 @@ export class OperationsController {
   constructor(
     private readonly service: OperationsService,
     private readonly auctionDiagnosticsService: AuctionDiagnosticsService,
+    private readonly discordOperations: DiscordOperationsService,
     private readonly integrityService: IntegrityService,
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
@@ -241,21 +243,21 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async discordTemplates(): Promise<DiscordTemplateSummary> {
-    return this.service.getDiscordTemplates();
+    return this.discordOperations.getDiscordTemplates();
   }
 
   @Get('staff/discord-webhooks')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async discordWebhookQueue(@Query('limit') limit?: string): Promise<DiscordWebhookQueueSummary> {
-    return this.service.getDiscordWebhookQueue(Number(limit) || 50);
+    return this.discordOperations.getDiscordWebhookQueue(Number(limit) || 50);
   }
 
   @Post('staff/discord-webhooks/:deliveryId/retry')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async retryDiscordWebhookDelivery(@Param('deliveryId') deliveryId: string): Promise<DiscordWebhookQueueSummary> {
-    return this.service.retryDiscordWebhookDelivery(deliveryId);
+    return this.discordOperations.retryDiscordWebhookDelivery(deliveryId);
   }
 
   @Get('staff/audit')
