@@ -720,6 +720,11 @@ Entrega:
 
 Objetivo: permitir `whitelist`/`forbidNonWhitelisted` por modulo.
 
+Estado em 2026-07-02: fase 1 implementada no modulo `staff-review`. DTOs de
+review de leilao/cancelamento de bid possuem decorators `class-validator`, e o
+controller usa `ValidationPipe` local com `whitelist` e
+`forbidNonWhitelisted`, sem alterar o pipe global legado.
+
 Entrega:
 
 - Inventario de DTOs sem decorators.
