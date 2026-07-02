@@ -4,6 +4,7 @@ import { AuctionDiagnosticsService } from '../src/modules/operations/services/au
 import { DiscordOperationsService } from '../src/modules/operations/services/discord-operations.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
+import { OperationsRulesService } from '../src/modules/operations/services/operations-rules.service';
 import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
 import { StaffSummaryService } from '../src/modules/operations/services/staff-summary.service';
 import { WeeklySummaryService } from '../src/modules/operations/services/weekly-summary.service';
@@ -298,6 +299,35 @@ describe('Operations domain services', () => {
     await service.retryDiscordWebhookDelivery('delivery-1');
     assert.equal(queue.retryDelivery.mock.calls[0].arguments[0], 'delivery-1');
     assert.equal(queue.listDeliveries.mock.calls.at(-1)?.arguments[0], 50);
+  });
+
+  it('builds guild rules and maintenance summaries inside the rules domain service', async () => {
+    const businessRules = {
+      getMaintenanceMode: mock.fn(async () => ({ enabled: true, message: 'Manutencao planejada' })),
+      getEventRewards: mock.fn(async () => ({ BOSS: 10, RAID: 20 })),
+      getAuctionTierRules: mock.fn(async () => ({
+        T2: { minimumBid: 100 },
+        T3: { minimumBid: 250 },
+        T4: { minimumBid: 450, auctionMode: 'SCORE', minimumLayer: 4 },
+        LEGENDARY: { minimumBid: 1000, auctionMode: 'ALL_IN', minimumLayer: 8 },
+      })),
+      getPriorityScoreRules: mock.fn(async () => ({
+        layerWeight: 100,
+        attendanceWeight: 10,
+        bidDkpWeight: 1,
+        classPriorityBonus: 25,
+      })),
+    };
+    const service = new OperationsRulesService(businessRules as never);
+
+    const maintenance = await service.getMaintenanceMode();
+    assert.equal(maintenance.enabled, true);
+    assert.equal(maintenance.message, 'Manutencao planejada');
+
+    const rules = await service.getGuildRules();
+    assert.deepEqual(rules.sections.map((section) => section.key), ['dkp', 'auctions', 'interests', 'attendance', 'daoshi']);
+    assert.ok(rules.sections.find((section) => section.key === 'auctions')?.bullets.join(' ').includes('T4 minimo 450'));
+    assert.ok(rules.sections.find((section) => section.key === 'attendance')?.bullets.join(' ').includes('BOSS=10'));
   });
 
   it('builds morning briefing inside the briefing domain service', async () => {

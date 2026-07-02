@@ -9,6 +9,7 @@ import { DiscordOperationsService } from './services/discord-operations.service'
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
+import { OperationsRulesService } from './services/operations-rules.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
@@ -23,6 +24,7 @@ import { WeeklySummaryService } from './services/weekly-summary.service';
     IntegrityService,
     MeetingService,
     OperationalBriefingService,
+    OperationsRulesService,
     StaffInsightsService,
     StaffSummaryService,
     WeeklySummaryService,

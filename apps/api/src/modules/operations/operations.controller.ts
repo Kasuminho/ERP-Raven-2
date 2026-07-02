@@ -8,6 +8,7 @@ import { DiscordOperationsService } from './services/discord-operations.service'
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
+import { OperationsRulesService } from './services/operations-rules.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
@@ -54,6 +55,7 @@ export class OperationsController {
     private readonly integrityService: IntegrityService,
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
+    private readonly operationsRules: OperationsRulesService,
     private readonly staffInsights: StaffInsightsService,
     private readonly staffSummary: StaffSummaryService,
     private readonly weeklySummary: WeeklySummaryService,
@@ -76,12 +78,12 @@ export class OperationsController {
 
   @Get('rules')
   async rules(): Promise<GuildRulesSummary> {
-    return this.service.getGuildRules();
+    return this.operationsRules.getGuildRules();
   }
 
   @Get('maintenance')
   async maintenance(): Promise<MaintenanceModeSummary> {
-    return this.service.getMaintenanceMode();
+    return this.operationsRules.getMaintenanceMode();
   }
 
   @Get('staff')

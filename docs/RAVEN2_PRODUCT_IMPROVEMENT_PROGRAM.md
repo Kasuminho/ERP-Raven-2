@@ -669,7 +669,9 @@ do diagnostico Staff. A fase 12 moveu a timeline operacional de leilao para
 loot e comparacao de players para `StaffInsightsService`, reduzindo mais duas
 rotas que dependiam do legado. A fase 14 moveu previews de webhooks, fila de
 entregas e retry manual para `DiscordOperationsService`, deixando a comunicacao
-operacional Staff fora do legado.
+operacional Staff fora do legado. A fase 15 moveu regras da guilda e leitura do
+modo manutencao para `OperationsRulesService`, reduzindo o legado tambem nas
+rotas de configuracao operacional compartilhadas.
 
 Entrega:
 
@@ -681,7 +683,8 @@ Entrega:
   - `WeeklySummaryService`;
   - `OperationalBriefingService`;
   - `StaffInsightsService`;
-  - `DiscordOperationsService`.
+  - `DiscordOperationsService`;
+  - `OperationsRulesService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 
