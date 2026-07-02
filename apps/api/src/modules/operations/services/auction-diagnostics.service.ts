@@ -448,8 +448,68 @@ export class AuctionDiagnosticsService {
     };
   }
 
-  getAuctionDossier(auctionId: string): Promise<AuctionDossier> {
-    return this.operations.getAuctionDossier(auctionId);
+  async getAuctionDossier(auctionId: string): Promise<AuctionDossier> {
+    const [diagnostics, timeline, preview] = await Promise.all([
+      this.getAuctionDiagnostics(auctionId),
+      this.getAuctionTimeline(auctionId),
+      this.getAuctionFinalizationPreview(auctionId),
+    ]);
+    const lines = [
+      `# Dossie Staff - ${diagnostics.auction.itemName}`,
+      '',
+      `Gerado em: ${preview.generatedAt.toISOString()}`,
+      `Leilao: ${diagnostics.auction.id}`,
+      `Status: ${diagnostics.auction.status}`,
+      `Modo: ${diagnostics.auction.auctionMode}`,
+      `Tier/tipo: ${diagnostics.auction.itemTier} / ${diagnostics.auction.itemType}`,
+      `Encerramento: ${diagnostics.auction.endsAt.toISOString()}`,
+      `Camada minima: ${diagnostics.auction.minimumLayer ?? '-'}`,
+      '',
+      '## Estado',
+      `${diagnostics.stateReason.title}: ${diagnostics.stateReason.description}`,
+      '',
+      '## Previa de finalizacao',
+      `Acao: ${preview.actionLabel}`,
+      `Descricao: ${preview.description}`,
+      preview.candidate
+        ? `Candidato: ${preview.candidate.nickname} (${preview.candidate.bidAmount} DKP, layer ${preview.candidate.dimensionalLayer}, presenca ${preview.candidate.attendancePercentage.toFixed(2)}%)`
+        : 'Candidato: -',
+      preview.nextState
+        ? `Proximo estado previsto: ${preview.nextState.status}, camada ${preview.nextState.minimumLayer ?? '-'}, fim ${preview.nextState.endsAt?.toISOString() ?? '-'}, reabre ${preview.nextState.reopensAt?.toISOString() ?? '-'}`
+        : 'Proximo estado previsto: -',
+      '',
+      '## Contadores',
+      `Bids: ${diagnostics.counts.bids} (${diagnostics.counts.validBids} validos, ${diagnostics.counts.invalidBids} invalidos)`,
+      `Locks ativos: ${diagnostics.counts.activeLocks}`,
+      `Bids validos com lock: ${diagnostics.counts.validBidsWithActiveLocks}`,
+      `Bids na camada minima: ${diagnostics.counts.validBidsAtMinimumLayer}`,
+      `Cancelamentos: ${diagnostics.counts.cancellationRequests}`,
+      `Votos review: ${diagnostics.counts.approvalVotes} aprovacao / ${diagnostics.counts.rejectionVotes} rejeicao`,
+      `Votos invalidacao: ${diagnostics.counts.invalidationVotes}`,
+      `Audit logs relacionados: ${diagnostics.counts.auditLogs}`,
+      '',
+      '## Riscos e problemas',
+      ...this.markdownList(preview.risks.map((risk) => `[${risk.severity}] ${risk.title}: ${risk.description}`)),
+      '',
+      '## Bids',
+      ...this.markdownList(diagnostics.bids.map((bid) => `${bid.nickname}: ${bid.bidAmount} DKP, layer ${bid.dimensionalLayer}, presenca ${bid.attendancePercentage.toFixed(2)}%, valido=${bid.isValid ? 'sim' : 'nao'}, lock=${bid.hasActiveLock ? `${bid.activeLockAmount ?? 0} DKP` : 'nao'}`)),
+      '',
+      '## Locks ativos que a previa liberaria/consumiria',
+      ...this.markdownList([
+        ...preview.locksToConsume.map((lock) => `Consumir: ${lock.nickname} - ${lock.amount} DKP`),
+        ...preview.locksToRelease.map((lock) => `Liberar: ${lock.nickname} - ${lock.amount} DKP`),
+      ]),
+      '',
+      '## Timeline resumida',
+      ...this.markdownList(timeline.slice(-20).map((event) => `${event.occurredAt.toISOString()} - ${event.type} - ${event.title}: ${event.description}`)),
+    ];
+
+    return {
+      generatedAt: preview.generatedAt,
+      auctionId,
+      title: `Dossie Staff - ${diagnostics.auction.itemName}`,
+      markdown: lines.join('\n'),
+    };
   }
 
   getUniversalDossier(type: UniversalDossierType, id: string): Promise<UniversalDossier> {
@@ -843,6 +903,11 @@ export class AuctionDiagnosticsService {
 
   private addDays(date: Date, days: number): Date {
     return new Date(date.getTime() + days * DAYS);
+  }
+
+  private markdownList(items: string[]): string[] {
+    if (items.length === 0) return ['- Nenhum registro.'];
+    return items.map((item) => `- ${item}`);
   }
 
   private getAuctionStateReason(

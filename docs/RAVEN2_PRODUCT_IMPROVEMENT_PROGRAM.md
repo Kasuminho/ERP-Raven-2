@@ -95,7 +95,7 @@ Objetivo: explicar por que o leilao esta em determinado status.
 Estado em 2026-07-02: o raio-x Staff completo do diagnostico, incluindo
 `stateReason`, contadores, issues, bids, locks, votos e audit logs, e calculado
 em `AuctionDiagnosticsService`; a previa de finalizacao tambem ja saiu do legado,
-e dossies ainda estao na fila de extracao.
+e o dossie Staff especifico de leilao tambem ja e montado no dominio.
 
 Entrega:
 
@@ -150,7 +150,8 @@ Entrega:
 
 Objetivo: resolver treta de loot sem abrir 8 abas.
 
-Estado em 2026-06-29: implementado no diagnostico Staff de leilao.
+Estado em 2026-07-02: implementado no diagnostico Staff de leilao e montado em
+`AuctionDiagnosticsService`, combinando diagnostico, previa, timeline e Markdown.
 
 Entrega:
 

@@ -397,7 +397,13 @@ describe('Operations domain services', () => {
     assert.equal(preview.locksToRelease.length, 0);
     assert.equal(preview.nextState?.status, 'FINISHED');
     assert.equal(operations.getAuctionFinalizationPreview.mock.calls.length, 0);
-    assert.equal((await service.getAuctionDossier('auction-1')).auctionId, 'auction-1');
+    const dossier = await service.getAuctionDossier('auction-1');
+    assert.equal(dossier.auctionId, 'auction-1');
+    assert.equal(dossier.title, 'Dossie Staff - Cajado');
+    assert.match(dossier.markdown, /## Previa de finalizacao/);
+    assert.match(dossier.markdown, /Candidato: Aiko/);
+    assert.match(dossier.markdown, /AUCTION_WIN/);
+    assert.equal(operations.getAuctionDossier.mock.calls.length, 0);
     assert.deepEqual(await service.getUniversalDossier('auction', 'auction-1'), { type: 'auction', id: 'auction-1' });
     const timeline = await service.getAuctionTimeline('auction-1');
     assert.equal(timeline[0].type, 'AUCTION_CREATED');
