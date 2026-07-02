@@ -727,7 +727,9 @@ Objetivo: permitir `whitelist`/`forbidNonWhitelisted` por modulo.
 Estado em 2026-07-02: fase 1 implementada no modulo `staff-review`. DTOs de
 review de leilao/cancelamento de bid possuem decorators `class-validator`, e o
 controller usa `ValidationPipe` local com `whitelist` e
-`forbidNonWhitelisted`, sem alterar o pipe global legado.
+`forbidNonWhitelisted`, sem alterar o pipe global legado. A fase 2 implementou
+o mesmo padrao no modulo `codex`, validando criacao de pedido, comprovante de
+envio e motivo de cancelamento antes de processar o fluxo.
 
 Entrega:
 

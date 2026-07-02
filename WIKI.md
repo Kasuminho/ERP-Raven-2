@@ -99,6 +99,7 @@ Automacao ativa:
 - O modo manutencao usa a regra de negocio `maintenanceMode` com `{ enabled, message }`. Quando ativo, um guard global bloqueia mutacoes sensiveis em leiloes, finalizacao/automacao, entregas/drops, ajustes DKP, progresso, requests, anuncios, interesses, eventos, Codex, Daoshi, uploads e webhooks operacionais; leituras e health continuam liberados. `PATCH /business-rules/maintenanceMode` permanece liberado para Staff desativar o modo, e `GET /operations/maintenance` alimenta o banner da Web.
 - Nao habilitar `whitelist`/`forbidNonWhitelisted` globalmente enquanto os DTOs legados forem classes sem decorators; isso remove ou rejeita campos validos. A migracao deve ser feita por modulo, com teste do contrato antes de endurecer o pipe.
 - `staff-review` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam UUIDs, notas e motivos antes de aprovar/rejeitar vencedor, override, remover bid, reabrir/cancelar leilao ou revisar cancelamento de bid.
+- `codex` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print do pedido, print de comprovante opcional, nota opcional e motivo de cancelamento antes do fluxo player/Staff.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
@@ -301,6 +302,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Modulo `codex` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Contratos Staff de diagnostico de leilao passaram para `packages/shared/src/types/auctions.ts`, com aliases locais na API e Web para data de servidor/cliente. | contratos/shared |
 | 2026-07-02 | Modulo `staff-review` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Contratos compartilhados de operations/player tasks foram criados em `packages/shared`, e API/Web passaram a derivar `OperationTask` e `PlayerActionPlan` deles. | contratos/shared |
