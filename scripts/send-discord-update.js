@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo carimbou o changelog. Se algo chiar agora, entra na fila com senha e cara de bug.*',
-    '*Aristolfo publicou a ata. O deploy foi; o caos que abra ticket sem gritar no corredor.*',
-    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, vai ter log pra depor.*',
-    '*Aristolfo fechou a nota. Quem discordar dos fatos que leve print e stamina.*',
-    '*Aristolfo mandou o changelog. A planilha viu, fingiu costume e seguiu andando.*',
+    '*Aristolfo carimbou o changelog. Se algo chiar, pega senha e para de fazer cosplay de incidente.*',
+    '*Aristolfo publicou a ata. O deploy foi; o caos que abra ticket sem usar caps lock como argumento.*',
+    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o log ja esta de depoente.*',
+    '*Aristolfo fechou a nota. Quem discordar dos fatos que traga print, contexto e cafe frio.*',
+    '*Aristolfo mandou o changelog. A planilha piscou duas vezes e aceitou o destino.*',
   ],
   EN: [
-    '*Aristolfo stamped the changelog. If anything squeaks now, it can queue with a number and a bug face.*',
-    '*Aristolfo published the minutes. Deploy went out; chaos can open a ticket without yelling in the hallway.*',
-    '*Aristolfo sent the note with a receipt. If reality improvises, the log can testify.*',
-    '*Aristolfo closed the note. Whoever disputes the facts should bring screenshots and stamina.*',
-    '*Aristolfo shipped the changelog. The spreadsheet saw it, pretended this was normal, and kept walking.*',
+    '*Aristolfo stamped the changelog. If anything squeaks, take a number and stop cosplaying an incident.*',
+    '*Aristolfo published the minutes. Deploy went out; chaos can open a ticket without using caps lock as evidence.*',
+    '*Aristolfo sent the note with a receipt. If reality improvises, the log is already on the stand.*',
+    '*Aristolfo closed the note. Whoever disputes the facts should bring screenshots, context, and cold coffee.*',
+    '*Aristolfo shipped the changelog. The spreadsheet blinked twice and accepted its fate.*',
   ],
 };
 

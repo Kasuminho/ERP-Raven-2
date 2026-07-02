@@ -1464,16 +1464,16 @@ export class OperationsService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo fechou a semana no extrato. Se a planilha reclamar, e lag de orgulho.',
-          'Resumo semanal carimbado. Numero bateu antes do chat tentar speedrun de teoria.',
-          'Aristolfo nao passou pano; passou pente fino. O saldo saiu sem maquiagem de fanfic.',
-          'Semana quitada no registro. Duvida nova agora precisa entrar na fila como todo mundo.',
+          'Aristolfo fechou a semana no extrato. Se a planilha chiar, e ego com ping alto.',
+          'Resumo semanal carimbado. Numero bateu antes do chat abrir campeonato de teoria.',
+          'Aristolfo nao passou pano; passou scanner. O saldo saiu sem filtro de fanfic.',
+          'Semana quitada no registro. Duvida nova pega senha e espera sem furar fila.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo closed the week on the ledger. If the spreadsheet complains, that is pride lag.',
-          'Weekly summary stamped. The numbers matched before chat could theory-speedrun.',
-          'Aristolfo did not gloss over it; he fine-combed it. The balance left without fanfic makeup.',
-          'Week settled in the record. Any new doubt must queue like everyone else.',
+          'Aristolfo closed the week on the ledger. If the spreadsheet squeaks, that is ego with high ping.',
+          'Weekly summary stamped. The numbers matched before chat opened the theory tournament.',
+          'Aristolfo did not gloss over it; he scanned it. The balance left without fanfic filters.',
+          'Week settled in the record. Any new doubt gets a number and waits its turn.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

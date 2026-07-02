@@ -27,16 +27,16 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setColor(0x2f80ed)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Leilao aberto.** Confere o DKP antes do clique; calculadora em panico so farma meme ruim.',
-        '**Drop caiu na vitrine.** Bid com saldo certo, porque chute economico aqui vira cosplay de loss.',
-        '**Janela de lance online.** Mira direito; corrigir depois do lock e jogar ranked com mouse invertido.',
-        '**Item apareceu.** Entra com numero pensado, nao com fe de lan house em dia de chuva.',
+        '**Leilao na pista.** Confere o DKP; lance no impulso e boleto emocional com skin lendaria.',
+        '**Drop na vitrine.** Bid pensado, porque economista de teclado aqui vira clipe de derrota.',
+        '**Janela de lance aberta.** Mira limpo; depois do lock o arrependimento joga sem pause.',
+        '**Item spawnou.** Entra com conta feita, nao com fe de Wi-Fi de rodoviaria.',
       ],
       en: [
-        '**Auction is open.** Check DKP before clicking; panic math only farms bad memes.',
-        '**Drop hit the showcase.** Bid with real balance, because economy guesses turn into loss cosplay here.',
-        '**The bid window is online.** Aim properly; fixing it after the lock is ranked with inverted mouse.',
-        '**The item appeared.** Enter with a thought-out number, not internet-cafe faith on a storm day.',
+        '**Auction is live.** Check DKP; impulse bidding comes with legendary regret skin.',
+        '**Drop is on display.** Bid with math, because keyboard economics becomes a defeat clip here.',
+        '**Bid window is open.** Aim clean; after the lock, regret plays with no pause.',
+        '**Item spawned.** Bring real numbers, not bus-station Wi-Fi faith.',
       ],
     }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
@@ -57,16 +57,16 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
     .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `**${playerName} levou o drop.** O DKP saiu de casa e o "quase ganhei" foi mutado pelo log.`,
-        `**${playerName} fechou a call.** Item definido; replay de arrependimento agora e conteudo extra.`,
-        `**${playerName} ganhou no martelo.** O lock virou cobranca real e o chat perdeu poder de rewrite.`,
-        `**${playerName} acertou o bid final.** Item com dono, drama sem vaga e planilha sem fanfic.`,
+        `**${playerName} levou o drop.** O DKP fez check-out e o "quase" tomou mute administrativo.`,
+        `**${playerName} fechou a conta.** Item definido; replay de lamento agora e conteudo de bastidor.`,
+        `**${playerName} ganhou no martelo.** Lock virou cobranca e o chat perdeu a caneta da lore.`,
+        `**${playerName} acertou o bid final.** Item tem dono; novela paralela ficou sem horario nobre.`,
       ],
       en: [
-        `**${playerName} took the drop.** The DKP left home and "almost won" got muted by the log.`,
-        `**${playerName} closed the call.** Item decided; regret replay is bonus content now.`,
-        `**${playerName} won at the hammer.** The lock became a real charge and chat lost rewrite power.`,
-        `**${playerName} landed the final bid.** Item has an owner, drama has no slot, spreadsheet has no fanfic.`,
+        `**${playerName} took the drop.** DKP checked out and "almost" got administratively muted.`,
+        `**${playerName} closed the tab.** Item decided; regret replay is behind-the-scenes content now.`,
+        `**${playerName} won at the hammer.** Lock became a charge and chat lost the lore pen.`,
+        `**${playerName} landed the final bid.** Item has an owner; side drama missed prime time.`,
       ],
     }, itemName, playerName))
     .setColor(0x27ae60)
@@ -84,16 +84,16 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `Entrega confirmada para **${playerName}**. Print guardado antes que o chat abra pericia de boteco.`,
-        `**${playerName}** recebeu e entrou no log. O "tem comprovante?" tomou disconnect.`,
-        `Drop entregue para **${playerName}**. Prova anexada antes do roteiro paralelo ganhar like.`,
-        `Tudo entregue a **${playerName}**. Registro feito e o debate freestyle perdeu o palco.`,
+        `Entrega confirmada para **${playerName}**. Print salvo antes que o chat vire CSI de churrasco.`,
+        `**${playerName}** recebeu e entrou no log. O "cade prova?" caiu da call sozinho.`,
+        `Drop entregue para **${playerName}**. Prova anexada antes da teoria de zap farmar XP.`,
+        `Tudo entregue a **${playerName}**. Registro feito e a resenha freestyle perdeu prioridade.`,
       ],
       en: [
-        `Delivery confirmed for **${playerName}**. Screenshot stored before chat opened bar-counter forensics.`,
-        `**${playerName}** received it and it entered the log. The "got proof?" arc got disconnected.`,
-        `Drop delivered to **${playerName}**. Proof attached before the parallel script farmed likes.`,
-        `Everything reached **${playerName}**. Record made and the freestyle debate lost the stage.`,
+        `Delivery confirmed for **${playerName}**. Screenshot saved before chat became barbecue CSI.`,
+        `**${playerName}** received it and it entered the log. The "where proof?" arc dropped from call.`,
+        `Drop delivered to **${playerName}**. Proof attached before chat theory farmed XP.`,
+        `Everything reached **${playerName}**. Record made and freestyle debate lost priority.`,
       ],
     }, itemName, playerName))
     .setColor(0xf2c94c)
