@@ -388,7 +388,15 @@ describe('Operations domain services', () => {
     assert.equal(diagnostics.bids[0].hasActiveLock, true);
     assert.equal(diagnostics.locks[0].amount, 150);
     assert.equal(diagnostics.auditLogs[0].actorName, 'auditor');
-    assert.equal((await service.getAuctionFinalizationPreview('auction-1')).auctionId, 'auction-1');
+    const preview = await service.getAuctionFinalizationPreview('auction-1');
+    assert.equal(preview.auctionId, 'auction-1');
+    assert.equal(preview.action, 'FINISH_STANDARD');
+    assert.equal(preview.candidate?.nickname, 'Aiko');
+    assert.equal(preview.candidate?.bidAmount, 150);
+    assert.equal(preview.locksToConsume[0].id, 'lock-1');
+    assert.equal(preview.locksToRelease.length, 0);
+    assert.equal(preview.nextState?.status, 'FINISHED');
+    assert.equal(operations.getAuctionFinalizationPreview.mock.calls.length, 0);
     assert.equal((await service.getAuctionDossier('auction-1')).auctionId, 'auction-1');
     assert.deepEqual(await service.getUniversalDossier('auction', 'auction-1'), { type: 'auction', id: 'auction-1' });
     const timeline = await service.getAuctionTimeline('auction-1');

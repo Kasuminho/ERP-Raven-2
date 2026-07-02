@@ -12,6 +12,10 @@ import {
   UniversalDossierType,
 } from '../operations.types';
 
+const HOURS = 60 * 60 * 1000;
+const DAYS = 24 * HOURS;
+const AUCTION_RELIST_DELAY_DAYS = 7;
+
 @Injectable()
 export class AuctionDiagnosticsService {
   constructor(
@@ -332,8 +336,116 @@ export class AuctionDiagnosticsService {
     };
   }
 
-  getAuctionFinalizationPreview(auctionId: string): Promise<AuctionFinalizationPreview> {
-    return this.operations.getAuctionFinalizationPreview(auctionId);
+  async getAuctionFinalizationPreview(auctionId: string): Promise<AuctionFinalizationPreview> {
+    const diagnostics = await this.getAuctionDiagnostics(auctionId);
+    const auction = diagnostics.auction;
+    const now = new Date();
+    const activeLocks = diagnostics.locks.filter((lock) => !lock.released);
+    const activeLockByPlayer = new Map(activeLocks.map((lock) => [lock.playerId, lock]));
+    const minimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : null);
+    const eligibleBids = diagnostics.bids
+      .filter((bid) => bid.isValid)
+      .filter((bid) => activeLockByPlayer.has(bid.playerId))
+      .filter((bid) => !minimumLayer || auction.itemTier !== ItemTier.T4 || bid.dimensionalLayer >= minimumLayer)
+      .sort((left, right) => (
+        right.bidAmount - left.bidAmount
+        || right.dimensionalLayer - left.dimensionalLayer
+        || right.attendancePercentage - left.attendancePercentage
+        || new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+      ));
+    const candidate = eligibleBids[0] ?? null;
+    const winnerLock = candidate ? activeLockByPlayer.get(candidate.playerId) : undefined;
+    const ignoredBids = diagnostics.bids.flatMap((bid) => {
+      if (!bid.isValid) {
+        return [{ id: bid.id, playerId: bid.playerId, nickname: bid.nickname, bidAmount: bid.bidAmount, reason: 'Bid ja invalidado.' }];
+      }
+      if (!activeLockByPlayer.has(bid.playerId)) {
+        return [{ id: bid.id, playerId: bid.playerId, nickname: bid.nickname, bidAmount: bid.bidAmount, reason: 'Bid valido sem lock ativo.' }];
+      }
+      if (minimumLayer && auction.itemTier === ItemTier.T4 && bid.dimensionalLayer < minimumLayer) {
+        return [{
+          id: bid.id,
+          playerId: bid.playerId,
+          nickname: bid.nickname,
+          bidAmount: bid.bidAmount,
+          reason: `Player abaixo da camada minima atual (${minimumLayer}).`,
+        }];
+      }
+      return [];
+    });
+    const topBidAmount = eligibleBids[0]?.bidAmount;
+    const topBidTies = topBidAmount ? eligibleBids.filter((bid) => bid.bidAmount === topBidAmount) : [];
+    const risks: AuctionFinalizationPreview['risks'] = [...diagnostics.issues];
+
+    if (topBidTies.length > 1) {
+      risks.push({
+        severity: 'medium',
+        title: 'Empate no maior bid apto',
+        description: `${topBidTies.length} bids aptos estao no maior valor. A review da Staff deve conferir prioridade antes da entrega.`,
+        metadata: { bidIds: topBidTies.map((bid) => bid.id) },
+      });
+    }
+
+    if ((diagnostics.outcome === 'FINISH_STANDARD' || diagnostics.outcome === 'PENDING_REVIEW') && !candidate) {
+      risks.push({
+        severity: 'high',
+        title: 'Sem candidato apto para a acao prevista',
+        description: 'O diagnostico encontrou acao de fechamento, mas nenhum bid com lock ativo e camada compativel foi selecionado.',
+      });
+    }
+
+    const actionLabels: Record<AuctionFinalizationPreview['action'], string> = {
+      NO_ACTION: 'Sem acao automatica agora',
+      FINISH_STANDARD: 'Fechamento padrao previsto',
+      PENDING_REVIEW: 'Vai para review da Staff',
+      EXPAND_LAYER: 'Expande camada T4',
+      RELIST: 'Relista leilao',
+    };
+    const descriptions: Record<AuctionFinalizationPreview['action'], string> = {
+      NO_ACTION: auction.status === AuctionStatus.OPEN && auction.endsAt > now
+        ? 'O leilao ainda nao venceu; a automacao nao deve processar agora.'
+        : 'O estado atual nao pede uma acao automatica de finalizacao.',
+      FINISH_STANDARD: 'Existe bid apto para fechamento padrao; confira candidato e locks antes da decisao final.',
+      PENDING_REVIEW: 'A automacao colocaria o leilao em review para a Staff decidir o vencedor e a entrega.',
+      EXPAND_LAYER: 'Leilao T4 vencido sem bid apto na camada minima atual; a regra desce uma camada e prorroga o encerramento.',
+      RELIST: 'Leilao vencido sem bid valido restante; locks ativos seriam liberados e o ciclo aguardaria reabertura.',
+    };
+
+    return {
+      generatedAt: now,
+      auctionId,
+      action: diagnostics.outcome,
+      actionLabel: actionLabels[diagnostics.outcome],
+      description: descriptions[diagnostics.outcome],
+      candidate: candidate
+        ? {
+            bidId: candidate.id,
+            playerId: candidate.playerId,
+            nickname: candidate.nickname,
+            bidAmount: candidate.bidAmount,
+            dimensionalLayer: candidate.dimensionalLayer,
+            attendancePercentage: candidate.attendancePercentage,
+          }
+        : null,
+      locksToConsume: diagnostics.outcome === 'FINISH_STANDARD' && winnerLock
+        ? [{
+            id: winnerLock.id,
+            playerId: winnerLock.playerId,
+            nickname: winnerLock.nickname,
+            amount: winnerLock.amount,
+          }]
+        : [],
+      locksToRelease: diagnostics.outcome === 'RELIST'
+        ? activeLocks.map((lock) => ({ id: lock.id, playerId: lock.playerId, nickname: lock.nickname, amount: lock.amount }))
+        : diagnostics.outcome === 'FINISH_STANDARD'
+          ? activeLocks
+              .filter((lock) => lock.playerId !== candidate?.playerId)
+              .map((lock) => ({ id: lock.id, playerId: lock.playerId, nickname: lock.nickname, amount: lock.amount }))
+          : [],
+      ignoredBids,
+      nextState: this.getAuctionPreviewNextState(diagnostics),
+      risks,
+    };
   }
 
   getAuctionDossier(auctionId: string): Promise<AuctionDossier> {
@@ -675,6 +787,62 @@ export class AuctionDiagnosticsService {
   private userLabel(user?: { discordNickname?: string | null; discordUsername: string } | null): string | null {
     if (!user) return null;
     return user.discordNickname ?? user.discordUsername;
+  }
+
+  private getAuctionPreviewNextState(diagnostics: AuctionDiagnosticSummary): AuctionFinalizationPreview['nextState'] {
+    const { auction, outcome } = diagnostics;
+    const minimumLayer = auction.minimumLayer ?? (auction.itemTier === ItemTier.T4 ? 4 : null);
+
+    if (outcome === 'EXPAND_LAYER' && minimumLayer && minimumLayer > 1) {
+      return {
+        status: AuctionStatus.OPEN,
+        minimumLayer: minimumLayer - 1,
+        endsAt: this.addDays(auction.endsAt, 1),
+        reopensAt: null,
+      };
+    }
+
+    if (outcome === 'RELIST') {
+      if (auction.itemTier === ItemTier.T4) {
+        return {
+          status: AuctionStatus.RELISTED,
+          minimumLayer: 4,
+          endsAt: auction.endsAt,
+          reopensAt: this.addDays(auction.createdAt, AUCTION_RELIST_DELAY_DAYS),
+        };
+      }
+
+      return {
+        status: AuctionStatus.RELISTED,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: this.addDays(new Date(), AUCTION_RELIST_DELAY_DAYS),
+      };
+    }
+
+    if (outcome === 'PENDING_REVIEW') {
+      return {
+        status: AuctionStatus.PENDING_REVIEW,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: null,
+      };
+    }
+
+    if (outcome === 'FINISH_STANDARD') {
+      return {
+        status: AuctionStatus.FINISHED,
+        minimumLayer,
+        endsAt: auction.endsAt,
+        reopensAt: null,
+      };
+    }
+
+    return undefined;
+  }
+
+  private addDays(date: Date, days: number): Date {
+    return new Date(date.getTime() + days * DAYS);
   }
 
   private getAuctionStateReason(

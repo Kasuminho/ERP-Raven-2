@@ -58,7 +58,8 @@ legado.
 `AuctionDiagnosticsService` ja monta diretamente a lista de selecao de leiloes
 do diagnostico Staff, incluindo item, vencedor quando houver e data de fim; os
 detalhes pesados de timeline operacional e o raio-x completo tambem ja sairam
-para esse dominio. Preview de finalizacao e dossies ainda delegam ao legado.
+para esse dominio. A previa read-only de finalizacao tambem ja e calculada no
+dominio de diagnostico. Dossies ainda delegam ao legado.
 
 ## Regras de comunicacao
 
@@ -292,6 +293,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Previa read-only de finalizacao do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`, preservando candidato, locks, bids ignorados, riscos e proximo estado. | arquitetura/API |
 | 2026-07-02 | Raio-x completo do diagnostico Staff de leilao saiu da delegacao e passou a ser calculado em `AuctionDiagnosticsService`, preservando contadores, issues, estado visual, bids, locks, votos e audit logs. | arquitetura/API |
 | 2026-07-02 | Timeline operacional do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`. | arquitetura/API |
 | 2026-07-02 | Lista de selecao do diagnostico Staff de leilao saiu da delegacao e passou a ser calculada em `AuctionDiagnosticsService`. | arquitetura/API |
