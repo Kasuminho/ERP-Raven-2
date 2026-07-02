@@ -48,9 +48,9 @@ monta a pauta Staff com dia, reviews, interesses e eventos abertos sem depender
 do legado. `OperationalBriefingService` ja monta o resumo matinal Staff com
 pendencias, leiloes vencidos/proximos, saude e integridade sem depender do
 legado. `StaffSummaryService` ja calcula o resumo do dia Staff (`staff/day`)
-com contadores diarios e tarefas urgentes; o resumo Staff completo, health e
-deploy ainda delegam ao servico legado e devem ser migrados em fases para
-reduzir risco.
+e o resumo Staff completo com filas de review, Codex, requests, interesses,
+entregas, progresso, eventos e anuncios; health e deploy ainda delegam ao
+servico legado e devem ser migrados em fases para reduzir risco.
 
 ## Regras de comunicacao
 
@@ -284,6 +284,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Resumo Staff principal de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando filas, thresholds e contadores. | arquitetura/API |
 | 2026-07-02 | Resumo do dia Staff de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando contadores diarios e tarefas urgentes. | arquitetura/API |
 | 2026-07-02 | Resumo matinal Staff de `operations` saiu da delegacao e passou a ser montado em `OperationalBriefingService`, preservando secoes, contadores e Markdown. | arquitetura/API |
 | 2026-07-02 | Modo reuniao Staff de `operations` saiu da delegacao e passou a ser montado em `MeetingService`, preservando a pauta de dia, reviews, interesses e eventos. | arquitetura/API |

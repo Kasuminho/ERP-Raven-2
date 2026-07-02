@@ -8,34 +8,57 @@ import { WeeklySummaryService } from '../src/modules/operations/services/weekly-
 
 describe('Operations domain services', () => {
   it('keeps staff summary endpoints delegated through the domain service', async () => {
+    const now = new Date(Date.now() - 3_600_000);
     const operations = {
-      getStaffSummary: mock.fn(async () => ({
-        tasks: [
-          { id: 'high-1', type: 'A', title: 'Alta', description: 'Alta', href: '/a', priority: 'high' },
-          { id: 'low-1', type: 'B', title: 'Baixa', description: 'Baixa', href: '/b', priority: 'low' },
-        ],
-        counts: { reviews: 2, interests: 3, deliveries: 4 },
-      })),
       getStaffHealth: mock.fn(async () => ({ checks: [] })),
       getOperationalHealth: mock.fn(async () => ({ checks: [], discordFailures24h: 0 })),
       getDeploymentPanel: mock.fn(async () => ({ currentApiVersion: 'test' })),
     };
     const prisma = {
-      announcement: { count: mock.fn(async () => 1) },
-      event: { count: mock.fn(async () => 2) },
-      playerProgress: { count: mock.fn(async () => 5) },
+      auction: { findMany: mock.fn(async () => [{ id: 'auction-1', itemName: 'Lamina', updatedAt: now }]) },
+      codexRequest: { findMany: mock.fn(async () => []) },
+      itemRequest: { findMany: mock.fn(async () => []) },
+      itemInterestPost: { findMany: mock.fn(async () => []) },
+      dKPTransaction: { findMany: mock.fn(async () => []) },
+      dropHistory: { findMany: mock.fn(async () => []) },
+      playerProgress: {
+        findMany: mock.fn(async () => []),
+        count: mock.fn(async () => 5),
+      },
+      announcement: {
+        findMany: mock.fn(async () => []),
+        count: mock.fn(async () => 1),
+      },
+      event: {
+        findMany: mock.fn(async () => []),
+        count: mock.fn(async () => 2),
+      },
     };
-    const service = new StaffSummaryService(operations as never, prisma as never);
+    const businessRules = {
+      getStaffPendingThresholds: mock.fn(async () => ({
+        auctionReview: { mediumAfterMs: 1, highAfterMs: 2 },
+        codexRetry: { mediumAfterMs: 1, highAfterMs: 2 },
+        codexPending: { mediumAfterMs: 1, highAfterMs: 2 },
+        itemRequest: { mediumAfterMs: 1, highAfterMs: 2 },
+        interestDelivery: { mediumAfterMs: 1, highAfterMs: 2 },
+        auctionDropDelivery: { mediumAfterMs: 1, highAfterMs: 2 },
+        progressReview: { mediumAfterMs: 1, highAfterMs: 2 },
+        eventFinalization: { mediumAfterMs: 1, highAfterMs: 2 },
+      })),
+    };
+    const service = new StaffSummaryService(operations as never, prisma as never, businessRules as never);
 
-    assert.equal((await service.getStaffSummary()).counts.reviews, 2);
+    const staff = await service.getStaffSummary();
+    assert.equal(staff.counts.reviews, 1);
+    assert.equal(staff.tasks[0].type, 'STAFF_REVIEW');
     assert.deepEqual(await service.getStaffHealth(), { checks: [] });
     assert.equal((await service.getOperationalHealth()).discordFailures24h, 0);
     assert.equal((await service.getDeploymentPanel()).currentApiVersion, 'test');
     const dayView = await service.getStaffDayView();
     assert.equal(dayView.todaysAnnouncements, 1);
     assert.equal(dayView.openEvents, 2);
-    assert.equal(dayView.pendingStaffVotes, 5);
-    assert.equal(dayView.pendingDeliveries, 4);
+    assert.equal(dayView.pendingStaffVotes, 1);
+    assert.equal(dayView.pendingDeliveries, 0);
     assert.equal(dayView.pendingProgressReviews, 5);
     assert.equal(dayView.urgentTasks.length, 1);
   });
