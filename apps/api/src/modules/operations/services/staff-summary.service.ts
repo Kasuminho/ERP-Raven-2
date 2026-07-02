@@ -13,7 +13,6 @@ import { PrismaService } from '@database/prisma.service';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
-import { OperationsService } from '../operations.service';
 import {
   DeploymentPanelSummary,
   OperationPriority,
@@ -31,7 +30,6 @@ const DEPLOYMENT_ACTIONS_URL = 'https://github.com/Kasuminho/ERP-Raven-2/actions
 @Injectable()
 export class StaffSummaryService {
   constructor(
-    private readonly operations: OperationsService,
     private readonly prisma: PrismaService,
     private readonly businessRules: BusinessRulesService,
     private readonly config: ConfigService,

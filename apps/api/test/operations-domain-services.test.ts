@@ -9,7 +9,6 @@ import { WeeklySummaryService } from '../src/modules/operations/services/weekly-
 describe('Operations domain services', () => {
   it('builds staff summary and health inside the staff summary domain service', async () => {
     const now = new Date(Date.now() - 3_600_000);
-    const operations = {};
     const prisma = {
       $queryRaw: mock.fn(async () => [{ ok: 1 }]),
       auction: { findMany: mock.fn(async () => [{ id: 'auction-1', itemName: 'Lamina', updatedAt: now }]) },
@@ -72,7 +71,7 @@ describe('Operations domain services', () => {
         ? { status: 'ok', checkedAt: '2026-07-02T00:00:00.000Z', version: 'abc1234' }
         : {}),
     })) as never;
-    const service = new StaffSummaryService(operations as never, prisma as never, businessRules as never, config as never);
+    const service = new StaffSummaryService(prisma as never, businessRules as never, config as never);
 
     const staff = await service.getStaffSummary();
     assert.equal(staff.counts.reviews, 1);

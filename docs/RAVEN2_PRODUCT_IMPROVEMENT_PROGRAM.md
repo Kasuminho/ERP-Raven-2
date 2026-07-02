@@ -629,7 +629,8 @@ resumo semanal/mensal e a publicacao do resumo operacional para
 `StaffSummaryService`. A fase 7 moveu o resumo Staff principal, suas filas,
 thresholds e contadores para `StaffSummaryService`. A fase 8 moveu health Staff
 e health operacional para `StaffSummaryService`. A fase 9 moveu o painel Staff
-de deploy para `StaffSummaryService`.
+de deploy para `StaffSummaryService`. A fase 10 removeu a injecao do
+`OperationsService` legado em `StaffSummaryService`.
 
 Entrega:
 
