@@ -151,7 +151,8 @@ Entrega:
 Objetivo: resolver treta de loot sem abrir 8 abas.
 
 Estado em 2026-07-02: implementado no diagnostico Staff de leilao e montado em
-`AuctionDiagnosticsService`, combinando diagnostico, previa, timeline e Markdown.
+`AuctionDiagnosticsService`, combinando diagnostico, previa, timeline e Markdown;
+o dossie universal Staff do tipo `auction` tambem reaproveita esse dominio.
 
 Entrega:
 

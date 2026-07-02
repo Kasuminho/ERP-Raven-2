@@ -404,7 +404,15 @@ describe('Operations domain services', () => {
     assert.match(dossier.markdown, /Candidato: Aiko/);
     assert.match(dossier.markdown, /AUCTION_WIN/);
     assert.equal(operations.getAuctionDossier.mock.calls.length, 0);
-    assert.deepEqual(await service.getUniversalDossier('auction', 'auction-1'), { type: 'auction', id: 'auction-1' });
+    const universal = await service.getUniversalDossier('auction', 'auction-1');
+    assert.equal(universal.type, 'auction');
+    assert.equal(universal.id, 'auction-1');
+    assert.equal(universal.title, 'Dossie Staff - Cajado');
+    assert.equal(universal.summary.find((item) => item.label === 'Bids validos')?.value, '1');
+    assert.equal(universal.internalLinks[0].href, '/dashboard/staff/auction-diagnostics?auctionId=auction-1');
+    assert.equal(universal.auditLogs[0].action, 'AUCTION_TEST');
+    assert.match(universal.markdown, /Dossie Staff - Cajado/);
+    assert.equal(operations.getUniversalDossier.mock.calls.length, 0);
     const timeline = await service.getAuctionTimeline('auction-1');
     assert.equal(timeline[0].type, 'AUCTION_CREATED');
     assert.ok(timeline.some((event) => event.type === 'BID_CREATED'));

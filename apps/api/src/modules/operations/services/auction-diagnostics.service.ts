@@ -512,7 +512,40 @@ export class AuctionDiagnosticsService {
     };
   }
 
-  getUniversalDossier(type: UniversalDossierType, id: string): Promise<UniversalDossier> {
+  async getUniversalDossier(type: UniversalDossierType, id: string): Promise<UniversalDossier> {
+    if (type === 'auction') {
+      const [dossier, diagnostics] = await Promise.all([
+        this.getAuctionDossier(id),
+        this.getAuctionDiagnostics(id),
+      ]);
+
+      return {
+        generatedAt: dossier.generatedAt,
+        type,
+        id,
+        title: dossier.title,
+        summary: [
+          { label: 'Item', value: diagnostics.auction.itemName },
+          { label: 'Status', value: diagnostics.auction.status },
+          { label: 'Modo', value: diagnostics.auction.auctionMode },
+          { label: 'Bids validos', value: String(diagnostics.counts.validBids) },
+        ],
+        internalLinks: [
+          { label: 'Diagnostico Staff', href: `/dashboard/staff/auction-diagnostics?auctionId=${id}` },
+          { label: 'Leilao player', href: `/dashboard/auctions/${id}` },
+        ],
+        auditLogs: diagnostics.auditLogs.slice(0, 20).map((log) => ({
+          id: log.id,
+          action: log.action,
+          targetType: log.targetType,
+          targetId: log.targetId,
+          actorName: log.actorName,
+          createdAt: log.createdAt,
+        })),
+        markdown: dossier.markdown,
+      };
+    }
+
     return this.operations.getUniversalDossier(type, id);
   }
 
