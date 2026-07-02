@@ -570,6 +570,9 @@ Entrega:
 
 Objetivo: validar fluxo real sem depender do navegador humano.
 
+Estado em 2026-07-01: implementado por `scripts/authenticated-smoke-test.js`,
+com comando `npm run smoke:auth` e etapa opcional no job `deploy-smoke`.
+
 Entrega:
 
 - Script ou endpoint operacional que valida:
@@ -579,6 +582,13 @@ Entrega:
   - entregas pendentes;
   - health privado.
 - Documentar variaveis sem valores.
+- Variaveis documentadas: `SMOKE_BASE_URL`, `SMOKE_AUTH_TOKEN`,
+  `SMOKE_BEARER_TOKEN`, `SMOKE_ALLOW_EMPTY_AUCTIONS` e o secret de Actions
+  `PRODUCTION_SMOKE_BEARER_TOKEN`.
+- O workflow executa o smoke autenticado depois do smoke publico e pula a etapa
+  explicitamente quando o secret nao estiver configurado.
+- O script nao imprime token, nao le `.env` e falha quando qualquer contrato
+  Staff esperado deixa de responder.
 
 ### I3. Backup novo no health privado
 

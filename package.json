@@ -18,6 +18,7 @@
     "test:ci": "npm run -w @guild/api test:ci",
     "audit:ci": "node scripts/audit-policy.js",
     "smoke:public": "node scripts/public-smoke-test.js",
+    "smoke:auth": "node scripts/authenticated-smoke-test.js",
     "test:smoke": "node scripts/smoke-test.js",
     "discord:update": "node scripts/send-discord-update.js",
     "discord:configure-webhooks": "node scripts/configure-discord-webhooks.js",

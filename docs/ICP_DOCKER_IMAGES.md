@@ -98,6 +98,30 @@ scripts/prod/deploy-images.sh GIT_SHA
 EXPECTED_VERSION=GIT_SHA scripts/prod/smoke-production.sh
 ```
 
+The GitHub Actions `deploy-smoke` job also runs `scripts/public-smoke-test.js`
+after the Watchtower polling window. When the repository secret
+`PRODUCTION_SMOKE_BEARER_TOKEN` is configured, it then runs the authenticated
+staff smoke:
+
+```bash
+SMOKE_BASE_URL=https://app.guild-g3x.com.br/api/v1 \
+SMOKE_AUTH_TOKEN=TOKEN_DE_AUTOMACAO \
+npm run smoke:auth
+```
+
+Variables, without values:
+
+- `SMOKE_BASE_URL`: API base URL, defaults to production.
+- `SMOKE_AUTH_TOKEN` or `SMOKE_BEARER_TOKEN`: Bearer token for a Staff/Admin
+  automation account.
+- `SMOKE_ALLOW_EMPTY_AUCTIONS=true`: optional escape hatch for new guild stacks
+  without auctions.
+- `PRODUCTION_SMOKE_BEARER_TOKEN`: GitHub Actions secret used by `deploy-smoke`.
+
+The authenticated smoke validates `/auth/me`, Staff operations, auction
+diagnostics, pending auction deliveries, private health and the deploy panel. It
+does not print the token.
+
 The deploy promotes local state only after both containers become healthy. Return to
 the previously recorded immutable tag with `scripts/prod/rollback-images.sh`.
 

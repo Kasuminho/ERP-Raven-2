@@ -186,6 +186,7 @@ Confiabilidade:
 
 - Deploy de imagens usa `DEPLOY_IMAGE_TAG` imutavel e registra historico para rollback.
 - `APP_VERSION` identifica o artefato no health e no smoke de producao.
+- `scripts/authenticated-smoke-test.js` roda o smoke autenticado pos-deploy com Bearer token de automacao (`SMOKE_AUTH_TOKEN` ou `SMOKE_BEARER_TOKEN`), validando `/auth/me`, central Staff, diagnostico de leilao, entregas pendentes, health privado e painel de deploy. No GitHub Actions, o job `deploy-smoke` executa a etapa se o secret `PRODUCTION_SMOKE_BEARER_TOKEN` estiver configurado; sem o secret, a etapa e pulada explicitamente sem falhar o deploy.
 - `scripts/prod/deploy-images.sh` e `rollback-images.sh` controlam promocao e retorno de versao.
 - Containers possuem healthcheck e limites configuraveis de CPU/memoria.
 - `docker-compose.monitoring.yml` oferece Uptime Kuma independente da API; fonte operacional em `docs/MONITORING.md`.
@@ -269,6 +270,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |

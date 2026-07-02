@@ -131,3 +131,14 @@ jobs:
           SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
           SMOKE_ATTEMPTS: 12
           SMOKE_DELAY_MS: 15000
+
+      - name: Check authenticated staff API
+        run: |
+          if [ -z "$SMOKE_AUTH_TOKEN" ]; then
+            echo "Authenticated smoke skipped: PRODUCTION_SMOKE_BEARER_TOKEN is not configured."
+            exit 0
+          fi
+          node scripts/authenticated-smoke-test.js
+        env:
+          SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
+          SMOKE_AUTH_TOKEN: ${{ secrets.PRODUCTION_SMOKE_BEARER_TOKEN }}
