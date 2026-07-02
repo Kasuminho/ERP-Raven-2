@@ -285,16 +285,31 @@ describe('Operations domain services', () => {
 
   it('keeps auction diagnostics methods behind the auction domain service', async () => {
     const operations = {
-      getAuctionDiagnosticOptions: mock.fn(async () => [{ id: 'auction-1' }]),
       getAuctionDiagnostics: mock.fn(async (auctionId: string) => ({ auction: { id: auctionId } })),
       getAuctionFinalizationPreview: mock.fn(async (auctionId: string) => ({ auctionId })),
       getAuctionDossier: mock.fn(async (auctionId: string) => ({ auctionId })),
       getUniversalDossier: mock.fn(async (type: string, id: string) => ({ type, id })),
       getAuctionTimeline: mock.fn(async (auctionId: string) => [{ auctionId }]),
     };
-    const service = new AuctionDiagnosticsService(operations as never);
+    const prisma = {
+      auction: {
+        findMany: mock.fn(async () => [
+          { id: 'auction-1', itemName: 'Cajado', endsAt: new Date('2026-07-02T01:00:00.000Z') },
+          { id: 'auction-2', itemName: 'Arco', endsAt: new Date('2026-07-02T02:00:00.000Z') },
+        ]),
+      },
+      dKPTransaction: {
+        findMany: mock.fn(async () => [
+          { referenceId: 'auction-1', player: { nickname: 'Aiko' } },
+        ]),
+      },
+    };
+    const service = new AuctionDiagnosticsService(operations as never, prisma as never);
 
-    assert.equal((await service.getAuctionDiagnosticOptions())[0].id, 'auction-1');
+    const options = await service.getAuctionDiagnosticOptions();
+    assert.equal(options[0].id, 'auction-1');
+    assert.equal(options[0].winnerName, 'Aiko');
+    assert.equal(options[1].winnerName, null);
     assert.equal((await service.getAuctionDiagnostics('auction-1')).auction.id, 'auction-1');
     assert.equal((await service.getAuctionFinalizationPreview('auction-1')).auctionId, 'auction-1');
     assert.equal((await service.getAuctionDossier('auction-1')).auctionId, 'auction-1');

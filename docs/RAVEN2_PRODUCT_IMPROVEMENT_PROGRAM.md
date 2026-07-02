@@ -630,7 +630,9 @@ resumo semanal/mensal e a publicacao do resumo operacional para
 thresholds e contadores para `StaffSummaryService`. A fase 8 moveu health Staff
 e health operacional para `StaffSummaryService`. A fase 9 moveu o painel Staff
 de deploy para `StaffSummaryService`. A fase 10 removeu a injecao do
-`OperationsService` legado em `StaffSummaryService`.
+`OperationsService` legado em `StaffSummaryService`. A fase 11 iniciou a
+migracao de `AuctionDiagnosticsService`, movendo a lista de selecao de leiloes
+do diagnostico Staff.
 
 Entrega:
 
