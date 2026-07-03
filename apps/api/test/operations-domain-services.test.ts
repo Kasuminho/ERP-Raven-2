@@ -9,6 +9,7 @@ import { OperationsRulesService } from '../src/modules/operations/services/opera
 import { PlayerOperationsService } from '../src/modules/operations/services/player-operations.service';
 import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
 import { StaffSummaryService } from '../src/modules/operations/services/staff-summary.service';
+import { UniversalDossierService } from '../src/modules/operations/services/universal-dossier.service';
 import { WeeklySummaryService } from '../src/modules/operations/services/weekly-summary.service';
 
 describe('Operations domain services', () => {
@@ -745,5 +746,63 @@ describe('Operations domain services', () => {
     assert.ok(timeline.some((event) => event.type === 'AUCTION_WIN'));
     assert.ok(timeline.some((event) => event.type === 'DROP_DELIVERED'));
     assert.ok(timeline.some((event) => event.type === 'AUDIT_LOG'));
+  });
+
+  it('builds non-auction universal dossiers inside the dossier domain service', async () => {
+    const prisma = {
+      itemRequest: {
+        findUnique: mock.fn(async () => ({
+          id: 'request-1',
+          itemName: 'Essencia Suprema',
+          playerName: 'Aiko',
+          playerId: 'player-1',
+          rankPosition: 2,
+          remainingQuantity: 3,
+          totalQuantity: 5,
+          updateProofStatus: 'APPROVED',
+          createdAt: new Date('2026-07-01T10:00:00.000Z'),
+          updatedAt: new Date('2026-07-02T10:00:00.000Z'),
+          threadId: 'thread-1',
+          lastReminderStage: 'SECOND',
+          lastReminderAt: new Date('2026-07-02T09:00:00.000Z'),
+          player: { id: 'player-1', nickname: 'Aiko', dimensionalLayer: 4 },
+          itemCatalog: {
+            id: 'item-1',
+            namePt: 'Essencia Suprema',
+            nameEn: 'Supreme Essence',
+            itemTier: 'T4',
+            itemType: 'MATERIAL',
+            category: 'CRAFT',
+          },
+        })),
+      },
+      auditLog: {
+        findMany: mock.fn(async () => [{
+          id: 'audit-1',
+          action: 'REQUEST_UPDATED',
+          targetType: 'ItemRequest',
+          targetId: 'request-1',
+          createdAt: new Date('2026-07-02T11:00:00.000Z'),
+          actor: { discordUsername: 'staff-user', discordNickname: 'Staff' },
+        }]),
+      },
+    };
+    const service = new UniversalDossierService(prisma as never);
+
+    const dossier = await service.getUniversalDossier('request', 'request-1');
+    assert.equal(dossier.type, 'request');
+    assert.equal(dossier.id, 'request-1');
+    assert.equal(dossier.title, 'Dossie Staff - Request Essencia Suprema');
+    assert.equal(dossier.summary.find((item) => item.label === 'Item')?.value, 'Essencia Suprema');
+    assert.equal(dossier.summary.find((item) => item.label === 'Player')?.value, 'Aiko');
+    assert.equal(dossier.internalLinks.find((link) => link.label === 'Perfil Staff')?.href, '/dashboard/staff/players/player-1');
+    assert.equal(dossier.auditLogs[0].actorName, 'Staff');
+    assert.match(dossier.markdown, /REQUEST_UPDATED/);
+    assert.match(dossier.markdown, /Ultimo reminder: SECOND/);
+
+    await assert.rejects(
+      service.getUniversalDossier('auction', 'auction-1'),
+      /Tipo de dossie nao suportado/,
+    );
   });
 });

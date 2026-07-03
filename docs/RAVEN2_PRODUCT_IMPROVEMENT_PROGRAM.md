@@ -675,7 +675,10 @@ rotas de configuracao operacional compartilhadas. A fase 16 moveu o resumo
 player, notices e action plan para `PlayerOperationsService`, mantendo o
 contrato das rotas `me/*` e o sigilo de leilao para players. A fase 17 moveu a
 rota Staff de audit recente para `OperationsAuditService`, preservando limite
-sanitizado e actor resumido.
+sanitizado e actor resumido. A fase 18 moveu os dossies universais Staff de
+`player`, `request`, `interest`, `drop` e `event` para
+`UniversalDossierService`; o tipo `auction` continua no dominio de diagnostico
+de leilao para manter o raio-x e o Markdown especifico juntos.
 
 Entrega:
 
@@ -690,7 +693,8 @@ Entrega:
   - `DiscordOperationsService`;
   - `OperationsRulesService`;
   - `PlayerOperationsService`;
-  - `OperationsAuditService`.
+  - `OperationsAuditService`;
+  - `UniversalDossierService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 

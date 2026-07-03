@@ -13,6 +13,7 @@ import { OperationsRulesService } from './services/operations-rules.service';
 import { PlayerOperationsService } from './services/player-operations.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
+import { UniversalDossierService } from './services/universal-dossier.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
 import {
   AuctionDossier,
@@ -62,6 +63,7 @@ export class OperationsController {
     private readonly playerOperations: PlayerOperationsService,
     private readonly staffInsights: StaffInsightsService,
     private readonly staffSummary: StaffSummaryService,
+    private readonly universalDossiers: UniversalDossierService,
     private readonly weeklySummary: WeeklySummaryService,
   ) {}
 
@@ -195,7 +197,7 @@ export class OperationsController {
     if (type === 'auction') {
       return this.auctionDiagnosticsService.getUniversalDossier(type, id);
     }
-    return this.service.getUniversalDossier(type, id);
+    return this.universalDossiers.getUniversalDossier(type, id);
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')

@@ -14,6 +14,7 @@ import { OperationsRulesService } from './services/operations-rules.service';
 import { PlayerOperationsService } from './services/player-operations.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
+import { UniversalDossierService } from './services/universal-dossier.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
 
 @Module({
@@ -31,6 +32,7 @@ import { WeeklySummaryService } from './services/weekly-summary.service';
     PlayerOperationsService,
     StaffInsightsService,
     StaffSummaryService,
+    UniversalDossierService,
     WeeklySummaryService,
   ],
 })
