@@ -38,9 +38,10 @@ Modulos principais da API:
 - `discord`, `notifications`, `automation`, `audit`, `operations`;
 - `business-rules`, `staff-review`, `daoshi`, `codex`, `health`, `uploads`.
 
-No modulo `operations`, o controller encaminha rotas Staff de resumo, briefing,
-weekly/season, integridade, meeting e diagnostico/dossie de leilao para servicos
-de dominio em `apps/api/src/modules/operations/services`. `IntegrityService` ja
+No modulo `operations`, o controller encaminha rotas Staff e player para servicos
+de dominio em `apps/api/src/modules/operations/services`; o provider legado
+`OperationsService` foi removido depois da migracao completa das rotas.
+`IntegrityService` ja
 possui implementacao propria para integridade e legacy audit, e
 `WeeklySummaryService` ja calcula resumo semanal/mensal e publica o resumo
 operacional sem depender do `OperationsService` legado. `MeetingService` ja
@@ -61,8 +62,8 @@ detalhes pesados de timeline operacional e o raio-x completo tambem ja sairam
 para esse dominio. A previa read-only de finalizacao, o dossie Staff de leilao e
 o dossie universal do tipo `auction` tambem ja sao calculados no dominio de
 diagnostico. `AuctionDiagnosticsService` nao injeta mais o `OperationsService`
-legado; dossies universais de outros tipos ainda delegam ao legado pelo
-controller.
+legado; o controller envia `auction` para esse dominio e os demais dossies para
+`UniversalDossierService`.
 `StaffInsightsService` calcula diretamente os insights Staff de fairness de loot
 e comparacao de players, removendo mais duas rotas Staff do `OperationsService`
 legado.
@@ -131,7 +132,7 @@ Automacao ativa:
 - A navegacao principal e agrupada em Agora, Loot, Progresso e Conta.
 - No mobile ficam quatro destinos principais e o menu `Mais`; a central Staff agrupa ferramentas por contexto operacional.
 - A busca global `Ctrl+K` consulta itens, leiloes e eventos; resultados de players existem apenas no endpoint Staff.
-- Busca possui modulo e hook proprios; novos dominios nao devem ser adicionados ao `operations.service.ts` ou `use-guild-api.ts` quando puderem ter ownership independente.
+- Busca possui modulo e hook proprios; novos dominios nao devem recriar arquivo gigante em `operations` ou `use-guild-api.ts` quando puderem ter ownership independente.
 - Na Web, `apps/web/src/hooks/use-guild-api.ts` e apenas um barrel temporario. Hooks ficam separados por dominio: `use-profile-api`, `use-dkp-api`, `use-staff-operations-api`, `use-auctions-api`, `use-items-api`, `use-requests-api`, `use-events-api`, `use-codex-api`, `use-daoshi-api` e `use-drops-api`; telas novas devem importar direto do dominio.
 - A central de pendencias filtra por severidade e mostra responsavel, abertura e prazo quando aplicavel. Prazos Staff derivam dos thresholds configuraveis.
 - Acoes destrutivas e financeiras usam `ConfirmationDialog` acessivel, sem `window.confirm` ou `window.prompt`.
@@ -322,6 +323,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | `OperationsService` legado foi removido do modulo `operations`; controller e providers ficaram somente com servicos de dominio. | arquitetura/API |
 | 2026-07-02 | Dossies universais Staff de player, request, interest, drop e event sairam do `OperationsService` legado para `UniversalDossierService`; auction continua no dominio de diagnostico. | arquitetura/API |
 | 2026-07-02 | Audit recente Staff de `operations/staff/audit` saiu do `OperationsService` legado para `OperationsAuditService`. | arquitetura/API |
 | 2026-07-02 | Resumo player, notices e action plan de `operations/me/*` sairam do `OperationsService` legado para `PlayerOperationsService`. | arquitetura/API |

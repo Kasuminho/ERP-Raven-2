@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nest
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { OperationsService } from './operations.service';
 import { AuctionDiagnosticsService } from './services/auction-diagnostics.service';
 import { DiscordOperationsService } from './services/discord-operations.service';
 import { IntegrityService } from './services/integrity.service';
@@ -52,7 +51,6 @@ type ResolveMeetingItemBody = { title?: string; type?: string; href?: string };
 @UseGuards(JwtAuthGuard)
 export class OperationsController {
   constructor(
-    private readonly service: OperationsService,
     private readonly auctionDiagnosticsService: AuctionDiagnosticsService,
     private readonly discordOperations: DiscordOperationsService,
     private readonly integrityService: IntegrityService,

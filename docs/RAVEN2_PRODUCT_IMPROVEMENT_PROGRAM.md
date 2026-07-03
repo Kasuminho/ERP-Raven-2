@@ -678,7 +678,9 @@ rota Staff de audit recente para `OperationsAuditService`, preservando limite
 sanitizado e actor resumido. A fase 18 moveu os dossies universais Staff de
 `player`, `request`, `interest`, `drop` e `event` para
 `UniversalDossierService`; o tipo `auction` continua no dominio de diagnostico
-de leilao para manter o raio-x e o Markdown especifico juntos.
+de leilao para manter o raio-x e o Markdown especifico juntos. A fase 19 removeu
+o provider e o arquivo `OperationsService` legado do modulo `operations`,
+mantendo o controller somente com servicos de dominio.
 
 Entrega:
 
@@ -696,6 +698,8 @@ Entrega:
   - `OperationsAuditService`;
   - `UniversalDossierService`.
 - Manter controller compativel.
+- Nao recriar `OperationsService` como concentrador; novas rotas devem ter dono
+  de dominio proprio.
 - Testes de regressao para endpoints existentes.
 
 ### J2. Separar `use-guild-api.ts`
