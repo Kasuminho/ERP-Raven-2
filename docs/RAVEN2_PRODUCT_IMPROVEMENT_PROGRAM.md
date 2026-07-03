@@ -673,7 +673,9 @@ operacional Staff fora do legado. A fase 15 moveu regras da guilda e leitura do
 modo manutencao para `OperationsRulesService`, reduzindo o legado tambem nas
 rotas de configuracao operacional compartilhadas. A fase 16 moveu o resumo
 player, notices e action plan para `PlayerOperationsService`, mantendo o
-contrato das rotas `me/*` e o sigilo de leilao para players.
+contrato das rotas `me/*` e o sigilo de leilao para players. A fase 17 moveu a
+rota Staff de audit recente para `OperationsAuditService`, preservando limite
+sanitizado e actor resumido.
 
 Entrega:
 
@@ -687,7 +689,8 @@ Entrega:
   - `StaffInsightsService`;
   - `DiscordOperationsService`;
   - `OperationsRulesService`;
-  - `PlayerOperationsService`.
+  - `PlayerOperationsService`;
+  - `OperationsAuditService`.
 - Manter controller compativel.
 - Testes de regressao para endpoints existentes.
 

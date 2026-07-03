@@ -4,6 +4,7 @@ import { AuctionDiagnosticsService } from '../src/modules/operations/services/au
 import { DiscordOperationsService } from '../src/modules/operations/services/discord-operations.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
+import { OperationsAuditService } from '../src/modules/operations/services/operations-audit.service';
 import { OperationsRulesService } from '../src/modules/operations/services/operations-rules.service';
 import { PlayerOperationsService } from '../src/modules/operations/services/player-operations.service';
 import { StaffInsightsService } from '../src/modules/operations/services/staff-insights.service';
@@ -429,6 +430,32 @@ describe('Operations domain services', () => {
     const notices = await service.getNoticeBoard('user-1');
     assert.equal(notices.some((notice) => notice.type === 'DAOSHI_PENDING'), true);
     assert.equal(notices.some((notice) => notice.type === 'AUCTION_ENDING'), true);
+  });
+
+  it('loads recent audit entries inside the operations audit domain service', async () => {
+    const prisma = {
+      auditLog: {
+        findMany: mock.fn(async () => [{
+          id: 'audit-1',
+          action: 'TEST_ACTION',
+          actor: { id: 'user-1', discordUsername: 'staff', discordNickname: 'Staff' },
+          createdAt: new Date('2026-07-02T00:00:00.000Z'),
+        }]),
+      },
+    };
+    const service = new OperationsAuditService(prisma as never);
+
+    const highLimit = await service.getRecentAudit(999);
+    assert.equal(highLimit[0].id, 'audit-1');
+    assert.equal(prisma.auditLog.findMany.mock.calls[0].arguments[0].take, 100);
+    assert.deepEqual(prisma.auditLog.findMany.mock.calls[0].arguments[0].include.actor.select, {
+      id: true,
+      discordUsername: true,
+      discordNickname: true,
+    });
+
+    await service.getRecentAudit(-5);
+    assert.equal(prisma.auditLog.findMany.mock.calls[1].arguments[0].take, 1);
   });
 
   it('builds morning briefing inside the briefing domain service', async () => {

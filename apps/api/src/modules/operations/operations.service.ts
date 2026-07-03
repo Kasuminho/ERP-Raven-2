@@ -2081,22 +2081,6 @@ export class OperationsService {
     };
   }
 
-  async getRecentAudit(limit = 25) {
-    return this.prisma.auditLog.findMany({
-      include: {
-        actor: {
-          select: {
-            id: true,
-            discordUsername: true,
-            discordNickname: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: Math.min(Math.max(limit, 1), 100),
-    });
-  }
-
   private sortTasks(tasks: OperationTask[]): OperationTask[] {
     const weight = { high: 0, medium: 1, low: 2 };
     return [...tasks].sort((left, right) => {

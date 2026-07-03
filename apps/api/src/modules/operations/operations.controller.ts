@@ -8,6 +8,7 @@ import { DiscordOperationsService } from './services/discord-operations.service'
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
+import { OperationsAuditService } from './services/operations-audit.service';
 import { OperationsRulesService } from './services/operations-rules.service';
 import { PlayerOperationsService } from './services/player-operations.service';
 import { StaffInsightsService } from './services/staff-insights.service';
@@ -56,6 +57,7 @@ export class OperationsController {
     private readonly integrityService: IntegrityService,
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
+    private readonly operationsAudit: OperationsAuditService,
     private readonly operationsRules: OperationsRulesService,
     private readonly playerOperations: PlayerOperationsService,
     private readonly staffInsights: StaffInsightsService,
@@ -268,6 +270,6 @@ export class OperationsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async audit(@Query('limit') limit?: string) {
-    return this.service.getRecentAudit(Number(limit) || 25);
+    return this.operationsAudit.getRecentAudit(Number(limit) || 25);
   }
 }
