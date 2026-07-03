@@ -121,6 +121,7 @@ Automacao ativa:
 - `staff-review` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam UUIDs, notas e motivos antes de aprovar/rejeitar vencedor, override, remover bid, reabrir/cancelar leilao ou revisar cancelamento de bid.
 - `codex` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print do pedido, print de comprovante opcional, nota opcional e motivo de cancelamento antes do fluxo player/Staff.
 - `daoshi` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print, data, valores positivos, lancamento manual e nota de review antes de processar recibos e revisoes Staff.
+- `announcements` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida tipo, titulo, data ISO, campos opcionais e bosses de presenca em lote antes de criar anuncio/eventos.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
@@ -323,6 +324,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-02 | Modulo `announcements` ganhou DTO com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao de anuncios. | validacao/API |
 | 2026-07-02 | `OperationsService` legado foi removido do modulo `operations`; controller e providers ficaram somente com servicos de dominio. | arquitetura/API |
 | 2026-07-02 | Dossies universais Staff de player, request, interest, drop e event sairam do `OperationsService` legado para `UniversalDossierService`; auction continua no dominio de diagnostico. | arquitetura/API |
 | 2026-07-02 | Audit recente Staff de `operations/staff/audit` saiu do `OperationsService` legado para `OperationsAuditService`. | arquitetura/API |

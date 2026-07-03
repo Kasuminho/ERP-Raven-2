@@ -754,7 +754,9 @@ controller usa `ValidationPipe` local com `whitelist` e
 o mesmo padrao no modulo `codex`, validando criacao de pedido, comprovante de
 envio e motivo de cancelamento antes de processar o fluxo. A fase 3 implementou
 o mesmo padrao no modulo `daoshi`, validando recibos, lancamentos manuais e
-revisao Staff antes de processar valores financeiros.
+revisao Staff antes de processar valores financeiros. A fase 4 implementou o
+padrao no modulo `announcements`, validando criacao de anuncio, data ISO e bosses
+de presenca em lote antes de processar o fluxo.
 
 Entrega:
 

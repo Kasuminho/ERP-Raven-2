@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Announcement } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -15,6 +15,7 @@ type StaffRequest = {
 @Controller('announcements')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('STAFF', 'ADMIN')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class AnnouncementsController {
   constructor(private readonly service: AnnouncementsService) {}
 
