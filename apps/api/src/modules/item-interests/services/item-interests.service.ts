@@ -119,6 +119,8 @@ const criteriaTexts: Record<string, { pt: string; en: string }> = {
 
 const TRANSMUTE_IMAGE_URL = '/transmutar.png';
 const TRANSMUTE_TIME_ZONE = 'America/Sao_Paulo';
+const TRANSMUTE_HARD_LOCK_HOURS = 24;
+const TRANSMUTE_WEIGHTED_LOOKBACK_DAYS = 30;
 
 @Injectable()
 export class ItemInterestsService {
@@ -1054,7 +1056,14 @@ export class ItemInterestsService {
       const now = new Date();
       const post = await tx.itemInterestPost.findUnique({
         where: { id },
-        include: { entries: true },
+        include: {
+          entries: true,
+          itemCatalog: {
+            select: {
+              itemType: true,
+            },
+          },
+        },
       });
 
       if (!post) {
@@ -1120,6 +1129,8 @@ export class ItemInterestsService {
             entriesCount: post.entries.length,
             eligibleCount: selection.eligibleCount,
             blockedPlayerIds: selection.blockedPlayerIds,
+            weightedFallback: selection.weightedFallback,
+            raffleWeights: selection.raffleWeights,
             selectedEntryId: selection.entry.id,
             selectedPlayerId: selection.entry.playerId,
             transmuteDay: selection.dayKey,
@@ -1147,6 +1158,8 @@ export class ItemInterestsService {
           nextStatus: ItemInterestStatus.CLOSED,
           entriesCount: post.entries.length,
           blockedPlayerIds: selection.blockedPlayerIds,
+          weightedFallback: selection.weightedFallback,
+          raffleWeights: selection.raffleWeights,
           transmuteDay: selection.dayKey,
           closesAt: post.closesAt.toISOString(),
         });
@@ -1181,41 +1194,117 @@ export class ItemInterestsService {
 
   private async pickTransmuteWinnerForDay(
     tx: Prisma.TransactionClient,
-    post: ItemInterestPost & { entries: ItemInterestEntry[] },
+    post: ItemInterestPost & { entries: ItemInterestEntry[]; itemCatalog: { itemType: ItemType | null } },
     now: Date,
   ): Promise<{
     entry: ItemInterestEntry | null;
     eligibleCount: number;
     blockedPlayerIds: string[];
     dayKey: string;
+    weightedFallback: boolean;
+    raffleWeights: Array<{
+      entryId: string;
+      playerId: string;
+      recentAwards30d: number;
+      weight: number;
+    }>;
   }> {
-    const { start, end, dayKey } = this.transmuteDayRange(now);
-    const awardedEntries = await tx.itemInterestEntry.findMany({
+    const { dayKey } = this.transmuteDayRange(now);
+    const hardLockStart = new Date(now.getTime() - TRANSMUTE_HARD_LOCK_HOURS * 60 * 60 * 1000);
+    const weightedLookbackStart = new Date(now.getTime() - TRANSMUTE_WEIGHTED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+    const awardedPosts = await tx.itemInterestPost.findMany({
       where: {
-        isTransmuteRequest: true,
-        post: {
-          id: { not: post.id },
-          selectedEntryId: { not: null },
-          deliveryEnabledAt: { gte: start, lt: end },
-          status: { in: [ItemInterestStatus.READY_FOR_DELIVERY, ItemInterestStatus.DELIVERED] },
+        id: { not: post.id },
+        selectedEntryId: { not: null },
+        deliveryEnabledAt: { gte: weightedLookbackStart, lte: now },
+        status: { in: [ItemInterestStatus.READY_FOR_DELIVERY, ItemInterestStatus.DELIVERED] },
+        ...(post.itemCatalog.itemType ? { itemCatalog: { itemType: post.itemCatalog.itemType } } : {}),
+      },
+      select: {
+        selectedEntryId: true,
+        deliveryEnabledAt: true,
+        entries: {
+          where: { isTransmuteRequest: true },
+          select: { id: true, playerId: true },
         },
       },
-      select: { playerId: true },
     });
-    const blockedPlayerIds = [...new Set(awardedEntries.map((entry) => entry.playerId))];
+    const awardedRows = awardedPosts.flatMap((awardedPost) => {
+      const winningEntry = awardedPost.entries.find((entry) => entry.id === awardedPost.selectedEntryId);
+      return winningEntry && awardedPost.deliveryEnabledAt
+        ? [{ playerId: winningEntry.playerId, awardedAt: awardedPost.deliveryEnabledAt }]
+        : [];
+    });
+    const blockedPlayerIds = [...new Set(awardedRows
+      .filter((row) => row.awardedAt >= hardLockStart)
+      .map((row) => row.playerId))];
     const blocked = new Set(blockedPlayerIds);
     const eligibleEntries = post.entries.filter((entry) => !blocked.has(entry.playerId));
 
-    if (eligibleEntries.length === 0) {
-      return { entry: null, eligibleCount: 0, blockedPlayerIds, dayKey };
+    if (eligibleEntries.length > 0) {
+      return {
+        entry: eligibleEntries[randomInt(eligibleEntries.length)],
+        eligibleCount: eligibleEntries.length,
+        blockedPlayerIds,
+        dayKey,
+        weightedFallback: false,
+        raffleWeights: eligibleEntries.map((entry) => ({
+          entryId: entry.id,
+          playerId: entry.playerId,
+          recentAwards30d: awardedRows.filter((row) => row.playerId === entry.playerId).length,
+          weight: 1,
+        })),
+      };
     }
 
+    const recentAwardsByPlayer = new Map<string, number>();
+    for (const row of awardedRows) {
+      recentAwardsByPlayer.set(row.playerId, (recentAwardsByPlayer.get(row.playerId) ?? 0) + 1);
+    }
+    const raffleWeights = post.entries.map((entry) => {
+      const recentAwards30d = recentAwardsByPlayer.get(entry.playerId) ?? 0;
+      return {
+        entryId: entry.id,
+        playerId: entry.playerId,
+        recentAwards30d,
+        weight: this.transmuteWeightedFallbackTickets(recentAwards30d),
+      };
+    });
+
     return {
-      entry: eligibleEntries[randomInt(eligibleEntries.length)],
-      eligibleCount: eligibleEntries.length,
+      entry: this.pickWeightedTransmuteEntry(post.entries, raffleWeights),
+      eligibleCount: post.entries.length,
       blockedPlayerIds,
       dayKey,
+      weightedFallback: true,
+      raffleWeights,
     };
+  }
+
+  private transmuteWeightedFallbackTickets(recentAwards30d: number): number {
+    return Math.max(1, Math.floor(100 / ((recentAwards30d + 1) ** 2)));
+  }
+
+  private pickWeightedTransmuteEntry(
+    entries: ItemInterestEntry[],
+    weights: Array<{ entryId: string; weight: number }>,
+  ): ItemInterestEntry | null {
+    const weightByEntryId = new Map(weights.map((row) => [row.entryId, row.weight]));
+    const totalWeight = weights.reduce((sum, row) => sum + row.weight, 0);
+
+    if (totalWeight <= 0) {
+      return null;
+    }
+
+    let winningTicket = randomInt(1, totalWeight + 1);
+    for (const entry of entries) {
+      winningTicket -= weightByEntryId.get(entry.id) ?? 0;
+      if (winningTicket <= 0) {
+        return entry;
+      }
+    }
+
+    return null;
   }
 
   private transmuteDayRange(now: Date): { start: Date; end: Date; dayKey: string } {

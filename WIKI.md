@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-02
+**Ultima revisao:** 2026-07-08
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -145,7 +145,7 @@ Automacao ativa:
 - No perfil do player, `dimensionalLayer` e a camada operacional de 1 a 10. CP nao e editado diretamente ali: o player deve postar progresso `STATUS` com print, e a Staff aprova para atualizar o CP.
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - A tela player de interesses em `/dashboard/interests` permite selecionar varios posts abertos e declarar em lote. Cada post mantem nota, print ou transmutar proprio; a confirmacao unica envia cada declaracao pelo endpoint existente para preservar validacoes de duplicidade, janela aberta e print obrigatorio.
-- Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia aleatoriamente um vencedor entre os elegiveis. Um mesmo player so pode ser selecionado para um item de transmutar por dia operacional de Sao Paulo; se todos os interessados ja foram selecionados no dia, o post fecha sem vencedor e fica auditado.
+- Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia automaticamente. Quem recebeu item de transmutar do mesmo `ItemType` nas ultimas 24h fica fora enquanto houver ao menos um interessado livre. Se todos os interessados estiverem nesse bloqueio de 24h, o post nao fecha vazio: o sistema faz fallback ponderado com base nos recebimentos de transmutar dos ultimos 30 dias, dando menos peso a quem recebeu mais.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam abas de jornada (`Resolver agora`, `Auditar`, `Configurar`, `Comunicar`, `Operar deploy`) com contadores, cards filtrados e proximas acoes por grupo, alem de pendencias, saude e auditoria.
 - O modo reuniao Staff em `/dashboard/staff/meeting` consome `GET /operations/staff/meeting`, que preserva os campos antigos e adiciona `meetingDay`, `sections`, `resolvedItemKeys` e `markdown`. As secoes cobrem decisoes de loot, pendencias travadas, economia DKP, players sensiveis, progresso de boss/lote, comunicados e acoes ate a proxima reuniao. `POST /operations/staff/meeting/items/:itemKey/resolve` marca item como resolvido no dia operacional via audit log `STAFF_MEETING_ITEM_RESOLVED`.
@@ -324,6 +324,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Sorteio 100% transmutar preserva bloqueio de 24h por tipo quando ha player livre e usa fallback ponderado pelos recebimentos dos ultimos 30 dias quando todos ja receberam. | interesses/transmutar |
 | 2026-07-02 | Modulo `announcements` ganhou DTO com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao de anuncios. | validacao/API |
 | 2026-07-02 | `OperationsService` legado foi removido do modulo `operations`; controller e providers ficaram somente com servicos de dominio. | arquitetura/API |
 | 2026-07-02 | Dossies universais Staff de player, request, interest, drop e event sairam do `OperationsService` legado para `UniversalDossierService`; auction continua no dominio de diagnostico. | arquitetura/API |
