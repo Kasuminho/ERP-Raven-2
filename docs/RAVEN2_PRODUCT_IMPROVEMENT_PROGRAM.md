@@ -621,6 +621,9 @@ Entrega:
   explicitamente quando o secret nao estiver configurado.
 - O script nao imprime token, nao le `.env` e falha quando qualquer contrato
   Staff esperado deixa de responder.
+- O smoke publico do workflow preserva validacao de `APP_VERSION`, mas usa
+  janela estendida de tentativas para absorver variacao de Watchtower/edge antes
+  de marcar deploy como falho.
 
 ### I3. Backup novo no health privado
 

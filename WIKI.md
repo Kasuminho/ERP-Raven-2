@@ -30,6 +30,7 @@ Qualidade obrigatoria:
 - O workflow de imagens possui um job `quality` que executa install travado, Prisma, lint, testes, politica de audit e builds antes de publicar.
 - `scripts/audit-policy.js` bloqueia vulnerabilidade critica ou regressao acima do baseline versionado de severidade alta.
 - O smoke publico roda depois da janela do Watchtower e valida endpoints sem usar credenciais.
+- O smoke publico do workflow exige `APP_VERSION` esperado em `/health` e usa uma janela estendida de tentativas para absorver a variacao do Watchtower/edge sem afrouxar o criterio.
 
 Modulos principais da API:
 
@@ -325,6 +326,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Smoke publico pos-deploy do workflow ganhou janela estendida de tentativas mantendo validacao obrigatoria de `APP_VERSION`. | deploy/smoke |
 | 2026-07-08 | Modulo `events` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao, presenca e cancelamento. | validacao/API |
 | 2026-07-08 | Sexta rotacao automatica renovou o humor dos webhooks, DMs, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-08 | Sorteio 100% transmutar preserva bloqueio de 24h por tipo quando ha player livre e usa fallback ponderado pelos recebimentos dos ultimos 30 dias quando todos ja receberam. | interesses/transmutar |
