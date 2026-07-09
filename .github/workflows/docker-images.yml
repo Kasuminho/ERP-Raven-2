@@ -124,6 +124,7 @@ jobs:
         run: sleep 330
 
       - name: Check public API health
+        timeout-minutes: 15
         run: |
           export EXPECTED_VERSION="${GITHUB_SHA::7}"
           node scripts/public-smoke-test.js
@@ -131,6 +132,7 @@ jobs:
           SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
           SMOKE_ATTEMPTS: 24
           SMOKE_DELAY_MS: 20000
+          SMOKE_FETCH_TIMEOUT_MS: 10000
 
       - name: Check authenticated staff API
         run: |

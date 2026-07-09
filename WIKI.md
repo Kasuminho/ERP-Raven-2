@@ -31,6 +31,7 @@ Qualidade obrigatoria:
 - `scripts/audit-policy.js` bloqueia vulnerabilidade critica ou regressao acima do baseline versionado de severidade alta.
 - O smoke publico roda depois da janela do Watchtower e valida endpoints sem usar credenciais.
 - O smoke publico do workflow exige `APP_VERSION` esperado em `/health` e usa uma janela estendida de tentativas para absorver a variacao do Watchtower/edge sem afrouxar o criterio.
+- O script de smoke publico registra sua configuracao efetiva e limita tempo por fetch; o step tambem possui timeout proprio no GitHub Actions para evitar deploy preso por conexao pendurada.
 
 Modulos principais da API:
 
@@ -326,6 +327,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Smoke publico ganhou logs de configuracao e timeout explicito por fetch/step para evitar job preso durante verificacao pos-Watchtower. | deploy/smoke |
 | 2026-07-08 | Smoke publico pos-deploy do workflow ganhou janela estendida de tentativas mantendo validacao obrigatoria de `APP_VERSION`. | deploy/smoke |
 | 2026-07-08 | Modulo `events` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao, presenca e cancelamento. | validacao/API |
 | 2026-07-08 | Sexta rotacao automatica renovou o humor dos webhooks, DMs, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |

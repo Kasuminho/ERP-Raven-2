@@ -624,6 +624,9 @@ Entrega:
 - O smoke publico do workflow preserva validacao de `APP_VERSION`, mas usa
   janela estendida de tentativas para absorver variacao de Watchtower/edge antes
   de marcar deploy como falho.
+- O smoke publico imprime a configuracao efetiva e limita cada fetch e o step do
+  GitHub Actions, evitando jobs pendurados quando a rede do runner nao encerra
+  uma conexao corretamente.
 
 ### I3. Backup novo no health privado
 
