@@ -16,13 +16,16 @@ dns.setDefaultResultOrder(dnsOrder);
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function requestWithTimeout(url) {
+function requestWithTimeout(url, attempt) {
   const parsedUrl = new URL(url);
+  parsedUrl.searchParams.set('_smoke', `${process.env.EXPECTED_VERSION ?? 'manual'}-${attempt}-${Date.now()}`);
   const client = parsedUrl.protocol === 'http:' ? http : https;
   const options = {
     family: dnsFamily,
     headers: {
       Accept: 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
       'User-Agent': userAgent,
     },
     timeout: fetchTimeoutMs,
@@ -47,10 +50,10 @@ function requestWithTimeout(url) {
   });
 }
 
-async function check() {
+async function check(attempt) {
   const results = await Promise.all(paths.map(async (path) => {
     try {
-      const response = await requestWithTimeout(`${baseUrl}${path}`);
+      const response = await requestWithTimeout(`${baseUrl}${path}`, attempt);
       const body = path === '/health' ? JSON.parse(response.body) : undefined;
       const versionMatches = path !== '/health' || !expectedVersion || body?.version === expectedVersion;
       return { path, status: response.status, ...(body?.version ? { version: body.version } : {}), versionMatches };
@@ -65,7 +68,7 @@ async function main() {
   console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, paths }, null, 2));
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const result = await check();
+    const result = await check(attempt);
     if (result.ok) {
       console.log(JSON.stringify({ ok: true, baseUrl, attempt, checks: result.results }, null, 2));
       return;

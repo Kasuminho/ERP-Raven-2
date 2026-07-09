@@ -633,6 +633,9 @@ Entrega:
   nativo `http/https` com familia DNS explicita em vez de depender do `fetch`.
 - As chamadas do smoke enviam `Accept: application/json` e `SMOKE_USER_AGENT`
   explicito para reduzir bloqueio de edge/WAF contra runner automatizado.
+- Cada request do smoke recebe query `_smoke` unica e headers `Cache-Control:
+  no-cache`/`Pragma: no-cache`, preservando a validacao de `APP_VERSION` sem
+  aceitar health antigo vindo de cache regional.
 
 ### I3. Backup novo no health privado
 
