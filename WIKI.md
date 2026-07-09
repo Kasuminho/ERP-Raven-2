@@ -131,6 +131,7 @@ Automacao ativa:
 - `daoshi` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print, data, valores positivos, lancamento manual e nota de review antes de processar recibos e revisoes Staff.
 - `announcements` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida tipo, titulo, data ISO, campos opcionais e bosses de presenca em lote antes de criar anuncio/eventos.
 - `events` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao de evento, registro de presenca e cancelamento antes da rotina Staff de presenca/DKP.
+- `search` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida a query `q`, rejeita parametros extras e limita o termo antes da busca global/player Staff.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
@@ -338,6 +339,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Modulo `search` ganhou DTO com `class-validator` e pipe local forte para a query `q`, rejeitando parametros extras antes do servico de busca. | validacao/API |
 | 2026-07-09 | Contratos de eventos passaram para `packages/shared/src/types/events.ts`, com aliases locais na API e Web para preservar datas de servidor/cliente. | contratos/shared |
 | 2026-07-09 | Roadmap original ganhou controle anti-reexecucao e foi criado o roadmap de implantacao 2026-07 para a proxima rodada de melhorias sem iniciar programacao. | docs/roadmap |
 | 2026-07-09 | Smoke publico passou a bloquear deploy somente pelo `/health` com `APP_VERSION` esperado; healths de modulos viraram diagnostico auxiliar para evitar falso negativo de borda no runner externo. | deploy/smoke |
