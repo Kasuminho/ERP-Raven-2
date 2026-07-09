@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-08
+**Ultima revisao:** 2026-07-09
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -29,8 +29,9 @@ Qualidade obrigatoria:
 - A suite critica usa Node Test Runner via `tsx` e cobre DKP, bids, ALL_IN, lotes de presenca, sessao e upload seguro.
 - O workflow de imagens possui um job `quality` que executa install travado, Prisma, lint, testes, politica de audit e builds antes de publicar.
 - `scripts/audit-policy.js` bloqueia vulnerabilidade critica ou regressao acima do baseline versionado de severidade alta.
-- O smoke publico roda depois da janela do Watchtower e valida endpoints sem usar credenciais.
-- O smoke publico do workflow exige `APP_VERSION` esperado em `/health` e usa uma janela estendida de tentativas para absorver a variacao do Watchtower/edge sem afrouxar o criterio.
+- O smoke publico roda depois da janela do Watchtower e valida a API sem usar credenciais.
+- O smoke publico do workflow exige `APP_VERSION` esperado em `/health` como gate obrigatorio e usa uma janela estendida de tentativas para absorver a variacao do Watchtower/edge sem afrouxar o criterio.
+- Os healthchecks publicos de modulos (`/auctions/health`, `/items/health`, `/eligibility/health`, `/audit/health`) ficam como diagnostico auxiliar no smoke publico; falhas isoladas deles sao logadas sem bloquear deploy quando `/health` ja confirmou a versao esperada.
 - O script de smoke publico registra sua configuracao efetiva e limita tempo por fetch; o step tambem possui timeout proprio no GitHub Actions para evitar deploy preso por conexao pendurada.
 - O smoke publico usa DNS `ipv4first` por padrao, via `SMOKE_DNS_ORDER`, e cliente nativo `http/https` com familia DNS explicita para reduzir falso negativo de runner quando IPv6 do dominio existe mas o caminho saudavel observado e IPv4.
 - O smoke publico envia `Accept: application/json` e `SMOKE_USER_AGENT` explicito para reduzir bloqueio de edge/WAF contra runner automatizado.
@@ -331,6 +332,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Smoke publico passou a bloquear deploy somente pelo `/health` com `APP_VERSION` esperado; healths de modulos viraram diagnostico auxiliar para evitar falso negativo de borda no runner externo. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a emitir annotation de falha com ultimo resultado observado para diagnostico publico do Actions. | deploy/smoke |
 | 2026-07-08 | Smoke publico ganhou cache-buster `_smoke` e headers no-cache por request para evitar health antigo em edge regional. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a enviar `Accept: application/json` e `SMOKE_USER_AGENT` explicito nas chamadas do runner externo. | deploy/smoke |
