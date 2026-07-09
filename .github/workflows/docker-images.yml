@@ -121,7 +121,7 @@ jobs:
           node-version: 20
 
       - name: Wait for Watchtower polling window
-        run: sleep 600  # ← Aumenta de 330 para 600s (10 minutos)
+        run: sleep 330  # ← Aumenta de 330 para 600s (10 minutos)
 
       - name: Check public API health
         timeout-minutes: 15
