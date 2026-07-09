@@ -1,5 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DKPTransactionType, Event, EventStatus, EventType, PlayerClass, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
+import type {
+  EventBatchPanel as SharedEventBatchPanel,
+  EventFinalizationChecklist as SharedEventFinalizationChecklist,
+  EventReadinessReport as SharedEventReadinessReport,
+  EventTacticalRole,
+  FinalizeEventResult as SharedFinalizeEventResult,
+} from '@shared/types/events';
 import { AuditService } from '../../audit/services/audit.service';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
@@ -14,168 +21,10 @@ import {
 } from '../exceptions/attendance-domain.exceptions';
 import { EventDetails, EventsRepository } from '../repositories/events.repository';
 
-export type FinalizeEventResult = {
-  event: Event;
-  nextEvent: Event | null;
-  copiedAttendanceCount: number;
-  attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
-};
-
-export type EventFinalizationChecklist = {
-  eventId: string;
-  eventName: string;
-  eventType: EventType;
-  status: EventStatus;
-  dkpPerPlayer: number;
-  totalDkp: number;
-  presentCount: number;
-  absentCount: number;
-  activePlayerCount: number;
-  presentPlayers: Array<{
-    id: string;
-    nickname: string;
-    class: string;
-    dimensionalLayer: number;
-  }>;
-  absentPlayers: Array<{
-    id: string;
-    nickname: string;
-    class: string;
-    dimensionalLayer: number;
-  }>;
-  currentBoss: {
-    id: string;
-    name: string;
-    type: EventType;
-    startsAt: Date;
-    attendanceBatchId: string | null;
-    batchOrder: number | null;
-  };
-  nextBatchEvent: {
-    id: string;
-    name: string;
-    type: EventType;
-    startsAt: Date;
-    status: EventStatus;
-    attendanceBatchId: string | null;
-    batchOrder: number | null;
-    existingAttendanceCount: number;
-  } | null;
-  attendanceCopy: {
-    willCopy: boolean;
-    status: 'WILL_COPY' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
-    targetEventId?: string;
-    targetEventName?: string;
-    copiedCountEstimate: number;
-    messagePt: string;
-  };
-  warnings: Array<{
-    tone: 'info' | 'warning' | 'danger';
-    messagePt: string;
-  }>;
-};
-
-export type EventBatchPanel = {
-  batchId: string;
-  title: string;
-  startsAt: Date | null;
-  totalEvents: number;
-  finalizedEvents: number;
-  cancelledEvents: number;
-  pendingEvents: number;
-  activePlayerCount: number;
-  totalDkpDistributed: number;
-  nextActionEvent: {
-    id: string;
-    name: string;
-    type: EventType;
-    status: EventStatus;
-    batchOrder: number | null;
-    presentCount: number;
-    actionPt: string;
-  } | null;
-  events: Array<{
-    id: string;
-    name: string;
-    type: EventType;
-    status: EventStatus;
-    startsAt: Date;
-    finalizedAt: Date | null;
-    dkpReward: number;
-    dkpDistributedAt: Date | null;
-    batchOrder: number | null;
-    presentCount: number;
-    absentCount: number;
-    totalDkp: number;
-    dkpDistributed: boolean;
-    skipped: boolean;
-    isNextAction: boolean;
-  }>;
-};
-
-type EventTacticalRole = 'TANK' | 'HEALER' | 'DPS' | 'SUPPORT';
-
-export type EventReadinessReport = {
-  event: {
-    id: string;
-    name: string;
-    type: EventType;
-    status: EventStatus;
-    startsAt: Date;
-  };
-  generatedAt: Date;
-  activePlayerCount: number;
-  presentCount: number;
-  activeByLayer: Array<{
-    layer: number;
-    activeCount: number;
-    presentCount: number;
-    approvedCpAverage: number;
-  }>;
-  classPresence: Array<{
-    class: PlayerClass;
-    role: EventTacticalRole;
-    activeCount: number;
-    presentCount: number;
-    averageCombatPower: number;
-    maxLayer: number;
-  }>;
-  roleGaps: Array<{
-    role: 'TANK' | 'HEALER' | 'DPS';
-    labelPt: string;
-    required: number;
-    present: number;
-    backup: number;
-    missing: boolean;
-    classHints: PlayerClass[];
-    notePt: string;
-  }>;
-  cpSummary: {
-    withCombatPower: number;
-    withoutCombatPower: number;
-    averageCombatPower: number;
-    topPlayers: Array<{
-      id: string;
-      nickname: string;
-      class: PlayerClass;
-      dimensionalLayer: number;
-      combatPower: number;
-      isPresent: boolean;
-    }>;
-  };
-  staleStatusPlayers: Array<{
-    id: string;
-    nickname: string;
-    class: PlayerClass;
-    dimensionalLayer: number;
-    combatPower: number;
-    isPresent: boolean;
-    lastStatusAt: Date | null;
-    lastStatusReviewStatus: ProgressReviewStatus | null;
-    daysSinceStatus: number | null;
-  }>;
-  notesPt: string[];
-};
+export type FinalizeEventResult = SharedFinalizeEventResult<Event, Date>;
+export type EventFinalizationChecklist = SharedEventFinalizationChecklist<Date, PlayerClass>;
+export type EventBatchPanel = SharedEventBatchPanel<Date>;
+export type EventReadinessReport = SharedEventReadinessReport<Date, PlayerClass, ProgressReviewStatus>;
 
 @Injectable()
 export class AttendanceService {

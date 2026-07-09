@@ -11,6 +11,17 @@ Este arquivo define o contrato de trabalho para qualquer agente Codex neste repo
 5. Use o codigo e os documentos atuais como fonte de verdade. O wiki orienta, mas nao substitui a leitura dos arquivos afetados.
 6. Consulte o historico Git e os changelogs quando a tarefa envolver comportamento ou comunicacao ja alterados recentemente.
 
+## Controle anti-reexecucao de roadmaps
+
+Antes de executar qualquer roadmap vivo, especialmente
+`docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`:
+
+1. Classifique os itens como `implementado`, `parcial`, `pendente` ou `futuro`.
+2. Trate blocos `Estado em ...` como fonte de verdade documental ate prova em contrario.
+3. Confira `git log --oneline -- ARQUIVO` e os arquivos citados antes de implementar.
+4. Nao execute uma "ordem sugerida" historica sem confirmar a proxima pendencia real.
+5. Se a tarefa for criar nova rodada de melhorias, produza primeiro um roadmap novo e pare; nao comece a programar sem pedido explicito.
+
 ## Memoria viva obrigatoria
 
 Atualize `WIKI.md` no mesmo trabalho sempre que houver mudanca relevante em:

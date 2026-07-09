@@ -21,7 +21,7 @@ Producao:
 - API: NestJS em `apps/api`.
 - Web: Next.js 15 em `apps/web`.
 - Banco: PostgreSQL via Prisma em `packages/database`.
-- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
+- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; contratos de eventos (`EventRecord`, `FinalizeEventResult`, `EventFinalizationChecklist`, `EventBatchPanel`, `EventReadinessReport`, `EventDetails`, `AttendanceStats`, `PlayerAttendanceHistoryRow`) ficam em `packages/shared/src/types/events.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
 Qualidade obrigatoria:
@@ -162,6 +162,11 @@ Automacao ativa:
 - O diagnostico Staff de leilao em `/dashboard/staff/auction-diagnostics` seleciona qualquer leilao por lista, exibindo item, vencedor registrado por `AUCTION_WIN` quando houver e data de encerramento antes de consultar o raio-x completo. A tela tambem mostra motivo visual do estado atual, previa de finalizacao Staff-only, dossie Markdown copiavel e timeline operacional derivada de leilao, bids, locks, cancelamentos, votos, transacoes, entrega e audit logs. Endpoints sensiveis: `GET /operations/staff/auction-diagnostics/:auctionId/finalization-preview` e `GET /operations/staff/auction-diagnostics/:auctionId/dossier`.
 - A tela Staff `/dashboard/staff/deliveries` consome `GET /drops/pending-auction-deliveries`, que preserva `auction`, `player` e `transaction` e adiciona `urgency`, `ageHours`, `deliveryDueAt` e `priorityReason`. A tela mostra contadores, filtros por todos/atrasados/hoje/sem prova, busca por player/item, filtro por tier, badges de urgencia e prazo para impedir drop vencido esquecido. As tarefas Staff `DROP_DELIVERY` tambem carregam idade e motivo de prioridade no metadata para dashboard e meeting.
 - O programa completo de melhorias de produto/UX/processo fica em `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`, com epicos para leiloes, Staff, players, requests, interesses, eventos, Discord, auditoria, deploy e arquitetura.
+- O programa de melhorias original e historico consolidado da primeira rodada:
+  itens com `Estado em ... implementado` nao devem ser reexecutados como backlog
+  ativo. A nova rodada planejada fica em
+  `docs/RAVEN2_IMPLEMENTATION_ROADMAP_2026_07.md`; antes de programar qualquer
+  fatia, reconciliar roadmap, `git log`, wiki e arquivos citados.
 
 ## Leiloes e sigilo
 
@@ -333,6 +338,8 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Contratos de eventos passaram para `packages/shared/src/types/events.ts`, com aliases locais na API e Web para preservar datas de servidor/cliente. | contratos/shared |
+| 2026-07-09 | Roadmap original ganhou controle anti-reexecucao e foi criado o roadmap de implantacao 2026-07 para a proxima rodada de melhorias sem iniciar programacao. | docs/roadmap |
 | 2026-07-09 | Smoke publico passou a bloquear deploy somente pelo `/health` com `APP_VERSION` esperado; healths de modulos viraram diagnostico auxiliar para evitar falso negativo de borda no runner externo. | deploy/smoke |
 | 2026-07-09 | Workflow passou a tolerar challenge HTML 403 da borda contra runner GitHub no smoke publico, emitindo warning explicito em vez de falhar quando a requisicao nao chega na API. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a emitir annotation de falha com ultimo resultado observado para diagnostico publico do Actions. | deploy/smoke |

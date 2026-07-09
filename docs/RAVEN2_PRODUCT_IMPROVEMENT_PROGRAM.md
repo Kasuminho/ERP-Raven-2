@@ -5,6 +5,23 @@ O objetivo nao e listar desejos soltos, e sim definir entregas completas para a
 guilda operar melhor DKP, loot, presenca, progresso, comunicacao, deploy e
 incidentes.
 
+## Status atual e controle anti-reexecucao
+
+Status em 2026-07-09: este programa deve ser lido como historico consolidado da
+primeira rodada de melhorias. Os itens marcados com `Estado em ... implementado`
+nao sao backlog ativo e nao devem ser reexecutados sem uma auditoria previa em
+`git log`, `WIKI.md` e nos arquivos citados.
+
+Backlog ativo para uma nova rodada fica em
+`docs/RAVEN2_IMPLEMENTATION_ROADMAP_2026_07.md`.
+
+Antes de usar este documento para programar:
+
+1. Classificar cada item relevante como implementado, parcial, pendente ou futuro.
+2. Conferir os commits e arquivos citados no item.
+3. Declarar qual pendencia real sera atacada.
+4. Parar se a tarefa for apenas planejar ou refazer roadmap.
+
 Este trabalho e interno do produto. Mudancas publicadas para a operacao G3X ainda
 seguem o protocolo normal: validar, publicar, verificar producao e so entao enviar
 changelog Staff quando houver impacto operacional.
@@ -801,7 +818,10 @@ Entrega:
 - Health Staff mostra check `rate-limit` indicando provider em memoria local e
   limite operacional para multi-replica.
 
-## Ordem sugerida de execucao
+## Ordem historica executada
+
+Esta ordem descreve a primeira rodada ja executada/documentada. Nao usar como
+fila ativa sem reconciliar com o estado atual do codigo.
 
 1. Documentar programa e alinhar WIKI.
 2. Separar servico de diagnostico de leilao ou criar servico novo sem mover tudo.
@@ -817,6 +837,9 @@ Entrega:
 12. Refatorar hooks/API por dominio.
 13. Migrar DTOs e contratos compartilhados.
 14. Atualizar guias funcionais e docs de produto.
+
+Para proximos trabalhos, usar
+`docs/RAVEN2_IMPLEMENTATION_ROADMAP_2026_07.md`.
 
 ## Definicao de pronto por fatia
 

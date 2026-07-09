@@ -6,6 +6,17 @@ import type {
   AuctionFinalizationPreview as SharedAuctionFinalizationPreview,
   AuctionTimelineEvent as SharedAuctionTimelineEvent,
 } from '@shared/types/auctions';
+import type {
+  AttendanceStats as SharedAttendanceStats,
+  EventBatchPanel as SharedEventBatchPanel,
+  EventDetails as SharedEventDetails,
+  EventFinalizationChecklist as SharedEventFinalizationChecklist,
+  EventReadinessReport as SharedEventReadinessReport,
+  EventRecord as SharedEventRecord,
+  EventType as SharedEventType,
+  FinalizeEventResult as SharedFinalizeEventResult,
+  PlayerAttendanceHistoryRow as SharedPlayerAttendanceHistoryRow,
+} from '@shared/types/events';
 import type { OperationPriority as SharedOperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
 
 export type ItemTier = 'T2' | 'T3' | 'T4' | 'LEGENDARY';
@@ -37,24 +48,7 @@ export type AuctionStatus = 'OPEN' | 'PENDING_REVIEW' | 'FINISHED' | 'CANCELLED'
 export type AuctionMode = 'STANDARD' | 'ALL_IN' | 'STAFF_REVIEW';
 export type OperationPriority = SharedOperationPriority;
 export type DeploymentProtocolStepStatus = 'done' | 'pending' | 'blocked' | 'manual';
-export type EventType =
-  | 'LUNOS'
-  | 'RIGRETO'
-  | 'GARDRON'
-  | 'MELKAR'
-  | 'VARGAS'
-  | 'BELLAMONICA'
-  | 'SION'
-  | 'ISTERIA'
-  | 'NIDROK'
-  | 'MORGON'
-  | 'GUILD_DUNGEON'
-  | 'SATURDAY_EVENT'
-  | 'ABYSS_1'
-  | 'ABYSS_1_2'
-  | 'FLOUD'
-  | 'KRATERIUS'
-  | 'T3_ROTATION';
+export type EventType = SharedEventType;
 
 export type DeploymentPanelSummary = {
   generatedAt: string;
@@ -519,185 +513,15 @@ export type EligibilityResponse = {
   itemType?: string;
 };
 
-export type EventRecord = {
-  id: string;
-  name: string;
-  type: EventType;
-  status: 'OPEN' | 'ATTENDANCE_REGISTRATION' | 'FINALIZED' | 'CANCELLED';
-  dkpReward: number;
-  startsAt: string;
-  finalizedAt?: string;
-  attendanceBatchId?: string;
-  batchOrder?: number;
-};
-
-export type FinalizeEventResult = {
-  event: EventRecord;
-  nextEvent: EventRecord | null;
-  copiedAttendanceCount: number;
-  attendanceCopyStatus: 'COPIED' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
-};
-
-export type EventFinalizationChecklist = {
-  eventId: string;
-  eventName: string;
-  eventType: EventType;
-  status: EventRecord['status'];
-  dkpPerPlayer: number;
-  totalDkp: number;
-  presentCount: number;
-  absentCount: number;
-  activePlayerCount: number;
-  presentPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'>>;
-  absentPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'>>;
-  currentBoss: {
-    id: string;
-    name: string;
-    type: EventType;
-    startsAt: string;
-    attendanceBatchId?: string;
-    batchOrder?: number;
-  };
-  nextBatchEvent: {
-    id: string;
-    name: string;
-    type: EventType;
-    startsAt: string;
-    status: EventRecord['status'];
-    attendanceBatchId?: string;
-    batchOrder?: number;
-    existingAttendanceCount: number;
-  } | null;
-  attendanceCopy: {
-    willCopy: boolean;
-    status: 'WILL_COPY' | 'NEXT_EVENT_NOT_EMPTY' | 'NO_NEXT_EVENT';
-    targetEventId?: string;
-    targetEventName?: string;
-    copiedCountEstimate: number;
-    messagePt: string;
-  };
-  warnings: Array<{
-    tone: 'info' | 'warning' | 'danger';
-    messagePt: string;
-  }>;
-};
-
-export type EventBatchPanel = {
-  batchId: string;
-  title: string;
-  startsAt?: string | null;
-  totalEvents: number;
-  finalizedEvents: number;
-  cancelledEvents: number;
-  pendingEvents: number;
-  activePlayerCount: number;
-  totalDkpDistributed: number;
-  nextActionEvent: {
-    id: string;
-    name: string;
-    type: EventType;
-    status: EventRecord['status'];
-    batchOrder?: number | null;
-    presentCount: number;
-    actionPt: string;
-  } | null;
-  events: Array<{
-    id: string;
-    name: string;
-    type: EventType;
-    status: EventRecord['status'];
-    startsAt: string;
-    finalizedAt?: string | null;
-    dkpReward: number;
-    dkpDistributedAt?: string | null;
-    batchOrder?: number | null;
-    presentCount: number;
-    absentCount: number;
-    totalDkp: number;
-    dkpDistributed: boolean;
-    skipped: boolean;
-    isNextAction: boolean;
-  }>;
-};
-
-export type EventReadinessReport = {
-  event: Pick<EventRecord, 'id' | 'name' | 'type' | 'status' | 'startsAt'>;
-  generatedAt: string;
-  activePlayerCount: number;
-  presentCount: number;
-  activeByLayer: Array<{
-    layer: number;
-    activeCount: number;
-    presentCount: number;
-    approvedCpAverage: number;
-  }>;
-  classPresence: Array<{
-    class: PlayerClass;
-    role: 'TANK' | 'HEALER' | 'DPS' | 'SUPPORT';
-    activeCount: number;
-    presentCount: number;
-    averageCombatPower: number;
-    maxLayer: number;
-  }>;
-  roleGaps: Array<{
-    role: 'TANK' | 'HEALER' | 'DPS';
-    labelPt: string;
-    required: number;
-    present: number;
-    backup: number;
-    missing: boolean;
-    classHints: PlayerClass[];
-    notePt: string;
-  }>;
-  cpSummary: {
-    withCombatPower: number;
-    withoutCombatPower: number;
-    averageCombatPower: number;
-    topPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'> & {
-      combatPower: number;
-      isPresent: boolean;
-    }>;
-  };
-  staleStatusPlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'> & {
-    combatPower: number;
-    isPresent: boolean;
-    lastStatusAt?: string | null;
-    lastStatusReviewStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_REQUIRED' | null;
-    daysSinceStatus?: number | null;
-  }>;
-  notesPt: string[];
-};
-
-export type EventAttendanceRow = {
-  id: string;
-  eventId: string;
-  playerId: string;
-  attended: boolean;
-  createdAt: string;
-  player: PlayerProfile;
-};
-
-export type EventDetails = EventRecord & {
-  attendances: EventAttendanceRow[];
-};
-
-export type AttendanceStats = {
-  playerId: string;
-  participatedEvents: number;
-  eligibleEvents: number;
-  attendancePercentage: number;
-};
-
-export type PlayerAttendanceHistoryRow = {
-  eventId: string;
-  name: string;
-  type: EventType;
-  status: EventRecord['status'];
-  dkpReward: number;
-  startsAt: string;
-  finalizedAt?: string;
-  attendanceStatus: 'PRESENT' | 'ABSENT' | 'PENDING';
-};
+export type EventRecord = SharedEventRecord<string>;
+export type FinalizeEventResult = SharedFinalizeEventResult<EventRecord, string>;
+export type EventFinalizationChecklist = SharedEventFinalizationChecklist<string, PlayerClass>;
+export type EventBatchPanel = SharedEventBatchPanel<string>;
+export type EventReadinessReport = SharedEventReadinessReport<string, PlayerClass, ProgressReviewStatus>;
+export type EventDetails = SharedEventDetails<string, PlayerProfile>;
+export type EventAttendanceRow = EventDetails['attendances'][number];
+export type AttendanceStats = SharedAttendanceStats;
+export type PlayerAttendanceHistoryRow = SharedPlayerAttendanceHistoryRow<string>;
 
 export type Transaction = {
   id: string;
