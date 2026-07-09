@@ -238,6 +238,7 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Requests tambem podem receber `swapSuggestions`: ate tres itens requestaveis ativos da mesma categoria e, quando aplicavel, mesmo tier/tipo, com fila menor. A UI mostra posicao estimada, unidades na fila e trade-off PT-BR/EN; a troca continua manual/controlada pela Staff.
 - Requests tambem recebem `materialPriority`: requests de craft T3 mostram selo de prioridade operacional, e requests de Quintessencia afetados por craft T3 do mesmo material inferido mostram aviso simplificado para player e texto operacional para Staff.
 - A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
+- A rota Web `/dashboard/item-requests` usa componentes locais em `_components`: `page.tsx` fica como guard/entrada, `item-request-panels.tsx` concentra os paineis player/Staff e `item-request-common.tsx` guarda paineis reutilizados de forecast, sugestoes e prioridade.
 
 ## Deploy e producao
 
@@ -339,6 +340,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Tela Web de item requests foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-09 | Calculo de forecast, sugestoes e prioridade de material de item-requests saiu do servico principal para `ItemRequestQueueService`, com teste direto de regressao. | arquitetura/API |
 | 2026-07-09 | Contratos de item-requests passaram para `packages/shared/src/types/requests.ts`, com aliases locais na API e Web para request, forecast de fila, sugestoes de troca e prioridade de material. | contratos/shared |
 | 2026-07-09 | Modulo `search` ganhou DTO com `class-validator` e pipe local forte para a query `q`, rejeitando parametros extras antes do servico de busca. | validacao/API |
