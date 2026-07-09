@@ -122,6 +122,7 @@ Automacao ativa:
 - `codex` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print do pedido, print de comprovante opcional, nota opcional e motivo de cancelamento antes do fluxo player/Staff.
 - `daoshi` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print, data, valores positivos, lancamento manual e nota de review antes de processar recibos e revisoes Staff.
 - `announcements` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida tipo, titulo, data ISO, campos opcionais e bosses de presenca em lote antes de criar anuncio/eventos.
+- `events` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao de evento, registro de presenca e cancelamento antes da rotina Staff de presenca/DKP.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
@@ -324,6 +325,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Modulo `events` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao, presenca e cancelamento. | validacao/API |
 | 2026-07-08 | Sexta rotacao automatica renovou o humor dos webhooks, DMs, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-08 | Sorteio 100% transmutar preserva bloqueio de 24h por tipo quando ha player livre e usa fallback ponderado pelos recebimentos dos ultimos 30 dias quando todos ja receberam. | interesses/transmutar |
 | 2026-07-02 | Modulo `announcements` ganhou DTO com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao de anuncios. | validacao/API |

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Event } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -11,6 +11,7 @@ import { EventsService } from '../services/events.service';
 type AuthRequest = { user?: { userId?: string } };
 
 @Controller()
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class EventsController {
   constructor(
     private readonly service: EventsService,

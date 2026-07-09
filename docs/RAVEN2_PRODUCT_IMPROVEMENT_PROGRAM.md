@@ -756,7 +756,9 @@ envio e motivo de cancelamento antes de processar o fluxo. A fase 3 implementou
 o mesmo padrao no modulo `daoshi`, validando recibos, lancamentos manuais e
 revisao Staff antes de processar valores financeiros. A fase 4 implementou o
 padrao no modulo `announcements`, validando criacao de anuncio, data ISO e bosses
-de presenca em lote antes de processar o fluxo.
+de presenca em lote antes de processar o fluxo. A fase 5 implementou o padrao no
+modulo `events`, validando criacao de evento, registro de presenca e cancelamento
+antes de processar a rotina de presenca/DKP.
 
 Entrega:
 
