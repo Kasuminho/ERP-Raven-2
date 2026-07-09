@@ -627,6 +627,9 @@ Entrega:
 - O smoke publico imprime a configuracao efetiva e limita cada fetch e o step do
   GitHub Actions, evitando jobs pendurados quando a rede do runner nao encerra
   uma conexao corretamente.
+- O smoke publico usa resolucao DNS `ipv4first` por padrao, configuravel por
+  `SMOKE_DNS_ORDER`, para evitar falso negativo quando o runner resolve um
+  caminho IPv6 instavel antes do IPv4 publico saudavel.
 
 ### I3. Backup novo no health privado
 

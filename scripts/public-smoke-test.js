@@ -1,9 +1,14 @@
+const dns = require('node:dns');
+
 const baseUrl = (process.env.SMOKE_BASE_URL ?? 'https://app.guild-g3x.com.br/api/v1').replace(/\/$/, '');
 const attempts = Number(process.env.SMOKE_ATTEMPTS ?? 6);
 const delayMs = Number(process.env.SMOKE_DELAY_MS ?? 10_000);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS ?? 10_000);
+const dnsOrder = process.env.SMOKE_DNS_ORDER ?? 'ipv4first';
 const expectedVersion = process.env.EXPECTED_VERSION ?? '';
 const paths = ['/health', '/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
+
+dns.setDefaultResultOrder(dnsOrder);
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -33,7 +38,7 @@ async function check() {
 }
 
 async function main() {
-  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, expectedVersion, paths }, null, 2));
+  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, expectedVersion, paths }, null, 2));
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await check();

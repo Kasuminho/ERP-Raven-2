@@ -133,6 +133,7 @@ jobs:
           SMOKE_ATTEMPTS: 24
           SMOKE_DELAY_MS: 20000
           SMOKE_FETCH_TIMEOUT_MS: 10000
+          SMOKE_DNS_ORDER: ipv4first
 
       - name: Check authenticated staff API
         run: |
