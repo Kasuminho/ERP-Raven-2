@@ -636,6 +636,9 @@ Entrega:
 - Cada request do smoke recebe query `_smoke` unica e headers `Cache-Control:
   no-cache`/`Pragma: no-cache`, preservando a validacao de `APP_VERSION` sem
   aceitar health antigo vindo de cache regional.
+- Em falha, o script emite uma annotation `Public smoke failed` com o ultimo
+  resultado observado, permitindo diagnostico na pagina publica do Actions mesmo
+  quando logs completos exigem login.
 
 ### I3. Backup novo no health privado
 

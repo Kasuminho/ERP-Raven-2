@@ -16,6 +16,13 @@ dns.setDefaultResultOrder(dnsOrder);
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+function escapeGithubAnnotation(value) {
+  return value
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A');
+}
+
 function requestWithTimeout(url, attempt) {
   const parsedUrl = new URL(url);
   parsedUrl.searchParams.set('_smoke', `${process.env.EXPECTED_VERSION ?? 'manual'}-${attempt}-${Date.now()}`);
@@ -67,8 +74,10 @@ async function check(attempt) {
 async function main() {
   console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, paths }, null, 2));
 
+  let lastResult;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await check(attempt);
+    lastResult = result;
     if (result.ok) {
       console.log(JSON.stringify({ ok: true, baseUrl, attempt, checks: result.results }, null, 2));
       return;
@@ -76,6 +85,8 @@ async function main() {
     console.error(`Public smoke attempt ${attempt}/${attempts} failed: ${JSON.stringify(result.results)}`);
     if (attempt < attempts) await sleep(delayMs);
   }
+  const failure = JSON.stringify({ baseUrl, expectedVersion, checks: lastResult?.results ?? [] });
+  console.error(`::error title=Public smoke failed::${escapeGithubAnnotation(failure)}`);
   process.exitCode = 1;
 }
 

@@ -35,6 +35,7 @@ Qualidade obrigatoria:
 - O smoke publico usa DNS `ipv4first` por padrao, via `SMOKE_DNS_ORDER`, e cliente nativo `http/https` com familia DNS explicita para reduzir falso negativo de runner quando IPv6 do dominio existe mas o caminho saudavel observado e IPv4.
 - O smoke publico envia `Accept: application/json` e `SMOKE_USER_AGENT` explicito para reduzir bloqueio de edge/WAF contra runner automatizado.
 - O smoke publico adiciona query `_smoke` unica e headers `Cache-Control: no-cache`/`Pragma: no-cache` em cada request para evitar `APP_VERSION` antigo vindo de cache regional.
+- Quando falha, o smoke publico emite annotation `Public smoke failed` com o ultimo resultado observado para diagnostico visivel na pagina do Actions.
 
 Modulos principais da API:
 
@@ -330,6 +331,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Smoke publico passou a emitir annotation de falha com ultimo resultado observado para diagnostico publico do Actions. | deploy/smoke |
 | 2026-07-08 | Smoke publico ganhou cache-buster `_smoke` e headers no-cache por request para evitar health antigo em edge regional. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a enviar `Accept: application/json` e `SMOKE_USER_AGENT` explicito nas chamadas do runner externo. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a preferir DNS IPv4-first por padrao, com override `SMOKE_DNS_ORDER`, usando cliente nativo `http/https` com familia DNS explicita para estabilizar verificacao feita por runner externo. | deploy/smoke |
