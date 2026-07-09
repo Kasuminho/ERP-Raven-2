@@ -1,5 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ItemCatalog, ItemRequest, ItemRequestUpdateStatus, ItemTier, Prisma } from '@prisma/client';
+import type {
+  ItemRequestEnrichment as SharedItemRequestEnrichment,
+  ItemRequestMaterialPriority as SharedItemRequestMaterialPriority,
+  ItemRequestQueueForecast as SharedItemRequestQueueForecast,
+  ItemRequestSwapSuggestion as SharedItemRequestSwapSuggestion,
+} from '@shared/types/requests';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { getRequestableCatalogKey, requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
@@ -11,56 +17,10 @@ const categoryLimitExemptions = new Set(['creature of gaiety', 'elder dragon ist
 const categoryLimitExemptCategories = new Set(['creature']);
 const updateExpiryExemptCategories = new Set(['creature']);
 
-export type ItemRequestQueueForecast = {
-  position: number;
-  queueSize: number;
-  requestsAhead: number;
-  unitsAhead: number;
-  estimatedDeliveriesBefore: number;
-  isNext: boolean;
-  needsUpdate: boolean;
-  updateStage: 'clear' | 'warned_3d' | 'warned_4d' | 'pending_review' | 'boss_manual';
-  lastUpdateAt: Date;
-  daysSinceUpdate: number;
-  lastDeliveryAt?: Date | null;
-  lastDeliveryPlayerName?: string | null;
-  summaryPt: string;
-  summaryEn: string;
-  staffSummaryPt: string;
-};
-
-export type ItemRequestSwapSuggestion = {
-  itemCatalogId: string;
-  itemName: string;
-  itemNamePt: string;
-  itemNameEn: string;
-  category: string;
-  itemTier?: string | null;
-  itemType?: string | null;
-  queueSize: number;
-  unitsInQueue: number;
-  estimatedPosition: number;
-  tradeoffPt: string;
-  tradeoffEn: string;
-};
-
-export type ItemRequestMaterialPriority = {
-  affected: boolean;
-  reason: 'NONE' | 'T3_CRAFT_PRIORITY' | 'T3_CRAFT_OVER_QUINTESSENCE';
-  materialKey?: string | null;
-  blockingCraftRequests: number;
-  blockingRequestIds: string[];
-  blockingItemNames: string[];
-  summaryPt: string;
-  summaryEn: string;
-  staffSummaryPt: string;
-};
-
-export type ItemRequestDetailsWithForecast = ItemRequestDetails & {
-  queueForecast: ItemRequestQueueForecast;
-  swapSuggestions: ItemRequestSwapSuggestion[];
-  materialPriority: ItemRequestMaterialPriority;
-};
+export type ItemRequestQueueForecast = SharedItemRequestQueueForecast<Date>;
+export type ItemRequestSwapSuggestion = SharedItemRequestSwapSuggestion<string, string>;
+export type ItemRequestMaterialPriority = SharedItemRequestMaterialPriority;
+export type ItemRequestDetailsWithForecast = ItemRequestDetails & Required<SharedItemRequestEnrichment<Date, string, string>>;
 
 @Injectable()
 export class ItemRequestsService {

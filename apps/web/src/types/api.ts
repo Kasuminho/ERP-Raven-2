@@ -18,6 +18,7 @@ import type {
   PlayerAttendanceHistoryRow as SharedPlayerAttendanceHistoryRow,
 } from '@shared/types/events';
 import type { OperationPriority as SharedOperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
+import type { ItemRequestRecord as SharedItemRequestRecord } from '@shared/types/requests';
 
 export type ItemTier = 'T2' | 'T3' | 'T4' | 'LEGENDARY';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CELESTIAL_STONE';
@@ -167,85 +168,19 @@ export type ItemCatalog = {
   updatedAt: string;
 };
 
-export type ItemRequest = {
-  id: string;
-  legacyId?: number;
-  itemCatalogId?: string;
-  playerId?: string;
-  discordId: string;
-  playerName: string;
-  itemName: string;
-  imageUrl?: string;
-  totalQuantity: number;
-  remainingQuantity: number;
-  rankPosition: number;
-  threadId?: string;
-  threadChannelId?: string;
-  warned3d: boolean;
-  warned4d: boolean;
-  updateProofImageUrl?: string;
-  updateProofNote?: string;
-  updateProofStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  updateProofSubmittedAt?: string;
-  updateProofReviewedAt?: string;
-  updateProofReviewedById?: string;
-  lastReminderStage?: string;
-  lastReminderAt?: string;
-  legacyCreatedAt?: string;
-  legacyUpdatedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  itemCatalog?: ItemCatalog;
-  player?: PlayerProfile & {
+export type ItemRequest = SharedItemRequestRecord<
+  string,
+  ItemCatalog,
+  PlayerProfile & {
     user?: {
       discordId: string;
       discordUsername: string;
       discordNickname?: string;
     };
-  };
-  queueForecast?: {
-    position: number;
-    queueSize: number;
-    requestsAhead: number;
-    unitsAhead: number;
-    estimatedDeliveriesBefore: number;
-    isNext: boolean;
-    needsUpdate: boolean;
-    updateStage: 'clear' | 'warned_3d' | 'warned_4d' | 'pending_review' | 'boss_manual';
-    lastUpdateAt: string;
-    daysSinceUpdate: number;
-    lastDeliveryAt?: string | null;
-    lastDeliveryPlayerName?: string | null;
-    summaryPt: string;
-    summaryEn: string;
-    staffSummaryPt: string;
-  };
-  swapSuggestions?: Array<{
-    itemCatalogId: string;
-    itemName: string;
-    itemNamePt: string;
-    itemNameEn: string;
-    category: string;
-    itemTier?: ItemTier | null;
-    itemType?: ItemType | null;
-    queueSize: number;
-    unitsInQueue: number;
-    estimatedPosition: number;
-    tradeoffPt: string;
-    tradeoffEn: string;
-  }>;
-  materialPriority?: {
-    affected: boolean;
-    reason: 'NONE' | 'T3_CRAFT_PRIORITY' | 'T3_CRAFT_OVER_QUINTESSENCE';
-    materialKey?: string | null;
-    blockingCraftRequests: number;
-    blockingRequestIds: string[];
-    blockingItemNames: string[];
-    summaryPt: string;
-    summaryEn: string;
-    staffSummaryPt: string;
-  };
-};
+  },
+  ItemTier,
+  ItemType
+>;
 
 export type ItemInterestStatus = 'OPEN' | 'CLOSED' | 'VOTING' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
 

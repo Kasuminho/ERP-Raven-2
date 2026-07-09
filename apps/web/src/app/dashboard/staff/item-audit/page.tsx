@@ -234,7 +234,7 @@ function StaffItemAuditContent() {
                     {requests.map((request) => (
                       <div key={request.id} className="rounded-md border bg-background/35 p-3 text-sm">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-semibold">{itemName(request.itemCatalog, locale, request.itemName)}</p>
+                          <p className="font-semibold">{itemName(request.itemCatalog ?? undefined, locale, request.itemName)}</p>
                           <Badge tone={request.remainingQuantity > 0 ? 'blue' : 'green'}>
                             {request.remainingQuantity > 0 ? 'Aberto' : 'Completo'}
                           </Badge>

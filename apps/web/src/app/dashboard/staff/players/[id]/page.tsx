@@ -48,7 +48,7 @@ export default function StaffPlayerHistoryPage() {
             <CardContent className="space-y-2">
               {(history.data?.itemRequests ?? []).map((request) => (
                 <div key={request.id} className="rounded-md border bg-background/35 p-2 text-sm">
-                  #{request.rankPosition} {itemName(request.itemCatalog, locale, request.itemName)} - {request.remainingQuantity}/{request.totalQuantity}
+                  #{request.rankPosition} {itemName(request.itemCatalog ?? undefined, locale, request.itemName)} - {request.remainingQuantity}/{request.totalQuantity}
                 </div>
               ))}
             </CardContent>

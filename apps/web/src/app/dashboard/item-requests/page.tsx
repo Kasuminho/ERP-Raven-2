@@ -267,7 +267,7 @@ function PlayerItemRequestsPanel() {
                 <div className="flex min-w-0 gap-3">
                   {request.imageUrl && <img className="h-16 w-16 rounded-md border object-cover" src={displayImageUrl(request.imageUrl)} alt={request.itemName} />}
                   <div>
-                    <p className="font-semibold">{itemName(request.itemCatalog, locale, request.itemName)}</p>
+                    <p className="font-semibold">{itemName(request.itemCatalog ?? undefined, locale, request.itemName)}</p>
                     <p className="text-sm text-muted-foreground">{t(locale, 'rank')} #{request.rankPosition} - {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}</p>
                     <p className="text-xs text-muted-foreground">{t(locale, 'lastUpdate')}: {request.legacyUpdatedAt ? new Date(request.legacyUpdatedAt).toLocaleString() : new Date(request.updatedAt).toLocaleString()}</p>
                   </div>
@@ -334,7 +334,7 @@ function PlayerItemRequestsPanel() {
           {groupedRankings.map((group) => (
             <div key={group.itemName} className="rounded-md border bg-background/35 p-3">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold capitalize">{itemName(group.item, locale, group.itemName)}</p>
+                <p className="font-semibold capitalize">{itemName(group.item ?? undefined, locale, group.itemName)}</p>
                 <span className="flex flex-wrap gap-2">
                   {group.item?.category ? <Badge tone="blue">{categoryLabel(locale, group.item.category)}</Badge> : null}
                   <Badge tone="gold">{group.rows.length} {t(locale, 'inQueue')}</Badge>
@@ -494,7 +494,7 @@ function StaffItemRequestsPanel() {
                     <span className="text-sm text-muted-foreground">{request.player?.user?.discordUsername ?? request.discordId}</span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {itemName(request.itemCatalog, locale, request.itemName)} - {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}
+                    {itemName(request.itemCatalog ?? undefined, locale, request.itemName)} - {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}
                   </p>
                   {request.updateProofNote && <p className="mt-1 text-sm">{request.updateProofNote}</p>}
                   <div className="mt-3 flex flex-wrap gap-3">
@@ -552,7 +552,7 @@ function StaffItemRequestsPanel() {
           <Card key={group.itemName} className="overflow-hidden">
             <CardHeader className="border-b bg-muted/25">
               <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <span className="capitalize">{itemName(group.item, locale, group.itemName)}</span>
+                <span className="capitalize">{itemName(group.item ?? undefined, locale, group.itemName)}</span>
                 <span className="flex flex-wrap gap-2">
                   {group.item?.category ? <Badge tone="blue">{categoryLabel(locale, group.item.category)}</Badge> : null}
                   <Badge tone="gold">{group.rows.length} {t(locale, 'inQueue')}</Badge>

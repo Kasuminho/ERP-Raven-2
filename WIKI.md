@@ -21,7 +21,7 @@ Producao:
 - API: NestJS em `apps/api`.
 - Web: Next.js 15 em `apps/web`.
 - Banco: PostgreSQL via Prisma em `packages/database`.
-- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; contratos de eventos (`EventRecord`, `FinalizeEventResult`, `EventFinalizationChecklist`, `EventBatchPanel`, `EventReadinessReport`, `EventDetails`, `AttendanceStats`, `PlayerAttendanceHistoryRow`) ficam em `packages/shared/src/types/events.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
+- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; contratos de eventos (`EventRecord`, `FinalizeEventResult`, `EventFinalizationChecklist`, `EventBatchPanel`, `EventReadinessReport`, `EventDetails`, `AttendanceStats`, `PlayerAttendanceHistoryRow`) ficam em `packages/shared/src/types/events.ts`; contratos de requests (`ItemRequestRecord`, `ItemRequestQueueForecast`, `ItemRequestSwapSuggestion`, `ItemRequestMaterialPriority`) ficam em `packages/shared/src/types/requests.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
 Qualidade obrigatoria:
@@ -339,6 +339,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Contratos de item-requests passaram para `packages/shared/src/types/requests.ts`, com aliases locais na API e Web para request, forecast de fila, sugestoes de troca e prioridade de material. | contratos/shared |
 | 2026-07-09 | Modulo `search` ganhou DTO com `class-validator` e pipe local forte para a query `q`, rejeitando parametros extras antes do servico de busca. | validacao/API |
 | 2026-07-09 | Contratos de eventos passaram para `packages/shared/src/types/events.ts`, com aliases locais na API e Web para preservar datas de servidor/cliente. | contratos/shared |
 | 2026-07-09 | Roadmap original ganhou controle anti-reexecucao e foi criado o roadmap de implantacao 2026-07 para a proxima rodada de melhorias sem iniciar programacao. | docs/roadmap |
