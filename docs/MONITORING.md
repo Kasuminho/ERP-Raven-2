@@ -32,10 +32,14 @@ por mais de 26 horas.
 O health privado tambem denuncia backup verificado antigo lendo
 `BACKUP_STATUS_FILE` (`/app/backups/last-verified-backup.json` por padrao). Mantenha
 `${BACKUP_DIR}` montado no container da API como read-only para o painel Staff e o
-health privado enxergarem o marcador gerado por `verify-backup.sh`.
+health privado enxergarem o marcador gerado por `verify-backup.sh`. Quando o job
+roda no host e herda `BACKUP_STATUS_FILE=/app/backups/...`, o verificador grava o
+marcador equivalente dentro de `${BACKUP_DIR}`.
 
-O job de backup deve executar `verify-backup.sh` ao menos semanalmente. O destino
-off-site deve alertar independentemente quando nao receber um arquivo no periodo.
+O job de backup deve executar `verify-backup.sh` antes de vencer
+`BACKUP_MAX_AGE_HOURS`; em producao, prefira `BACKUP_VERIFY_AFTER=1
+scripts/prod/backup-postgres.sh` no cron diario. O destino off-site deve alertar
+independentemente quando nao receber um arquivo no periodo.
 
 ## Teste do alarme
 

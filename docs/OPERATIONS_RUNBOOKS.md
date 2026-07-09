@@ -48,22 +48,28 @@ segredos, dumps ou URLs completas de webhook em tickets ou changelogs.
 
 ## Backup diario e teste de restauracao
 
-Cron diario:
+Cron diario recomendado, criando o dump e validando o arquivo recem-gerado por
+restore temporario. Esse modo tambem atualiza `last-verified-backup.json`, que e o
+marcador lido pelo health privado e pelo painel Staff:
 
 ```cron
-20 4 * * * cd /caminho/do/projeto && . ./.env.production && scripts/prod/backup-postgres.sh >> logs/backup.log 2>&1
+20 4 * * * cd /caminho/do/projeto && mkdir -p logs && . ./.env.production && BACKUP_VERIFY_AFTER=1 scripts/prod/backup-postgres.sh >> logs/backup.log 2>&1
 ```
 
-Teste semanal, usando o backup mais recente escolhido explicitamente:
+Se preferir separar backup e verificacao, o teste precisa rodar dentro de
+`BACKUP_MAX_AGE_HOURS` (26h por padrao). Exemplo diario usando o backup mais
+recente:
 
 ```cron
-20 6 * * 1 cd /caminho/do/projeto && . ./.env.production && scripts/prod/verify-backup.sh /caminho/do/backup.dump.gpg >> logs/backup-verify.log 2>&1
+20 6 * * * cd /caminho/do/projeto && mkdir -p logs && . ./.env.production && latest="$(find "${BACKUP_DIR:-./backups}" -maxdepth 1 -type f \( -name "${POSTGRES_DB:-guild_platform}_*.dump" -o -name "${POSTGRES_DB:-guild_platform}_*.dump.gpg" \) -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)" && scripts/prod/verify-backup.sh "$latest" >> logs/backup-verify.log 2>&1
 ```
 
 `verify-backup.sh` grava `last-verified-backup.json` no diretorio do backup, ou em
-`BACKUP_STATUS_FILE` quando definido. Garanta que `${BACKUP_DIR}` esteja montado
-como `/app/backups:ro` na API para o health privado mostrar a idade do ultimo
-backup verificado.
+`BACKUP_HOST_STATUS_FILE` quando definido. Se herdar
+`BACKUP_STATUS_FILE=/app/backups/last-verified-backup.json` da API, o script traduz
+esse caminho para `${BACKUP_DIR}/last-verified-backup.json` no host. Garanta que
+`${BACKUP_DIR}` esteja montado como `/app/backups:ro` na API para o health privado
+mostrar a idade do ultimo backup verificado.
 
 Use `BACKUP_OFFSITE_COMMAND` para enviar artefato e checksum a um destino externo. O
 comando recebe o caminho em `$1`; exemplo: `rclone copy "$1" remote:guild-backups`.

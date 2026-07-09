@@ -141,15 +141,28 @@ writes a small status marker:
 }
 ```
 
-The marker is written to `BACKUP_STATUS_FILE` when set, otherwise to
-`$(dirname BACKUP_FILE)/last-verified-backup.json`. Production Compose mounts
-`${BACKUP_DIR:-/srv/guild/backups}` into the API container as `/app/backups:ro`,
-and private health reads `/app/backups/last-verified-backup.json` by default.
+The marker is written to `BACKUP_HOST_STATUS_FILE` when set, otherwise to
+`$(dirname BACKUP_FILE)/last-verified-backup.json`. When the script inherits
+`BACKUP_STATUS_FILE=/app/backups/last-verified-backup.json` from the API env, it
+maps that container path back to `${BACKUP_DIR}/last-verified-backup.json` on the
+host. Production Compose mounts `${BACKUP_DIR:-/srv/guild/backups}` into the API
+container as `/app/backups:ro`, and private health reads
+`/app/backups/last-verified-backup.json` by default.
+
+Recommended production cron:
+
+```cron
+20 4 * * * cd /path/to/project && mkdir -p logs && . ./.env.production && BACKUP_VERIFY_AFTER=1 scripts/prod/backup-postgres.sh >> logs/backup.log 2>&1
+```
+
+`BACKUP_VERIFY_AFTER=1` makes `backup-postgres.sh` verify the dump it just created,
+so the marker stays fresh before the default 26 hour health limit expires.
 
 Variables, without values:
 
 - `BACKUP_DIR`: host directory for backup artifacts and the verification marker.
 - `BACKUP_STATUS_FILE`: API-side path to the marker.
+- `BACKUP_HOST_STATUS_FILE`: optional host-side marker override for backup jobs.
 - `BACKUP_MAX_AGE_HOURS`: maximum age before private health becomes degraded,
   default `26`.
 

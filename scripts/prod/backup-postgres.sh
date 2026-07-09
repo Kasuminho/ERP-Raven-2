@@ -51,3 +51,8 @@ find "$BACKUP_DIR" -type f \( -name "${DB}_*.dump" -o -name "${DB}_*.dump.gpg" -
 
 echo "Backup ready: $ARTIFACT"
 echo "Checksum ready: $ARTIFACT.sha256"
+
+if [ "${BACKUP_VERIFY_AFTER:-}" = "1" ] || [ "${BACKUP_VERIFY_AFTER:-}" = "true" ]; then
+  SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
+  "$SCRIPT_DIR/verify-backup.sh" "$ARTIFACT"
+fi

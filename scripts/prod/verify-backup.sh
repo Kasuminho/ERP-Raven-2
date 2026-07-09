@@ -44,7 +44,20 @@ docker exec "$CONTAINER" createdb -U "$USER" "$VERIFY_DB"
 docker exec "$CONTAINER" pg_restore -U "$USER" -d "$VERIFY_DB" --no-owner --no-privileges --exit-on-error /tmp/verify.dump
 TABLE_COUNT="$(docker exec "$CONTAINER" psql -U "$USER" -d "$VERIFY_DB" -Atc "select count(*) from pg_catalog.pg_tables where schemaname = 'public';")"
 [ "$TABLE_COUNT" -gt 0 ] || { echo "Restore completed but no public tables were found" >&2; exit 1; }
-STATUS_FILE="${BACKUP_STATUS_FILE:-$(dirname "$BACKUP_FILE")/last-verified-backup.json}"
+if [ -n "${BACKUP_HOST_STATUS_FILE:-}" ]; then
+  STATUS_FILE="$BACKUP_HOST_STATUS_FILE"
+elif [ -n "${BACKUP_STATUS_FILE:-}" ]; then
+  case "$BACKUP_STATUS_FILE" in
+    /app/backups/*)
+      STATUS_FILE="${BACKUP_DIR:-$(dirname "$BACKUP_FILE")}/${BACKUP_STATUS_FILE#/app/backups/}"
+      ;;
+    *)
+      STATUS_FILE="$BACKUP_STATUS_FILE"
+      ;;
+  esac
+else
+  STATUS_FILE="$(dirname "$BACKUP_FILE")/last-verified-backup.json"
+fi
 STATUS_DIR="$(dirname "$STATUS_FILE")"
 mkdir -p "$STATUS_DIR"
 cat > "$STATUS_FILE" <<EOF

@@ -251,7 +251,7 @@ Confiabilidade:
 - `scripts/prod/deploy-images.sh` e `rollback-images.sh` controlam promocao e retorno de versao.
 - Containers possuem healthcheck e limites configuraveis de CPU/memoria.
 - `docker-compose.monitoring.yml` oferece Uptime Kuma independente da API; fonte operacional em `docs/MONITORING.md`.
-- Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `verify-backup.sh` restaura em PostgreSQL temporario para provar integridade e grava `last-verified-backup.json` sem segredo. A API le `BACKUP_STATUS_FILE` ou `/app/backups/last-verified-backup.json` e mostra idade do ultimo backup verificado no health privado e nos checks Staff; acima de `BACKUP_MAX_AGE_HOURS` (26h padrao) fica degradado.
+- Backup gera SHA-256, aplica retencao, aceita criptografia GPG e hook off-site. `BACKUP_VERIFY_AFTER=1 scripts/prod/backup-postgres.sh` cria o dump e roda `verify-backup.sh` no arquivo recem-gerado; o verificador restaura em PostgreSQL temporario para provar integridade e grava `last-verified-backup.json` sem segredo. Quando herda `BACKUP_STATUS_FILE=/app/backups/...` da API, o job no host grava o marcador equivalente em `BACKUP_DIR`; `BACKUP_HOST_STATUS_FILE` pode sobrescrever o caminho do host. A API le `BACKUP_STATUS_FILE` ou `/app/backups/last-verified-backup.json` e mostra idade do ultimo backup verificado no health privado e nos checks Staff; acima de `BACKUP_MAX_AGE_HOURS` (26h padrao) fica degradado.
 - Runbooks de banco, Discord, deploy, leilao e DKP ficam em `docs/OPERATIONS_RUNBOOKS.md`.
 - A tela Staff `/dashboard/staff/deploy` consome `GET /operations/staff/deploy` e centraliza versao atual da API, SHA esperado do `master` quando o GitHub publico responde, health publico, health privado Staff, smoke publico, ultimo changelog Staff documentado e checklist do protocolo. O frontend nao recebe token GitHub nem segredo; o campo de changelog explicita que envios por CLI nao gravam recibo interno.
 
@@ -347,6 +347,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumo player, notices e action plan de `operations/me/*` sairam do `OperationsService` legado para `PlayerOperationsService`. | arquitetura/API |
 | 2026-07-02 | Regras da guilda e leitura do modo manutencao sairam do `OperationsService` legado para `OperationsRulesService`. | arquitetura/API |
 | 2026-07-02 | Previews de webhooks, fila sanitizada e retry manual sairam do `OperationsService` legado para `DiscordOperationsService`. | arquitetura/API |
+| 2026-07-02 | Backup de producao ganhou modo `BACKUP_VERIFY_AFTER=1` e traducao do caminho `/app/backups/...` para `BACKUP_DIR` quando o verificador roda no host, mantendo fresco o marcador lido pelo health Staff. | backup/health |
 | 2026-07-02 | Insights Staff de fairness de loot e comparacao de players sairam do `OperationsService` legado para `StaffInsightsService`. | arquitetura/API |
 | 2026-07-02 | Modulo `daoshi` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |
 | 2026-07-02 | Modulo `codex` ganhou DTOs com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted. | validacao/API |

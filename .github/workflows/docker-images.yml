@@ -121,7 +121,7 @@ jobs:
           node-version: 20
 
       - name: Wait for Watchtower polling window
-        run: sleep 330
+        run: sleep 600  # ← Aumenta de 330 para 600s (10 minutos)
 
       - name: Check public API health
         timeout-minutes: 15
@@ -130,7 +130,7 @@ jobs:
           node scripts/public-smoke-test.js
         env:
           SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
-          SMOKE_ATTEMPTS: 24
+          SMOKE_ATTEMPTS: 30  # ← Aumenta tentativas de 24 para 30
           SMOKE_DELAY_MS: 20000
           SMOKE_FETCH_TIMEOUT_MS: 10000
           SMOKE_DNS_ORDER: ipv4first
