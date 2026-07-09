@@ -100,16 +100,16 @@ export class WeeklySummaryService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo fechou a semana no extrato. Se a planilha chiar, e ego com ping alto.',
-          'Resumo semanal carimbado. Numero bateu antes do chat abrir campeonato de teoria.',
-          'Aristolfo nao passou pano; passou scanner. O saldo saiu sem filtro de fanfic.',
-          'Semana quitada no registro. Duvida nova pega senha e espera sem furar fila.',
+          'Aristolfo fechou a semana no extrato. Se a planilha chiar, manda ela atualizar driver.',
+          'Resumo semanal carimbado. Numero bateu antes do chat abrir tribunal de sofa.',
+          'Aristolfo nao passou pano; passou raio-x. O saldo saiu sem maquiagem de fanfic.',
+          'Semana quitada no registro. Duvida nova pega senha e nao tenta furar fila no dash.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo closed the week on the ledger. If the spreadsheet squeaks, that is ego with high ping.',
-          'Weekly summary stamped. The numbers matched before chat opened the theory tournament.',
-          'Aristolfo did not gloss over it; he scanned it. The balance left without fanfic filters.',
-          'Week settled in the record. Any new doubt gets a number and waits its turn.',
+          'Aristolfo closed the week on the ledger. If the spreadsheet squeaks, tell it to update drivers.',
+          'Weekly summary stamped. The numbers matched before chat opened couch court.',
+          'Aristolfo did not gloss over it; he ran an x-ray. The balance left without fanfic makeup.',
+          'Week settled in the record. Any new doubt gets a number and does not cut the dash line.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

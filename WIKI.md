@@ -107,7 +107,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
-- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-02 para evitar reciclar as frases das revisoes anteriores.
+- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-08 para evitar reciclar as frases das revisoes anteriores.
 
 ## Seguranca, sessao e uploads
 
@@ -324,6 +324,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Sexta rotacao automatica renovou o humor dos webhooks, DMs, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-08 | Sorteio 100% transmutar preserva bloqueio de 24h por tipo quando ha player livre e usa fallback ponderado pelos recebimentos dos ultimos 30 dias quando todos ja receberam. | interesses/transmutar |
 | 2026-07-02 | Modulo `announcements` ganhou DTO com `class-validator` e pipe local forte com whitelist/forbidNonWhitelisted para criacao de anuncios. | validacao/API |
 | 2026-07-02 | `OperationsService` legado foi removido do modulo `operations`; controller e providers ficaram somente com servicos de dominio. | arquitetura/API |

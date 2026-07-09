@@ -72,16 +72,16 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
     .setColor(0xf2c94c)
     .setDescription(data.description?.trim() || pickBilingualVoice({
       'pt-BR': [
-        '**Aviso na tela.** Bota no calendario antes que a memoria de alt+F4 sem salvar.',
-        '**Horario publicado.** Marca agora; "eu lembro" e build sem healer.',
-        '**Ping operacional entregue.** Agenda logo antes que o cerebro troque raid por meme.',
-        '**Waypoint fixado.** Salva o horario e evita speedrun de desculpa em cima do portao.',
+        '**Aviso na tela.** Joga no calendario antes que a memoria de rage quit sem salvar.',
+        '**Horario publicado.** Marca agora; "eu lembro" e build full dano sem sustain.',
+        '**Ping operacional entregue.** Agenda logo antes que o cerebro troque boss por reels.',
+        '**Waypoint fixado.** Salva o horario e evita speedrun de desculpa na entrada.',
       ],
       en: [
-        '**Announcement on screen.** Put it on the calendar before memory alt-F4s without saving.',
-        '**Time published.** Mark it now; "I will remember" is a build with no healer.',
-        '**Operational ping delivered.** Schedule it before the brain swaps raid for memes.',
-        '**Waypoint pinned.** Save the time and avoid an excuse speedrun at the gate.',
+        '**Announcement on screen.** Put it on the calendar before memory rage-quits unsaved.',
+        '**Time published.** Mark it now; "I will remember" is a full-damage build with no sustain.',
+        '**Operational ping delivered.** Schedule it before the brain swaps boss for reels.',
+        '**Waypoint pinned.** Save the time and avoid an excuse speedrun at the entrance.',
       ],
     }, data.stageLabel, data.type, data.title, data.eventTime))
     .addFields(
@@ -97,23 +97,23 @@ export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale
   const copy = (values: Record<DiscordLocale, string>) => staffOnly ? values['pt-BR'] : localeCopy(locale, values);
   const description = staffOnly
     ? pickStaffVoice([
-      '**Fila parada nao dropa update.** Cobra o print antes que o rank tome rasteira do cron.',
-      '**Request criou raiz.** Puxa o player agora antes que a pendencia vire tombamento municipal.',
-      '**Feed sem novidade.** Cutuca hoje; amanha isso chega de textao e chinelo.',
-      '**Pedido estacionado em AFK.** Chama o player antes que a poeira abra chamado.',
+      '**Fila parada nao dropa update.** Cobra o print antes que o cron aplique voadora regulamentar.',
+      '**Request plantou bandeira.** Puxa o player agora antes que a pendencia vire ponto turistico.',
+      '**Feed sem novidade.** Cutuca hoje; amanha isso chega com textao e print tremido.',
+      '**Pedido estacionado em AFK.** Chama o player antes que a poeira vire feature request.',
     ], data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition)
     : pickBilingualVoice({
       'pt-BR': [
-        '**Request parado nao upa.** Atualiza o print antes que teu rank leve nerf em praca publica.',
-        '**Fila sem prova nao invoca loot.** Sobe print novo antes que teu lugar vire souvenir.',
-        '**Sem update recente.** Resolve ja; deixar pro fim e assinar o pacote "vacilei".',
-        '**Teu request foi de soneca.** Atualiza a prova antes que a fila te mande pro banco.',
+        '**Request parado nao upa.** Atualiza o print antes que teu rank tome nerf em rede nacional.',
+        '**Fila sem prova nao invoca loot.** Sobe print novo antes que teu lugar vire NFT inutil.',
+        '**Sem update recente.** Resolve ja; deixar pro fim e comprar ingresso do "vacilei".',
+        '**Teu request dormiu no ponto.** Atualiza a prova antes que a fila te mande pro banco.',
       ],
       en: [
-        '**A stalled request does not level up.** Update the screenshot before your rank gets nerfed in public.',
-        '**A queue without proof summons no loot.** Upload fresh proof before your spot becomes a souvenir.',
-        '**No recent update found.** Fix it now; leaving it late subscribes to "my bad".',
-        '**Your request went snooze mode.** Update the proof before the queue sends you to the bench.',
+        '**A stalled request does not level up.** Update the screenshot before your rank gets nerfed on broadcast.',
+        '**A queue without proof summons no loot.** Upload fresh proof before your spot becomes useless NFT.',
+        '**No recent update found.** Fix it now; leaving it late buys a ticket to "my bad".',
+        '**Your request slept through the stop.** Update the proof before the queue benches you.',
       ],
     }, data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition);
 
@@ -137,16 +137,16 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
     .setColor(0x27ae60)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Interesse aberto.** Declara no site com print limpo; gambiarra aqui vira mutirao de retrabalho.',
-        '**Fila do loot liberada.** Escolhe direito e prova bem, antes que o Discord vire firma reconhecida.',
-        '**Janela de interesse online.** Sem evidencia boa, a burocracia ganha barra de boss.',
-        '**Registro valendo.** Entra com criterio antes que o screenshot vire julgamento de grupo.',
+        '**Interesse aberto.** Declara no site com print decente; gambiarra aqui toma ban da paciencia.',
+        '**Fila do loot liberada.** Escolhe direito e prova bem, antes que o Discord vire cartorio gamer.',
+        '**Janela de interesse online.** Sem evidencia boa, a burocracia ganha segunda fase.',
+        '**Registro valendo.** Entra com criterio antes que o screenshot vire tribunal de grupo.',
       ],
       en: [
-        '**Interest is open.** Declare it on the site with a clean screenshot; hacks here become rework duty.',
-        '**The loot queue is unlocked.** Choose properly and prove it well before Discord becomes a notary office.',
-        '**The interest window is online.** Without good evidence, bureaucracy gets a boss bar.',
-        '**Registration is live.** Join with criteria before the screenshot becomes group court.',
+        '**Interest is open.** Declare it on the site with a decent screenshot; hacks here get patience-banned.',
+        '**The loot queue is unlocked.** Choose properly and prove it well before Discord becomes a gamer notary.',
+        '**The interest window is online.** Without good evidence, bureaucracy gets a second phase.',
+        '**Registration is live.** Join with criteria before the screenshot becomes group tribunal.',
       ],
     }, data.title, data.itemName, data.mode, data.closesAt))
     .addFields(
@@ -172,16 +172,16 @@ export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbed
     .setColor(0xf2c94c)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Entrega logada.** O loot saiu da fila e o "cade meu item?" ficou sem microfone.',
-        '**Interesse concluido.** Item entregue; teoria paralela agora joga amistoso no vazio.',
-        '**Distribuicao confirmada.** Tudo no historico, sem DLC de fofoca contabil.',
-        '**Entrega fechada.** Item com destino certo e duvida em modo espectador.',
+        '**Entrega logada.** O loot saiu da fila e o "cade meu item?" perdeu o cracha.',
+        '**Interesse concluido.** Item entregue; teoria paralela foi rebaixada para amistoso.',
+        '**Distribuicao confirmada.** Tudo no historico, sem podcast de contabilidade criativa.',
+        '**Entrega fechada.** Item com destino certo e duvida assistindo da arquibancada.',
       ],
       en: [
-        '**Delivery logged.** The loot left the queue and "where is my item?" lost the mic.',
-        '**Interest completed.** Item delivered; the parallel theory now plays friendlies into the void.',
-        '**Distribution confirmed.** Everything is in history, with no accounting-gossip DLC.',
-        '**Delivery closed.** Item has a proper destination and doubt is in spectator mode.',
+        '**Delivery logged.** The loot left the queue and "where is my item?" lost its badge.',
+        '**Interest completed.** Item delivered; the parallel theory got relegated to friendly matches.',
+        '**Distribution confirmed.** Everything is in history, with no creative-accounting podcast.',
+        '**Delivery closed.** Item has a proper destination and doubt is watching from the stands.',
       ],
     }, data.title, data.itemName, data.playerNames.join('|')))
     .addFields(
@@ -206,16 +206,16 @@ export function buildItemInterestSkillBatchEmbed(data: ItemInterestSkillBatchEmb
     .setColor(0x27ae60)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Pacote de skills no ar.** Pega upgrade que entrega, nao glitter com MBA em cilada.',
-        '**Lote liberado.** Prioriza build de verdade; brilho sem impacto e skin de remorso.',
-        '**Mais skills na fila.** Mira no que muda o boneco, nao no carnaval do tooltip.',
-        '**Batch aberto.** Escolhe gameplay, nao item caro fazendo pose no inventario.',
+        '**Pacote de skills no ar.** Pega upgrade que trabalha, nao glitter fazendo cosplay de meta.',
+        '**Lote liberado.** Prioriza build de verdade; brilho sem impacto e confete caro.',
+        '**Mais skills na fila.** Mira no que muda o boneco, nao no tooltip pagando de coach.',
+        '**Batch aberto.** Escolhe gameplay, nao item caro tirando selfie no inventario.',
       ],
       en: [
-        '**Skill batch is live.** Grab the upgrade that delivers, not glitter with a trap MBA.',
-        '**Bundle unlocked.** Prioritize a real build; sparkle without impact is remorse skin.',
-        '**More skills in queue.** Aim for what changes the character, not tooltip carnival.',
-        '**Batch is open.** Choose gameplay, not expensive gear posing in the inventory.',
+        '**Skill batch is live.** Grab the upgrade that works, not glitter cosplaying as meta.',
+        '**Bundle unlocked.** Prioritize a real build; sparkle without impact is expensive confetti.',
+        '**More skills in queue.** Aim for what changes the character, not a tooltip acting like a coach.',
+        '**Batch is open.** Choose gameplay, not expensive gear taking selfies in inventory.',
       ],
     }, data.count, data.mode, data.closesAt, data.sampleTitles.join('|')))
     .addFields(

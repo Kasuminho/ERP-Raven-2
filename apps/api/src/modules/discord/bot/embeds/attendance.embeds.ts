@@ -11,16 +11,16 @@ export function buildAttendanceStartedEmbed(eventName: string, startsAt: Date, l
     .setTitle(localeCopy(locale, { 'pt-BR': `Presenca aberta: ${eventName}`, en: `Attendance open: ${eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Check-in aberto.** Marca agora antes que o "ja entro" vire NPC de mentira.',
-        '**Presenca valendo.** DKP nao le pensamento; clica no site e poupa a ata do drama.',
-        '**Janela de presenca no ar.** Registra logo; lag espiritual nao ganha recurso.',
-        '**Ponto liberado.** Entra no site antes que a raid ande e teu nome vire easter egg AFK.',
+        '**Check-in abriu.** Marca no site antes que o "to chegando" vire lenda urbana da call.',
+        '**Presenca valendo.** DKP nao aceita telepatia; clique feito vale mais que audio de desculpa.',
+        '**Janela de presenca no ar.** Registra logo; lag imaginario nao passa na auditoria.',
+        '**Ponto liberado.** Entra antes da raid andar e teu nome virar figurante AFK.',
       ],
       en: [
-        '**Check-in is open.** Mark it now before "joining soon" becomes fake NPC dialogue.',
-        '**Attendance counts now.** DKP cannot read minds; click the site and spare the minutes.',
-        '**The attendance window is live.** Register early; spiritual lag does not win appeals.',
-        '**Clock-in is unlocked.** Hit the site before the raid moves and your name becomes an AFK easter egg.',
+        '**Check-in opened.** Mark it on the site before "almost there" becomes call folklore.',
+        '**Attendance counts now.** DKP does not accept telepathy; one click beats excuse audio.',
+        '**The attendance window is live.** Register early; imaginary lag fails the audit.',
+        '**Clock-in is unlocked.** Hit the site before the raid moves and your name becomes AFK background.',
       ],
     }, eventName, startsAt))
     .addFields({ name: localeCopy(locale, { 'pt-BR': 'Inicio', en: 'Starts' }), value: `${discordTimestamp(startsAt, 'F')}\n${discordTimestamp(startsAt, 'R')}`, inline: false })
@@ -39,16 +39,16 @@ export function buildEventFinalizedEmbed(data: {
     .setTitle(localeCopy(locale, { 'pt-BR': `Evento fechado: ${data.eventName}`, en: `Event closed: ${data.eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Raid fechada e DKP pago.** A conta bateu; printem esse boss raro da matematica.',
-        '**Distribuicao concluida.** Quem veio recebeu, quem faltou farmou nostalgia premium.',
-        '**Resumo liquidado.** Numero alinhado sem pedir auxilio ao oraculo da calculadora.',
-        '**Evento encerrado.** DKP entregue e a planilha saiu ilesa do modo ranked.',
+        '**Raid fechada e DKP pago.** A conta fechou; milagre moderno sem DLC de calculadora.',
+        '**Distribuicao concluida.** Quem colou recebeu, quem faltou farmou saudade em 4K.',
+        '**Resumo liquidado.** Numero alinhado sem invocar santo de planilha quebrada.',
+        '**Evento encerrado.** DKP entregue e a planilha saiu do ranked com elo intacto.',
       ],
       en: [
-        '**Raid closed and DKP paid.** The math matched; screenshot this rare boss.',
-        '**Distribution complete.** Whoever showed got paid; whoever missed farmed premium nostalgia.',
-        '**Wrap-up settled.** Numbers aligned without asking the calculator oracle for help.',
-        '**Event closed.** DKP delivered and the spreadsheet survived ranked mode.',
+        '**Raid closed and DKP paid.** The math closed; modern miracle with no calculator DLC.',
+        '**Distribution complete.** Whoever showed got paid; whoever missed farmed nostalgia in 4K.',
+        '**Wrap-up settled.** Numbers aligned without summoning spreadsheet saints.',
+        '**Event closed.** DKP delivered and the spreadsheet left ranked with its elo intact.',
       ],
     }, data.eventName, data.rewardPerPlayer, data.totalDkp, data.presentCount, data.absentCount))
     .addFields(

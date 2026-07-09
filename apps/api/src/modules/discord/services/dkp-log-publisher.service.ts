@@ -87,16 +87,16 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
             color: 0x9b51e0,
             description: `${initialBackfill
               ? `${pickStaffVoice([
-                '**Aristolfo puxou 3 dias de extrato.** Confere antes que o saldo vire fanfic com rodape.',
-                '**Backfill entregue.** Tres dias em ordem, sem contabilidade freestyle de madrugada.',
-                '**Historico saiu do arquivo.** O extrato chegou antes do "na minha cabeca era outro valor".',
-                '**Retroativo na mesa.** O log trouxe tudo antes que o achismo alugasse trio eletrico.',
+                '**Aristolfo puxou 3 dias de extrato.** Confere antes que o saldo vire novela com narrador suspeito.',
+                '**Backfill entregue.** Tres dias em ordem, sem contabilidade freestyle no after.',
+                '**Historico saiu do arquivo.** O extrato chegou antes do "mas eu lembro diferente".',
+                '**Retroativo na mesa.** O log trouxe tudo antes que o achismo abrisse live.',
               ], this.stateId, index, 'backfill')}\n\n`
               : `${pickStaffVoice([
-                '**Movimentacao nova no log.** Chegou antes que a memoria coletiva abrisse editor de video.',
-                '**DKP mexeu e Aristolfo carimbou.** Timeline salva sem novela de grupo.',
-                '**Extrato atualizado.** O contador atropelou o chutometro sem pedir buff.',
-                '**Saldo mudou.** Registro saiu cedo, antes do voice vender remake dos fatos.',
+                '**Movimentacao nova no log.** Chegou antes que a memoria coletiva editasse o roteiro.',
+                '**DKP mexeu e Aristolfo carimbou.** Timeline salva, fofoca sem permissao de escrita.',
+                '**Extrato atualizado.** O contador passou por cima do chutometro sem usar ultimate.',
+                '**Saldo mudou.** Registro saiu cedo, antes do voice lancar remake dos fatos.',
               ], this.stateId, index, 'live')}\n\n`}${chunk.lines.join('\n')}`,
             footer: { text: `${chunk.rows.length} movimentacao(oes) | Ordem cronologica` },
             timestamp: new Date().toISOString(),

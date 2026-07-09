@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo carimbou o changelog. Se algo chiar, pega senha e para de fazer cosplay de incidente.*',
-    '*Aristolfo publicou a ata. O deploy foi; o caos que abra ticket sem usar caps lock como argumento.*',
-    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o log ja esta de depoente.*',
-    '*Aristolfo fechou a nota. Quem discordar dos fatos que traga print, contexto e cafe frio.*',
-    '*Aristolfo mandou o changelog. A planilha piscou duas vezes e aceitou o destino.*',
+    '*Aristolfo carimbou o changelog. Se algo chiar, abre ticket; terapia de caps lock nao escala.*',
+    '*Aristolfo publicou a ata. O deploy saiu; o caos que pegue senha e traga evidencia, sem novela.*',
+    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o log ja esta de print armado.*',
+    '*Aristolfo fechou a nota. Discordar pode, mas venha com contexto e sem freestyle juridico.*',
+    '*Aristolfo mandou o changelog. A planilha respirou fundo e parou de fingir surpresa.*',
   ],
   EN: [
-    '*Aristolfo stamped the changelog. If anything squeaks, take a number and stop cosplaying an incident.*',
-    '*Aristolfo published the minutes. Deploy went out; chaos can open a ticket without using caps lock as evidence.*',
-    '*Aristolfo sent the note with a receipt. If reality improvises, the log is already on the stand.*',
-    '*Aristolfo closed the note. Whoever disputes the facts should bring screenshots, context, and cold coffee.*',
-    '*Aristolfo shipped the changelog. The spreadsheet blinked twice and accepted its fate.*',
+    '*Aristolfo stamped the changelog. If anything squeaks, open a ticket; caps-lock therapy does not scale.*',
+    '*Aristolfo published the minutes. Deploy shipped; chaos can take a number and bring evidence, no soap opera.*',
+    '*Aristolfo sent the note with a receipt. If reality improvises, the log already has screenshots ready.*',
+    '*Aristolfo closed the note. Disagree if needed, but bring context and skip legal freestyle.*',
+    '*Aristolfo shipped the changelog. The spreadsheet took a breath and stopped pretending surprise.*',
   ],
 };
 
