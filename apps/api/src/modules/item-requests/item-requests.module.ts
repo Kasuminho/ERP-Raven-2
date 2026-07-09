@@ -6,12 +6,13 @@ import { UploadsModule } from '../uploads/uploads.module';
 import { ItemRequestsController } from './controllers/item-requests.controller';
 import { ItemRequestsRepository } from './repositories/item-requests.repository';
 import { ItemRequestsCronService } from './schedulers/item-requests-cron.service';
+import { ItemRequestQueueService } from './services/item-request-queue.service';
 import { ItemRequestsService } from './services/item-requests.service';
 
 @Module({
   imports: [AuditModule, UploadsModule, DiscordModule],
   controllers: [ItemRequestsController],
-  providers: [ItemRequestsService, ItemRequestsRepository, ItemRequestsCronService, RolesGuard],
+  providers: [ItemRequestsService, ItemRequestQueueService, ItemRequestsRepository, ItemRequestsCronService, RolesGuard],
   exports: [ItemRequestsService],
 })
 export class ItemRequestsModule {}

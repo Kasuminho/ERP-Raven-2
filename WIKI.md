@@ -234,7 +234,7 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Materiais solicitados para concluir itens T3 possuem prioridade sobre pedidos do mesmo material destinados a Quintessencia.
 - Um pedido de Quintessencia continua valido, mas so deve ser atendido quando nao houver player aguardando aquele material para fabricar um item T3.
 - A regra existe para elevar primeiro quem ainda esta abaixo na progressao e melhorar o resultado coletivo da guilda.
-- Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
+- Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada por `ItemRequestQueueService` a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
 - Requests tambem podem receber `swapSuggestions`: ate tres itens requestaveis ativos da mesma categoria e, quando aplicavel, mesmo tier/tipo, com fila menor. A UI mostra posicao estimada, unidades na fila e trade-off PT-BR/EN; a troca continua manual/controlada pela Staff.
 - Requests tambem recebem `materialPriority`: requests de craft T3 mostram selo de prioridade operacional, e requests de Quintessencia afetados por craft T3 do mesmo material inferido mostram aviso simplificado para player e texto operacional para Staff.
 - A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
@@ -339,6 +339,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-09 | Calculo de forecast, sugestoes e prioridade de material de item-requests saiu do servico principal para `ItemRequestQueueService`, com teste direto de regressao. | arquitetura/API |
 | 2026-07-09 | Contratos de item-requests passaram para `packages/shared/src/types/requests.ts`, com aliases locais na API e Web para request, forecast de fila, sugestoes de troca e prioridade de material. | contratos/shared |
 | 2026-07-09 | Modulo `search` ganhou DTO com `class-validator` e pipe local forte para a query `q`, rejeitando parametros extras antes do servico de busca. | validacao/API |
 | 2026-07-09 | Contratos de eventos passaram para `packages/shared/src/types/events.ts`, com aliases locais na API e Web para preservar datas de servidor/cliente. | contratos/shared |
