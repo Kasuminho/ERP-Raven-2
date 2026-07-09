@@ -135,6 +135,7 @@ jobs:
           SMOKE_FETCH_TIMEOUT_MS: 10000
           SMOKE_DNS_ORDER: ipv4first
           SMOKE_USER_AGENT: Raven2PublicSmoke/1.0
+          SMOKE_ALLOW_EDGE_CHALLENGE: 1
 
       - name: Check authenticated staff API
         run: |

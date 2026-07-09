@@ -10,6 +10,7 @@ const dnsOrder = process.env.SMOKE_DNS_ORDER ?? 'ipv4first';
 const dnsFamily = dnsOrder === 'ipv4first' ? 4 : dnsOrder === 'ipv6first' ? 6 : undefined;
 const userAgent = process.env.SMOKE_USER_AGENT ?? 'Raven2PublicSmoke/1.0';
 const expectedVersion = process.env.EXPECTED_VERSION ?? '';
+const allowEdgeChallenge = process.env.SMOKE_ALLOW_EDGE_CHALLENGE === '1';
 const requiredPaths = ['/health'];
 const diagnosticPaths = ['/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
 const paths = [...requiredPaths, ...diagnosticPaths];
@@ -23,6 +24,14 @@ function escapeGithubAnnotation(value) {
     .replace(/%/g, '%25')
     .replace(/\r/g, '%0D')
     .replace(/\n/g, '%0A');
+}
+
+function isEdgeChallenge(result) {
+  return result.status === 403
+    && typeof result.contentType === 'string'
+    && result.contentType.toLowerCase().includes('text/html')
+    && typeof result.bodyPreview === 'string'
+    && result.bodyPreview.includes('Just a moment');
 }
 
 function requestWithTimeout(url, attempt) {
@@ -90,7 +99,7 @@ async function check(attempt) {
 }
 
 async function main() {
-  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, paths }, null, 2));
+  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, allowEdgeChallenge, paths }, null, 2));
 
   let lastResult;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -111,6 +120,13 @@ async function main() {
     if (attempt < attempts) await sleep(delayMs);
   }
   const failure = JSON.stringify({ baseUrl, expectedVersion, checks: lastResult?.results ?? [] });
+  const requiredResults = lastResult?.results.filter((result) => requiredPaths.includes(result.path)) ?? [];
+  const edgeChallengeOnly = requiredResults.length > 0 && requiredResults.every(isEdgeChallenge);
+  if (allowEdgeChallenge && edgeChallengeOnly) {
+    console.warn(`::warning title=Public smoke blocked by edge challenge::${escapeGithubAnnotation(failure)}`);
+    console.warn('Public smoke could not verify APP_VERSION because the edge returned an HTML challenge to the GitHub runner.');
+    return;
+  }
   console.error(`::error title=Public smoke failed::${escapeGithubAnnotation(failure)}`);
   process.exitCode = 1;
 }
