@@ -1,10 +1,13 @@
 const dns = require('node:dns');
+const http = require('node:http');
+const https = require('node:https');
 
 const baseUrl = (process.env.SMOKE_BASE_URL ?? 'https://app.guild-g3x.com.br/api/v1').replace(/\/$/, '');
 const attempts = Number(process.env.SMOKE_ATTEMPTS ?? 6);
 const delayMs = Number(process.env.SMOKE_DELAY_MS ?? 10_000);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS ?? 10_000);
 const dnsOrder = process.env.SMOKE_DNS_ORDER ?? 'ipv4first';
+const dnsFamily = dnsOrder === 'ipv4first' ? 4 : dnsOrder === 'ipv6first' ? 6 : undefined;
 const expectedVersion = process.env.EXPECTED_VERSION ?? '';
 const paths = ['/health', '/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
 
@@ -12,22 +15,38 @@ dns.setDefaultResultOrder(dnsOrder);
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function fetchWithTimeout(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(new Error(`timeout after ${fetchTimeoutMs}ms`)), fetchTimeoutMs);
+function requestWithTimeout(url) {
+  const parsedUrl = new URL(url);
+  const client = parsedUrl.protocol === 'http:' ? http : https;
+  const options = {
+    family: dnsFamily,
+    timeout: fetchTimeoutMs,
+  };
 
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
+  return new Promise((resolve, reject) => {
+    const request = client.get(parsedUrl, options, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        resolve({ status: response.statusCode, body });
+      });
+    });
+
+    request.on('timeout', () => {
+      request.destroy(new Error(`timeout after ${fetchTimeoutMs}ms`));
+    });
+    request.on('error', reject);
+  });
 }
 
 async function check() {
   const results = await Promise.all(paths.map(async (path) => {
     try {
-      const response = await fetchWithTimeout(`${baseUrl}${path}`);
-      const body = path === '/health' ? await response.json().catch(() => undefined) : undefined;
+      const response = await requestWithTimeout(`${baseUrl}${path}`);
+      const body = path === '/health' ? JSON.parse(response.body) : undefined;
       const versionMatches = path !== '/health' || !expectedVersion || body?.version === expectedVersion;
       return { path, status: response.status, ...(body?.version ? { version: body.version } : {}), versionMatches };
     } catch (error) {
@@ -38,7 +57,7 @@ async function check() {
 }
 
 async function main() {
-  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, expectedVersion, paths }, null, 2));
+  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, expectedVersion, paths }, null, 2));
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await check();

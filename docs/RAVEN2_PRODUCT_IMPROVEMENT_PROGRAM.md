@@ -629,7 +629,8 @@ Entrega:
   uma conexao corretamente.
 - O smoke publico usa resolucao DNS `ipv4first` por padrao, configuravel por
   `SMOKE_DNS_ORDER`, para evitar falso negativo quando o runner resolve um
-  caminho IPv6 instavel antes do IPv4 publico saudavel.
+  caminho IPv6 instavel antes do IPv4 publico saudavel; o script usa o cliente
+  nativo `http/https` com familia DNS explicita em vez de depender do `fetch`.
 
 ### I3. Backup novo no health privado
 
