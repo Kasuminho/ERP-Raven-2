@@ -631,6 +631,8 @@ Entrega:
   `SMOKE_DNS_ORDER`, para evitar falso negativo quando o runner resolve um
   caminho IPv6 instavel antes do IPv4 publico saudavel; o script usa o cliente
   nativo `http/https` com familia DNS explicita em vez de depender do `fetch`.
+- As chamadas do smoke enviam `Accept: application/json` e `SMOKE_USER_AGENT`
+  explicito para reduzir bloqueio de edge/WAF contra runner automatizado.
 
 ### I3. Backup novo no health privado
 

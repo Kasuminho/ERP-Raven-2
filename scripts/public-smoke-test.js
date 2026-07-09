@@ -8,6 +8,7 @@ const delayMs = Number(process.env.SMOKE_DELAY_MS ?? 10_000);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS ?? 10_000);
 const dnsOrder = process.env.SMOKE_DNS_ORDER ?? 'ipv4first';
 const dnsFamily = dnsOrder === 'ipv4first' ? 4 : dnsOrder === 'ipv6first' ? 6 : undefined;
+const userAgent = process.env.SMOKE_USER_AGENT ?? 'Raven2PublicSmoke/1.0';
 const expectedVersion = process.env.EXPECTED_VERSION ?? '';
 const paths = ['/health', '/auctions/health', '/items/health', '/eligibility/health', '/audit/health'];
 
@@ -20,6 +21,10 @@ function requestWithTimeout(url) {
   const client = parsedUrl.protocol === 'http:' ? http : https;
   const options = {
     family: dnsFamily,
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': userAgent,
+    },
     timeout: fetchTimeoutMs,
   };
 
@@ -57,7 +62,7 @@ async function check() {
 }
 
 async function main() {
-  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, expectedVersion, paths }, null, 2));
+  console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, paths }, null, 2));
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await check();

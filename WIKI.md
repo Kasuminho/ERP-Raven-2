@@ -33,6 +33,7 @@ Qualidade obrigatoria:
 - O smoke publico do workflow exige `APP_VERSION` esperado em `/health` e usa uma janela estendida de tentativas para absorver a variacao do Watchtower/edge sem afrouxar o criterio.
 - O script de smoke publico registra sua configuracao efetiva e limita tempo por fetch; o step tambem possui timeout proprio no GitHub Actions para evitar deploy preso por conexao pendurada.
 - O smoke publico usa DNS `ipv4first` por padrao, via `SMOKE_DNS_ORDER`, e cliente nativo `http/https` com familia DNS explicita para reduzir falso negativo de runner quando IPv6 do dominio existe mas o caminho saudavel observado e IPv4.
+- O smoke publico envia `Accept: application/json` e `SMOKE_USER_AGENT` explicito para reduzir bloqueio de edge/WAF contra runner automatizado.
 
 Modulos principais da API:
 
@@ -328,6 +329,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-08 | Smoke publico passou a enviar `Accept: application/json` e `SMOKE_USER_AGENT` explicito nas chamadas do runner externo. | deploy/smoke |
 | 2026-07-08 | Smoke publico passou a preferir DNS IPv4-first por padrao, com override `SMOKE_DNS_ORDER`, usando cliente nativo `http/https` com familia DNS explicita para estabilizar verificacao feita por runner externo. | deploy/smoke |
 | 2026-07-08 | Smoke publico ganhou logs de configuracao e timeout explicito por fetch/step para evitar job preso durante verificacao pos-Watchtower. | deploy/smoke |
 | 2026-07-08 | Smoke publico pos-deploy do workflow ganhou janela estendida de tentativas mantendo validacao obrigatoria de `APP_VERSION`. | deploy/smoke |
