@@ -191,6 +191,21 @@ docs, tickets ou changelogs:
 - comando de backup/restore definido com `POSTGRES_CONTAINER`, `POSTGRES_DB` e
   `POSTGRES_USER` da guilda.
 
+Rode tambem o dry-run local da stack antes de executar `up -d`. O comando le o
+Compose e o env real, mas imprime apenas nomes de variaveis, caminhos e
+diagnosticos sanitizados:
+
+```bash
+npm run guild:dry-run -- --guild guilda-teste --compose docker-compose.guilda-teste.yml --env-file icontainer-guilda-teste.env --base-url https://guilda-teste.exemplo.com --uploads-dir /srv/guilda-teste/uploads --backups-dir /srv/guilda-teste/backups --postgres-db guilda_teste --postgres-user guilda_teste_app
+```
+
+Use `--skip-docker` somente quando o host local nao tiver Docker disponivel; no
+servidor final, deixe o script rodar `docker compose config --quiet`.
+
+O dry-run falha quando encontra risco claro de reusar G3X por engano, como
+containers `guild-api`/`guild-web`, dominio `app.guild-g3x.com.br`, diretorios
+`/srv/guild/...` ou database `guild_platform` em uma guilda que nao seja G3X.
+
 ## Checklist para nova guilda
 
 1. Criar database e usuario PostgreSQL restrito.
@@ -201,19 +216,25 @@ docs, tickets ou changelogs:
 6. Criar DNS e rota do proxy para as portas da nova guilda.
 7. Configurar OAuth do Discord com o callback da nova guilda.
 8. Configurar webhooks/canais da guilda somente no env real.
-9. Validar Compose:
+9. Rodar o dry-run da stack por guilda:
+
+```bash
+npm run guild:dry-run -- --guild guilda --compose docker-compose.guilda.yml --env-file icontainer-guilda.env --base-url https://guilda.exemplo.com --uploads-dir /srv/guilda/uploads --backups-dir /srv/guilda/backups --postgres-db guilda --postgres-user guilda_app
+```
+
+10. Validar Compose:
 
 ```bash
 docker compose -f docker-compose.guilda.yml --env-file icontainer-guilda.env config
 ```
 
-10. Subir:
+11. Subir:
 
 ```bash
 docker compose -f docker-compose.guilda.yml --env-file icontainer-guilda.env up -d
 ```
 
-11. Rodar migrations/generate contra a database da guilda:
+12. Rodar migrations/generate contra a database da guilda:
 
 ```bash
 DATABASE_URL=postgresql://... npx prisma migrate deploy --schema packages/database/prisma/schema.prisma
@@ -222,13 +243,13 @@ DATABASE_URL=postgresql://... npx prisma generate --schema packages/database/pri
 
 Use valores reais apenas no shell/env local, nunca neste arquivo.
 
-12. Verificar health:
+13. Verificar health:
 
 ```bash
 curl https://guilda.exemplo.com/api/v1/health
 ```
 
-13. Rodar smoke publico da guilda:
+14. Rodar smoke publico da guilda:
 
 ```bash
 PRODUCTION_BASE_URL=https://guilda.exemplo.com scripts/prod/smoke-production.sh
@@ -238,17 +259,17 @@ SMOKE_BASE_URL=https://guilda.exemplo.com/api/v1 npm run smoke:auth
 Use `SMOKE_AUTH_TOKEN`/`SMOKE_BEARER_TOKEN` apenas no env local quando houver
 conta de automacao Staff/Admin da guilda.
 
-14. Testar login Discord, upload de imagem e abertura de `/uploads/...`.
-15. Rodar primeiro backup e verificacao de restore em arquivo temporario:
+15. Testar login Discord, upload de imagem e abertura de `/uploads/...`.
+16. Rodar primeiro backup e verificacao de restore em arquivo temporario:
 
 ```bash
 POSTGRES_CONTAINER=CONTAINER_POSTGRES POSTGRES_DB=guilda scripts/prod/backup-postgres.sh
 POSTGRES_CONTAINER=CONTAINER_POSTGRES POSTGRES_DB=guilda scripts/prod/verify-backup.sh BACKUP_DA_GUILDA
 ```
 
-16. Registrar o marcador `last-verified-backup.json` no diretorio de backups da
+17. Registrar o marcador `last-verified-backup.json` no diretorio de backups da
     guilda e confirmar health privado.
-17. Registrar tag/SHA inicial para rollback e testar o comando em janela
+18. Registrar tag/SHA inicial para rollback e testar o comando em janela
     controlada antes de cliente externo.
 
 ## Operacao por guilda

@@ -311,6 +311,9 @@ Plano vivo: `docs/SAAS_SINGLE_TENANT_ROADMAP.md`.
   nova guilda: pre-flight sem segredo, database/usuario restrito,
   uploads/backups, env por guilda, DNS/proxy, Discord OAuth/webhooks,
   migrations, smoke, backup verificado e rollback.
+- `npm run guild:dry-run -- --guild ... --compose ... --env-file ...` valida
+  uma stack de nova guilda antes do `up -d`, sem imprimir valores de segredo, e
+  falha quando detecta marcadores G3X reaproveitados em guilda externa.
 - A Web resolve a API em runtime pelo hostname `*.guild-g3x.com.br`, usando
   `https://HOST/api/v1`; isso permite reutilizar a mesma imagem Web em stacks
   de teste/guilda sem ficar presa ao `NEXT_PUBLIC_API_URL` gravado no build.
@@ -357,6 +360,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Criado dry-run de stack por guilda para validar Compose/env/diretorios/database sem imprimir segredos e bloquear marcadores G3X em guildas externas. | SaaS single-tenant |
 | 2026-07-10 | Checklist de nova guilda single-tenant foi consolidado com pre-flight, env por guilda, Discord, smoke, backup verificado e rollback. | SaaS single-tenant |
 | 2026-07-10 | Painel Staff de deploy passou a classificar smoke publico e health externo por tipo de diagnostico, separando challenge de borda/WAF de falha real de API. | deploy/smoke |
 | 2026-07-10 | Tela Web de admin items foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
