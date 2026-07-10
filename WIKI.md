@@ -169,9 +169,11 @@ Automacao ativa:
 - O programa completo de melhorias de produto/UX/processo fica em `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`, com epicos para leiloes, Staff, players, requests, interesses, eventos, Discord, auditoria, deploy e arquitetura.
 - O programa de melhorias original e historico consolidado da primeira rodada:
   itens com `Estado em ... implementado` nao devem ser reexecutados como backlog
-  ativo. A nova rodada planejada fica em
-  `docs/RAVEN2_IMPLEMENTATION_ROADMAP_2026_07.md`; antes de programar qualquer
-  fatia, reconciliar roadmap, `git log`, wiki e arquivos citados.
+  ativo. A rodada de implantacao 2026-07 fica em
+  `docs/RAVEN2_IMPLEMENTATION_ROADMAP_2026_07.md` e esta concluida. A proxima
+  rodada curta fica em `docs/RAVEN2_MAINTENANCE_ROADMAP_2026_07.md`; antes de
+  programar qualquer fatia, reconciliar roadmap, `git log`, wiki e arquivos
+  citados.
 
 ## Leiloes e sigilo
 
@@ -333,6 +335,7 @@ npm.cmd run discord:configure-webhooks
 - `docs/SAAS_SINGLE_TENANT_ROADMAP.md`: plano para empacotar o Raven como SaaS por instancia Docker isolada por guilda.
 - `docs/SAAS_GUILD_COMPOSE_GUIDE.md`: guia pratico para Compose por guilda e database PostgreSQL isolada.
 - `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`: plano para provider Redis/gateway de rate limit, sem ativar por padrao.
+- `docs/RAVEN2_MAINTENANCE_ROADMAP_2026_07.md`: proxima rodada curta de manutencao, validacao forte e observabilidade.
 - `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`: programa completo de melhorias de produto, UX, operacao e arquitetura.
 - `docs/DEPLOY_ICP.md`: contexto de deploy ICP.
 - `docs/DISCORD_WEBHOOK_VOICE.md`: identidade, idioma e tom.
@@ -345,6 +348,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Criado roadmap curto de manutencao pos-rodada 2026-07, priorizando validacao forte em `notifications`, `audit`, `business-rules`, componentizacao de admin items e observabilidade sem segredo. | docs/roadmap |
 | 2026-07-10 | Provider Redis/gateway de rate limit foi planejado sem ativacao por padrao; `InMemoryRateLimitStore` continua default para instancia unica da G3X. | rate-limit/multi-guilda |
 | 2026-07-10 | Painel Staff de deploy passou a mostrar sinais da fila de webhooks: pendentes, envio, retry, falhas, idade da pendencia mais antiga, ultimo retry e ultima falha. | deploy/Staff |
 | 2026-07-10 | CLI de changelog Staff passou a registrar recibo interno sanitizado em `DiscordWebhookDelivery`, e o painel de deploy marca changelog como concluido quando encontra recibo do arquivo mais recente. | deploy/Staff |
