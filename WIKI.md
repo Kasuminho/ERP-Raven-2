@@ -61,9 +61,9 @@ e o resumo Staff completo com filas de review, Codex, requests, interesses,
 entregas, progresso, eventos e anuncios. `StaffSummaryService` tambem calcula
 health Staff e health operacional com banco, storage, webhooks, automacao,
 backup verificado, falhas recentes e aproximacao de fila, alem do painel Staff
-de deploy com versao atual/esperada, health publico, smoke publico, changelog
-documentado e protocolo; este dominio nao injeta mais o `OperationsService`
-legado.
+de deploy com versao atual/esperada, health publico, smoke publico, sinais da
+fila de webhooks, changelog documentado/recibo e protocolo; este dominio nao
+injeta mais o `OperationsService` legado.
 `AuctionDiagnosticsService` ja monta diretamente a lista de selecao de leiloes
 do diagnostico Staff, incluindo item, vencedor quando houver e data de fim; os
 detalhes pesados de timeline operacional e o raio-x completo tambem ja sairam
@@ -344,6 +344,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Painel Staff de deploy passou a mostrar sinais da fila de webhooks: pendentes, envio, retry, falhas, idade da pendencia mais antiga, ultimo retry e ultima falha. | deploy/Staff |
 | 2026-07-10 | CLI de changelog Staff passou a registrar recibo interno sanitizado em `DiscordWebhookDelivery`, e o painel de deploy marca changelog como concluido quando encontra recibo do arquivo mais recente. | deploy/Staff |
 | 2026-07-10 | Tela Staff de interesses foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-10 | Sorteio/transmutar de item-interests saiu do servico principal para `ItemInterestTransmuteRaffleService`, preservando bloqueio 24h e fallback ponderado 30d. | arquitetura/API |

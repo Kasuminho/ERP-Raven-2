@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, CheckCircle2, ExternalLink, FileText, GitBranch, RefreshCw, Rocket, ShieldCheck, XCircle } from 'lucide-react';
+import { Activity, CheckCircle2, ExternalLink, FileText, GitBranch, MessageSquare, RefreshCw, Rocket, ShieldCheck, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeploymentPanel } from '@/hooks/use-staff-operations-api';
@@ -160,6 +160,51 @@ function SmokePanel({ data }: { data?: DeploymentPanelSummary }) {
   );
 }
 
+function WebhookQueuePanel({ data }: { data?: DeploymentPanelSummary }) {
+  const queue = data?.webhookQueue;
+  const active = (queue?.pending ?? 0) + (queue?.sending ?? 0) + (queue?.retrying ?? 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-primary" />
+          Fila de webhooks
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={healthTone[queue?.status ?? 'degraded']}>{queue?.status ?? 'carregando'}</Badge>
+          <span className="text-xs text-muted-foreground">Checado em {formatDate(queue?.checkedAt)}</span>
+        </div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <div className="rounded-md border bg-background/35 p-3">
+            <p className="text-xs uppercase text-muted-foreground">Ativas</p>
+            <p className="mt-1 text-xl font-semibold">{active}</p>
+            <p className="text-xs text-muted-foreground">Pend. {queue?.pending ?? 0} / envio {queue?.sending ?? 0} / retry {queue?.retrying ?? 0}</p>
+          </div>
+          <div className="rounded-md border bg-background/35 p-3">
+            <p className="text-xs uppercase text-muted-foreground">Falhas</p>
+            <p className="mt-1 text-xl font-semibold">{queue?.failed ?? '-'}</p>
+            <p className="text-xs text-muted-foreground">{queue?.latestFailureAction ?? 'Sem falha recente'}</p>
+          </div>
+          <div className="rounded-md border bg-background/35 p-3">
+            <p className="text-xs uppercase text-muted-foreground">Mais antiga</p>
+            <p className="mt-1 text-xl font-semibold">{queue?.oldestPendingAgeMinutes != null ? `${queue.oldestPendingAgeMinutes} min` : '-'}</p>
+            <p className="text-xs text-muted-foreground">{formatDate(queue?.oldestPendingQueuedAt)}</p>
+          </div>
+          <div className="rounded-md border bg-background/35 p-3">
+            <p className="text-xs uppercase text-muted-foreground">Ultimo retry</p>
+            <p className="mt-1 text-sm font-semibold">{formatDate(queue?.latestRetryAt)}</p>
+            <p className="text-xs text-muted-foreground">{queue?.latestRetryAction ?? 'Sem retry registrado'}</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{queue?.message ?? 'Carregando sinais da fila...'}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ChangelogAndProtocol({ data }: { data?: DeploymentPanelSummary }) {
   return (
     <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
@@ -224,6 +269,7 @@ export default function StaffDeployPage() {
 
       <VersionCards data={data} />
       <HealthPanels data={data} />
+      <WebhookQueuePanel data={data} />
       <SmokePanel data={data} />
       <ChangelogAndProtocol data={data} />
     </div>

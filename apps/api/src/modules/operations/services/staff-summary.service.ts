@@ -283,11 +283,12 @@ export class StaffSummaryService {
 
   async getDeploymentPanel(): Promise<DeploymentPanelSummary> {
     const generatedAt = new Date();
-    const [privateHealth, publicHealth, expectedVersion, publicSmoke, latestStaffChangelog] = await Promise.all([
+    const [privateHealth, publicHealth, expectedVersion, publicSmoke, webhookQueue, latestStaffChangelog] = await Promise.all([
       this.getStaffHealth(),
       this.checkPublicApiHealth(),
       this.getExpectedDeploymentVersion(),
       this.runPublicSmoke(),
+      this.getWebhookQueueSignal(),
       this.getLatestStaffChangelog(),
     ]);
     const currentApiVersion = process.env.APP_VERSION ?? 'development';
@@ -306,6 +307,7 @@ export class StaffSummaryService {
       publicHealth,
       privateHealth,
       publicSmoke,
+      webhookQueue,
       latestStaffChangelog,
       protocol: this.buildDeploymentProtocol(currentApiVersion, expectedVersion.sha, publicHealth.status, publicSmoke.status, latestStaffChangelog),
       actionsUrl: DEPLOYMENT_ACTIONS_URL,
@@ -511,6 +513,66 @@ export class StaffSummaryService {
       status: checks.every((check) => check.ready) ? 'ok' : checks.some((check) => check.ready) ? 'degraded' : 'down',
       checkedAt,
       checks,
+    };
+  }
+
+  private async getWebhookQueueSignal(): Promise<DeploymentPanelSummary['webhookQueue']> {
+    const checkedAt = new Date();
+    const activeStatuses = [
+      DiscordWebhookDeliveryStatus.PENDING,
+      DiscordWebhookDeliveryStatus.SENDING,
+      DiscordWebhookDeliveryStatus.RETRYING,
+    ];
+    const [pending, sending, retrying, failed, oldestPending, latestRetry, latestFailure] = await Promise.all([
+      this.prisma.discordWebhookDelivery.count({ where: { status: DiscordWebhookDeliveryStatus.PENDING } }),
+      this.prisma.discordWebhookDelivery.count({ where: { status: DiscordWebhookDeliveryStatus.SENDING } }),
+      this.prisma.discordWebhookDelivery.count({ where: { status: DiscordWebhookDeliveryStatus.RETRYING } }),
+      this.prisma.discordWebhookDelivery.count({ where: { status: DiscordWebhookDeliveryStatus.FAILED } }),
+      this.prisma.discordWebhookDelivery.findFirst({
+        where: { status: { in: activeStatuses } },
+        orderBy: { queuedAt: 'asc' },
+        select: { queuedAt: true, action: true, channelLabel: true, status: true },
+      }),
+      this.prisma.discordWebhookDelivery.findFirst({
+        where: { retriedAt: { not: null } },
+        orderBy: { retriedAt: 'desc' },
+        select: { retriedAt: true, action: true, channelLabel: true },
+      }),
+      this.prisma.discordWebhookDelivery.findFirst({
+        where: { status: DiscordWebhookDeliveryStatus.FAILED },
+        orderBy: [{ failedAt: 'desc' }, { updatedAt: 'desc' }],
+        select: { failedAt: true, action: true, channelLabel: true },
+      }),
+    ]);
+    const oldestPendingAgeMinutes = oldestPending
+      ? Math.max(0, Math.floor((checkedAt.getTime() - oldestPending.queuedAt.getTime()) / 60_000))
+      : null;
+    const activeTotal = pending + sending + retrying;
+    const status = failed > 0 || (oldestPendingAgeMinutes ?? 0) >= 60
+      ? 'down'
+      : activeTotal > 0 || (oldestPendingAgeMinutes ?? 0) >= 15
+        ? 'degraded'
+        : 'ok';
+    const message = status === 'ok'
+      ? 'Fila de webhooks sem pendencias ativas.'
+      : failed > 0
+        ? `${failed} entrega(s) falharam; use a tela de webhooks para revisar retry.`
+        : `Fila ativa com ${activeTotal} entrega(s); item mais antigo ha ${oldestPendingAgeMinutes ?? 0} min.`;
+
+    return {
+      status,
+      checkedAt: checkedAt.toISOString(),
+      pending,
+      sending,
+      retrying,
+      failed,
+      oldestPendingQueuedAt: oldestPending?.queuedAt.toISOString() ?? null,
+      oldestPendingAgeMinutes,
+      latestRetryAt: latestRetry?.retriedAt?.toISOString() ?? null,
+      latestRetryAction: latestRetry?.action ?? latestRetry?.channelLabel ?? null,
+      latestFailureAt: latestFailure?.failedAt?.toISOString() ?? null,
+      latestFailureAction: latestFailure?.action ?? latestFailure?.channelLabel ?? null,
+      message,
     };
   }
 

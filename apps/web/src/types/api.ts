@@ -89,6 +89,21 @@ export type DeploymentPanelSummary = {
       message?: string | null;
     }>;
   };
+  webhookQueue: {
+    status: 'ok' | 'degraded' | 'down';
+    checkedAt: string;
+    pending: number;
+    sending: number;
+    retrying: number;
+    failed: number;
+    oldestPendingQueuedAt?: string | null;
+    oldestPendingAgeMinutes?: number | null;
+    latestRetryAt?: string | null;
+    latestRetryAction?: string | null;
+    latestFailureAt?: string | null;
+    latestFailureAction?: string | null;
+    message: string;
+  };
   latestStaffChangelog: {
     title: string;
     fileName?: string | null;

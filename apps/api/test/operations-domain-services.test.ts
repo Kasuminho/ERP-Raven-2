@@ -44,7 +44,18 @@ describe('Operations domain services', () => {
         )),
       },
       discordWebhookDelivery: {
-        findFirst: mock.fn(async () => ({ sentAt: new Date('2026-07-10T03:00:00.000Z') })),
+        count: mock.fn(async (args: { where: { status: string } }) => {
+          if (args.where.status === 'PENDING') return 1;
+          if (args.where.status === 'FAILED') return 2;
+          return 0;
+        }),
+        findFirst: mock.fn(async (args: { where: { action?: string; status?: unknown; retriedAt?: unknown } }) => {
+          if (args.where.action === 'STAFF_CHANGELOG_SENT') return { sentAt: new Date('2026-07-10T03:00:00.000Z') };
+          if (typeof args.where.status === 'object') return { queuedAt: new Date(Date.now() - 20 * 60_000), action: 'TEST_PENDING', channelLabel: 'Staff', status: 'PENDING' };
+          if (args.where.retriedAt) return { retriedAt: new Date('2026-07-10T02:30:00.000Z'), action: 'TEST_RETRY', channelLabel: 'Staff' };
+          if (args.where.status === 'FAILED') return { failedAt: new Date('2026-07-10T02:45:00.000Z'), action: 'TEST_FAILED', channelLabel: 'Staff' };
+          return null;
+        }),
       },
     };
     const businessRules = {
@@ -97,6 +108,9 @@ describe('Operations domain services', () => {
     assert.equal(deploy.expectedVersion.matchesCurrent, true);
     assert.equal(deploy.publicSmoke.status, 'ok');
     assert.equal(deploy.protocol.find((step) => step.key === 'watchtower')?.status, 'done');
+    assert.equal(deploy.webhookQueue.pending, 1);
+    assert.equal(deploy.webhookQueue.failed, 2);
+    assert.equal(deploy.webhookQueue.status, 'down');
     assert.equal(deploy.latestStaffChangelog.sentReceiptAvailable, true);
     assert.equal(deploy.protocol.find((step) => step.key === 'staff-changelog')?.status, 'done');
     const dayView = await service.getStaffDayView();
