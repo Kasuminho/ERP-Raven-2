@@ -138,6 +138,12 @@ Entregas candidatas:
 - Usar `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md` somente como guia futuro;
   Redis/gateway continuam fora do default.
 
+Estado em 2026-07-10: checklist de nova guilda implementado em
+`docs/SAAS_GUILD_COMPOSE_GUIDE.md`. O guia cobre pre-flight sem segredo,
+database/usuario PostgreSQL restrito, uploads/backups isolados, env por guilda,
+DNS/proxy, OAuth/webhooks Discord, migrations, smoke publico/autenticado, backup
+verificado e rollback. O dry-run automatizado segue como a proxima fatia.
+
 Definicao de pronto:
 
 - Nada quebra a stack G3X.

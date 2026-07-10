@@ -307,6 +307,10 @@ Plano vivo: `docs/SAAS_SINGLE_TENANT_ROADMAP.md`.
 - O PostgreSQL da VPS pode ser compartilhado entre clientes, desde que cada
   guilda use database propria e usuario que so tenha acesso a ela. O guia
   pratico fica em `docs/SAAS_GUILD_COMPOSE_GUIDE.md`.
+- `docs/SAAS_GUILD_COMPOSE_GUIDE.md` tambem contem o checklist operacional de
+  nova guilda: pre-flight sem segredo, database/usuario restrito,
+  uploads/backups, env por guilda, DNS/proxy, Discord OAuth/webhooks,
+  migrations, smoke, backup verificado e rollback.
 - A Web resolve a API em runtime pelo hostname `*.guild-g3x.com.br`, usando
   `https://HOST/api/v1`; isso permite reutilizar a mesma imagem Web em stacks
   de teste/guilda sem ficar presa ao `NEXT_PUBLIC_API_URL` gravado no build.
@@ -353,6 +357,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Checklist de nova guilda single-tenant foi consolidado com pre-flight, env por guilda, Discord, smoke, backup verificado e rollback. | SaaS single-tenant |
 | 2026-07-10 | Painel Staff de deploy passou a classificar smoke publico e health externo por tipo de diagnostico, separando challenge de borda/WAF de falha real de API. | deploy/smoke |
 | 2026-07-10 | Tela Web de admin items foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-10 | Modulo `business-rules` ganhou DTOs e `ValidationPipe` local forte para validar chave de regra e body `{ value }` nas atualizacoes Staff. | validacao/API |
