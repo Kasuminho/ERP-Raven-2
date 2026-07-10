@@ -56,6 +56,10 @@ Fatia 2 recomendada: `audit`.
 - Manter `GET /audit/health` publico e sem autenticacao.
 - Evitar expor audit logs a players; timeline continua Staff/Admin.
 
+Estado em 2026-07-10: implementado. `audit` ganhou DTOs de params/query,
+`ValidationPipe` local forte e testes de rejeicao para alvo/paginacao invalidos,
+mantendo `/audit/health` publico e timeline Staff/Admin.
+
 Fatia 3 recomendada: `business-rules`.
 
 - Validar `key` e body `{ value }` com cuidado, porque `value` aceita tipos

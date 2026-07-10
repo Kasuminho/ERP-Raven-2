@@ -1,10 +1,12 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { AuditTimelineParamDto, AuditTimelineQueryDto } from '../dto';
 import { AuditService } from '../services/audit.service';
 
 @Controller('audit')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class AuditController {
   constructor(private readonly service: AuditService) {}
 
@@ -17,11 +19,9 @@ export class AuditController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async timeline(
-    @Param('targetType') targetType: string,
-    @Param('targetId') targetId: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Param() params: AuditTimelineParamDto,
+    @Query() query: AuditTimelineQueryDto,
   ) {
-    return this.service.getTimeline(targetType, targetId, { page: Number(page), limit: Number(limit) });
+    return this.service.getTimeline(params.targetType, params.targetId, { page: query.page, limit: query.limit });
   }
 }
