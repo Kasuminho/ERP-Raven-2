@@ -4,6 +4,7 @@ import {
   AnnouncementStatus,
   AuctionStatus,
   CodexRequestStatus,
+  DiscordWebhookDeliveryStatus,
   DKPTransactionType,
   EventStatus,
   ItemInterestStatus,
@@ -306,7 +307,7 @@ export class StaffSummaryService {
       privateHealth,
       publicSmoke,
       latestStaffChangelog,
-      protocol: this.buildDeploymentProtocol(currentApiVersion, expectedVersion.sha, publicHealth.status, publicSmoke.status, latestStaffChangelog.source),
+      protocol: this.buildDeploymentProtocol(currentApiVersion, expectedVersion.sha, publicHealth.status, publicSmoke.status, latestStaffChangelog),
       actionsUrl: DEPLOYMENT_ACTIONS_URL,
     };
   }
@@ -515,11 +516,11 @@ export class StaffSummaryService {
 
   private async getLatestStaffChangelog(): Promise<DeploymentPanelSummary['latestStaffChangelog']> {
     try {
-      const docsDir = join(process.cwd(), 'docs');
-      const files = (await readdir(docsDir))
+      const { docsDir, files } = await this.readDocsDirectory();
+      const changelogFiles = files
         .filter((file) => /^discord-staff-update-\d{4}-\d{2}-\d{2}.+\.md$/.test(file))
         .sort((a, b) => b.localeCompare(a));
-      const fileName = files[0];
+      const fileName = changelogFiles[0];
 
       if (!fileName) {
         return {
@@ -535,14 +536,25 @@ export class StaffSummaryService {
       const content = await readFile(join(docsDir, fileName), 'utf8');
       const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? fileName.replace(/\.md$/, '');
       const inferredDate = fileName.match(/(\d{4}-\d{2}-\d{2})/)?.[1] ?? null;
+      const receipt = await this.prisma.discordWebhookDelivery.findFirst({
+        where: {
+          webhookKey: 'staff-updates',
+          action: 'STAFF_CHANGELOG_SENT',
+          targetId: fileName,
+          status: DiscordWebhookDeliveryStatus.SENT,
+        },
+        orderBy: [{ sentAt: 'desc' }, { createdAt: 'desc' }],
+      });
 
       return {
         title,
         fileName,
         inferredDate,
         source: 'docs',
-        sentReceiptAvailable: false,
-        note: 'Envios por CLI nao gravam recibo no banco; este campo mostra o ultimo changelog Staff documentado no repositorio.',
+        sentReceiptAvailable: Boolean(receipt),
+        note: receipt?.sentAt
+          ? `Recibo interno encontrado em ${receipt.sentAt.toISOString()}; URL de webhook nao e armazenada.`
+          : 'Changelog Staff documentado; recibo interno ainda nao encontrado para este arquivo.',
       };
     } catch (error) {
       return {
@@ -556,12 +568,30 @@ export class StaffSummaryService {
     }
   }
 
+  private async readDocsDirectory(): Promise<{ docsDir: string; files: string[] }> {
+    const candidates = [
+      join(process.cwd(), 'docs'),
+      join(process.cwd(), '..', 'docs'),
+      join(process.cwd(), '..', '..', 'docs'),
+    ];
+
+    for (const docsDir of candidates) {
+      try {
+        return { docsDir, files: await readdir(docsDir) };
+      } catch {
+        // Try the next likely workspace root.
+      }
+    }
+
+    throw new Error('Diretorio docs nao encontrado.');
+  }
+
   private buildDeploymentProtocol(
     currentApiVersion: string,
     expectedSha: string | null | undefined,
     publicHealthStatus: DeploymentPanelSummary['publicHealth']['status'],
     publicSmokeStatus: DeploymentPanelSummary['publicSmoke']['status'],
-    latestChangelogSource: DeploymentPanelSummary['latestStaffChangelog']['source'],
+    latestStaffChangelog: DeploymentPanelSummary['latestStaffChangelog'],
   ): DeploymentPanelSummary['protocol'] {
     const versionMatches = Boolean(expectedSha && currentApiVersion !== 'development' && currentApiVersion.startsWith(expectedSha.slice(0, 7)));
 
@@ -605,8 +635,12 @@ export class StaffSummaryService {
       {
         key: 'staff-changelog',
         label: 'Changelog Staff',
-        detail: latestChangelogSource === 'docs' ? 'Ha changelog Staff documentado; envio ainda depende do ritual pos-verificacao.' : 'Nenhum changelog Staff foi localizado nos docs.',
-        status: latestChangelogSource === 'docs' ? 'manual' : 'pending',
+        detail: latestStaffChangelog.sentReceiptAvailable
+          ? 'Changelog Staff documentado e recibo interno encontrado sem guardar URL de webhook.'
+          : latestStaffChangelog.source === 'docs'
+            ? 'Ha changelog Staff documentado; envio ainda precisa de recibo interno.'
+            : 'Nenhum changelog Staff foi localizado nos docs.',
+        status: latestStaffChangelog.sentReceiptAvailable ? 'done' : latestStaffChangelog.source === 'docs' ? 'manual' : 'pending',
       },
     ];
   }

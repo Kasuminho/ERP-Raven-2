@@ -105,6 +105,7 @@ Fonte detalhada: `docs/DISCORD_WEBHOOK_VOICE.md`.
 - Alertas criticos explicam o problema antes da punchline.
 - Bancos de voz dos webhooks usam selecao deterministica por contexto; quando ha par PT-BR/EN equivalente, a variante escolhida e espelhada entre os dois blocos.
 - Changelog da Staff e enviado com `npm.cmd run discord:update -- ARQUIVO --staff`.
+- Apos envio real de changelog Staff, o CLI grava um recibo interno em `DiscordWebhookDelivery` com `action=STAFF_CHANGELOG_SENT`, `webhookKey=staff-updates`, arquivo/titulo/contagem e status `SENT`; URLs de webhook nao sao persistidas.
 - Avisos extraordinarios para players podem ser redigidos/revisados no chat Codex e publicados com `npm.cmd run discord:update -- ARQUIVO --announcements`; fazer `--dry-run` antes, manter PT-BR/EN em blocos separados e exigir confirmacao humana antes do envio.
 - A tela Staff `/dashboard/staff/discord-templates` consome `GET /operations/staff/discord-templates` e mostra preview real sanitizado de webhooks para anuncios, leiloes, interesses, drops, presenca, requests e review Staff. O payload inclui `username`, `avatar_url`, `content`, `embeds` e `allowed_mentions`, nunca a URL do webhook. Templates player-facing exibem PT-BR e EN; Staff-only fica PT-BR.
 - A tela Staff `/dashboard/staff/discord-webhooks` consome `GET /operations/staff/discord-webhooks` e lista entregas persistidas em `DiscordWebhookDelivery`: alvo logico, canal, action, target, status, tentativas, erro resumido e payload sanitizado. `POST /operations/staff/discord-webhooks/:deliveryId/retry` reenvia apenas entregas `FAILED` e `retryable`, buscando a URL pelo `webhookKey` no servidor sem expor segredo.
@@ -343,6 +344,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | CLI de changelog Staff passou a registrar recibo interno sanitizado em `DiscordWebhookDelivery`, e o painel de deploy marca changelog como concluido quando encontra recibo do arquivo mais recente. | deploy/Staff |
 | 2026-07-10 | Tela Staff de interesses foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-10 | Sorteio/transmutar de item-interests saiu do servico principal para `ItemInterestTransmuteRaffleService`, preservando bloqueio 24h e fallback ponderado 30d. | arquitetura/API |
 | 2026-07-10 | Contratos de item-interests passaram para `packages/shared/src/types/interests.ts`, com aliases locais na API e Web para posts, entries, votos e comparador Staff. | contratos/shared |

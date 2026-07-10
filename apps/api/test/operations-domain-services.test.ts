@@ -43,6 +43,9 @@ describe('Operations domain services', () => {
             : { createdAt: new Date('2026-07-02T01:00:00.000Z') }
         )),
       },
+      discordWebhookDelivery: {
+        findFirst: mock.fn(async () => ({ sentAt: new Date('2026-07-10T03:00:00.000Z') })),
+      },
     };
     const businessRules = {
       getStaffPendingThresholds: mock.fn(async () => ({
@@ -94,6 +97,8 @@ describe('Operations domain services', () => {
     assert.equal(deploy.expectedVersion.matchesCurrent, true);
     assert.equal(deploy.publicSmoke.status, 'ok');
     assert.equal(deploy.protocol.find((step) => step.key === 'watchtower')?.status, 'done');
+    assert.equal(deploy.latestStaffChangelog.sentReceiptAvailable, true);
+    assert.equal(deploy.protocol.find((step) => step.key === 'staff-changelog')?.status, 'done');
     const dayView = await service.getStaffDayView();
     assert.equal(dayView.todaysAnnouncements, 1);
     assert.equal(dayView.openEvents, 2);

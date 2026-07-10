@@ -84,7 +84,8 @@ function readMessage() {
   ));
 
   if (argPath) {
-    return fs.readFileSync(path.resolve(argPath), 'utf8').trim();
+    const filePath = path.resolve(argPath);
+    return { content: fs.readFileSync(filePath, 'utf8').trim(), filePath };
   }
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
@@ -93,7 +94,7 @@ function readMessage() {
     throw new Error('Provide a markdown file path or pipe message content through stdin.');
   }
 
-  return stdin;
+  return { content: stdin, filePath: undefined };
 }
 
 function readArgValue(name) {
@@ -215,6 +216,70 @@ function groupEmbeds(embeds) {
   return groups;
 }
 
+function changelogTitle(content, fallback) {
+  return content.match(/^#\s+(.+)$/m)?.[1]?.trim() || fallback || 'Atualizacao da plataforma';
+}
+
+async function recordStaffChangelogReceipt({ content, filePath, locale, username, avatarUrl, messageCount, embedCount }) {
+  if (process.env.DISCORD_CHANGELOG_RECEIPT_DISABLED === '1') {
+    return;
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.warn('Staff changelog receipt skipped: DATABASE_URL is not configured.');
+    return;
+  }
+
+  let PrismaClient;
+  try {
+    ({ PrismaClient } = require('@prisma/client'));
+  } catch (error) {
+    console.warn(`Staff changelog receipt skipped: Prisma client unavailable (${error.message}).`);
+    return;
+  }
+
+  const prisma = new PrismaClient();
+  const fileName = filePath ? path.basename(filePath) : null;
+  const relativePath = filePath ? path.relative(process.cwd(), filePath).replace(/\\/g, '/') : null;
+  const title = changelogTitle(content, fileName);
+  const now = new Date();
+
+  try {
+    await prisma.discordWebhookDelivery.create({
+      data: {
+        webhookKey: 'staff-updates',
+        channelLabel: 'Staff updates',
+        action: 'STAFF_CHANGELOG_SENT',
+        targetId: fileName || title,
+        status: 'SENT',
+        attempts: messageCount,
+        maxAttempts: messageCount,
+        retryable: false,
+        payloadPreview: {
+          kind: 'staff-changelog-receipt',
+          title,
+          fileName,
+          relativePath,
+          locale,
+          username,
+          avatarUrl,
+          messageCount,
+          embedCount,
+          sentAt: now.toISOString(),
+        },
+        queuedAt: now,
+        startedAt: now,
+        sentAt: now,
+      },
+    });
+    console.log(`Staff changelog receipt recorded for ${fileName || title}.`);
+  } catch (error) {
+    console.warn(`Staff changelog receipt failed: ${error.message}`);
+  } finally {
+    await prisma.$disconnect().catch(() => undefined);
+  }
+}
+
 async function main() {
   loadEnv(process.cwd());
 
@@ -237,7 +302,8 @@ async function main() {
     throw new Error(`${expectedEnv} is not configured.`);
   }
 
-  const embedGroups = groupEmbeds(buildEmbeds(readMessage(), target, locale));
+  const message = readMessage();
+  const embedGroups = groupEmbeds(buildEmbeds(message.content, target, locale));
 
   if (embedGroups.length === 0) {
     throw new Error(`No ${locale} section was found in the changelog.`);
@@ -265,6 +331,18 @@ async function main() {
       const body = await response.text();
       throw new Error(`Discord webhook failed with ${response.status}: ${body}`);
     }
+  }
+
+  if (target === 'staff') {
+    await recordStaffChangelogReceipt({
+      content: message.content,
+      filePath: message.filePath,
+      locale,
+      username,
+      avatarUrl,
+      messageCount: embedGroups.length,
+      embedCount: embedGroups.flat().length,
+    });
   }
 
   console.log(`Discord update sent in ${embedGroups.length} message(s).`);
