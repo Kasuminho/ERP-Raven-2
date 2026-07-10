@@ -2,101 +2,67 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemType, Prisma } from '@prisma/client';
 import { randomInt } from 'node:crypto';
 import { PrismaService } from '@database/prisma.service';
+import type {
+  ItemInterestEntryRelations as SharedItemInterestEntryRelations,
+  ItemInterestPostRelations as SharedItemInterestPostRelations,
+  ItemInterestStaffComparison as SharedItemInterestStaffComparison,
+} from '@shared/types/interests';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { ImageStorageService } from '../../uploads/image-storage.service';
 import { BulkCreateItemInterestPostDto, CreateItemInterestPostDto, DeclareItemInterestDto, DeliverItemInterestDto } from '../dto';
 
-export type ItemInterestDetails = ItemInterestPost & {
-  itemCatalog: {
-    id: string;
-    kind: string;
-    category: string;
-    namePt: string;
-    nameEn: string;
-    nameEs: string | null;
-    typePt: string;
-    typeEn: string;
-    typeEs: string | null;
-    itemType: ItemType | null;
-    image1Url: string | null;
-    image2Url: string | null;
+type ItemInterestCatalogDetails = {
+  id: string;
+  kind: string;
+  category: string;
+  namePt: string;
+  nameEn: string;
+  nameEs: string | null;
+  typePt: string;
+  typeEn: string;
+  typeEs: string | null;
+  itemType: ItemType | null;
+  image1Url: string | null;
+  image2Url: string | null;
+};
+
+type ItemInterestVoteDetails = {
+  id: string;
+  round: number;
+  voterId: string;
+  voter: {
+    discordUsername: string;
+    discordNickname: string | null;
   };
-  entries: Array<ItemInterestEntry & {
-    player: {
+};
+
+type ItemInterestPostVoteDetails = {
+  id: string;
+  entryId: string;
+  voterId: string;
+  round: number;
+};
+
+export type ItemInterestStaffComparison = SharedItemInterestStaffComparison<Date, string, string>;
+
+export type ItemInterestDetails = ItemInterestPost & SharedItemInterestPostRelations<
+  Date,
+  ItemInterestCatalogDetails,
+  ItemInterestEntry & SharedItemInterestEntryRelations<
+    Date,
+    {
       id: string;
       nickname: string;
       dimensionalLayer: number;
       attendancePercentage: number;
-    };
-    dropHistory: {
-      id: string;
-      deliveredAt: Date | null;
-    } | null;
-    votes: Array<{
-      id: string;
-      round: number;
-      voterId: string;
-      voter: {
-        discordUsername: string;
-        discordNickname: string | null;
-      };
-    }>;
-    lootStats?: {
-      queueDays: number;
-      totalDrops: number;
-      sameItemDrops: number;
-      sameTypeDrops: number;
-      lastDropAt: Date | null;
-    };
-    staffComparison?: ItemInterestStaffComparison;
-  }>;
-  votes: Array<{
-    id: string;
-    entryId: string;
-    voterId: string;
-    round: number;
-  }>;
-  views?: Array<{
-    seenAt: Date;
-  }>;
-  viewerHasDeclared?: boolean;
-  viewerSeenAt?: Date | null;
-};
-
-export type ItemInterestStaffComparison = {
-  playerClass: string;
-  dimensionalLayer: number;
-  attendancePercentage: number;
-  totalDkp: number;
-  lockedDkp: number;
-  availableDkp: number;
-  activeRequests: Array<{
-    id: string;
-    itemName: string;
-    remainingQuantity: number;
-    totalQuantity: number;
-    rankPosition: number;
-    category?: string | null;
-    itemTier?: string | null;
-    itemType?: string | null;
-  }>;
-  latestStaffNote?: {
-    severity: string;
-    body: string;
-    createdAt: Date;
-    authorName: string;
-  } | null;
-  recentLoot: {
-    queueDays: number;
-    totalDrops: number;
-    sameItemDrops: number;
-    sameTypeDrops: number;
-    lastDropAt: Date | null;
-  };
-  decisionSignalsPt: string[];
-  summaryPt: string;
-};
+    },
+    ItemInterestVoteDetails,
+    ItemInterestStaffComparison
+  >,
+  ItemInterestPostVoteDetails,
+  { seenAt: Date }
+>;
 
 const criteriaTexts: Record<string, { pt: string; en: string }> = {
   'skill:PvE': {

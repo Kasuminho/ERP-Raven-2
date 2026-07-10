@@ -7,6 +7,13 @@ import type {
   AuctionTimelineEvent as SharedAuctionTimelineEvent,
 } from '@shared/types/auctions';
 import type {
+  ItemInterestEntryRecord as SharedItemInterestEntryRecord,
+  ItemInterestPostRecord as SharedItemInterestPostRecord,
+  ItemInterestStaffComparison as SharedItemInterestStaffComparison,
+  ItemInterestStatus as SharedItemInterestStatus,
+  ItemInterestVote as SharedItemInterestVote,
+} from '@shared/types/interests';
+import type {
   AttendanceStats as SharedAttendanceStats,
   EventBatchPanel as SharedEventBatchPanel,
   EventDetails as SharedEventDetails,
@@ -182,103 +189,33 @@ export type ItemRequest = SharedItemRequestRecord<
   ItemType
 >;
 
-export type ItemInterestStatus = 'OPEN' | 'CLOSED' | 'VOTING' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+export type ItemInterestStatus = SharedItemInterestStatus;
 
-export type ItemInterestVote = {
-  id: string;
-  entryId: string;
-  voterId: string;
-  round: number;
-  voter?: {
+export type ItemInterestVote = SharedItemInterestVote<{
     discordUsername: string;
     discordNickname?: string;
-  };
-};
+  }>;
 
-export type ItemInterestEntry = {
-  id: string;
-  postId: string;
-  playerId: string;
-  note?: string;
-  imageUrl?: string;
-  isTransmuteRequest: boolean;
-  createdAt: string;
-  dropHistory?: {
-    id: string;
-    deliveredAt?: string;
-  } | null;
-  lootStats?: {
-    queueDays: number;
-    totalDrops: number;
-    sameItemDrops: number;
-    sameTypeDrops: number;
-    lastDropAt?: string | null;
-  };
-  staffComparison?: {
-    playerClass: string;
-    dimensionalLayer: number;
-    attendancePercentage: number;
-    totalDkp: number;
-    lockedDkp: number;
-    availableDkp: number;
-    activeRequests: Array<{
-      id: string;
-      itemName: string;
-      remainingQuantity: number;
-      totalQuantity: number;
-      rankPosition: number;
-      category?: string | null;
-      itemTier?: ItemTier | null;
-      itemType?: ItemType | null;
-    }>;
-    latestStaffNote?: {
-      severity: string;
-      body: string;
-      createdAt: string;
-      authorName: string;
-    } | null;
-    recentLoot: {
-      queueDays: number;
-      totalDrops: number;
-      sameItemDrops: number;
-      sameTypeDrops: number;
-      lastDropAt?: string | null;
-    };
-    decisionSignalsPt: string[];
-    summaryPt: string;
-  };
-  player?: {
+export type ItemInterestStaffComparison = SharedItemInterestStaffComparison<string, ItemTier, ItemType>;
+
+export type ItemInterestEntry = SharedItemInterestEntryRecord<
+  string,
+  {
     id: string;
     nickname: string;
     dimensionalLayer: number;
     attendancePercentage: number;
-  };
-  votes?: ItemInterestVote[];
-};
+  },
+  ItemInterestStaffComparison,
+  ItemInterestVote
+>;
 
-export type ItemInterestPost = {
-  id: string;
-  itemCatalogId: string;
-  mode: 'PvE' | 'PvP';
-  title: string;
-  criteriaPt: string;
-  criteriaEn: string;
-  status: ItemInterestStatus;
-  votingRound: number;
-  votingCandidateEntryIds?: string[];
-  selectedEntryId?: string;
-  deliveryEnabledAt?: string;
-  closesAt: string;
-  closedAt?: string;
-  proofImageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  itemCatalog?: Pick<ItemCatalog, 'id' | 'kind' | 'category' | 'itemType' | 'namePt' | 'nameEn' | 'nameEs' | 'typePt' | 'typeEn' | 'typeEs' | 'image1Url' | 'image2Url'>;
-  entries?: ItemInterestEntry[];
-  votes?: ItemInterestVote[];
-  viewerHasDeclared?: boolean;
-  viewerSeenAt?: string | null;
-};
+export type ItemInterestPost = SharedItemInterestPostRecord<
+  string,
+  Pick<ItemCatalog, 'id' | 'kind' | 'category' | 'itemType' | 'namePt' | 'nameEn' | 'nameEs' | 'typePt' | 'typeEn' | 'typeEs' | 'image1Url' | 'image2Url'>,
+  ItemInterestEntry,
+  ItemInterestVote
+>;
 
 export type CodexRequestStatus = 'PENDING' | 'SENT' | 'CONFIRMED' | 'NEEDS_RETRY' | 'CANCELLED';
 export type DaoshiReceiptStatus = 'PENDING' | 'APPROVED' | 'REJECTED';

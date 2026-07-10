@@ -21,7 +21,7 @@ Producao:
 - API: NestJS em `apps/api`.
 - Web: Next.js 15 em `apps/web`.
 - Banco: PostgreSQL via Prisma em `packages/database`.
-- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; contratos de eventos (`EventRecord`, `FinalizeEventResult`, `EventFinalizationChecklist`, `EventBatchPanel`, `EventReadinessReport`, `EventDetails`, `AttendanceStats`, `PlayerAttendanceHistoryRow`) ficam em `packages/shared/src/types/events.ts`; contratos de requests (`ItemRequestRecord`, `ItemRequestQueueForecast`, `ItemRequestSwapSuggestion`, `ItemRequestMaterialPriority`) ficam em `packages/shared/src/types/requests.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
+- Tipos compartilhados: `packages/shared`. Contratos de operations/player tasks (`OperationPriority`, `OperationTask`, `PlayerActionPlanCard`, `PlayerActionPlan`) ficam em `packages/shared/src/types/operations.ts`; contratos Staff de diagnostico de leilao (`AuctionDiagnosticOption`, `AuctionTimelineEvent`, `AuctionFinalizationPreview`, `AuctionDossier`, `AuctionDiagnosticSummary`) ficam em `packages/shared/src/types/auctions.ts`; contratos de eventos (`EventRecord`, `FinalizeEventResult`, `EventFinalizationChecklist`, `EventBatchPanel`, `EventReadinessReport`, `EventDetails`, `AttendanceStats`, `PlayerAttendanceHistoryRow`) ficam em `packages/shared/src/types/events.ts`; contratos de requests (`ItemRequestRecord`, `ItemRequestQueueForecast`, `ItemRequestSwapSuggestion`, `ItemRequestMaterialPriority`) ficam em `packages/shared/src/types/requests.ts`; contratos de interesses (`ItemInterestPostRecord`, `ItemInterestEntryRecord`, `ItemInterestVote`, `ItemInterestStaffComparison`) ficam em `packages/shared/src/types/interests.ts`; API e Web usam aliases locais derivados deles para respeitar data como `Date|string`/`Date` no servidor e `string` no cliente.
 - Infra e utilitarios: `scripts`, `Dockerfile` e arquivos Compose.
 
 Qualidade obrigatoria:
@@ -341,6 +341,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Contratos de item-interests passaram para `packages/shared/src/types/interests.ts`, com aliases locais na API e Web para posts, entries, votos e comparador Staff. | contratos/shared |
 | 2026-07-10 | Modulo `item-requests` ganhou DTOs com `class-validator`, pipe local forte e validacao UUID nos IDs de mutacao. | validacao/API |
 | 2026-07-09 | Tela Web de item requests foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-09 | Calculo de forecast, sugestoes e prioridade de material de item-requests saiu do servico principal para `ItemRequestQueueService`, com teste direto de regressao. | arquitetura/API |
