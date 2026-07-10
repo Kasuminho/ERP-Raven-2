@@ -164,6 +164,7 @@ Automacao ativa:
 - As regras de sorteio/transmutar de interesses pertencem ao dominio `ItemInterestTransmuteRaffleService`; `ItemInterestsService` apenas coordena fechamento, status, auditoria e persistencia.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
 - A implementacao Web de `/dashboard/staff/interests` fica em componentes locais da rota (`_components/staff-interests-page-content.tsx` e filtros), mantendo a pagina fina e o estado/mutacoes no nivel da experiencia Staff.
+- A implementacao Web de `/dashboard/admin/items` fica em componentes locais da rota (`_components/item-create-form-card.tsx`, `item-catalog-controls-card.tsx` e `item-catalog-card.tsx`), mantendo estado e mutacoes na pagina para preservar contratos e comportamento de leilao/interesse.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam abas de jornada (`Resolver agora`, `Auditar`, `Configurar`, `Comunicar`, `Operar deploy`) com contadores, cards filtrados e proximas acoes por grupo, alem de pendencias, saude e auditoria.
 - O modo reuniao Staff em `/dashboard/staff/meeting` consome `GET /operations/staff/meeting`, que preserva os campos antigos e adiciona `meetingDay`, `sections`, `resolvedItemKeys` e `markdown`. As secoes cobrem decisoes de loot, pendencias travadas, economia DKP, players sensiveis, progresso de boss/lote, comunicados e acoes ate a proxima reuniao. `POST /operations/staff/meeting/items/:itemKey/resolve` marca item como resolvido no dia operacional via audit log `STAFF_MEETING_ITEM_RESOLVED`.
 - O dossie universal Staff em `/dashboard/staff/dossier` consome `GET /operations/staff/dossiers/:type/:id` e gera contexto auditavel com resumo, links internos, audit logs e Markdown copiavel para `player`, `auction`, `request`, `interest`, `drop` e `event`. O endpoint e Staff-only e nao retorna segredos, URLs de webhook ou payload privado desnecessario.
@@ -351,6 +352,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Tela Web de admin items foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-10 | Modulo `business-rules` ganhou DTOs e `ValidationPipe` local forte para validar chave de regra e body `{ value }` nas atualizacoes Staff. | validacao/API |
 | 2026-07-10 | Modulo `audit` ganhou DTOs e `ValidationPipe` local forte para validar alvo e paginacao da timeline Staff sem mudar `/audit/health`. | validacao/API |
 | 2026-07-10 | Modulo `notifications` ganhou DTO e `ValidationPipe` local forte para validar UUID antes de marcar notificacao como lida. | validacao/API |

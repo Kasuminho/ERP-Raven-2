@@ -91,6 +91,11 @@ Fatia recomendada: `/dashboard/admin/items`.
   excessivo.
 - Nao alterar textos, contratos da API ou comportamento de leilao/interesse.
 
+Estado em 2026-07-10: implementado. `/dashboard/admin/items` foi separado em
+componentes locais da rota para formulario de criacao, controles/filtros/acoes
+em massa e card de catalogo, mantendo estado/mutacoes na pagina e contratos
+sem alteracao.
+
 Definicao de pronto:
 
 - Mesma UX observavel.
