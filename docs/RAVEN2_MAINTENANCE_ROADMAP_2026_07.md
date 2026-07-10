@@ -46,6 +46,10 @@ Fatia 1 recomendada: `notifications`.
 - Adicionar teste de rejeicao para ID invalido e campo extra quando houver body.
 - Atualizar `WIKI.md` se a validacao entrar.
 
+Estado em 2026-07-10: implementado. `notifications` ganhou DTO de parametro,
+`ValidationPipe` local forte e teste de rejeicao para UUID invalido/campo extra,
+preservando as rotas existentes.
+
 Fatia 2 recomendada: `audit`.
 
 - Validar `targetType`, `targetId`, `page` e `limit`.

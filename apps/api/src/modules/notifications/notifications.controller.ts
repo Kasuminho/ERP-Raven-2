@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { NotificationIdParamDto } from './dto';
 import { NotificationsService } from './notifications.service';
 
 type AuthRequest = {
@@ -10,6 +11,7 @@ type AuthRequest = {
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class NotificationsController {
   constructor(private readonly service: NotificationsService) {}
 
@@ -24,8 +26,8 @@ export class NotificationsController {
   }
 
   @Post(':id/read')
-  async markRead(@Param('id') id: string, @Req() req: AuthRequest) {
-    return this.service.markRead(req.user.userId, id);
+  async markRead(@Param() params: NotificationIdParamDto, @Req() req: AuthRequest) {
+    return this.service.markRead(req.user.userId, params.id);
   }
 
   @Post('read-all')
