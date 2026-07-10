@@ -87,9 +87,11 @@ describe('Operations domain services', () => {
     globalThis.fetch = mock.fn(async (url: string) => ({
       ok: true,
       status: 200,
+      headers: { get: () => 'application/json' },
       json: async () => (url.endsWith('/health')
         ? { status: 'ok', checkedAt: '2026-07-02T00:00:00.000Z', version: 'abc1234' }
         : {}),
+      text: async () => '',
     })) as never;
     const service = new StaffSummaryService(prisma as never, businessRules as never, config as never);
 
@@ -107,12 +109,26 @@ describe('Operations domain services', () => {
     assert.equal(deploy.currentApiVersion, 'abc1234');
     assert.equal(deploy.expectedVersion.matchesCurrent, true);
     assert.equal(deploy.publicSmoke.status, 'ok');
+    assert.equal(deploy.publicSmoke.outcome, 'ok');
     assert.equal(deploy.protocol.find((step) => step.key === 'watchtower')?.status, 'done');
     assert.equal(deploy.webhookQueue.pending, 1);
     assert.equal(deploy.webhookQueue.failed, 2);
     assert.equal(deploy.webhookQueue.status, 'down');
     assert.equal(deploy.latestStaffChangelog.sentReceiptAvailable, true);
     assert.equal(deploy.protocol.find((step) => step.key === 'staff-changelog')?.status, 'done');
+    globalThis.fetch = mock.fn(async () => ({
+      ok: false,
+      status: 403,
+      headers: { get: () => 'text/html; charset=UTF-8' },
+      json: async () => undefined,
+      text: async () => '<!DOCTYPE html><title>Just a moment...</title>',
+    })) as never;
+    const edgeDeploy = await service.getDeploymentPanel();
+    assert.equal(edgeDeploy.publicHealth.diagnostic, 'edge-challenge');
+    assert.equal(edgeDeploy.publicSmoke.status, 'degraded');
+    assert.equal(edgeDeploy.publicSmoke.outcome, 'edge-challenge');
+    assert.equal(edgeDeploy.publicSmoke.checks[0].diagnostic, 'edge-challenge');
+    assert.equal(edgeDeploy.protocol.find((step) => step.key === 'public-smoke')?.status, 'manual');
     const dayView = await service.getStaffDayView();
     assert.equal(dayView.todaysAnnouncements, 1);
     assert.equal(dayView.openEvents, 2);

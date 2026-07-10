@@ -27,6 +27,22 @@ const protocolLabel: Record<DeploymentProtocolStepStatus, string> = {
   manual: 'Manual',
 };
 
+const diagnosticTone: Record<DeploymentPanelSummary['publicSmoke']['checks'][number]['diagnostic'], 'green' | 'gold' | 'red' | 'blue'> = {
+  ok: 'green',
+  'edge-challenge': 'gold',
+  'http-error': 'red',
+  'network-error': 'red',
+  'not-configured': 'blue',
+};
+
+const diagnosticLabel: Record<DeploymentPanelSummary['publicSmoke']['checks'][number]['diagnostic'], string> = {
+  ok: 'OK',
+  'edge-challenge': 'Borda/WAF',
+  'http-error': 'HTTP',
+  'network-error': 'Rede',
+  'not-configured': 'Config',
+};
+
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : '-';
 }
@@ -95,6 +111,9 @@ function HealthPanels({ data }: { data?: DeploymentPanelSummary }) {
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={healthTone[data?.publicHealth.status ?? 'degraded']}>{data?.publicHealth.status ?? 'carregando'}</Badge>
+            {data?.publicHealth.diagnostic ? (
+              <Badge tone={diagnosticTone[data.publicHealth.diagnostic]}>{diagnosticLabel[data.publicHealth.diagnostic]}</Badge>
+            ) : null}
             <span className="text-sm text-muted-foreground">{data?.publicHealth.latencyMs ?? '-'} ms</span>
           </div>
           <p className="text-sm">Versao publica: <span className="font-semibold">{data?.publicHealth.version ?? '-'}</span></p>
@@ -139,16 +158,19 @@ function SmokePanel({ data }: { data?: DeploymentPanelSummary }) {
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={healthTone[data?.publicSmoke.status ?? 'degraded']}>{data?.publicSmoke.status ?? 'carregando'}</Badge>
+          {data?.publicSmoke.outcome ? <Badge tone={data.publicSmoke.outcome === 'ok' ? 'green' : data.publicSmoke.outcome === 'edge-challenge' ? 'gold' : data.publicSmoke.outcome === 'partial' ? 'blue' : 'red'}>{data.publicSmoke.outcome}</Badge> : null}
           <span className="text-xs text-muted-foreground">Checado em {formatDate(data?.publicSmoke.checkedAt)}</span>
+          <span className="text-xs text-muted-foreground">{data?.publicSmoke.totalLatencyMs ?? '-'} ms total</span>
         </div>
+        <p className="text-sm text-muted-foreground">{data?.publicSmoke.message ?? 'Aguardando diagnostico do smoke publico.'}</p>
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
           {(data?.publicSmoke.checks ?? []).map((check) => (
             <div key={check.path} className="rounded-md border bg-background/35 p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate text-sm font-semibold">{check.path}</p>
-                <Badge tone={check.ready ? 'green' : 'red'}>{check.statusCode ?? '-'}</Badge>
+                <Badge tone={diagnosticTone[check.diagnostic]}>{diagnosticLabel[check.diagnostic]}</Badge>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{check.latencyMs ?? '-'} ms</p>
+              <p className="mt-1 text-xs text-muted-foreground">HTTP {check.statusCode ?? '-'} · {check.latencyMs ?? '-'} ms</p>
               {check.version ? <p className="mt-1 text-xs text-muted-foreground">Versao {check.version}</p> : null}
               {check.message ? <p className="mt-1 line-clamp-2 text-xs text-red-300">{check.message}</p> : null}
             </div>

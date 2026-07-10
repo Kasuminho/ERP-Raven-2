@@ -38,6 +38,7 @@ Qualidade obrigatoria:
 - O smoke publico adiciona query `_smoke` unica e headers `Cache-Control: no-cache`/`Pragma: no-cache` em cada request para evitar `APP_VERSION` antigo vindo de cache regional.
 - No workflow, `SMOKE_ALLOW_EDGE_CHALLENGE=1` transforma challenge HTML 403 da borda/WAF contra o runner externo em warning explicito; resposta JSON com versao errada, timeout, erro de API ou falha sem esse padrao continua bloqueando.
 - Quando falha, o smoke publico emite annotation `Public smoke failed` com o ultimo resultado observado para diagnostico visivel na pagina do Actions.
+- O painel Staff de deploy classifica o smoke publico como `ok`, `partial`, `edge-challenge`, `api-failure` ou `not-configured`; checks individuais tambem indicam `Borda/WAF`, `HTTP`, `Rede` ou `Config` para separar desafio de borda de API realmente indisponivel.
 
 Modulos principais da API:
 
@@ -352,6 +353,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Painel Staff de deploy passou a classificar smoke publico e health externo por tipo de diagnostico, separando challenge de borda/WAF de falha real de API. | deploy/smoke |
 | 2026-07-10 | Tela Web de admin items foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-10 | Modulo `business-rules` ganhou DTOs e `ValidationPipe` local forte para validar chave de regra e body `{ value }` nas atualizacoes Staff. | validacao/API |
 | 2026-07-10 | Modulo `audit` ganhou DTOs e `ValidationPipe` local forte para validar alvo e paginacao da timeline Staff sem mudar `/audit/health`. | validacao/API |

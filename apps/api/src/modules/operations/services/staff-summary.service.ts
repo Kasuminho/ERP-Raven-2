@@ -410,6 +410,7 @@ export class StaffSummaryService {
     if (!baseUrl) {
       return {
         status: 'degraded',
+        diagnostic: 'not-configured',
         checkedAt: new Date().toISOString(),
         message: 'PUBLIC_APP_URL nao esta configurada.',
       };
@@ -417,17 +418,37 @@ export class StaffSummaryService {
 
     const startedAt = Date.now();
     try {
-      const body = await this.fetchJson<{ status?: string; checkedAt?: string; version?: string }>(`${baseUrl}/health`, 6000);
-      const status = body.status === 'ok' || body.status === 'degraded' || body.status === 'down' ? body.status : 'degraded';
+      const response = await this.fetchWithTimeout(`${baseUrl}/health`, 6000, {
+        accept: 'application/json',
+        'user-agent': 'raven2-deploy-panel',
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        const edgeChallenge = this.isEdgeChallengeResponse(response, text);
+        return {
+          status: edgeChallenge ? 'degraded' : 'down',
+          diagnostic: edgeChallenge ? 'edge-challenge' : 'http-error',
+          checkedAt: new Date().toISOString(),
+          latencyMs: Date.now() - startedAt,
+          message: edgeChallenge
+            ? 'A borda/WAF respondeu challenge HTML para o health publico; a API pode estar saudavel, mas a verificacao externa precisa de confirmacao direta.'
+            : `Health publico respondeu HTTP ${response.status}.`,
+        };
+      }
+      const body = await response.json().catch(() => undefined) as { status?: string; checkedAt?: string; version?: string } | undefined;
+      const status = body?.status === 'ok' || body?.status === 'degraded' || body?.status === 'down' ? body.status : 'degraded';
       return {
         status,
-        checkedAt: body.checkedAt ?? new Date().toISOString(),
-        version: body.version ?? null,
+        diagnostic: status === 'ok' ? 'ok' : 'http-error',
+        checkedAt: body?.checkedAt ?? new Date().toISOString(),
+        version: body?.version ?? null,
         latencyMs: Date.now() - startedAt,
+        message: status === 'ok' ? null : 'Health publico respondeu JSON, mas sem status OK.',
       };
     } catch (error) {
       return {
         status: 'down',
+        diagnostic: 'network-error',
         checkedAt: new Date().toISOString(),
         latencyMs: Date.now() - startedAt,
         message: this.errorMessage(error),
@@ -477,41 +498,82 @@ export class StaffSummaryService {
     if (!baseUrl) {
       return {
         status: 'degraded',
+        outcome: 'not-configured',
         checkedAt,
+        totalLatencyMs: null,
+        message: 'PUBLIC_APP_URL nao esta configurada; smoke publico precisa ser validado manualmente.',
         checks: PUBLIC_SMOKE_PATHS.map((path) => ({
           path,
           ready: false,
+          diagnostic: 'not-configured',
           message: 'PUBLIC_APP_URL nao esta configurada.',
         })),
       };
     }
 
-    const checks = await Promise.all(PUBLIC_SMOKE_PATHS.map(async (path) => {
-      const startedAt = Date.now();
+    const startedAt = Date.now();
+    const checks: DeploymentPanelSummary['publicSmoke']['checks'] = await Promise.all(PUBLIC_SMOKE_PATHS.map(async (path) => {
+      const checkStartedAt = Date.now();
       try {
-        const response = await this.fetchWithTimeout(`${baseUrl}${path}`, 6000);
-        const body = path === '/health' ? await response.json().catch(() => undefined) as { version?: string } | undefined : undefined;
+        const response = await this.fetchWithTimeout(`${baseUrl}${path}`, 6000, {
+          accept: 'application/json',
+          'user-agent': 'raven2-deploy-panel',
+        });
+        const contentType = response.headers.get('content-type') ?? '';
+        const expectsJson = contentType.toLowerCase().includes('application/json') || path === '/health';
+        const body = response.ok && expectsJson
+          ? await response.json().catch(() => undefined) as { version?: string } | undefined
+          : undefined;
+        const text = response.ok || body ? '' : await response.text().catch(() => '');
+        const edgeChallenge = this.isEdgeChallengeResponse(response, text);
+
         return {
           path,
           ready: response.ok,
+          diagnostic: response.ok ? 'ok' : edgeChallenge ? 'edge-challenge' : 'http-error',
           statusCode: response.status,
-          latencyMs: Date.now() - startedAt,
+          latencyMs: Date.now() - checkStartedAt,
           version: body?.version ?? null,
-          message: response.ok ? null : `HTTP ${response.status}`,
+          message: response.ok
+            ? null
+            : edgeChallenge
+              ? 'Borda/WAF retornou challenge HTML para o runner/verificador.'
+              : `HTTP ${response.status}`,
         };
       } catch (error) {
         return {
           path,
           ready: false,
-          latencyMs: Date.now() - startedAt,
+          diagnostic: 'network-error',
+          latencyMs: Date.now() - checkStartedAt,
           message: this.errorMessage(error),
         };
       }
     }));
+    const edgeChallenges = checks.filter((check) => check.diagnostic === 'edge-challenge').length;
+    const readyChecks = checks.filter((check) => check.ready).length;
+    const outcome = checks.every((check) => check.ready)
+      ? 'ok'
+      : edgeChallenges === checks.length
+        ? 'edge-challenge'
+        : readyChecks > 0
+          ? 'partial'
+          : 'api-failure';
+    const status = outcome === 'ok' ? 'ok' : outcome === 'edge-challenge' || outcome === 'partial' ? 'degraded' : 'down';
+    const message = outcome === 'ok'
+      ? 'Endpoints publicos criticos responderam.'
+      : outcome === 'edge-challenge'
+        ? 'Todos os checks receberam challenge HTML de borda/WAF; trate como diagnostico manual e confirme /health direto antes de bloquear deploy.'
+        : outcome === 'partial'
+          ? 'Parte dos checks respondeu e parte falhou; diferencie API, modulo e borda antes de agir.'
+          : 'Nenhum check publico respondeu como pronto; investigue API, rede ou borda.';
 
     return {
-      status: checks.every((check) => check.ready) ? 'ok' : checks.some((check) => check.ready) ? 'degraded' : 'down',
+      status,
+      outcome,
       checkedAt,
+      totalLatencyMs: Date.now() - startedAt,
+      message,
       checks,
     };
   }
@@ -691,8 +753,12 @@ export class StaffSummaryService {
       {
         key: 'public-smoke',
         label: 'Smoke publico',
-        detail: publicSmokeStatus === 'ok' ? 'Endpoints publicos criticos responderam.' : 'Algum endpoint do smoke publico falhou.',
-        status: publicSmokeStatus === 'ok' ? 'done' : 'blocked',
+        detail: publicSmokeStatus === 'ok'
+          ? 'Endpoints publicos criticos responderam.'
+          : publicSmokeStatus === 'degraded'
+            ? 'Smoke publico degradado: pode ser desafio de borda/WAF ou falha parcial; confirme o diagnostico antes de bloquear deploy.'
+            : 'Smoke publico falhou sem resposta pronta; investigue API, rede ou borda.',
+        status: publicSmokeStatus === 'ok' ? 'done' : publicSmokeStatus === 'degraded' ? 'manual' : 'blocked',
       },
       {
         key: 'staff-changelog',
@@ -731,5 +797,11 @@ export class StaffSummaryService {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private isEdgeChallengeResponse(response: Response, bodyPreview: string): boolean {
+    return response.status === 403
+      && (response.headers.get('content-type') ?? '').toLowerCase().includes('text/html')
+      && bodyPreview.includes('Just a moment');
   }
 }

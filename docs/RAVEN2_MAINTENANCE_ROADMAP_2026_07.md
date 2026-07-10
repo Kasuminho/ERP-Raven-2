@@ -114,6 +114,13 @@ Entregas candidatas:
 - Criar checklist documental de incidente de webhook com fila, retry e recibo
   de changelog.
 
+Estado em 2026-07-10: implementado parcialmente para smoke/borda. O payload de
+`GET /operations/staff/deploy` agora classifica health externo e smoke publico
+por diagnostico (`edge-challenge`, `http-error`, `network-error`,
+`not-configured`) e a Web mostra outcome/mensagem por check para diferenciar
+desafio de borda/WAF de falha real de API. Checklist documental de incidente de
+webhook ficou para fatia propria se necessario.
+
 Definicao de pronto:
 
 - Nenhum token, webhook URL ou valor de `.env` em logs/documentos.

@@ -71,6 +71,7 @@ export type DeploymentPanelSummary = {
   };
   publicHealth: {
     status: 'ok' | 'degraded' | 'down';
+    diagnostic: 'ok' | 'edge-challenge' | 'http-error' | 'network-error' | 'not-configured';
     checkedAt?: string | null;
     version?: string | null;
     latencyMs?: number | null;
@@ -79,10 +80,14 @@ export type DeploymentPanelSummary = {
   privateHealth: StaffHealthSummary;
   publicSmoke: {
     status: 'ok' | 'degraded' | 'down';
+    outcome: 'ok' | 'partial' | 'edge-challenge' | 'api-failure' | 'not-configured';
     checkedAt: string;
+    totalLatencyMs?: number | null;
+    message: string;
     checks: Array<{
       path: string;
       ready: boolean;
+      diagnostic: 'ok' | 'edge-challenge' | 'http-error' | 'network-error' | 'not-configured';
       statusCode?: number | null;
       latencyMs?: number | null;
       version?: string | null;
