@@ -192,6 +192,11 @@ Definicao de pronto:
 11. Melhorar painel de deploy/health com sinais de fila.
 12. Planejar provider Redis/gateway para rate limit, sem ativar por padrao.
 
+Estado final em 2026-07-10: a ordem 1-12 foi concluida. A ultima fatia gerou o
+plano `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`; Redis/gateway continuam
+desativados por padrao e `InMemoryRateLimitStore` segue como provider atual da
+G3X.
+
 ## Fora de escopo desta rodada
 
 - Refazer epicos A-I do programa antigo.

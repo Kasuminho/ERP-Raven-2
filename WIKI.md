@@ -124,7 +124,7 @@ Automacao ativa:
 - JWT nao passa em query string e nao fica em localStorage ou acessivel ao JavaScript.
 - `GET /auth/me` hidrata o perfil; `POST /auth/logout` encerra a sessao. Bearer token continua aceito para automacoes e smoke autenticado.
 - A API aplica headers defensivos, HSTS em producao, limite de body, rate limit para OAuth/upload, CORS com credenciais e `ValidationPipe` com transformacao.
-- O rate limit de OAuth/upload usa `apps/api/src/common/rate-limit`: `createRateLimiter`, regras por rota e `RateLimitStore`. O provider atual e `InMemoryRateLimitStore`, adequado para instancia unica; multi-replica deve trocar por Redis/gateway preservando a interface. O health Staff mostra check `rate-limit` com essa condicao operacional.
+- O rate limit de OAuth/upload usa `apps/api/src/common/rate-limit`: `createRateLimiter`, regras por rota e `RateLimitStore`. O provider atual e `InMemoryRateLimitStore`, adequado para instancia unica; multi-replica deve trocar por Redis/gateway preservando a interface. O plano operacional fica em `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`, com memoria local como default e Redis/gateway sem ativacao por padrao. O health Staff mostra check `rate-limit` com essa condicao operacional.
 - O modo manutencao usa a regra de negocio `maintenanceMode` com `{ enabled, message }`. Quando ativo, um guard global bloqueia mutacoes sensiveis em leiloes, finalizacao/automacao, entregas/drops, ajustes DKP, progresso, requests, anuncios, interesses, eventos, Codex, Daoshi, uploads e webhooks operacionais; leituras e health continuam liberados. `PATCH /business-rules/maintenanceMode` permanece liberado para Staff desativar o modo, e `GET /operations/maintenance` alimenta o banner da Web.
 - Nao habilitar `whitelist`/`forbidNonWhitelisted` globalmente enquanto os DTOs legados forem classes sem decorators; isso remove ou rejeita campos validos. A migracao deve ser feita por modulo, com teste do contrato antes de endurecer o pipe.
 - `staff-review` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam UUIDs, notas e motivos antes de aprovar/rejeitar vencedor, override, remover bid, reabrir/cancelar leilao ou revisar cancelamento de bid.
@@ -324,7 +324,7 @@ npm.cmd run discord:configure-webhooks
 - O lint possui um warning preexistente em `eligibility.service.ts:467` sobre `client` nao usado.
 - `.env`, `.env.production`, tokens e URLs de webhooks nunca entram em documentacao ou resposta publica.
 - O audit de 2026-06-21 ficou em 0 criticas e 8 altas conhecidas; o gate impede regressao, mas upgrades maiores de Nest/Discord devem continuar em sprint controlada.
-- O rate limit atual usa provider em memoria local por tras de `RateLimitStore`. Se a API escalar para varias replicas, implementar provider Redis ou delegar ao gateway compartilhado.
+- O rate limit atual usa provider em memoria local por tras de `RateLimitStore`. Se a API escalar para varias replicas, seguir `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`: implementar provider Redis ou delegar ao gateway compartilhado, mantendo `memory` como default e sem registrar segredos.
 
 ## Documentos de referencia
 
@@ -332,6 +332,7 @@ npm.cmd run discord:configure-webhooks
 - `docs/ICP_DOCKER_IMAGES.md`: deploy por imagens e Watchtower.
 - `docs/SAAS_SINGLE_TENANT_ROADMAP.md`: plano para empacotar o Raven como SaaS por instancia Docker isolada por guilda.
 - `docs/SAAS_GUILD_COMPOSE_GUIDE.md`: guia pratico para Compose por guilda e database PostgreSQL isolada.
+- `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`: plano para provider Redis/gateway de rate limit, sem ativar por padrao.
 - `docs/RAVEN2_PRODUCT_IMPROVEMENT_PROGRAM.md`: programa completo de melhorias de produto, UX, operacao e arquitetura.
 - `docs/DEPLOY_ICP.md`: contexto de deploy ICP.
 - `docs/DISCORD_WEBHOOK_VOICE.md`: identidade, idioma e tom.
@@ -344,6 +345,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Provider Redis/gateway de rate limit foi planejado sem ativacao por padrao; `InMemoryRateLimitStore` continua default para instancia unica da G3X. | rate-limit/multi-guilda |
 | 2026-07-10 | Painel Staff de deploy passou a mostrar sinais da fila de webhooks: pendentes, envio, retry, falhas, idade da pendencia mais antiga, ultimo retry e ultima falha. | deploy/Staff |
 | 2026-07-10 | CLI de changelog Staff passou a registrar recibo interno sanitizado em `DiscordWebhookDelivery`, e o painel de deploy marca changelog como concluido quando encontra recibo do arquivo mais recente. | deploy/Staff |
 | 2026-07-10 | Tela Staff de interesses foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
