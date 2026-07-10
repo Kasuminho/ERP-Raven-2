@@ -67,6 +67,10 @@ Fatia 3 recomendada: `business-rules`.
 - Manter `maintenanceMode` compativel com o guard global.
 - Testar rejeicao de body sem `value` e parametro extra indevido.
 
+Estado em 2026-07-10: implementado. `business-rules` ganhou DTOs para chave de
+regra e body `{ value }`, `ValidationPipe` local forte e testes de rejeicao para
+chave desconhecida, body sem `value` e campo extra.
+
 Definicao de pronto:
 
 - DTOs com decorators para parametros, queries e bodies relevantes.

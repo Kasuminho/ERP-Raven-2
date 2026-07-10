@@ -137,6 +137,7 @@ Automacao ativa:
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - `notifications` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida UUID de notificacao antes de marcar leitura, preservando as rotas de listagem e marcar todas como lidas.
 - `audit` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam `targetType`, `targetId`, `page` e `limit` na timeline Staff, mantendo `/audit/health` publico.
+- `business-rules` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam chaves conhecidas e exigem body `{ value }` nas atualizacoes sem tipar rigidamente o JSON de cada regra.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
 - `GET /health` e publico e minimo: status, horario e `APP_VERSION`. Detalhes exigem Staff/Admin em `GET /health/details`.
@@ -350,6 +351,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Modulo `business-rules` ganhou DTOs e `ValidationPipe` local forte para validar chave de regra e body `{ value }` nas atualizacoes Staff. | validacao/API |
 | 2026-07-10 | Modulo `audit` ganhou DTOs e `ValidationPipe` local forte para validar alvo e paginacao da timeline Staff sem mudar `/audit/health`. | validacao/API |
 | 2026-07-10 | Modulo `notifications` ganhou DTO e `ValidationPipe` local forte para validar UUID antes de marcar notificacao como lida. | validacao/API |
 | 2026-07-10 | Criado roadmap curto de manutencao pos-rodada 2026-07, priorizando validacao forte em `notifications`, `audit`, `business-rules`, componentizacao de admin items e observabilidade sem segredo. | docs/roadmap |
