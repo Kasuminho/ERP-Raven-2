@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 import { ItemInterestStatus, ItemType } from '@prisma/client';
-import { ItemInterestsService } from '../src/modules/item-interests/services/item-interests.service';
+import { ItemInterestTransmuteRaffleService } from '../src/modules/item-interests/services/item-interest-transmute-raffle.service';
 
-describe('ItemInterestsService transmute raffle', () => {
+describe('ItemInterestTransmuteRaffleService', () => {
   it('keeps the 24h hard lock when at least one interested player has not received a transmute item', async () => {
     const tx = {
       itemInterestPost: {
@@ -19,7 +19,7 @@ describe('ItemInterestsService transmute raffle', () => {
         ]),
       },
     };
-    const service = new ItemInterestsService({} as never, {} as never, {} as never, {} as never);
+    const service = new ItemInterestTransmuteRaffleService();
     const post = {
       id: 'post-current',
       entries: [
@@ -30,7 +30,7 @@ describe('ItemInterestsService transmute raffle', () => {
       itemCatalog: { itemType: ItemType.WEAPON },
     };
 
-    const result = await (service as any).pickTransmuteWinnerForDay(tx, post, new Date('2026-07-01T02:00:00.000Z'));
+    const result = await service.pickWinnerForDay(tx as never, post as never, new Date('2026-07-01T02:00:00.000Z'));
 
     assert.deepEqual(result.blockedPlayerIds, ['player-b']);
     assert.equal(result.eligibleCount, 2);
@@ -72,7 +72,7 @@ describe('ItemInterestsService transmute raffle', () => {
         ]),
       },
     };
-    const service = new ItemInterestsService({} as never, {} as never, {} as never, {} as never);
+    const service = new ItemInterestTransmuteRaffleService();
     const post = {
       id: 'post-current',
       entries: [
@@ -82,7 +82,7 @@ describe('ItemInterestsService transmute raffle', () => {
       itemCatalog: { itemType: ItemType.ARMOR },
     };
 
-    const result = await (service as any).pickTransmuteWinnerForDay(tx, post, new Date('2026-07-01T02:00:00.000Z'));
+    const result = await service.pickWinnerForDay(tx as never, post as never, new Date('2026-07-01T02:00:00.000Z'));
 
     assert.deepEqual(result.blockedPlayerIds.sort(), ['player-a', 'player-b']);
     assert.equal(result.eligibleCount, 2);

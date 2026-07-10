@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-09
+**Ultima revisao:** 2026-07-10
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -157,6 +157,7 @@ Automacao ativa:
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - A tela player de interesses em `/dashboard/interests` permite selecionar varios posts abertos e declarar em lote. Cada post mantem nota, print ou transmutar proprio; a confirmacao unica envia cada declaracao pelo endpoint existente para preservar validacoes de duplicidade, janela aberta e print obrigatorio.
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia automaticamente. Quem recebeu item de transmutar do mesmo `ItemType` nas ultimas 24h fica fora enquanto houver ao menos um interessado livre. Se todos os interessados estiverem nesse bloqueio de 24h, o post nao fecha vazio: o sistema faz fallback ponderado com base nos recebimentos de transmutar dos ultimos 30 dias, dando menos peso a quem recebeu mais.
+- As regras de sorteio/transmutar de interesses pertencem ao dominio `ItemInterestTransmuteRaffleService`; `ItemInterestsService` apenas coordena fechamento, status, auditoria e persistencia.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam abas de jornada (`Resolver agora`, `Auditar`, `Configurar`, `Comunicar`, `Operar deploy`) com contadores, cards filtrados e proximas acoes por grupo, alem de pendencias, saude e auditoria.
 - O modo reuniao Staff em `/dashboard/staff/meeting` consome `GET /operations/staff/meeting`, que preserva os campos antigos e adiciona `meetingDay`, `sections`, `resolvedItemKeys` e `markdown`. As secoes cobrem decisoes de loot, pendencias travadas, economia DKP, players sensiveis, progresso de boss/lote, comunicados e acoes ate a proxima reuniao. `POST /operations/staff/meeting/items/:itemKey/resolve` marca item como resolvido no dia operacional via audit log `STAFF_MEETING_ITEM_RESOLVED`.
@@ -341,6 +342,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Sorteio/transmutar de item-interests saiu do servico principal para `ItemInterestTransmuteRaffleService`, preservando bloqueio 24h e fallback ponderado 30d. | arquitetura/API |
 | 2026-07-10 | Contratos de item-interests passaram para `packages/shared/src/types/interests.ts`, com aliases locais na API e Web para posts, entries, votos e comparador Staff. | contratos/shared |
 | 2026-07-10 | Modulo `item-requests` ganhou DTOs com `class-validator`, pipe local forte e validacao UUID nos IDs de mutacao. | validacao/API |
 | 2026-07-09 | Tela Web de item requests foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
