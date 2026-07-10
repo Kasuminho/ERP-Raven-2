@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ItemRequest } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { ApproveItemRequestUpdateDto, CreateItemRequestDto, DeliverItemRequestDto, UpdateItemRequestProofDto } from '../dto';
+import { ApproveItemRequestUpdateDto, CreateItemRequestDto, CreateSelfItemRequestDto, DeliverItemRequestDto, UpdateItemRequestProofDto } from '../dto';
 import { ItemRequestDetails } from '../repositories/item-requests.repository';
 import { ItemRequestsService } from '../services/item-requests.service';
 
@@ -14,6 +14,7 @@ type StaffRequest = {
 };
 
 @Controller('item-requests')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class ItemRequestsController {
   constructor(private readonly service: ItemRequestsService) {}
 
@@ -26,7 +27,7 @@ export class ItemRequestsController {
 
   @Post('me')
   @UseGuards(JwtAuthGuard)
-  async createMine(@Body() dto: { itemCatalogId: string; quantity: number; imageUrl?: string }, @Req() req: StaffRequest): Promise<ItemRequest> {
+  async createMine(@Body() dto: CreateSelfItemRequestDto, @Req() req: StaffRequest): Promise<ItemRequest> {
     return this.service.createSelfRequest(req.user.userId, dto);
   }
 
@@ -65,20 +66,20 @@ export class ItemRequestsController {
   @Post(':id/update')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async markUpdated(@Param('id') id: string, @Req() req: StaffRequest): Promise<ItemRequest> {
+  async markUpdated(@Param('id', ParseUUIDPipe) id: string, @Req() req: StaffRequest): Promise<ItemRequest> {
     return this.service.markUpdated(id, req.user.userId);
   }
 
   @Post(':id/player-update')
   @UseGuards(JwtAuthGuard)
-  async markPlayerUpdated(@Param('id') id: string, @Body() dto: UpdateItemRequestProofDto, @Req() req: StaffRequest): Promise<ItemRequest> {
+  async markPlayerUpdated(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateItemRequestProofDto, @Req() req: StaffRequest): Promise<ItemRequest> {
     return this.service.markPlayerUpdated(id, req.user.userId, dto);
   }
 
   @Post(':id/approve-update')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async approvePlayerUpdate(@Param('id') id: string, @Body() dto: ApproveItemRequestUpdateDto, @Req() req: StaffRequest): Promise<ItemRequest> {
+  async approvePlayerUpdate(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ApproveItemRequestUpdateDto, @Req() req: StaffRequest): Promise<ItemRequest> {
     return this.service.approvePlayerUpdate(id, dto, req.user.userId);
   }
 
@@ -86,7 +87,7 @@ export class ItemRequestsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async deliver(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: DeliverItemRequestDto,
     @Req() req: StaffRequest,
   ): Promise<{ delivered: number; completed: boolean }> {
@@ -96,14 +97,14 @@ export class ItemRequestsController {
   @Post(':id/drop-rank')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async dropRank(@Param('id') id: string, @Req() req: StaffRequest): Promise<void> {
+  async dropRank(@Param('id', ParseUUIDPipe) id: string, @Req() req: StaffRequest): Promise<void> {
     return this.service.dropRank(id, req.user.userId);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async delete(@Param('id') id: string, @Req() req: StaffRequest): Promise<void> {
+  async delete(@Param('id', ParseUUIDPipe) id: string, @Req() req: StaffRequest): Promise<void> {
     return this.service.deleteRequest(id, req.user.userId);
   }
 

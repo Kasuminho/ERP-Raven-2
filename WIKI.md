@@ -132,6 +132,7 @@ Automacao ativa:
 - `announcements` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida tipo, titulo, data ISO, campos opcionais e bosses de presenca em lote antes de criar anuncio/eventos.
 - `events` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao de evento, registro de presenca e cancelamento antes da rotina Staff de presenca/DKP.
 - `search` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida a query `q`, rejeita parametros extras e limita o termo antes da busca global/player Staff.
+- `item-requests` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao Staff/player, comprovante de update, aprovacao de update, entrega e UUIDs de mutacoes antes do fluxo de fila/entrega.
 - Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
 - Em producao, novos uploads usam `IMAGE_STORAGE_PROVIDER=local` com volume persistente `UPLOADS_HOST_DIR` montado em `/app/uploads`; o proxy publico deve rotear `/uploads/` para a API. Links antigos do Google Drive podem continuar existindo ate a migracao do legado.
 - A migracao do legado do Google Drive usa `npm run images:migrate-drive`: primeiro `--dry-run`, depois `--apply --limit 10`, e por fim `--apply`; o script gera manifesto em `reports/`, valida magic bytes e atualiza campos de imagem para `/uploads/...`.
@@ -340,6 +341,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-10 | Modulo `item-requests` ganhou DTOs com `class-validator`, pipe local forte e validacao UUID nos IDs de mutacao. | validacao/API |
 | 2026-07-09 | Tela Web de item requests foi componentizada com componentes locais da rota, mantendo UX e contratos sem alteracao. | arquitetura/Web |
 | 2026-07-09 | Calculo de forecast, sugestoes e prioridade de material de item-requests saiu do servico principal para `ItemRequestQueueService`, com teste direto de regressao. | arquitetura/API |
 | 2026-07-09 | Contratos de item-requests passaram para `packages/shared/src/types/requests.ts`, com aliases locais na API e Web para request, forecast de fila, sugestoes de troca e prioridade de material. | contratos/shared |
