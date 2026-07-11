@@ -61,4 +61,29 @@ describe('AttendanceService event batches', () => {
     assert.equal(result.attendanceCopyStatus, 'NEXT_EVENT_NOT_EMPTY');
     assert.equal(tx.eventAttendance.createMany.mock.callCount(), 0);
   });
+
+  it('marks event checklist items and audits the change', async () => {
+    const event: any = {
+      id: 'e1',
+      name: 'Abyss',
+      status: EventStatus.ATTENDANCE_REGISTRATION,
+      checklist: [
+        { key: 'route', label: 'Rota definida', detail: 'Rota Abyss', checked: false },
+      ],
+    };
+    const repository = {
+      findById: mock.fn(async () => event),
+      updateEvent: mock.fn(async (_id: string, data: any) => ({ ...event, ...data })),
+    };
+    const audit = { log: mock.fn(async () => undefined) };
+    const service = new AttendanceService(repository as never, {} as never, audit as never, {} as never, {} as never);
+
+    const updated = await service.markChecklistItem('e1', 'route', { checked: true, note: 'caller confirmou' }, 'staff-1');
+    const checklist = updated.checklist as any[];
+
+    assert.equal(checklist[0].checked, true);
+    assert.equal(checklist[0].checkedById, 'staff-1');
+    assert.equal(repository.updateEvent.mock.calls[0].arguments[1].checklist[0].note, 'caller confirmou');
+    assert.equal(audit.log.mock.calls[0].arguments[0].action, 'EVENT_CHECKLIST_ITEM_UPDATED');
+  });
 });

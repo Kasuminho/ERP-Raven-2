@@ -18,6 +18,9 @@ import type {
   EventBatchPanel as SharedEventBatchPanel,
   EventDetails as SharedEventDetails,
   EventFinalizationChecklist as SharedEventFinalizationChecklist,
+  EventChecklistItem as SharedEventChecklistItem,
+  EventOperationalCategory as SharedEventOperationalCategory,
+  EventOperationalPriority as SharedEventOperationalPriority,
   EventReadinessReport as SharedEventReadinessReport,
   EventRecord as SharedEventRecord,
   EventType as SharedEventType,
@@ -25,10 +28,32 @@ import type {
   PlayerAttendanceHistoryRow as SharedPlayerAttendanceHistoryRow,
 } from '@shared/types/events';
 import type { OperationPriority as SharedOperationPriority, OperationTask as SharedOperationTask, PlayerActionPlan as SharedPlayerActionPlan } from '@shared/types/operations';
+import type { PlayerCombatAvailability as SharedPlayerCombatAvailability, PlayerCombatProfileChangeRequestRecord as SharedPlayerCombatProfileChangeRequestRecord, PlayerCombatProfileChangeStatus as SharedPlayerCombatProfileChangeStatus, PlayerCombatProfileRecord as SharedPlayerCombatProfileRecord, PlayerCombatRole as SharedPlayerCombatRole, RosterCompositionMatrix as SharedRosterCompositionMatrix } from '@shared/types/roster';
+import type {
+  PlayerWarRoomAssignment as SharedPlayerWarRoomAssignment,
+  WarRoomInternalLink as SharedWarRoomInternalLink,
+  WarRoomOperationPriority as SharedWarRoomOperationPriority,
+  WarRoomOperationRecord as SharedWarRoomOperationRecord,
+  WarRoomOperationStatus as SharedWarRoomOperationStatus,
+  WarRoomOperationType as SharedWarRoomOperationType,
+  WarRoomRosterConflict as SharedWarRoomRosterConflict,
+  WarRoomRosterDossier as SharedWarRoomRosterDossier,
+  WarRoomRosterSlotRecord as SharedWarRoomRosterSlotRecord,
+  WarRoomRosterSlotStatus as SharedWarRoomRosterSlotStatus,
+  WarRoomLiveDossier as SharedWarRoomLiveDossier,
+  WarRoomTimelineEventRecord as SharedWarRoomTimelineEventRecord,
+  WarRoomTimelineEventType as SharedWarRoomTimelineEventType,
+  WarRoomAfterActionReport as SharedWarRoomAfterActionReport,
+} from '@shared/types/war-room';
 import type { ItemRequestRecord as SharedItemRequestRecord } from '@shared/types/requests';
+import type { StaffWishlistDemand as SharedStaffWishlistDemand, WishlistItemRecord as SharedWishlistItemRecord, WishlistPriority as SharedWishlistPriority, WishlistStatus as SharedWishlistStatus } from '@shared/types/wishlist';
 
 export type ItemTier = 'T2' | 'T3' | 'T4' | 'LEGENDARY';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CELESTIAL_STONE';
+export type WishlistPriority = SharedWishlistPriority;
+export type WishlistStatus = SharedWishlistStatus;
+export type WishlistItem = SharedWishlistItemRecord<string>;
+export type StaffWishlistDemand = SharedStaffWishlistDemand<string>;
 export type PlayerClass =
   | 'GUNSLINGER'
   | 'BERSERKER'
@@ -52,6 +77,9 @@ export type ProgressCategory =
   | 'DIMENSIONAL_RIFT'
   | 'RUNES';
 export type ProgressReviewStatus = 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+export type PlayerCombatRole = SharedPlayerCombatRole;
+export type PlayerCombatAvailability = SharedPlayerCombatAvailability;
+export type PlayerCombatProfileChangeStatus = SharedPlayerCombatProfileChangeStatus;
 export type AuctionStatus = 'OPEN' | 'PENDING_REVIEW' | 'FINISHED' | 'CANCELLED' | 'RELISTED';
 export type AuctionMode = 'STANDARD' | 'ALL_IN' | 'STAFF_REVIEW';
 export type OperationPriority = SharedOperationPriority;
@@ -373,6 +401,68 @@ export type AuctionBidCancellationRequest = {
   };
 };
 
+export type PlayerAuctionResultReceipt = {
+  auction: Pick<Auction, 'id' | 'itemName' | 'itemTier' | 'itemType' | 'minimumBid' | 'auctionMode' | 'requiresStaffReview' | 'status' | 'endsAt'> & {
+    minimumLayer?: number | null;
+  };
+  role: 'WINNER' | 'PARTICIPANT' | 'OBSERVER';
+  finalStatus: 'WON' | 'NOT_SELECTED' | 'NO_PARTICIPATION';
+  ownBidAmount?: number | null;
+  ownBidValid?: boolean | null;
+  winnerCost?: number | null;
+  deliveryStatus: 'PENDING_DELIVERY' | 'DELIVERED' | 'NOT_APPLICABLE';
+  deliveredAt?: string | null;
+  ruleApplied: {
+    minimumBid: number;
+    auctionMode: AuctionMode;
+    requiresStaffReview: boolean;
+    minimumLayer?: number | null;
+    itemTier: ItemTier;
+  };
+  safeReason: {
+    pt: string;
+    en: string;
+  };
+  nextSteps: {
+    pt: string;
+    en: string;
+  };
+};
+
+export type PlayerAuctionTimelineEvent = {
+  key: 'AUCTION_OPENED' | 'AUCTION_CLOSED' | 'STAFF_REVIEW' | 'RESULT_PUBLISHED' | 'DELIVERY_PENDING' | 'DELIVERED' | 'RELISTED' | 'CANCELLED';
+  occurredAt: string;
+  tone: 'info' | 'warning' | 'success' | 'muted';
+  title: {
+    pt: string;
+    en: string;
+  };
+  description: {
+    pt: string;
+    en: string;
+  };
+};
+
+export type AuctionDisputeStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export type AuctionDispute = {
+  id: string;
+  auctionId: string;
+  playerId: string;
+  reason: string;
+  proofImageUrl?: string | null;
+  status: AuctionDisputeStatus;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  externalNotePt?: string | null;
+  externalNoteEn?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  auction?: Pick<Auction, 'id' | 'itemName' | 'status' | 'auctionMode' | 'endsAt'>;
+  player?: Pick<PlayerProfile, 'id' | 'nickname' | 'dimensionalLayer'>;
+};
+
 export type EligibilityRow = {
   playerId: string;
   nickname: string;
@@ -405,7 +495,101 @@ export type EligibilityResponse = {
   itemType?: string;
 };
 
+export type StaffReviewAlert = {
+  key: string;
+  playerId?: string;
+  severity: 'info' | 'warning' | 'danger';
+  title: string;
+  explanation: string;
+  evidenceHref: string;
+};
+
+export type StaffReviewDetails = Auction & {
+  ranking: EligibilityRow[];
+  assistedReview?: {
+    alerts: StaffReviewAlert[];
+    overriddenAlertKeys: string[];
+  };
+};
+
+export type GuildProgressReport = {
+  period: 'week' | 'month';
+  start: string;
+  end: string;
+  generatedAt: string;
+  counts: {
+    finalizedEvents: number;
+    attendances: number;
+    dropsDelivered: number;
+    auctionsFinished: number;
+    requestsDelivered: number;
+    progressApproved: number;
+    warRoomOperations: number;
+    activeWishlistItems: number;
+    pendingRisks: number;
+  };
+  classDistribution: Array<{ class: string; active: number; layer4Plus: number; lowAttendance: number }>;
+  risks: Array<{ key: string; label: string; severity: 'info' | 'warning' | 'danger'; detail: string; href: string }>;
+  nextActions: Array<{ label: string; href: string; reason: string; priority: OperationPriority }>;
+  markdown: string;
+};
+
+export type PlayerWeeklySafeSummary = {
+  period: 'week' | 'month';
+  start: string;
+  end: string;
+  generatedAt: string;
+  titlePt: string;
+  titleEn: string;
+  summaryPt: string;
+  summaryEn: string;
+  collective: {
+    finalizedEvents: number;
+    dropsDelivered: number;
+    auctionsFinished: number;
+    requestsDelivered: number;
+    warRoomOperations: number;
+  };
+  actionLinks: Array<{ labelPt: string; labelEn: string; href: string }>;
+};
+
+export type RecruitmentApplicationStatus = 'PENDING' | 'TRIAGE' | 'ACCEPTED' | 'REJECTED' | 'CONVERTED' | 'ARCHIVED';
+
+export type RecruitmentApplication = {
+  id: string;
+  nickname: string;
+  discordTag?: string | null;
+  playerClass: PlayerClass;
+  combatPower: number;
+  dimensionalLayer: number;
+  availability: string;
+  focus: string;
+  experience: string;
+  proofImageUrl?: string | null;
+  notes?: string | null;
+  rulesAccepted: boolean;
+  status: RecruitmentApplicationStatus;
+  reviewedById?: string | null;
+  convertedById?: string | null;
+  convertedPlayerId?: string | null;
+  reviewedAt?: string | null;
+  convertedAt?: string | null;
+  reviewNote?: string | null;
+  convertedPlayer?: {
+    id: string;
+    nickname: string;
+    class: PlayerClass;
+    dimensionalLayer: number;
+    combatPower: number;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type EventRecord = SharedEventRecord<string>;
+export type EventChecklistItem = SharedEventChecklistItem<string>;
+export type EventOperationalCategory = SharedEventOperationalCategory;
+export type EventOperationalPriority = SharedEventOperationalPriority;
 export type FinalizeEventResult = SharedFinalizeEventResult<EventRecord, string>;
 export type EventFinalizationChecklist = SharedEventFinalizationChecklist<string, PlayerClass>;
 export type EventBatchPanel = SharedEventBatchPanel<string>;
@@ -450,9 +634,118 @@ export type DkpEconomySummary = {
   eventRewardDkp: number;
   auctionSpentDkp: number;
   adminAdjustmentDkp: number;
+  averageDkp: number;
+  medianDkp: number;
+  top10DkpSharePercent: number;
+  recentActivePlayers: number;
+  distribution: Array<{ bucket: string; min: number; max: number | null; players: number; totalDkp: number }>;
   topBalances: DkpLeaderboardRow[];
   topEarners: Array<{ playerId: string; nickname: string; amount: number }>;
   topSpenders: Array<{ playerId: string; nickname: string; amount: number }>;
+  inactiveHighDkpPlayers: Array<{ playerId: string; nickname: string; total: number; lastActivityAt?: string | null }>;
+  signals: Array<{
+    key: string;
+    label: string;
+    detail: string;
+    severity: 'info' | 'warning' | 'danger';
+  }>;
+  markdown: string;
+};
+
+export type DkpDecaySimulationSummary = {
+  generatedAt: string;
+  persisted: boolean;
+  simulationId?: string;
+  name?: string;
+  config: {
+    percent: number;
+    minimumDkp: number;
+  };
+  totals: {
+    players: number;
+    affectedPlayers: number;
+    totalBefore: number;
+    totalAfter: number;
+    totalReduced: number;
+  };
+  distributionBefore: DkpEconomySummary['distribution'];
+  distributionAfter: DkpEconomySummary['distribution'];
+  topImpacted: Array<{
+    playerId: string;
+    nickname: string;
+    before: number;
+    after: number;
+    reduced: number;
+  }>;
+  markdown: string;
+};
+
+export type DkpBidPolicySimulationSummary = {
+  generatedAt: string;
+  persisted: boolean;
+  simulationId?: string;
+  name?: string;
+  config: {
+    minimumCost: number;
+    winTaxPercent: number;
+    tierCaps: Record<string, number>;
+    itemTypeCaps: Record<string, number>;
+    layerCaps: Record<string, number>;
+    fixedCostByTier: Record<string, number>;
+    modeMultiplierPercent: Record<string, number>;
+  };
+  totals: {
+    auctionsAnalyzed: number;
+    changedAuctions: number;
+    currentSpent: number;
+    proposedSpent: number;
+    delta: number;
+    cappedAuctions: number;
+    raisedByFloorAuctions: number;
+  };
+  rows: Array<{
+    auctionId: string;
+    itemName: string;
+    itemTier: ItemTier;
+    itemType: ItemType;
+    auctionMode: AuctionMode;
+    winnerPlayerId: string;
+    winnerNickname: string;
+    winnerLayer: number;
+    currentCost: number;
+    proposedCost: number;
+    delta: number;
+    capApplied?: number | null;
+    floorApplied: boolean;
+    taxAmount: number;
+  }>;
+  risks: Array<{
+    key: string;
+    label: string;
+    detail: string;
+    severity: 'info' | 'warning' | 'danger';
+  }>;
+  markdown: string;
+};
+
+export type DkpPolicySimulation = {
+  id: string;
+  type: 'DECAY' | 'BID_POLICY';
+  status: 'DRAFT' | 'PROMOTED' | 'ARCHIVED';
+  name: string;
+  config: unknown;
+  result: unknown;
+  createdById: string;
+  promotedById?: string | null;
+  promotedAt?: string | null;
+  promotionReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PromotedDkpPolicySimulation = {
+  simulation: DkpPolicySimulation;
+  businessRule: BusinessRule;
 };
 
 export type ItemAuditSummary = {
@@ -532,7 +825,31 @@ export type PlayerProfile = {
   combatPower?: number;
   timezone?: string;
   attendancePercentage: number;
+  combatProfile?: PlayerCombatProfile | null;
 };
+
+export type PlayerCombatProfile = SharedPlayerCombatProfileRecord<string, PlayerClass>;
+
+export type PlayerCombatProfileChangeRequest = SharedPlayerCombatProfileChangeRequestRecord<string, PlayerClass> & {
+  player?: StaffPlayer & { combatProfile?: PlayerCombatProfile | null };
+};
+
+export type RosterCompositionMatrix = SharedRosterCompositionMatrix<string, PlayerClass>;
+
+export type WarRoomOperationType = SharedWarRoomOperationType;
+export type WarRoomOperationStatus = SharedWarRoomOperationStatus;
+export type WarRoomOperationPriority = SharedWarRoomOperationPriority;
+export type WarRoomInternalLink = SharedWarRoomInternalLink;
+export type WarRoomOperation = SharedWarRoomOperationRecord<string>;
+export type WarRoomRosterSlotStatus = SharedWarRoomRosterSlotStatus;
+export type WarRoomRosterConflict = SharedWarRoomRosterConflict<string>;
+export type WarRoomRosterSlot = SharedWarRoomRosterSlotRecord<string, PlayerClass>;
+export type WarRoomRosterDossier = SharedWarRoomRosterDossier<string, PlayerClass>;
+export type PlayerWarRoomAssignment = SharedPlayerWarRoomAssignment<string, PlayerClass>;
+export type WarRoomTimelineEventType = SharedWarRoomTimelineEventType;
+export type WarRoomTimelineEvent = SharedWarRoomTimelineEventRecord<string>;
+export type WarRoomLiveDossier = SharedWarRoomLiveDossier<string, PlayerClass>;
+export type WarRoomAfterActionReport = SharedWarRoomAfterActionReport<string, PlayerClass>;
 
 export type DropHistory = {
   id: string;
@@ -942,6 +1259,13 @@ export type UniversalDossier = {
   id: string;
   title: string;
   summary: Array<{ label: string; value: string }>;
+  riskFlags?: Array<{
+    key: string;
+    label: string;
+    severity: 'info' | 'warning' | 'danger';
+    explanation: string;
+    evidenceHref: string;
+  }>;
   internalLinks: Array<{ label: string; href: string }>;
   auditLogs: Array<{
     id: string;
@@ -952,6 +1276,45 @@ export type UniversalDossier = {
     createdAt: string;
   }>;
   markdown: string;
+};
+
+export type ContextualEligibilityType = 'auction' | 'request' | 'war-room' | 'recruitment';
+
+export type ContextualEligibilityDecision = 'eligible' | 'review' | 'blocked';
+
+export type ContextualEligibilityReason = {
+  key: string;
+  label: string;
+  status: ContextualEligibilityDecision;
+  explanation: string;
+  metric?: string;
+  rule?: string;
+  evidenceHref?: string;
+};
+
+export type ContextualEligibilitySummary = {
+  generatedAt: string;
+  context: {
+    type: ContextualEligibilityType;
+    id?: string | null;
+    label: string;
+  };
+  player: {
+    id: string;
+    nickname: string;
+    class: PlayerClass | string;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    availableDkp: number;
+    combatPower: number;
+    build?: string | null;
+    preferredRole?: PlayerCombatRole | string | null;
+  };
+  decision: ContextualEligibilityDecision;
+  headline: string;
+  reasons: ContextualEligibilityReason[];
+  appliedRules: string[];
+  evidenceLinks: Array<{ label: string; href: string }>;
 };
 
 export type AuctionDiagnosticSummary = SharedAuctionDiagnosticSummary<string>;

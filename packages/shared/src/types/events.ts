@@ -19,16 +19,36 @@ export type EventType =
 
 export type EventStatus = 'OPEN' | 'ATTENDANCE_REGISTRATION' | 'FINALIZED' | 'CANCELLED';
 
+export type EventOperationalCategory = 'BOSS' | 'ABYSS' | 'GUILD_RAID' | 'FARM' | 'TRAINING' | 'CLASH' | 'CUSTOM';
+
+export type EventOperationalPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type EventChecklistItem<TDate = string | Date> = {
+  key: string;
+  label: string;
+  detail?: string | null;
+  checked: boolean;
+  checkedAt?: TDate | null;
+  checkedById?: string | null;
+  note?: string | null;
+};
+
 export type EventRecord<TDate = string | Date> = {
   id: string;
   name: string;
   type: EventType;
   status: EventStatus;
+  operationalCategory: EventOperationalCategory;
+  priority: EventOperationalPriority;
   dkpReward: number;
   startsAt: TDate;
+  endsAt?: TDate | null;
   finalizedAt?: TDate | null;
   attendanceBatchId?: string | null;
   batchOrder?: number | null;
+  responsibleUserId?: string | null;
+  checklist: EventChecklistItem<TDate>[];
+  operationalNotes?: string | null;
 };
 
 export type FinalizeEventResult<TEvent = EventRecord, TDate = string | Date> = {
@@ -179,6 +199,11 @@ export type EventReadinessReport<
     daysSinceStatus: number | null;
   }>;
   notesPt: string[];
+  actionLinks: Array<{
+    label: string;
+    href: string;
+    reason: string;
+  }>;
 };
 
 export type EventAttendanceRow<TDate = string | Date, TPlayer = unknown> = {

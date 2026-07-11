@@ -17,6 +17,19 @@ import { StaffAuctionReviewDetails, StaffReviewRepository } from '../repositorie
 export type StaffReviewDetails = StaffAuctionReviewDetails & {
   ranking: Awaited<ReturnType<EligibilityService['rankAuctionCandidates']>>;
   timeline: AuditLog[];
+  assistedReview: {
+    alerts: StaffReviewAlert[];
+    overriddenAlertKeys: string[];
+  };
+};
+
+export type StaffReviewAlert = {
+  key: string;
+  playerId?: string;
+  severity: 'info' | 'warning' | 'danger';
+  title: string;
+  explanation: string;
+  evidenceHref: string;
 };
 
 export type StaffBidCancellationRequest = AuctionBidCancellationRequest & {
@@ -560,6 +573,30 @@ export class StaffReviewService {
     return this.getAuctionReviewDetailsWithinTransaction(auctionId);
   }
 
+  async overrideReviewAlert(
+    auctionId: string,
+    reviewerId: string,
+    alertKey: string,
+    reason: string,
+    playerId?: string,
+  ): Promise<StaffReviewDetails> {
+    this.assertReason(reason);
+
+    return this.repository.client.$transaction(async (tx) => {
+      const auction = await this.requireAuction(auctionId, tx);
+      this.assertReviewable(auction);
+
+      await this.auditWithinTransaction(tx, reviewerId, 'AUCTION_REVIEW_ALERT_OVERRIDDEN', 'Auction', auctionId, {
+        auctionId,
+        alertKey,
+        playerId,
+        reason,
+      });
+
+      return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
+    });
+  }
+
   private async getAuctionReviewDetailsWithinTransaction(
     auctionId: string,
     tx?: Prisma.TransactionClient,
@@ -580,7 +617,119 @@ export class StaffReviewService {
       ...details,
       ranking,
       timeline,
+      assistedReview: this.buildAssistedReview(auctionId, ranking, timeline),
     };
+  }
+
+  private buildAssistedReview(
+    auctionId: string,
+    ranking: Awaited<ReturnType<EligibilityService['rankAuctionCandidates']>>,
+    timeline: AuditLog[],
+  ): StaffReviewDetails['assistedReview'] {
+    const overriddenAlertKeys = timeline
+      .filter((log) => log.action === 'AUCTION_REVIEW_ALERT_OVERRIDDEN')
+      .map((log) => {
+        const metadata = log.metadata as Prisma.JsonObject | null;
+        const alertKey = metadata?.alertKey;
+        const playerId = metadata?.playerId;
+        return typeof alertKey === 'string'
+          ? this.alertInstanceKey(alertKey, typeof playerId === 'string' ? playerId : undefined)
+          : undefined;
+      })
+      .filter((key): key is string => Boolean(key));
+    const alerts: StaffReviewAlert[] = [];
+    const topCandidate = ranking[0];
+
+    if (!topCandidate) {
+      alerts.push({
+        key: 'no-candidates',
+        severity: 'danger',
+        title: 'Sem candidato rankeado',
+        explanation: 'A review nao possui candidato valido no ranking de elegibilidade.',
+        evidenceHref: `/dashboard/staff/auction-diagnostics?auctionId=${auctionId}`,
+      });
+    }
+
+    for (const [index, candidate] of ranking.entries()) {
+      const evidenceHref = `/dashboard/staff/item-audit?playerId=${candidate.playerId}`;
+
+      if (candidate.eligibilityStatus === 'INELIGIBLE') {
+        alerts.push({
+          key: 'candidate-ineligible',
+          playerId: candidate.playerId,
+          severity: 'danger',
+          title: `${candidate.nickname} inelegivel`,
+          explanation: candidate.eligibilityReason,
+          evidenceHref,
+        });
+      } else if (candidate.eligibilityStatus === 'NEEDS_STAFF_REVIEW') {
+        alerts.push({
+          key: 'needs-staff-review',
+          playerId: candidate.playerId,
+          severity: 'warning',
+          title: `${candidate.nickname} exige review`,
+          explanation: candidate.eligibilityReason,
+          evidenceHref,
+        });
+      }
+
+      if (candidate.lockMatchesBid === false) {
+        alerts.push({
+          key: 'lock-mismatch',
+          playerId: candidate.playerId,
+          severity: 'danger',
+          title: `${candidate.nickname} com lock divergente`,
+          explanation: `Bid ${candidate.bidAmount ?? 0} DKP e lock ${candidate.lockAmount ?? 0} DKP nao batem.`,
+          evidenceHref,
+        });
+      }
+
+      if (candidate.attendancePercentage < 60) {
+        alerts.push({
+          key: 'low-attendance',
+          playerId: candidate.playerId,
+          severity: candidate.attendancePercentage < 40 ? 'danger' : 'warning',
+          title: `${candidate.nickname} com presenca baixa`,
+          explanation: `Presenca atual ${candidate.attendancePercentage.toFixed(2)}%.`,
+          evidenceHref,
+        });
+      }
+
+      if (index === 0 && candidate.priorityScore < 1) {
+        alerts.push({
+          key: 'low-priority-score',
+          playerId: candidate.playerId,
+          severity: 'warning',
+          title: `${candidate.nickname} com score baixo`,
+          explanation: `Score de prioridade ${candidate.priorityScore.toFixed(2)}; conferir contexto antes do voto.`,
+          evidenceHref,
+        });
+      }
+    }
+
+    const splitApprovals = timeline.some((log) => {
+      const metadata = log.metadata as Prisma.JsonObject | null;
+      return log.action === 'AUCTION_REVIEW_APPROVAL_VOTE' && metadata?.playerId && metadata.playerId !== topCandidate?.playerId;
+    });
+
+    if (splitApprovals) {
+      alerts.push({
+        key: 'split-approval',
+        severity: 'info',
+        title: 'Votos divididos',
+        explanation: 'Existe voto de aprovacao para candidato diferente do topo atual.',
+        evidenceHref: `/dashboard/staff/auction-diagnostics?auctionId=${auctionId}`,
+      });
+    }
+
+    return {
+      alerts,
+      overriddenAlertKeys,
+    };
+  }
+
+  private alertInstanceKey(alertKey: string, playerId?: string): string {
+    return playerId ? `${alertKey}:${playerId}` : alertKey;
   }
 
   private async approveWinner(

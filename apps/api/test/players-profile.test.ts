@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BadRequestException } from '@nestjs/common';
-import { PlayerClass } from '@prisma/client';
+import { PlayerClass, PlayerCombatAvailability, PlayerCombatRole, ProgressCategory } from '@prisma/client';
 import { PlayersService } from '../src/modules/players/services/players.service';
 
 function createService() {
@@ -80,4 +80,69 @@ test('profile update accepts unicode nicknames', async () => {
     dimensionalLayer: 1,
     timezone: undefined,
   });
+});
+
+test('combat roster matrix reports composition gaps and stale status', async () => {
+  const now = new Date('2026-07-11T12:00:00.000Z');
+  const stale = new Date('2026-06-01T12:00:00.000Z');
+  const client = {
+    player: {
+      findMany: async () => [
+        {
+          id: 'player-1',
+          nickname: 'Aiko',
+          class: PlayerClass.WARLORD,
+          dimensionalLayer: 6,
+          combatPower: 1000,
+          attendancePercentage: 82,
+          isActive: true,
+          combatProfile: {
+            primaryClass: PlayerClass.WARLORD,
+            secondaryClass: null,
+            declaredBuild: 'Frontline CC',
+            preferredRole: PlayerCombatRole.FRONTLINE,
+            acceptedRoles: [PlayerCombatRole.CALLER],
+            availability: PlayerCombatAvailability.DAILY,
+          },
+        },
+        {
+          id: 'player-2',
+          nickname: 'Brann',
+          class: PlayerClass.ELEMENTALIST,
+          dimensionalLayer: 4,
+          combatPower: 800,
+          attendancePercentage: 35,
+          isActive: true,
+          combatProfile: null,
+        },
+      ],
+    },
+    playerProgress: {
+      findMany: async () => [
+        { playerId: 'player-1', category: ProgressCategory.STATUS, createdAt: now },
+        { playerId: 'player-2', category: ProgressCategory.STATUS, createdAt: stale },
+      ],
+    },
+    eventAttendance: {
+      findMany: async () => [
+        { playerId: 'player-1', createdAt: now },
+      ],
+    },
+  };
+  const service = new PlayersService(
+    { client } as never,
+    {} as never,
+    {} as never,
+  );
+
+  const matrix = await service.getCombatRosterMatrix();
+
+  assert.equal(matrix.totals.activePlayers, 2);
+  assert.equal(matrix.totals.frontline, 1);
+  assert.equal(matrix.totals.support, 0);
+  assert.equal(matrix.totals.missingBuild, 1);
+  assert.equal(matrix.totals.staleStatus, 1);
+  assert.equal(matrix.totals.lowAttendance, 1);
+  assert.ok(matrix.alerts.some((alert) => alert.key === 'missing-support'));
+  assert.ok(matrix.markdown.includes('Matriz de composicao G3X'));
 });

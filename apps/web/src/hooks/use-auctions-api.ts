@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDispute, AuctionDisputeStatus, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerAuctionResultReceipt, PlayerAuctionTimelineEvent, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, StaffReviewDetails, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
 export function useAuctionDiagnostics(auctionId: string) {
   return useQuery({
@@ -76,6 +76,65 @@ export function useMyAuctionBid(id: string) {
     queryKey: ['my-auction-bid', id],
     queryFn: async () => (await api.get<AuctionBid | null>(`/auctions/${id}/bid/me`)).data,
     enabled: Boolean(id),
+  });
+}
+
+export function useMyAuctionResult(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['my-auction-result', id],
+    queryFn: async () => (await api.get<PlayerAuctionResultReceipt>(`/auctions/${id}/result/me`)).data,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useMyAuctionTimeline(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['my-auction-timeline', id],
+    queryFn: async () => (await api.get<PlayerAuctionTimelineEvent[]>(`/auctions/${id}/timeline/me`)).data,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useMyAuctionDispute(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['my-auction-dispute', id],
+    queryFn: async () => (await api.get<AuctionDispute | null>(`/auctions/${id}/dispute/me`)).data,
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useCreateAuctionDispute(auctionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { reason: string; proofImageUrl?: string }) =>
+      (await api.post<AuctionDispute>(`/auctions/${auctionId}/disputes`, data)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['my-auction-dispute', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['auction-disputes'] }),
+      ]);
+    },
+  });
+}
+
+export function useStaffAuctionDisputes(status: AuctionDisputeStatus | 'ALL' = 'PENDING') {
+  return useQuery({
+    queryKey: ['auction-disputes', status],
+    queryFn: async () => (await api.get<AuctionDispute[]>('/auctions/staff/disputes', { params: status === 'ALL' ? undefined : { status } })).data,
+  });
+}
+
+export function useReviewAuctionDispute() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { disputeId: string; status: 'ACCEPTED' | 'REJECTED'; reviewNote: string; externalNotePt?: string; externalNoteEn?: string }) =>
+      (await api.post<AuctionDispute>(`/auctions/staff/disputes/${data.disputeId}/review`, {
+        status: data.status,
+        reviewNote: data.reviewNote,
+        externalNotePt: data.externalNotePt,
+        externalNoteEn: data.externalNoteEn,
+      })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction-disputes'] }),
   });
 }
 
@@ -187,7 +246,7 @@ export function useBidCancellationHistory() {
 export function useStaffReviewDetails(auctionId: string) {
   return useQuery({
     queryKey: ['staff-review', auctionId],
-    queryFn: async () => (await api.get<{ ranking: EligibilityRow[] } & Auction>(`/staff/reviews/${auctionId}`)).data,
+    queryFn: async () => (await api.get<StaffReviewDetails>(`/staff/reviews/${auctionId}`)).data,
     enabled: Boolean(auctionId),
   });
 }
@@ -204,6 +263,21 @@ export function useApproveWinner(auctionId: string) {
         queryClient.invalidateQueries({ queryKey: ['auction', auctionId] }),
         queryClient.invalidateQueries({ queryKey: ['pending-auction-deliveries'] }),
         queryClient.invalidateQueries({ queryKey: ['dkp-leaderboard'] }),
+      ]);
+    },
+  });
+}
+
+export function useOverrideStaffReviewAlert(auctionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { alertKey: string; reason: string; playerId?: string }) =>
+      (await api.post<StaffReviewDetails>(`/staff/reviews/${auctionId}/alerts/override`, data)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['staff-review', auctionId] }),
+        queryClient.invalidateQueries({ queryKey: ['operations', 'staff', 'auction-diagnostics', auctionId, 'dossier'] }),
+        queryClient.invalidateQueries({ queryKey: ['operations', 'staff', 'auction-diagnostics', auctionId, 'timeline'] }),
       ]);
     },
   });

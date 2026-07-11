@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAuction, useAuctionBids, useAuctionRanking, useEligibility, useFinalizeAuction, useMyAuctionBid, useMyBidCancellation, usePlaceBid, useRequestBidCancellation } from '@/hooks/use-auctions-api';
+import { useAuction, useAuctionBids, useAuctionRanking, useCreateAuctionDispute, useEligibility, useFinalizeAuction, useMyAuctionBid, useMyAuctionDispute, useMyAuctionResult, useMyAuctionTimeline, useMyBidCancellation, usePlaceBid, useRequestBidCancellation } from '@/hooks/use-auctions-api';
 import { useDkpSummary } from '@/hooks/use-dkp-api';
 import { usePlayerId } from '@/hooks/use-profile-api';
 import { displayImageUrl } from '@/lib/images';
@@ -135,21 +135,30 @@ export default function AuctionDetailPage() {
   const auction = useAuction(id);
   const bids = useAuctionBids(id, canManageAuctions);
   const myBid = useMyAuctionBid(id);
+  const myResult = useMyAuctionResult(id, auction.data?.status === 'FINISHED');
+  const myTimeline = useMyAuctionTimeline(id, Boolean(auction.data));
+  const myDispute = useMyAuctionDispute(id, auction.data?.status === 'FINISHED');
   const dkp = useDkpSummary(playerId);
   const eligibility = useEligibility(playerId, id);
   const ranking = useAuctionRanking(id, canManageAuctions);
   const placeBid = usePlaceBid(id);
   const requestBidCancellation = useRequestBidCancellation(id);
+  const createDispute = useCreateAuctionDispute(id);
   const myBidCancellation = useMyBidCancellation(id);
   const finalizeAuction = useFinalizeAuction(id);
   const locale = useLocaleStore((state) => state.locale);
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [confirmBidCancellation, setConfirmBidCancellation] = useState(false);
   const [bidCancellationReason, setBidCancellationReason] = useState('');
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeProofImageUrl, setDisputeProofImageUrl] = useState('');
 
   if (!auction.data) return <EmptyState title={t(locale, 'loadingAuction')} />;
 
   const existingBid = myBid.data ?? undefined;
+  const resultReceipt = myResult.data;
+  const resultText = locale === 'en' ? resultReceipt?.safeReason.en : resultReceipt?.safeReason.pt;
+  const nextStepsText = locale === 'en' ? resultReceipt?.nextSteps.en : resultReceipt?.nextSteps.pt;
   const rankingByPlayerId = new Map((ranking.data ?? []).map((row) => [row.playerId, row]));
 
   function closeAuctionEarly() {
@@ -177,6 +186,24 @@ export default function AuctionDetailPage() {
         tone: 'error',
       }),
     });
+  }
+
+  function submitDispute() {
+    if (disputeReason.trim().length < 12) return;
+    createDispute.mutate(
+      {
+        reason: disputeReason.trim(),
+        proofImageUrl: disputeProofImageUrl.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setDisputeReason('');
+          setDisputeProofImageUrl('');
+          notifyToast({ title: locale === 'en' ? 'Dispute sent.' : 'Contestacao enviada.', tone: 'success' });
+        },
+        onError: () => notifyToast({ title: locale === 'en' ? 'Could not send dispute.' : 'Nao foi possivel enviar a contestacao.', tone: 'error' }),
+      },
+    );
   }
 
   return (
@@ -222,6 +249,70 @@ export default function AuctionDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {auction.data.status === 'FINISHED' && resultReceipt ? (
+          <Card>
+            <CardHeader><CardTitle>{locale === 'en' ? 'Result receipt' : 'Recibo do resultado'}</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge tone={resultReceipt.role === 'WINNER' ? 'green' : resultReceipt.role === 'PARTICIPANT' ? 'gold' : 'muted'}>{resultReceipt.role}</Badge>
+                <Badge tone="blue">{resultReceipt.finalStatus}</Badge>
+                <Badge tone={resultReceipt.deliveryStatus === 'DELIVERED' ? 'green' : resultReceipt.deliveryStatus === 'PENDING_DELIVERY' ? 'gold' : 'muted'}>{resultReceipt.deliveryStatus}</Badge>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-md border bg-background/40 p-3">
+                  <p className="text-muted-foreground">{locale === 'en' ? 'Your bid' : 'Seu bid'}</p>
+                  <p className="text-xl font-bold">{resultReceipt.ownBidAmount ?? '-'}</p>
+                </div>
+                <div className="rounded-md border bg-background/40 p-3">
+                  <p className="text-muted-foreground">{locale === 'en' ? 'Winner cost' : 'Custo vencedor'}</p>
+                  <p className="text-xl font-bold">{resultReceipt.winnerCost ?? '-'}</p>
+                </div>
+                <div className="rounded-md border bg-background/40 p-3">
+                  <p className="text-muted-foreground">{locale === 'en' ? 'Rule' : 'Regra'}</p>
+                  <p className="text-sm font-semibold">{resultReceipt.ruleApplied.auctionMode} · min {resultReceipt.ruleApplied.minimumBid}</p>
+                </div>
+              </div>
+              <div className="rounded-md border bg-background/40 p-4 text-sm">
+                <p className="font-semibold">{locale === 'en' ? 'Why this result?' : 'Por que esse resultado?'}</p>
+                <p className="mt-1 text-muted-foreground">{resultText}</p>
+              </div>
+              <div className="rounded-md border bg-background/40 p-4 text-sm">
+                <p className="font-semibold">{locale === 'en' ? 'Next steps' : 'Proximos passos'}</p>
+                <p className="mt-1 text-muted-foreground">{nextStepsText}</p>
+                {resultReceipt.deliveredAt ? <p className="mt-2 text-xs text-muted-foreground">{new Date(resultReceipt.deliveredAt).toLocaleString()}</p> : null}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {auction.data.status === 'FINISHED' ? (
+          <Card>
+            <CardHeader><CardTitle>{locale === 'en' ? 'Controlled dispute' : 'Contestacao controlada'}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {myDispute.data ? (
+                <div className="rounded-md border bg-background/40 p-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{locale === 'en' ? 'Your dispute' : 'Sua contestacao'}</p>
+                    <Badge tone={myDispute.data.status === 'PENDING' ? 'gold' : myDispute.data.status === 'ACCEPTED' ? 'green' : 'red'}>{myDispute.data.status}</Badge>
+                  </div>
+                  <p className="mt-2 text-muted-foreground">{myDispute.data.reason}</p>
+                  {(myDispute.data.externalNotePt || myDispute.data.externalNoteEn) ? (
+                    <p className="mt-2 text-muted-foreground">{locale === 'en' ? myDispute.data.externalNoteEn ?? myDispute.data.externalNotePt : myDispute.data.externalNotePt ?? myDispute.data.externalNoteEn}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} placeholder={locale === 'en' ? 'Reason for Staff review' : 'Motivo para revisao da Staff'} />
+                  <Input value={disputeProofImageUrl} onChange={(event) => setDisputeProofImageUrl(event.target.value)} placeholder={locale === 'en' ? 'Proof URL (optional)' : 'URL do print (opcional)'} />
+                  <Button type="button" disabled={createDispute.isPending || disputeReason.trim().length < 12} onClick={submitDispute}>
+                    {locale === 'en' ? 'Send dispute' : 'Enviar contestacao'}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader><CardTitle>{t(locale, 'participation')}</CardTitle></CardHeader>
@@ -295,6 +386,27 @@ export default function AuctionDetailPage() {
               </div>
             ))}
             {canManageAuctions && !bids.isLoading && !bids.data?.length && <p className="text-sm text-muted-foreground">{t(locale, 'noCandidatesRanked')}</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{locale === 'en' ? 'Safe timeline' : 'Timeline segura'}</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {(myTimeline.data ?? []).map((event) => {
+              const title = locale === 'en' ? event.title.en : event.title.pt;
+              const description = locale === 'en' ? event.description.en : event.description.pt;
+              return (
+                <div key={`${event.key}-${event.occurredAt}`} className="rounded-md border bg-background/35 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{title}</p>
+                    <Badge tone={event.tone === 'success' ? 'green' : event.tone === 'warning' ? 'gold' : event.tone === 'muted' ? 'muted' : 'blue'}>{event.key}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{new Date(event.occurredAt).toLocaleString()}</p>
+                  <p className="mt-2 text-muted-foreground">{description}</p>
+                </div>
+              );
+            })}
+            {!myTimeline.isLoading && (myTimeline.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">-</p> : null}
           </CardContent>
         </Card>
       </aside>

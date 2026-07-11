@@ -5,11 +5,15 @@ import { AuditService } from '../audit/services/audit.service';
 import {
   AuctionTierRule,
   AuctionTierRules,
+  AuctionDisputeRules,
+  DkpBidPolicyRules,
   EventRewardRules,
   PriorityScoreRules,
   StaffPendingThresholdRules,
   businessRuleDefaults,
+  defaultAuctionDisputeRules,
   defaultAuctionTierRules,
+  defaultDkpBidPolicyRules,
   defaultEventRewardRules,
   defaultMaintenanceModeRules,
   defaultPriorityScoreRules,
@@ -158,6 +162,14 @@ export class BusinessRulesService {
     return this.mergeMaintenanceMode(await this.getRuleValue('maintenanceMode'), defaultMaintenanceModeRules);
   }
 
+  async getDkpBidPolicy(): Promise<DkpBidPolicyRules> {
+    return this.mergeDkpBidPolicy(await this.getRuleValue('dkpBidPolicy'), defaultDkpBidPolicyRules);
+  }
+
+  async getAuctionDisputeRules(): Promise<AuctionDisputeRules> {
+    return this.mergeAuctionDisputeRules(await this.getRuleValue('auctionDisputeRules'), defaultAuctionDisputeRules);
+  }
+
   private async ensureDefaults(): Promise<void> {
     const count = await this.prisma.businessRule.count();
 
@@ -191,6 +203,10 @@ export class BusinessRulesService {
         return this.mergeStaffPendingThresholds(value, defaultStaffPendingThresholdRules) as Prisma.InputJsonValue;
       case 'maintenanceMode':
         return this.mergeMaintenanceMode(value, defaultMaintenanceModeRules) as unknown as Prisma.InputJsonValue;
+      case 'dkpBidPolicy':
+        return this.mergeDkpBidPolicy(value, defaultDkpBidPolicyRules) as unknown as Prisma.InputJsonValue;
+      case 'auctionDisputeRules':
+        return this.mergeAuctionDisputeRules(value, defaultAuctionDisputeRules) as unknown as Prisma.InputJsonValue;
       default:
         throw new BadRequestException(`Unknown business rule: ${key}`);
     }
@@ -282,6 +298,56 @@ export class BusinessRulesService {
       enabled: typeof input.enabled === 'boolean' ? input.enabled : fallback.enabled,
       message,
     };
+  }
+
+  private mergeDkpBidPolicy(value: unknown, fallback: DkpBidPolicyRules): DkpBidPolicyRules {
+    const input = this.asRecord(value);
+    return {
+      enabled: typeof input.enabled === 'boolean' ? input.enabled : fallback.enabled,
+      minimumCost: this.boundedInteger(input.minimumCost, fallback.minimumCost, 0, 100000),
+      winTaxPercent: this.boundedInteger(input.winTaxPercent, fallback.winTaxPercent, 0, 100),
+      tierCaps: this.numberMap(input.tierCaps),
+      itemTypeCaps: this.numberMap(input.itemTypeCaps),
+      layerCaps: this.numberMap(input.layerCaps),
+      fixedCostByTier: this.numberMap(input.fixedCostByTier),
+      modeMultiplierPercent: this.numberMap(input.modeMultiplierPercent),
+      sourceSimulationId: this.shortString(input.sourceSimulationId, 80),
+      sourceSimulationName: this.shortString(input.sourceSimulationName, 120),
+      promotedAt: this.shortString(input.promotedAt, 40),
+      promotedById: this.shortString(input.promotedById, 80),
+      reason: this.shortString(input.reason, 240),
+    };
+  }
+
+  private mergeAuctionDisputeRules(value: unknown, fallback: AuctionDisputeRules): AuctionDisputeRules {
+    const input = this.asRecord(value);
+    return {
+      enabled: typeof input.enabled === 'boolean' ? input.enabled : fallback.enabled,
+      windowHours: this.boundedInteger(input.windowHours, fallback.windowHours, 1, 720),
+    };
+  }
+
+  private boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
+    const parsed = Math.trunc(Number(value));
+    return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : fallback;
+  }
+
+  private numberMap(value: unknown): Record<string, number> {
+    const input = this.asRecord(value);
+    const output: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(input)) {
+      const parsed = Math.trunc(Number(raw));
+      if (key.length <= 40 && Number.isInteger(parsed) && parsed >= 0 && parsed <= 100000) {
+        output[key] = parsed;
+      }
+    }
+    return output;
+  }
+
+  private shortString(value: unknown, maxLength: number): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized.slice(0, maxLength) : undefined;
   }
 
   private asRecord(value: unknown): Record<string, unknown> {

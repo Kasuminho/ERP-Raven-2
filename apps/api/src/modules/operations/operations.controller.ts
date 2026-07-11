@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AuctionDiagnosticsService } from './services/auction-diagnostics.service';
 import { DiscordOperationsService } from './services/discord-operations.service';
+import { GuildProgressReportService } from './services/guild-progress-report.service';
 import { IntegrityService } from './services/integrity.service';
 import { MeetingService } from './services/meeting.service';
 import { OperationalBriefingService } from './services/operational-briefing.service';
@@ -14,12 +15,15 @@ import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { UniversalDossierService } from './services/universal-dossier.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
+import { ContextualEligibilityService } from './services/contextual-eligibility.service';
 import {
   AuctionDossier,
+  ContextualEligibilitySummary,
   DiscordTemplateSummary,
   DiscordWebhookQueueSummary,
   DeploymentPanelSummary,
   GuildRulesSummary,
+  GuildProgressReport,
   IntegritySummary,
   AuctionDiagnosticOption,
   AuctionDiagnosticSummary,
@@ -31,6 +35,7 @@ import {
   NoticeBoardItem,
   OperationalHealthSummary,
   PlayerActionPlan,
+  PlayerWeeklySafeSummary,
   PlayerComparisonSummary,
   PlayerOperationsSummary,
   SeasonMonthlySummary,
@@ -52,7 +57,9 @@ type ResolveMeetingItemBody = { title?: string; type?: string; href?: string };
 export class OperationsController {
   constructor(
     private readonly auctionDiagnosticsService: AuctionDiagnosticsService,
+    private readonly contextualEligibility: ContextualEligibilityService,
     private readonly discordOperations: DiscordOperationsService,
+    private readonly guildProgressReport: GuildProgressReportService,
     private readonly integrityService: IntegrityService,
     private readonly meetingService: MeetingService,
     private readonly operationalBriefing: OperationalBriefingService,
@@ -78,6 +85,11 @@ export class OperationsController {
   @Get('me/action-plan')
   async actionPlan(@Req() req: AuthRequest): Promise<PlayerActionPlan> {
     return this.playerOperations.getPlayerActionPlan(req.user.userId);
+  }
+
+  @Get('me/weekly-summary')
+  async playerWeeklySummary(@Query('period') period?: string): Promise<PlayerWeeklySafeSummary> {
+    return this.guildProgressReport.getPlayerSafeSummary(period === 'month' ? 'month' : 'week');
   }
 
   @Get('rules')
@@ -146,6 +158,13 @@ export class OperationsController {
     return this.weeklySummary.getWeeklySummary();
   }
 
+  @Get('staff/guild-progress')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async guildProgress(@Query('period') period?: string): Promise<GuildProgressReport> {
+    return this.guildProgressReport.getStaffReport(period === 'month' ? 'month' : 'week');
+  }
+
   @Post('staff/weekly/post')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
@@ -196,6 +215,18 @@ export class OperationsController {
       return this.auctionDiagnosticsService.getUniversalDossier(type, id);
     }
     return this.universalDossiers.getUniversalDossier(type, id);
+  }
+
+  @Get('staff/player-eligibility/:playerId/context')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async contextualPlayerEligibility(
+    @Param('playerId') playerId: string,
+    @Query('type') type?: string,
+    @Query('contextId') contextId?: string,
+    @Query('role') role?: string,
+  ): Promise<ContextualEligibilitySummary> {
+    return this.contextualEligibility.getContextualEligibility(playerId, { type, contextId, role });
   }
 
   @Get('staff/auction-diagnostics/:auctionId/timeline')

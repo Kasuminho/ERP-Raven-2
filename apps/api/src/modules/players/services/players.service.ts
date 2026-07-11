@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DKPTransactionType, PlayerClass, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
+import { DKPTransactionType, PlayerClass, PlayerCombatAvailability, PlayerCombatProfileChangeStatus, PlayerCombatRole, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto } from '../dto';
 import { PlayersRepository } from '../repositories/players.repository';
 
 const reviewRequiredCategories = new Set<ProgressCategory>([
@@ -37,6 +38,8 @@ type PlayerTimelineCopy = {
   tone: PlayerTimelineTone;
 };
 
+type RosterSignal = 'SEM_BUILD' | 'SEM_ROLE' | 'SEM_STATUS_RECENTE' | 'PRESENCA_BAIXA' | 'SEM_DISPONIBILIDADE';
+
 @Injectable()
 export class PlayersService {
   constructor(
@@ -56,6 +59,7 @@ export class PlayersService {
         players: {
           include: {
             roles: { include: { role: true } },
+            combatProfile: true,
           },
         },
       },
@@ -74,8 +78,422 @@ export class PlayersService {
           },
         },
         roles: { include: { role: true } },
+        combatProfile: true,
       },
       orderBy: [{ isActive: 'desc' }, { nickname: 'asc' }],
+    });
+  }
+
+  async getCombatRosterMatrix() {
+    const staleStatusCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const [players, progressRows, attendanceRows] = await Promise.all([
+      this.repository.client.player.findMany({
+        where: { isActive: true },
+        include: {
+          user: {
+            select: {
+              discordId: true,
+              discordUsername: true,
+              discordNickname: true,
+              preferredLocale: true,
+            },
+          },
+          combatProfile: true,
+        },
+        orderBy: [{ dimensionalLayer: 'desc' }, { attendancePercentage: 'desc' }, { nickname: 'asc' }],
+      }),
+      this.repository.client.playerProgress.findMany({
+        where: {
+          player: { isActive: true },
+        },
+        select: {
+          playerId: true,
+          category: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
+      }),
+      this.repository.client.eventAttendance.findMany({
+        where: {
+          player: { isActive: true },
+          attended: true,
+        },
+        select: {
+          playerId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
+      }),
+    ]);
+
+    const lastProgressAt = new Map<string, Date>();
+    const lastStatusAt = new Map<string, Date>();
+    const lastAttendanceAt = new Map<string, Date>();
+
+    for (const row of progressRows) {
+      if (!lastProgressAt.has(row.playerId)) {
+        lastProgressAt.set(row.playerId, row.createdAt);
+      }
+
+      if (row.category === ProgressCategory.STATUS && !lastStatusAt.has(row.playerId)) {
+        lastStatusAt.set(row.playerId, row.createdAt);
+      }
+    }
+
+    for (const row of attendanceRows) {
+      if (!lastAttendanceAt.has(row.playerId)) {
+        lastAttendanceAt.set(row.playerId, row.createdAt);
+      }
+    }
+
+    const rows = players.map((player) => {
+      const profile = player.combatProfile;
+      const primaryClass = profile?.primaryClass ?? player.class;
+      const preferredRole = profile?.preferredRole ?? null;
+      const availability = profile?.availability ?? PlayerCombatAvailability.UNSET;
+      const playerLastStatusAt = lastStatusAt.get(player.id) ?? null;
+      const signals: RosterSignal[] = [];
+
+      if (!profile?.declaredBuild) signals.push('SEM_BUILD');
+      if (!preferredRole) signals.push('SEM_ROLE');
+      if (!playerLastStatusAt || playerLastStatusAt < staleStatusCutoff) signals.push('SEM_STATUS_RECENTE');
+      if (player.attendancePercentage < 50) signals.push('PRESENCA_BAIXA');
+      if (availability === PlayerCombatAvailability.UNSET) signals.push('SEM_DISPONIBILIDADE');
+
+      return {
+        playerId: player.id,
+        nickname: player.nickname,
+        playerClass: player.class,
+        dimensionalLayer: player.dimensionalLayer,
+        combatPower: player.combatPower,
+        attendancePercentage: player.attendancePercentage,
+        isActive: player.isActive,
+        primaryClass,
+        secondaryClass: profile?.secondaryClass ?? null,
+        declaredBuild: profile?.declaredBuild ?? null,
+        preferredRole,
+        acceptedRoles: profile?.acceptedRoles ?? [],
+        availability,
+        lastProgressAt: lastProgressAt.get(player.id) ?? null,
+        lastStatusAt: playerLastStatusAt,
+        lastAttendanceAt: lastAttendanceAt.get(player.id) ?? null,
+        signals,
+      };
+    });
+
+    const totals = {
+      activePlayers: rows.length,
+      mappedProfiles: rows.filter((row) => Boolean(row.declaredBuild || row.preferredRole || row.availability !== PlayerCombatAvailability.UNSET)).length,
+      missingBuild: rows.filter((row) => row.signals.includes('SEM_BUILD')).length,
+      staleStatus: rows.filter((row) => row.signals.includes('SEM_STATUS_RECENTE')).length,
+      lowAttendance: rows.filter((row) => row.signals.includes('PRESENCA_BAIXA')).length,
+      frontline: rows.filter((row) => row.preferredRole === PlayerCombatRole.FRONTLINE).length,
+      support: rows.filter((row) => row.preferredRole === PlayerCombatRole.SUPPORT).length,
+      reserve: rows.filter((row) => row.preferredRole === PlayerCombatRole.RESERVE).length,
+    };
+
+    const alerts = this.buildRosterAlerts(rows, totals);
+    const counts = {
+      byClass: this.countBy(Object.values(PlayerClass), rows, (row) => row.primaryClass),
+      byRole: this.countBy([...Object.values(PlayerCombatRole), 'UNSET'] as Array<PlayerCombatRole | 'UNSET'>, rows, (row) => row.preferredRole ?? 'UNSET'),
+      byLayer: this.countBy(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10'], rows, (row) => `C${row.dimensionalLayer}`),
+      byAvailability: this.countBy(Object.values(PlayerCombatAvailability), rows, (row) => row.availability),
+    };
+
+    return {
+      generatedAt: new Date(),
+      totals,
+      counts,
+      alerts,
+      rows,
+      markdown: this.buildRosterMarkdown(totals, alerts, rows),
+    };
+  }
+
+  async getMyCombatProfile(userId: string) {
+    const player = await this.getPrimaryPlayerByUser(userId);
+
+    if (!player) {
+      throw new NotFoundException('Player profile not found.');
+    }
+
+    return this.repository.client.player.findUnique({
+      where: { id: player.id },
+      include: {
+        combatProfile: true,
+        combatProfileRequests: {
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
+      },
+    });
+  }
+
+  async updateCombatProfile(playerId: string, actorId: string, data: UpdateCombatProfileDto) {
+    const normalized = this.normalizeCombatProfilePayload(data, true);
+    const primaryClass = normalized.primaryClass;
+    const reason = data.reason?.trim() || undefined;
+
+    if (!primaryClass) {
+      throw new BadRequestException('Primary class is required.');
+    }
+
+    return this.repository.client.$transaction(async (tx) => {
+      const player = await tx.player.findUnique({
+        where: { id: playerId },
+        include: { combatProfile: true },
+      });
+
+      if (!player) {
+        throw new NotFoundException('Player not found.');
+      }
+
+      const previous = player.combatProfile;
+      const profile = await tx.playerCombatProfile.upsert({
+        where: { playerId },
+        create: {
+          player: { connect: { id: playerId } },
+          primaryClass,
+          secondaryClass: normalized.secondaryClass ?? null,
+          declaredBuild: normalized.declaredBuild ?? null,
+          preferredRole: normalized.preferredRole ?? null,
+          acceptedRoles: normalized.acceptedRoles,
+          availability: normalized.availability ?? PlayerCombatAvailability.UNSET,
+          publicNote: normalized.publicNote ?? null,
+          staffNote: normalized.staffNote ?? null,
+          updatedBy: { connect: { id: actorId } },
+        },
+        update: {
+          primaryClass,
+          secondaryClass: normalized.secondaryClass ?? null,
+          declaredBuild: normalized.declaredBuild ?? null,
+          preferredRole: normalized.preferredRole ?? null,
+          acceptedRoles: normalized.acceptedRoles,
+          availability: normalized.availability ?? PlayerCombatAvailability.UNSET,
+          publicNote: normalized.publicNote ?? null,
+          staffNote: normalized.staffNote ?? null,
+          updatedBy: { connect: { id: actorId } },
+        },
+      });
+
+      if (player.class !== primaryClass) {
+        await tx.player.update({
+          where: { id: playerId },
+          data: { class: primaryClass },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'PLAYER_COMBAT_PROFILE_UPDATED',
+          targetType: 'Player',
+          targetId: playerId,
+          metadata: {
+            previousPrimaryClass: previous?.primaryClass ?? player.class,
+            primaryClass,
+            previousBuild: previous?.declaredBuild,
+            declaredBuild: normalized.declaredBuild,
+            preferredRole: normalized.preferredRole,
+            acceptedRoles: normalized.acceptedRoles,
+            availability: normalized.availability ?? PlayerCombatAvailability.UNSET,
+            reason,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
+      return profile;
+    });
+  }
+
+  async requestCombatProfileChange(userId: string, data: RequestCombatProfileChangeDto) {
+    const player = await this.getPrimaryPlayerByUser(userId);
+
+    if (!player) {
+      throw new NotFoundException('Player profile not found.');
+    }
+
+    const normalized = this.normalizeCombatProfilePayload(data, false);
+
+    if (
+      normalized.primaryClass === undefined
+      && normalized.secondaryClass === undefined
+      && normalized.declaredBuild === undefined
+      && normalized.preferredRole === undefined
+      && normalized.acceptedRoles === undefined
+      && normalized.availability === undefined
+      && !data.note?.trim()
+      && !data.proofImageUrl?.trim()
+    ) {
+      throw new BadRequestException('At least one combat profile change must be provided.');
+    }
+
+    const request = await this.repository.client.playerCombatProfileChangeRequest.create({
+      data: {
+        player: { connect: { id: player.id } },
+        primaryClass: normalized.primaryClass,
+        secondaryClass: normalized.secondaryClass,
+        declaredBuild: normalized.declaredBuild,
+        preferredRole: normalized.preferredRole,
+        acceptedRoles: normalized.acceptedRoles ?? [],
+        availability: normalized.availability,
+        proofImageUrl: data.proofImageUrl?.trim() || undefined,
+        note: data.note?.trim() || undefined,
+      },
+    });
+
+    await this.auditService.log({
+      actorId: userId,
+      action: 'PLAYER_COMBAT_PROFILE_CHANGE_REQUESTED',
+      targetType: 'Player',
+      targetId: player.id,
+      metadata: {
+        requestId: request.id,
+        primaryClass: request.primaryClass,
+        preferredRole: request.preferredRole,
+        availability: request.availability,
+      },
+    });
+
+    return request;
+  }
+
+  async listCombatProfileRequests() {
+    return this.repository.client.playerCombatProfileChangeRequest.findMany({
+      where: { status: PlayerCombatProfileChangeStatus.PENDING },
+      include: {
+        player: {
+          include: {
+            user: {
+              select: {
+                discordId: true,
+                discordUsername: true,
+                discordNickname: true,
+                preferredLocale: true,
+              },
+            },
+            combatProfile: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+    });
+  }
+
+  async approveCombatProfileRequest(requestId: string, reviewerId: string, data: ReviewCombatProfileChangeDto) {
+    return this.repository.client.$transaction(async (tx) => {
+      const request = await tx.playerCombatProfileChangeRequest.findUnique({
+        where: { id: requestId },
+        include: { player: { include: { combatProfile: true } } },
+      });
+
+      if (!request) {
+        throw new NotFoundException('Combat profile change request not found.');
+      }
+
+      if (request.status !== PlayerCombatProfileChangeStatus.PENDING) {
+        throw new BadRequestException('Combat profile change request is not pending.');
+      }
+
+      const current = request.player.combatProfile;
+      const primaryClass = request.primaryClass ?? current?.primaryClass ?? request.player.class;
+      const profile = await tx.playerCombatProfile.upsert({
+        where: { playerId: request.playerId },
+        create: {
+          player: { connect: { id: request.playerId } },
+          primaryClass,
+          secondaryClass: request.secondaryClass ?? undefined,
+          declaredBuild: request.declaredBuild ?? undefined,
+          preferredRole: request.preferredRole ?? undefined,
+          acceptedRoles: request.acceptedRoles,
+          availability: request.availability ?? PlayerCombatAvailability.UNSET,
+          updatedBy: { connect: { id: reviewerId } },
+        },
+        update: {
+          primaryClass,
+          secondaryClass: request.secondaryClass ?? current?.secondaryClass ?? undefined,
+          declaredBuild: request.declaredBuild ?? current?.declaredBuild ?? undefined,
+          preferredRole: request.preferredRole ?? current?.preferredRole ?? undefined,
+          acceptedRoles: request.acceptedRoles.length > 0 ? request.acceptedRoles : current?.acceptedRoles ?? [],
+          availability: request.availability ?? current?.availability ?? PlayerCombatAvailability.UNSET,
+          updatedBy: { connect: { id: reviewerId } },
+        },
+      });
+
+      if (request.player.class !== primaryClass) {
+        await tx.player.update({
+          where: { id: request.playerId },
+          data: { class: primaryClass },
+        });
+      }
+
+      const updatedRequest = await tx.playerCombatProfileChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: PlayerCombatProfileChangeStatus.APPROVED,
+          reviewedBy: { connect: { id: reviewerId } },
+          reviewedAt: new Date(),
+          reviewNote: data.reviewNote?.trim() || undefined,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: reviewerId,
+          action: 'PLAYER_COMBAT_PROFILE_CHANGE_APPROVED',
+          targetType: 'Player',
+          targetId: request.playerId,
+          metadata: {
+            requestId,
+            primaryClass,
+            profileUpdatedAt: profile.updatedAt,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
+      return updatedRequest;
+    });
+  }
+
+  async rejectCombatProfileRequest(requestId: string, reviewerId: string, reviewNote?: string) {
+    return this.repository.client.$transaction(async (tx) => {
+      const request = await tx.playerCombatProfileChangeRequest.findUnique({ where: { id: requestId } });
+
+      if (!request) {
+        throw new NotFoundException('Combat profile change request not found.');
+      }
+
+      if (request.status !== PlayerCombatProfileChangeStatus.PENDING) {
+        throw new BadRequestException('Combat profile change request is not pending.');
+      }
+
+      const updated = await tx.playerCombatProfileChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: PlayerCombatProfileChangeStatus.REJECTED,
+          reviewedBy: { connect: { id: reviewerId } },
+          reviewedAt: new Date(),
+          reviewNote: reviewNote?.trim() || undefined,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: reviewerId,
+          action: 'PLAYER_COMBAT_PROFILE_CHANGE_REJECTED',
+          targetType: 'Player',
+          targetId: request.playerId,
+          metadata: {
+            requestId,
+            reviewNote,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -673,7 +1091,7 @@ export class PlayersService {
       : { player: { user: { discordId } } };
 
     const [player, drops, progress, itemRequests, transactions, daoshiReceipts, codexRequests, auctionBids, attendances] = await Promise.all([
-      this.repository.client.player.findFirst({ where: playerWhere, include: { user: true } }),
+      this.repository.client.player.findFirst({ where: playerWhere, include: { user: true, combatProfile: true } }),
       this.repository.client.dropHistory.findMany({
         where: dropWhere,
         include: { itemCatalog: true },
@@ -1111,6 +1529,238 @@ export class PlayersService {
     }
 
     return value as PlayerClass;
+  }
+
+  private normalizeOptionalCombatRole(value: unknown): PlayerCombatRole | undefined {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+
+    if (!Object.values(PlayerCombatRole).includes(value as PlayerCombatRole)) {
+      throw new BadRequestException('Invalid combat role.');
+    }
+
+    return value as PlayerCombatRole;
+  }
+
+  private normalizeOptionalAvailability(value: unknown): PlayerCombatAvailability | undefined {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+
+    if (!Object.values(PlayerCombatAvailability).includes(value as PlayerCombatAvailability)) {
+      throw new BadRequestException('Invalid combat availability.');
+    }
+
+    return value as PlayerCombatAvailability;
+  }
+
+  private normalizeOptionalText(value: unknown, maxLength: number, fieldName: string): string | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    const text = String(value).trim();
+
+    if (!text) {
+      return undefined;
+    }
+
+    if (text.length > maxLength) {
+      throw new BadRequestException(`${fieldName} must be at most ${maxLength} characters.`);
+    }
+
+    return text;
+  }
+
+  private normalizeCombatRoles(values: unknown): PlayerCombatRole[] | undefined {
+    if (values === undefined || values === null) {
+      return undefined;
+    }
+
+    if (!Array.isArray(values)) {
+      throw new BadRequestException('Accepted roles must be a list.');
+    }
+
+    const roles = values.map((value) => this.normalizeOptionalCombatRole(value)).filter((value): value is PlayerCombatRole => Boolean(value));
+    return [...new Set(roles)];
+  }
+
+  private normalizeCombatProfilePayload(data: Partial<UpdateCombatProfileDto & RequestCombatProfileChangeDto>, requirePrimaryClass: boolean): {
+    primaryClass?: PlayerClass;
+    secondaryClass?: PlayerClass;
+    declaredBuild?: string;
+    preferredRole?: PlayerCombatRole;
+    acceptedRoles?: PlayerCombatRole[];
+    availability?: PlayerCombatAvailability;
+    publicNote?: string;
+    staffNote?: string;
+  } {
+    const primaryClass = this.normalizeOptionalPlayerClass(data.primaryClass);
+
+    if (requirePrimaryClass && !primaryClass) {
+      throw new BadRequestException('Primary class is required.');
+    }
+
+    return {
+      primaryClass,
+      secondaryClass: this.normalizeOptionalPlayerClass(data.secondaryClass),
+      declaredBuild: this.normalizeOptionalText(data.declaredBuild, 120, 'Declared build'),
+      preferredRole: this.normalizeOptionalCombatRole(data.preferredRole),
+      acceptedRoles: this.normalizeCombatRoles(data.acceptedRoles) ?? (requirePrimaryClass ? [] : undefined),
+      availability: this.normalizeOptionalAvailability(data.availability),
+      publicNote: this.normalizeOptionalText(data.publicNote, 240, 'Public note'),
+      staffNote: this.normalizeOptionalText(data.staffNote, 500, 'Staff note'),
+    };
+  }
+
+  private countBy<TKey extends string, TRow>(keys: TKey[], rows: TRow[], selectKey: (row: TRow) => TKey) {
+    return keys.map((key) => ({
+      key,
+      label: key,
+      count: rows.filter((row) => selectKey(row) === key).length,
+    }));
+  }
+
+  private buildRosterAlerts(
+    rows: Array<{
+      playerId: string;
+      nickname: string;
+      preferredRole: PlayerCombatRole | null;
+      availability: PlayerCombatAvailability;
+      signals: RosterSignal[];
+    }>,
+    totals: {
+      activePlayers: number;
+      frontline: number;
+      support: number;
+      reserve: number;
+      missingBuild: number;
+      staleStatus: number;
+      lowAttendance: number;
+    },
+  ) {
+    const alerts: Array<{
+      key: string;
+      severity: 'high' | 'medium' | 'low';
+      title: string;
+      description: string;
+      playerIds?: string[];
+    }> = [];
+
+    if (totals.frontline === 0) {
+      alerts.push({
+        key: 'missing-frontline',
+        severity: 'high',
+        title: 'Sem frontline declarado',
+        description: 'Nenhum player ativo esta marcado como frontline. Escala de Clash sem parede vira aula pratica de respawn.',
+      });
+    }
+
+    if (totals.support === 0) {
+      alerts.push({
+        key: 'missing-support',
+        severity: 'high',
+        title: 'Sem suporte declarado',
+        description: 'Nenhum player ativo esta marcado como suporte. Se a call pedir sustain, hoje e na fe.',
+      });
+    }
+
+    if (totals.reserve > Math.max(2, Math.floor(totals.activePlayers * 0.35))) {
+      alerts.push({
+        key: 'reserve-heavy',
+        severity: 'medium',
+        title: 'Reserva demais no roster',
+        description: `${totals.reserve} player(s) estao como reserva. Pode ser estrategia, pode ser banco lotado.`,
+      });
+    }
+
+    if (totals.missingBuild > 0) {
+      alerts.push({
+        key: 'missing-build',
+        severity: 'medium',
+        title: 'Builds ainda nao mapeadas',
+        description: `${totals.missingBuild} player(s) ativos nao tem build declarada no perfil de combate.`,
+        playerIds: rows.filter((row) => row.signals.includes('SEM_BUILD')).map((row) => row.playerId),
+      });
+    }
+
+    if (totals.staleStatus > 0) {
+      alerts.push({
+        key: 'stale-status',
+        severity: 'medium',
+        title: 'STATUS recente faltando',
+        description: `${totals.staleStatus} player(s) estao sem STATUS nos ultimos 14 dias.`,
+        playerIds: rows.filter((row) => row.signals.includes('SEM_STATUS_RECENTE')).map((row) => row.playerId),
+      });
+    }
+
+    if (totals.lowAttendance > 0) {
+      alerts.push({
+        key: 'low-attendance',
+        severity: 'low',
+        title: 'Presenca baixa',
+        description: `${totals.lowAttendance} player(s) ativos estao abaixo de 50% de presenca.`,
+        playerIds: rows.filter((row) => row.signals.includes('PRESENCA_BAIXA')).map((row) => row.playerId),
+      });
+    }
+
+    const unsetAvailability = rows.filter((row) => row.availability === PlayerCombatAvailability.UNSET);
+    if (unsetAvailability.length > 0) {
+      alerts.push({
+        key: 'unset-availability',
+        severity: 'low',
+        title: 'Disponibilidade incompleta',
+        description: `${unsetAvailability.length} player(s) ainda nao tem janela de disponibilidade marcada.`,
+        playerIds: unsetAvailability.map((row) => row.playerId),
+      });
+    }
+
+    return alerts;
+  }
+
+  private buildRosterMarkdown(
+    totals: {
+      activePlayers: number;
+      mappedProfiles: number;
+      missingBuild: number;
+      staleStatus: number;
+      lowAttendance: number;
+      frontline: number;
+      support: number;
+      reserve: number;
+    },
+    alerts: Array<{ severity: string; title: string; description: string }>,
+    rows: Array<{
+      nickname: string;
+      primaryClass: PlayerClass;
+      dimensionalLayer: number;
+      preferredRole: PlayerCombatRole | null;
+      availability: PlayerCombatAvailability;
+      attendancePercentage: number;
+      declaredBuild?: string | null;
+    }>,
+  ): string {
+    const lines = [
+      '# Matriz de composicao G3X',
+      '',
+      `- Players ativos: ${totals.activePlayers}`,
+      `- Perfis mapeados: ${totals.mappedProfiles}`,
+      `- Frontline: ${totals.frontline}`,
+      `- Suporte: ${totals.support}`,
+      `- Reservas: ${totals.reserve}`,
+      `- Sem build: ${totals.missingBuild}`,
+      `- Sem STATUS recente: ${totals.staleStatus}`,
+      `- Presenca baixa: ${totals.lowAttendance}`,
+      '',
+      '## Alertas',
+      ...(alerts.length > 0 ? alerts.map((alert) => `- [${alert.severity}] ${alert.title}: ${alert.description}`) : ['- Nenhum alerta critico agora. Estranho, mas aceito.']),
+      '',
+      '## Roster resumido',
+      ...rows.slice(0, 80).map((row) => `- ${row.nickname}: ${row.primaryClass}, C${row.dimensionalLayer}, role ${row.preferredRole ?? 'UNSET'}, ${Math.round(row.attendancePercentage)}% presenca, disponibilidade ${row.availability}, build ${row.declaredBuild ?? 'nao mapeada'}`),
+    ];
+
+    return lines.join('\n');
   }
 
   private assertProfileUpdateHasChanges(data: {

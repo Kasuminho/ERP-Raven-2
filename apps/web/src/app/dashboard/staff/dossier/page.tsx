@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { useUniversalDossier } from '@/hooks/use-staff-operations-api';
-import type { UniversalDossierType } from '@/types/api';
+import { useContextualEligibility, useUniversalDossier } from '@/hooks/use-staff-operations-api';
+import type { ContextualEligibilityDecision, ContextualEligibilityType, UniversalDossierType } from '@/types/api';
 
 const dossierTypes: Array<{ value: UniversalDossierType; label: string }> = [
   { value: 'player', label: 'Player' },
@@ -23,10 +23,30 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString();
 }
 
+function riskTone(severity: 'info' | 'warning' | 'danger') {
+  if (severity === 'danger') return 'red';
+  if (severity === 'warning') return 'gold';
+  return 'blue';
+}
+
+function decisionTone(decision: ContextualEligibilityDecision) {
+  if (decision === 'blocked') return 'red';
+  if (decision === 'review') return 'gold';
+  return 'green';
+}
+
 export default function StaffDossierPage() {
   const [type, setType] = useState<UniversalDossierType>('player');
   const [id, setId] = useState('');
+  const [eligibilityType, setEligibilityType] = useState<ContextualEligibilityType>('auction');
+  const [contextId, setContextId] = useState('');
+  const [role, setRole] = useState('');
   const dossier = useUniversalDossier(type, id.trim());
+  const contextualEligibility = useContextualEligibility(type === 'player' ? id.trim() : '', {
+    type: eligibilityType,
+    contextId: contextId.trim(),
+    role: role.trim(),
+  });
 
   async function copyMarkdown() {
     if (!dossier.data) return;
@@ -110,6 +130,117 @@ export default function StaffDossierPage() {
               </div>
             </CardContent>
           </Card>
+
+          {(dossier.data.riskFlags ?? []).length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Risk flags operacionais</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {(dossier.data.riskFlags ?? []).map((flag) => (
+                  <div key={flag.key} className="rounded-md border bg-background/35 p-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={riskTone(flag.severity)}>{flag.severity}</Badge>
+                      <p className="font-semibold">{flag.label}</p>
+                    </div>
+                    <p className="mt-2 text-muted-foreground">{flag.explanation}</p>
+                    <Link href={flag.evidenceHref} className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline">
+                      Evidencia
+                    </Link>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {dossier.data.type === 'player' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Elegibilidade contextual</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-[180px_1fr_180px]">
+                  <label className="space-y-1 text-sm">
+                    <span className="text-xs uppercase text-muted-foreground">Contexto</span>
+                    <select
+                      value={eligibilityType}
+                      onChange={(event) => setEligibilityType(event.target.value as ContextualEligibilityType)}
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    >
+                      <option value="auction">Leilao</option>
+                      <option value="request">Request</option>
+                      <option value="war-room">War Room</option>
+                      <option value="recruitment">Recrutamento</option>
+                    </select>
+                  </label>
+                  {eligibilityType === 'recruitment' ? (
+                    <label className="space-y-1 text-sm">
+                      <span className="text-xs uppercase text-muted-foreground">Papel</span>
+                      <input
+                        value={role}
+                        onChange={(event) => setRole(event.target.value)}
+                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                        placeholder="FRONTLINE, SUPPORT, CALLER..."
+                      />
+                    </label>
+                  ) : (
+                    <label className="space-y-1 text-sm">
+                      <span className="text-xs uppercase text-muted-foreground">ID do contexto</span>
+                      <input
+                        value={contextId}
+                        onChange={(event) => setContextId(event.target.value)}
+                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                        placeholder="UUID do leilao, request ou operacao"
+                      />
+                    </label>
+                  )}
+                  <div className="flex items-end">
+                    <Badge tone={contextualEligibility.data ? decisionTone(contextualEligibility.data.decision) : 'muted'}>
+                      {contextualEligibility.data?.decision ?? 'aguardando'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {contextualEligibility.isError ? (
+                  <p className="rounded-md border border-red-400/35 bg-red-500/10 p-3 text-sm text-red-200">Contexto nao encontrado ou parametro invalido.</p>
+                ) : null}
+
+                {contextualEligibility.data ? (
+                  <div className="space-y-3">
+                    <div className="rounded-md border bg-background/35 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone={decisionTone(contextualEligibility.data.decision)}>{contextualEligibility.data.context.type}</Badge>
+                        <p className="font-semibold">{contextualEligibility.data.context.label}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{contextualEligibility.data.headline}</p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {contextualEligibility.data.reasons.map((reason) => (
+                        <div key={reason.key} className="rounded-md border bg-background/35 p-3 text-sm">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge tone={decisionTone(reason.status)}>{reason.status}</Badge>
+                            <p className="font-semibold">{reason.label}</p>
+                          </div>
+                          <p className="mt-2 text-muted-foreground">{reason.explanation}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">{reason.metric ?? '-'} | {reason.rule ?? '-'}</p>
+                          {reason.evidenceHref ? (
+                            <Link href={reason.evidenceHref} className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline">Evidencia</Link>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {contextualEligibility.data.evidenceLinks.map((link) => (
+                        <Link key={link.href} href={link.href} className="rounded-md border border-cyan-400/25 bg-secondary/80 px-3 py-2 text-sm font-semibold hover:border-cyan-300/45">
+                          {link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
             <Card>

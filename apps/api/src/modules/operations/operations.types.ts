@@ -368,12 +368,21 @@ export type AuctionDossier = SharedAuctionDossier<Date>;
 
 export type UniversalDossierType = 'player' | 'auction' | 'request' | 'interest' | 'drop' | 'event';
 
+export type UniversalDossierRiskFlag = {
+  key: string;
+  label: string;
+  severity: 'info' | 'warning' | 'danger';
+  explanation: string;
+  evidenceHref: string;
+};
+
 export type UniversalDossier = {
   generatedAt: Date;
   type: UniversalDossierType;
   id: string;
   title: string;
   summary: Array<{ label: string; value: string }>;
+  riskFlags?: UniversalDossierRiskFlag[];
   internalLinks: Array<{ label: string; href: string }>;
   auditLogs: Array<{
     id: string;
@@ -384,6 +393,86 @@ export type UniversalDossier = {
     createdAt: Date;
   }>;
   markdown: string;
+};
+
+export type ContextualEligibilityType = 'auction' | 'request' | 'war-room' | 'recruitment';
+
+export type ContextualEligibilityDecision = 'eligible' | 'review' | 'blocked';
+
+export type ContextualEligibilityReason = {
+  key: string;
+  label: string;
+  status: ContextualEligibilityDecision;
+  explanation: string;
+  metric?: string;
+  rule?: string;
+  evidenceHref?: string;
+};
+
+export type ContextualEligibilitySummary = {
+  generatedAt: Date;
+  context: {
+    type: ContextualEligibilityType;
+    id?: string | null;
+    label: string;
+  };
+  player: {
+    id: string;
+    nickname: string;
+    class: string;
+    dimensionalLayer: number;
+    attendancePercentage: number;
+    availableDkp: number;
+    combatPower: number;
+    build?: string | null;
+    preferredRole?: string | null;
+  };
+  decision: ContextualEligibilityDecision;
+  headline: string;
+  reasons: ContextualEligibilityReason[];
+  appliedRules: string[];
+  evidenceLinks: Array<{ label: string; href: string }>;
+};
+
+export type GuildProgressReport = {
+  period: 'week' | 'month';
+  start: Date;
+  end: Date;
+  generatedAt: Date;
+  counts: {
+    finalizedEvents: number;
+    attendances: number;
+    dropsDelivered: number;
+    auctionsFinished: number;
+    requestsDelivered: number;
+    progressApproved: number;
+    warRoomOperations: number;
+    activeWishlistItems: number;
+    pendingRisks: number;
+  };
+  classDistribution: Array<{ class: string; active: number; layer4Plus: number; lowAttendance: number }>;
+  risks: Array<{ key: string; label: string; severity: 'info' | 'warning' | 'danger'; detail: string; href: string }>;
+  nextActions: Array<{ label: string; href: string; reason: string; priority: OperationPriority }>;
+  markdown: string;
+};
+
+export type PlayerWeeklySafeSummary = {
+  period: 'week' | 'month';
+  start: Date;
+  end: Date;
+  generatedAt: Date;
+  titlePt: string;
+  titleEn: string;
+  summaryPt: string;
+  summaryEn: string;
+  collective: {
+    finalizedEvents: number;
+    dropsDelivered: number;
+    auctionsFinished: number;
+    requestsDelivered: number;
+    warRoomOperations: number;
+  };
+  actionLinks: Array<{ labelPt: string; labelEn: string; href: string }>;
 };
 
 export type AuctionDiagnosticSummary = SharedAuctionDiagnosticSummary<Date>;

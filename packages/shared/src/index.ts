@@ -3,4 +3,7 @@ export * from './types/auctions';
 export * from './types/events';
 export * from './types/operations';
 export * from './types/requests';
+export * from './types/roster';
+export * from './types/war-room';
 export * from './types/interests';
+export * from './types/wishlist';

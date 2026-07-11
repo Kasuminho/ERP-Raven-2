@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { DKPTransactionType, Event, EventStatus, EventType, PlayerClass, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
+import { DKPTransactionType, Event, EventOperationalCategory, EventStatus, EventType, PlayerClass, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import type {
   EventBatchPanel as SharedEventBatchPanel,
   EventFinalizationChecklist as SharedEventFinalizationChecklist,
@@ -11,7 +11,7 @@ import { AuditService } from '../../audit/services/audit.service';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { NotificationService } from '../../discord/services/notification.service';
-import { AttendanceStatsResponseDto, CreateEventDto, PlayerAttendanceHistoryRowDto } from '../dto';
+import { AttendanceStatsResponseDto, CreateEventDto, EventChecklistItemDto, MarkEventChecklistItemDto, PlayerAttendanceHistoryRowDto } from '../dto';
 import {
   DuplicateAttendanceException,
   EventNotFoundException,
@@ -26,6 +26,16 @@ export type EventFinalizationChecklist = SharedEventFinalizationChecklist<Date, 
 export type EventBatchPanel = SharedEventBatchPanel<Date>;
 export type EventReadinessReport = SharedEventReadinessReport<Date, PlayerClass, ProgressReviewStatus>;
 
+type EventChecklistItem = {
+  key: string;
+  label: string;
+  detail?: string;
+  checked: boolean;
+  checkedAt?: string;
+  checkedById?: string;
+  note?: string;
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -38,6 +48,7 @@ export class AttendanceService {
 
   async createEvent(data: CreateEventDto): Promise<Event> {
     const startsAt = new Date(data.startsAt);
+    const endsAt = data.endsAt ? new Date(data.endsAt) : undefined;
 
     if (!data.name?.trim()) {
       throw new BadRequestException('Event name is required.');
@@ -51,27 +62,44 @@ export class AttendanceService {
       throw new BadRequestException('Valid event start date is required.');
     }
 
+    if (endsAt && (Number.isNaN(endsAt.getTime()) || endsAt <= startsAt)) {
+      throw new BadRequestException('Event end date must be after start date.');
+    }
+
     if (!data.createdById) {
       throw new BadRequestException('Authenticated user is required to create an event.');
     }
 
     const reward = await this.businessRules.getEventReward(data.type);
+    const operationalCategory = data.operationalCategory ?? this.inferOperationalCategory(data.type);
+    const checklist = this.normalizeChecklist(data.checklist?.length ? data.checklist : this.defaultChecklist(operationalCategory, data.type));
     const event = await this.repository.create({
       name: data.name.trim(),
       type: data.type,
       status: EventStatus.ATTENDANCE_REGISTRATION,
+      operationalCategory,
+      priority: data.priority,
       dkpReward: reward,
       startsAt,
+      endsAt,
       createdBy: { connect: { id: data.createdById } },
+      responsibleUserId: data.responsibleUserId,
       attendanceBatchId: data.attendanceBatchId,
       batchOrder: data.batchOrder,
+      checklist: checklist as unknown as Prisma.InputJsonValue,
+      operationalNotes: data.operationalNotes?.trim() || undefined,
     });
 
     await this.audit('EVENT_CREATED', 'Event', event.id, data.createdById, {
       eventId: event.id,
       type: event.type,
+      operationalCategory: event.operationalCategory,
+      priority: event.priority,
       dkpReward: event.dkpReward,
       startsAt: event.startsAt.toISOString(),
+      endsAt: event.endsAt?.toISOString(),
+      responsibleUserId: event.responsibleUserId,
+      checklistKeys: checklist.map((item) => item.key),
     });
     await this.notificationService.notifyAttendanceStarted({
       eventId: event.id,
@@ -80,6 +108,44 @@ export class AttendanceService {
     });
 
     return event;
+  }
+
+  async markChecklistItem(
+    eventId: string,
+    key: string,
+    data: MarkEventChecklistItemDto,
+    actorId?: string,
+  ): Promise<Event> {
+    const event = await this.requireEvent(eventId);
+    const checklist = this.readChecklist(event.checklist);
+    const index = checklist.findIndex((item) => item.key === key);
+
+    if (index < 0) {
+      throw new BadRequestException(`Checklist item ${key} does not exist on event ${eventId}.`);
+    }
+
+    const previous = checklist[index];
+    checklist[index] = {
+      ...previous,
+      checked: data.checked,
+      checkedAt: data.checked ? new Date().toISOString() : undefined,
+      checkedById: data.checked ? actorId : undefined,
+      note: data.note?.trim() || undefined,
+    };
+
+    const updated = await this.repository.updateEvent(eventId, {
+      checklist: checklist as unknown as Prisma.InputJsonValue,
+    });
+
+    await this.audit('EVENT_CHECKLIST_ITEM_UPDATED', 'Event', eventId, actorId, {
+      eventId,
+      key,
+      checked: data.checked,
+      previousChecked: previous.checked,
+      note: data.note,
+    });
+
+    return updated;
   }
 
   async registerAttendance(eventId: string, playerId: string, reviewerId?: string): Promise<void> {
@@ -653,6 +719,7 @@ export class AttendanceService {
         },
         staleStatusPlayers,
         notesPt: this.buildReadinessNotes(roleGaps, staleStatusPlayers.length, presentActivePlayers.length),
+        actionLinks: this.buildReadinessActionLinks(event, roleGaps, staleStatusPlayers.length),
       };
     });
   }
@@ -840,7 +907,7 @@ export class AttendanceService {
     return Number(((participatedEvents / eligibleEvents) * 100).toFixed(2));
   }
 
-  private async requireEvent(eventId: string, tx: Prisma.TransactionClient): Promise<Event> {
+  private async requireEvent(eventId: string, tx?: Prisma.TransactionClient): Promise<Event> {
     const event = await this.repository.findById(eventId, tx);
 
     if (!event) {
@@ -948,6 +1015,88 @@ export class AttendanceService {
     return warnings;
   }
 
+  private inferOperationalCategory(type: EventType): EventOperationalCategory {
+    if (type === EventType.ABYSS_1 || type === EventType.ABYSS_1_2) return EventOperationalCategory.ABYSS;
+    if (type === EventType.GUILD_DUNGEON) return EventOperationalCategory.GUILD_RAID;
+    if (type === EventType.SATURDAY_EVENT || type === EventType.T3_ROTATION) return EventOperationalCategory.FARM;
+    return EventOperationalCategory.BOSS;
+  }
+
+  private defaultChecklist(category: EventOperationalCategory, type: EventType): EventChecklistItemDto[] {
+    const base: EventChecklistItemDto[] = [
+      { key: 'caller', label: 'Caller definido', detail: 'Responsavel por chamadas e wipe/reset.' },
+      { key: 'attendance-backup', label: 'Backup de presenca pronto', detail: 'Print/chamada conferidos antes de finalizar DKP.' },
+      { key: 'prints', label: 'Prints operacionais', detail: 'Prints de composicao, loot ou presenca quando necessario.' },
+    ];
+
+    if (category === EventOperationalCategory.ABYSS || type === EventType.ABYSS_1 || type === EventType.ABYSS_1_2) {
+      return [
+        { key: 'route', label: 'Rota Abyss definida', detail: 'Rota, ponto de encontro e prioridade de objetivo.' },
+        { key: 'minimum-group', label: 'Grupo minimo confirmado', detail: 'Frontline, suporte e DPS suficientes para entrar.' },
+        { key: 'key-classes', label: 'Classes chave presentes', detail: 'Vanguard/Divine Caster/Deathbringer conferidos.' },
+        ...base,
+      ];
+    }
+
+    if (category === EventOperationalCategory.CLASH) {
+      return [
+        { key: 'war-room-linked', label: 'War Room vinculada', detail: 'Operacao e escala taticas abertas.' },
+        { key: 'target-plan', label: 'Plano de alvo', detail: 'Objetivos, caller e substituicoes combinados.' },
+        ...base,
+      ];
+    }
+
+    if (category === EventOperationalCategory.TRAINING) {
+      return [
+        { key: 'training-goal', label: 'Objetivo de treino', detail: 'Mecanica, classe ou rota a treinar.' },
+        { key: 'feedback-owner', label: 'Responsavel por feedback', detail: 'Quem consolida pontos de melhoria.' },
+        ...base,
+      ];
+    }
+
+    return [
+      { key: 'route', label: 'Rota definida', detail: 'Caminho, canal e ponto de encontro combinados.' },
+      { key: 'minimum-group', label: 'Grupo minimo confirmado', detail: 'Quantidade minima e classes chave conferidas.' },
+      { key: 'consumables', label: 'Consumiveis lembrados', detail: 'Buffs, comida e recursos do conteudo.' },
+      { key: 'expected-loot', label: 'Loot esperado alinhado', detail: 'Itens de interesse, requests ou leilao previstos.' },
+      ...base,
+    ];
+  }
+
+  private normalizeChecklist(items: EventChecklistItemDto[]): EventChecklistItem[] {
+    const seen = new Set<string>();
+
+    return items
+      .map((item) => ({
+        key: item.key.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, ''),
+        label: item.label.trim(),
+        detail: item.detail?.trim() || undefined,
+        checked: Boolean(item.checked),
+      }))
+      .filter((item) => {
+        if (!item.key || seen.has(item.key)) return false;
+        seen.add(item.key);
+        return true;
+      });
+  }
+
+  private readChecklist(value: Prisma.JsonValue): EventChecklistItem[] {
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .filter((item): item is Prisma.JsonObject => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      .map((item) => ({
+        key: String(item.key ?? ''),
+        label: String(item.label ?? item.key ?? ''),
+        detail: typeof item.detail === 'string' ? item.detail : undefined,
+        checked: Boolean(item.checked),
+        checkedAt: typeof item.checkedAt === 'string' ? item.checkedAt : undefined,
+        checkedById: typeof item.checkedById === 'string' ? item.checkedById : undefined,
+        note: typeof item.note === 'string' ? item.note : undefined,
+      }))
+      .filter((item) => item.key && item.label);
+  }
+
   private tacticalRoleForClass(playerClass: PlayerClass): EventTacticalRole {
     if (playerClass === PlayerClass.VANGUARD) return 'TANK';
     if (playerClass === PlayerClass.DIVINE_CASTER) return 'HEALER';
@@ -1034,6 +1183,29 @@ export class AttendanceService {
     }
 
     return notes;
+  }
+
+  private buildReadinessActionLinks(
+    event: Event,
+    roleGaps: EventReadinessReport['roleGaps'],
+    staleStatusCount: number,
+  ): EventReadinessReport['actionLinks'] {
+    const links: EventReadinessReport['actionLinks'] = [
+      { label: 'Presenca', href: `/dashboard/admin/events?eventId=${event.id}`, reason: 'Revisar chamada antes de iniciar/finalizar.' },
+      { label: 'Roster', href: '/dashboard/staff/players', reason: 'Conferir classe, camada, build e disponibilidade.' },
+      { label: 'Requests', href: '/dashboard/staff/item-audit', reason: 'Ver pendencias de itens relevantes para o conteudo.' },
+      { label: 'Interesses', href: '/dashboard/staff/interests', reason: 'Cruzar demanda de loot antes de decidir distribuicao.' },
+    ];
+
+    if (roleGaps.some((gap) => gap.missing)) {
+      links.push({ label: 'War Room', href: '/dashboard/staff/war-room', reason: 'Montar escala ou chamar substitutos para gaps de classe.' });
+    }
+
+    if (staleStatusCount > 0) {
+      links.push({ label: 'Progresso', href: '/dashboard/staff/progress', reason: 'Aprovar STATUS atrasado antes de ler CP como verdade.' });
+    }
+
+    return links;
   }
 
   private average(values: number[]): number {

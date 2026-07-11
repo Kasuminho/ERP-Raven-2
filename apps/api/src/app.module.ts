@@ -29,6 +29,9 @@ import { HealthModule } from './modules/health/health.module';
 import { BusinessRulesModule } from './modules/business-rules/business-rules.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SearchModule } from './modules/search/search.module';
+import { WarRoomModule } from './modules/war-room/war-room.module';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { RecruitmentModule } from './modules/recruitment/recruitment.module';
 import { MaintenanceModeGuard } from './common/guards/maintenance-mode.guard';
 
 @Module({
@@ -61,6 +64,9 @@ import { MaintenanceModeGuard } from './common/guards/maintenance-mode.guard';
     DaoshiModule,
     HealthModule,
     SearchModule,
+    WarRoomModule,
+    WishlistModule,
+    RecruitmentModule,
   ],
   providers: [
     {

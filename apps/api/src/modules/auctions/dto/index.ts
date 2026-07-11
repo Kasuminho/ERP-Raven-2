@@ -1,3 +1,4 @@
+export * from './auction-dispute.dto';
 export * from './create-auction.dto';
 export * from './finalize-auction.dto';
 export * from './place-bid.dto';

@@ -1,4 +1,4 @@
-import type { ItemCatalog, PlayerClass, ProgressCategory } from '@/types/api';
+import type { ItemCatalog, PlayerClass, PlayerCombatAvailability, PlayerCombatRole, ProgressCategory } from '@/types/api';
 import type { Locale } from '@/store/locale-store';
 
 export function itemName(item: Pick<ItemCatalog, 'namePt' | 'nameEn' | 'nameEs'> | undefined, locale: Locale, fallback = 'Item'): string {
@@ -127,4 +127,31 @@ export function progressCategoryLabel(category: ProgressCategory, locale: Locale
 
 export function playerClassLabel(playerClass: PlayerClass | undefined, locale: Locale): string {
   return playerClass ? playerClassLabels[playerClass]?.[locale] ?? playerClass : '';
+}
+
+export const combatRoleLabels: Record<PlayerCombatRole, Record<Locale, string>> = {
+  FRONTLINE: { pt: 'Frontline', en: 'Frontline', es: 'Frontline' },
+  BACKLINE: { pt: 'Backline', en: 'Backline', es: 'Backline' },
+  SUPPORT: { pt: 'Suporte', en: 'Support', es: 'Soporte' },
+  CALLER: { pt: 'Caller', en: 'Caller', es: 'Caller' },
+  SCOUT: { pt: 'Scout', en: 'Scout', es: 'Scout' },
+  FLEX: { pt: 'Flex', en: 'Flex', es: 'Flex' },
+  RESERVE: { pt: 'Reserva', en: 'Reserve', es: 'Reserva' },
+};
+
+export const combatAvailabilityLabels: Record<PlayerCombatAvailability, Record<Locale, string>> = {
+  UNSET: { pt: 'Nao informado', en: 'Not set', es: 'No informado' },
+  WEEKDAYS: { pt: 'Dias de semana', en: 'Weekdays', es: 'Dias de semana' },
+  WEEKENDS: { pt: 'Fins de semana', en: 'Weekends', es: 'Fines de semana' },
+  DAILY: { pt: 'Diario', en: 'Daily', es: 'Diario' },
+  FLEX: { pt: 'Flexivel', en: 'Flexible', es: 'Flexible' },
+  LOW: { pt: 'Baixa', en: 'Low', es: 'Baja' },
+};
+
+export function combatRoleLabel(role: PlayerCombatRole | null | undefined, locale: Locale): string {
+  return role ? combatRoleLabels[role]?.[locale] ?? role : '-';
+}
+
+export function combatAvailabilityLabel(availability: PlayerCombatAvailability | null | undefined, locale: Locale): string {
+  return availability ? combatAvailabilityLabels[availability]?.[locale] ?? availability : combatAvailabilityLabels.UNSET[locale];
 }

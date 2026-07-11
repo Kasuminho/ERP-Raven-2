@@ -9,12 +9,12 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEventReadiness, useEvents, useFinalizeEvent, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-events-api';
+import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEventReadiness, useEvents, useFinalizeEvent, useMarkEventChecklistItem, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-events-api';
 import { usePlayers } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { EventType } from '@/types/api';
+import type { EventOperationalCategory, EventOperationalPriority, EventType } from '@/types/api';
 
 const eventTypes: EventType[] = [
   'LUNOS',
@@ -36,6 +36,9 @@ const eventTypes: EventType[] = [
   'T3_ROTATION',
 ];
 
+const operationalCategories: EventOperationalCategory[] = ['BOSS', 'ABYSS', 'GUILD_RAID', 'FARM', 'TRAINING', 'CLASH', 'CUSTOM'];
+const priorities: EventOperationalPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
+
 export default function AdminEventsPage() {
   const events = useEvents();
   const locale = useLocaleStore((state) => state.locale);
@@ -45,9 +48,14 @@ export default function AdminEventsPage() {
   const removeAttendance = useRemoveAttendance();
   const finalizeEvent = useFinalizeEvent();
   const cancelEvent = useCancelEvent();
+  const markChecklistItem = useMarkEventChecklistItem();
   const [name, setName] = useState('');
   const [startsAt, setStartsAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
   const [eventType, setEventType] = useState<EventType>('LUNOS');
+  const [operationalCategory, setOperationalCategory] = useState<EventOperationalCategory>('BOSS');
+  const [priority, setPriority] = useState<EventOperationalPriority>('MEDIUM');
+  const [operationalNotes, setOperationalNotes] = useState('');
   const [selectedEventId, setSelectedEventId] = useState('');
   const [hideFinalized, setHideFinalized] = useState(true);
   const [confirmation, setConfirmation] = useState<'finalize' | 'cancel'>();
@@ -76,12 +84,22 @@ export default function AdminEventsPage() {
   function create() {
     if (!name.trim() || !startsAt) return;
     createEvent.mutate(
-      { name, type: eventType, startsAt: new Date(startsAt).toISOString() },
+      {
+        name,
+        type: eventType,
+        startsAt: new Date(startsAt).toISOString(),
+        endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
+        operationalCategory,
+        priority,
+        operationalNotes: operationalNotes.trim() || undefined,
+      },
       {
         onSuccess: (event: { id: string }) => {
           setSelectedEventId(event.id);
           setName('');
           setStartsAt('');
+          setEndsAt('');
+          setOperationalNotes('');
           notifyToast({ title: t(locale, 'eventCreated'), tone: 'success' });
         },
       },
@@ -159,13 +177,21 @@ export default function AdminEventsPage() {
 
         <Card>
           <CardHeader><CardTitle>{t(locale, 'createEvent')}</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-[1fr_220px_220px_auto]">
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_180px_180px_180px_180px_auto]">
             <Input placeholder={t(locale, 'eventName')} value={name} onChange={(event) => setName(event.target.value)} />
             <Select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)}>
               {eventTypes.map((value) => <option key={value}>{value}</option>)}
             </Select>
+            <Select value={operationalCategory} onChange={(event) => setOperationalCategory(event.target.value as EventOperationalCategory)}>
+              {operationalCategories.map((value) => <option key={value}>{value}</option>)}
+            </Select>
+            <Select value={priority} onChange={(event) => setPriority(event.target.value as EventOperationalPriority)}>
+              {priorities.map((value) => <option key={value}>{value}</option>)}
+            </Select>
             <Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
             <Button onClick={create} disabled={!name.trim() || !startsAt || createEvent.isPending}>{t(locale, 'create')}</Button>
+            <Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
+            <Input className="xl:col-span-4" placeholder="Notas operacionais" value={operationalNotes} onChange={(event) => setOperationalNotes(event.target.value)} />
           </CardContent>
         </Card>
 
@@ -198,7 +224,10 @@ export default function AdminEventsPage() {
                       <p className="text-muted-foreground">{event.type} - {event.dkpReward} DKP</p>
                       <p className="text-xs text-muted-foreground">{new Date(event.startsAt).toLocaleString()}</p>
                     </div>
-                    <Badge tone={event.status === 'FINALIZED' ? 'green' : event.status === 'CANCELLED' ? 'red' : 'gold'}>{event.status}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge tone={event.status === 'FINALIZED' ? 'green' : event.status === 'CANCELLED' ? 'red' : 'gold'}>{event.status}</Badge>
+                      <Badge tone={event.priority === 'HIGH' ? 'red' : event.priority === 'LOW' ? 'muted' : 'blue'}>{event.operationalCategory}</Badge>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -257,6 +286,55 @@ export default function AdminEventsPage() {
                       <p className="text-lg font-semibold">{absentCount}</p>
                     </div>
                   </div>
+                  <div className="grid gap-2 rounded-md border bg-background/35 p-3 text-sm md:grid-cols-4">
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Categoria</p>
+                      <p className="font-semibold">{selectedEvent?.operationalCategory ?? 'BOSS'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Prioridade</p>
+                      <p className="font-semibold">{selectedEvent?.priority ?? 'MEDIUM'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Janela</p>
+                      <p className="font-semibold">{selectedEvent?.endsAt ? new Date(selectedEvent.endsAt).toLocaleTimeString() : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Responsavel</p>
+                      <p className="truncate font-semibold">{selectedEvent?.responsibleUserId ?? '-'}</p>
+                    </div>
+                  </div>
+                  {(selectedEvent?.checklist ?? []).length > 0 ? (
+                    <div className="space-y-3 rounded-md border bg-background/35 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs uppercase text-muted-foreground">Checklist do conteudo</p>
+                        <Badge tone={(selectedEvent?.checklist ?? []).every((item) => item.checked) ? 'green' : 'gold'}>
+                          {(selectedEvent?.checklist ?? []).filter((item) => item.checked).length}/{selectedEvent?.checklist.length ?? 0}
+                        </Badge>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        {(selectedEvent?.checklist ?? []).map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            disabled={isClosed || markChecklistItem.isPending}
+                            onClick={() => markChecklistItem.mutate({
+                              eventId: selectedEventId,
+                              key: item.key,
+                              checked: !item.checked,
+                            }, { onSuccess: () => notifyToast({ title: 'Checklist atualizado.', tone: 'success' }) })}
+                            className={`rounded-md border p-3 text-left text-sm transition disabled:opacity-60 ${item.checked ? 'border-emerald-400/45 bg-emerald-500/10' : 'bg-background/45 hover:border-primary'}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold">{item.label}</p>
+                              <Badge tone={item.checked ? 'green' : 'muted'}>{item.checked ? 'ok' : 'pendente'}</Badge>
+                            </div>
+                            {item.detail ? <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p> : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {selectedBatchId && (
                     <div className="space-y-3 rounded-md border bg-background/35 p-3">
                       {batchPanel.isLoading || !batchPanel.data ? (
@@ -419,6 +497,13 @@ export default function AdminEventsPage() {
                         <div className="space-y-2">
                           {readiness.data.notesPt.map((note) => (
                             <p key={note} className="rounded-md border bg-background/45 p-2 text-xs text-muted-foreground">{note}</p>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {readiness.data.actionLinks.map((link) => (
+                            <a key={link.href} href={link.href} className="rounded-md border border-cyan-400/25 bg-secondary/80 px-3 py-2 text-xs font-semibold hover:border-cyan-300/45" title={link.reason}>
+                              {link.label}
+                            </a>
                           ))}
                         </div>
                       </>

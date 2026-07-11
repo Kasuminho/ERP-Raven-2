@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerCombatAvailability, PlayerCombatProfileChangeRequest, PlayerCombatRole, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, RosterCompositionMatrix, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
 export function usePlayerId() {
   return useAuthStore((state) => state.playerId) ?? '';
@@ -180,6 +180,93 @@ export function usePlayers() {
   return useQuery({
     queryKey: ['players'],
     queryFn: async () => (await api.get<StaffPlayer[]>('/players')).data,
+  });
+}
+
+export function useMyCombatProfile() {
+  return useQuery({
+    queryKey: ['my-combat-profile'],
+    queryFn: async () => (await api.get<StaffPlayer & { combatProfileRequests?: PlayerCombatProfileChangeRequest[] }>('/players/me/combat-profile')).data,
+  });
+}
+
+export function useRequestCombatProfileChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      primaryClass?: PlayerClass;
+      secondaryClass?: PlayerClass;
+      declaredBuild?: string;
+      preferredRole?: PlayerCombatRole;
+      acceptedRoles?: PlayerCombatRole[];
+      availability?: PlayerCombatAvailability;
+      proofImageUrl?: string;
+      note?: string;
+    }) => (await api.post<PlayerCombatProfileChangeRequest>('/players/me/combat-profile/requests', data)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['my-combat-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['my-history'] }),
+      ]);
+    },
+  });
+}
+
+export function useCombatProfileRequests() {
+  return useQuery({
+    queryKey: ['combat-profile-requests'],
+    queryFn: async () => (await api.get<PlayerCombatProfileChangeRequest[]>('/players/combat-profile/requests')).data,
+  });
+}
+
+export function useCombatRosterMatrix() {
+  return useQuery({
+    queryKey: ['combat-roster'],
+    queryFn: async () => (await api.get<RosterCompositionMatrix>('/players/combat-roster')).data,
+  });
+}
+
+export function useUpdateCombatProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      playerId: string;
+      primaryClass: PlayerClass;
+      secondaryClass?: PlayerClass;
+      declaredBuild?: string;
+      preferredRole?: PlayerCombatRole;
+      acceptedRoles?: PlayerCombatRole[];
+      availability?: PlayerCombatAvailability;
+      publicNote?: string;
+      staffNote?: string;
+      reason?: string;
+    }) => {
+      const { playerId, ...payload } = data;
+      return (await api.patch(`/players/${playerId}/combat-profile`, payload)).data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-profile-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['player-history'] }),
+      ]);
+    },
+  });
+}
+
+export function useReviewCombatProfileRequest(action: 'approve' | 'reject') {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { requestId: string; reviewNote?: string }) =>
+      (await api.post<PlayerCombatProfileChangeRequest>(`/players/combat-profile/requests/${data.requestId}/${action}`, { reviewNote: data.reviewNote })).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-profile-requests'] }),
+      ]);
+    },
   });
 }
 

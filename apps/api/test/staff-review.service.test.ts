@@ -88,3 +88,80 @@ describe('StaffReviewService auction rejection', () => {
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, true);
   });
 });
+
+describe('StaffReviewService assisted review', () => {
+  it('builds review alerts and audits alert overrides without deciding the auction', async () => {
+    const auction = makePendingAuction(4);
+    const timeline: any[] = [];
+    const tx = {};
+    const repository = {
+      client: { $transaction: mock.fn(async (callback: any) => callback(tx)) },
+      findAuction: mock.fn(async () => auction),
+      findAuctionReviewDetails: mock.fn(async () => ({
+        ...auction,
+        bids: [],
+        dkpLocks: [],
+        createdBy: { id: 'staff-1' },
+        reviewVotes: [],
+        bidInvalidationVotes: [],
+      })),
+      findReviewTimeline: mock.fn(async () => timeline),
+    };
+    const eligibilityService = {
+      rankAuctionCandidates: mock.fn(async () => [
+        {
+          playerId: 'player-1',
+          nickname: 'Aiko',
+          dimensionalLayer: 4,
+          attendancePercentage: 35,
+          availableDKP: 1000,
+          bidId: 'bid-1',
+          bidAmount: 900,
+          lockAmount: 800,
+          lockMatchesBid: false,
+          priorityScore: 0.5,
+          eligibilityStatus: 'INELIGIBLE',
+          eligibilityReason: 'Player bid and DKP lock are inconsistent.',
+        },
+      ]),
+      rankAuctionCandidatesWithinTransaction: mock.fn(async () => eligibilityService.rankAuctionCandidates()),
+    };
+    const auditService = {
+      logWithinTransaction: mock.fn(async (entry: any) => {
+        timeline.push({
+          id: `audit-${timeline.length + 1}`,
+          action: entry.action,
+          targetType: entry.targetType,
+          targetId: entry.targetId,
+          metadata: entry.metadata,
+          createdAt: new Date(),
+        });
+      }),
+    };
+    const service = new StaffReviewService(
+      repository as never,
+      {} as never,
+      {} as never,
+      eligibilityService as never,
+      auditService as never,
+      {} as never,
+    );
+
+    const details = await service.getAuctionReviewDetails('auction-1');
+
+    assert.ok(details.assistedReview.alerts.some((alert) => alert.key === 'lock-mismatch'));
+    assert.ok(details.assistedReview.alerts.some((alert) => alert.key === 'low-attendance'));
+
+    const afterOverride = await service.overrideReviewAlert(
+      'auction-1',
+      'reviewer-1',
+      'low-attendance',
+      'Player is still the right frontline for this drop',
+      'player-1',
+    );
+
+    assert.equal(auditService.logWithinTransaction.mock.calls[0].arguments[0].action, 'AUCTION_REVIEW_ALERT_OVERRIDDEN');
+    assert.equal(auditService.logWithinTransaction.mock.calls[0].arguments[0].metadata.alertKey, 'low-attendance');
+    assert.ok(afterOverride.assistedReview.overriddenAlertKeys.includes('low-attendance:player-1'));
+  });
+});

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Rocket, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Trophy, UsersRound } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, BellRing, Calculator, CalendarCheck, Clipboard, ClipboardList, Coins, Database, FileText, Gem, HandCoins, HandHeart, HeartHandshake, MessageSquareText, PackageCheck, PackagePlus, Rocket, Scale, ScrollText, SearchCheck, Send, ShieldAlert, SlidersHorizontal, Sunrise, Swords, Trophy, UsersRound } from 'lucide-react';
 import { AuditTimeline } from '@/components/dashboard/audit-timeline';
 import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { StaffHealthPanel } from '@/components/dashboard/staff-health-panel';
@@ -26,8 +26,10 @@ type StaffWorkGroupKey = 'resolve' | 'audit' | 'configure' | 'communicate' | 'de
 
 const tools: StaffTool[] = [
   { href: '/dashboard/staff/day', titleKey: 'staffDay', descriptionKey: 'staffDayDescription', icon: CalendarCheck },
+  { href: '/dashboard/staff/war-room', titleKey: 'warRoom', descriptionKey: 'warRoomDescription', icon: Swords },
   { href: '/dashboard/staff/meeting', titleKey: 'staffMeeting', descriptionKey: 'staffMeetingDescription', icon: HeartHandshake },
   { href: '/dashboard/staff/season', titleKey: 'seasonSummary', descriptionKey: 'seasonSummaryDescription', icon: Trophy },
+  { href: '/dashboard/staff/guild-progress', titleKey: 'guildProgress', descriptionKey: 'guildProgressDescription', icon: BarChart3 },
   { href: '/dashboard/staff/auction-simulator', titleKey: 'auctionSimulator', descriptionKey: 'auctionSimulatorDescription', icon: Calculator },
   { href: '/dashboard/staff/auction-diagnostics', titleKey: 'auctionDiagnostics', descriptionKey: 'auctionDiagnosticsDescription', icon: SearchCheck },
   { href: '/dashboard/staff/fairness', titleKey: 'lootFairness', descriptionKey: 'lootFairnessDescription', icon: Scale },
@@ -41,6 +43,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/integrity', titleKey: 'integrityPanel', descriptionKey: 'integrityPanelDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/rules', titleKey: 'businessRules', descriptionKey: 'businessRulesDescription', icon: SlidersHorizontal },
   { href: '/dashboard/staff/players', titleKey: 'players', descriptionKey: 'staffPlayersDescription', icon: UsersRound },
+  { href: '/dashboard/staff/recruitment', titleKey: 'recruitment', descriptionKey: 'recruitmentDescription', icon: UsersRound },
   { href: '/dashboard/staff/item-audit', titleKey: 'auditTimeline', descriptionKey: 'staffDropsDescription', icon: ClipboardList },
   { href: '/dashboard/staff/item-audit/items', titleKey: 'items', descriptionKey: 'staffDropsDescription', icon: ClipboardList },
   { href: '/dashboard/staff/dkp', titleKey: 'dkp', descriptionKey: 'staffDkpDescription', icon: Coins },
@@ -51,6 +54,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/admin/events', titleKey: 'events', descriptionKey: 'staffEventsDescription', icon: CalendarCheck },
   { href: '/dashboard/admin/items', titleKey: 'items', descriptionKey: 'staffItemsDescription', icon: PackagePlus },
   { href: '/dashboard/staff/interests', titleKey: 'interests', descriptionKey: 'staffInterestsDescription', icon: HandHeart },
+  { href: '/dashboard/staff/wishlist', titleKey: 'wishlist', descriptionKey: 'staffWishlistDescription', icon: Gem },
   { href: '/dashboard/staff/codex', titleKey: 'codex', descriptionKey: 'staffCodexDescription', icon: ScrollText },
   { href: '/dashboard/staff/daoshi', titleKey: 'daoshi', descriptionKey: 'staffDaoshiDescription', icon: HandCoins },
   { href: '/dashboard/staff/progress', titleKey: 'progress', descriptionKey: 'staffProgressDescription', icon: Activity },
@@ -68,13 +72,13 @@ const toolGroups: Array<{
     key: 'resolve',
     label: 'Resolver agora',
     description: 'Pendencias, entregas, reviews, eventos e filas que pedem acao.',
-    hrefs: ['/dashboard/staff/day', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/staff/interests', '/dashboard/staff/codex', '/dashboard/staff/progress'],
+    hrefs: ['/dashboard/staff/day', '/dashboard/staff/war-room', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/staff/interests', '/dashboard/staff/wishlist', '/dashboard/staff/recruitment', '/dashboard/staff/codex', '/dashboard/staff/progress'],
   },
   {
     key: 'audit',
     label: 'Auditar',
     description: 'Diagnosticos, dossies, historico de drops, integridade e comparacoes.',
-    hrefs: ['/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/integrity', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/staff/fairness', '/dashboard/staff/compare'],
+    hrefs: ['/dashboard/staff/auction-diagnostics', '/dashboard/staff/auction-simulator', '/dashboard/staff/guild-progress', '/dashboard/staff/integrity', '/dashboard/staff/legacy-audit', '/dashboard/staff/dossier', '/dashboard/staff/drops', '/dashboard/staff/item-audit', '/dashboard/staff/item-audit/items', '/dashboard/staff/fairness', '/dashboard/staff/compare'],
   },
   {
     key: 'configure',

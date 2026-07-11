@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PlayerClass, PlayerCombatProfileChangeStatus, ProgressReviewStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
-import { UniversalDossier, UniversalDossierType } from '../operations.types';
+import { UniversalDossier, UniversalDossierRiskFlag, UniversalDossierType } from '../operations.types';
 
 @Injectable()
 export class UniversalDossierService {
@@ -25,8 +25,16 @@ export class UniversalDossierService {
         dkpTransactions: { orderBy: { createdAt: 'desc' }, take: 10 },
         dkpLocks: { where: { released: false }, orderBy: { createdAt: 'desc' }, take: 10 },
         itemRequests: { orderBy: { updatedAt: 'desc' }, take: 5 },
-        dropHistories: { orderBy: { deliveredAt: 'desc' }, take: 5 },
-        progressUpdates: { orderBy: { createdAt: 'desc' }, take: 5 },
+        dropHistories: {
+          orderBy: { deliveredAt: 'desc' },
+          take: 5,
+          include: { itemCatalog: { select: { itemTier: true } } },
+        },
+        progressUpdates: { orderBy: { createdAt: 'desc' }, take: 20 },
+        combatProfile: true,
+        combatProfileRequests: { where: { status: PlayerCombatProfileChangeStatus.APPROVED }, orderBy: { reviewedAt: 'desc' }, take: 10 },
+        auctionDisputes: { orderBy: { createdAt: 'desc' }, take: 10 },
+        attendances: { orderBy: { createdAt: 'desc' }, take: 20 },
       },
     });
     if (!player) throw new NotFoundException('Player nao encontrado.');
@@ -47,7 +55,11 @@ export class UniversalDossierService {
       { label: 'Attendance', value: `${player.attendancePercentage.toFixed(2)}%` },
       { label: 'DKP total/locked/available', value: `${totalDkp}/${lockedDkp}/${totalDkp - lockedDkp}` },
     ];
+    const riskFlags = this.buildPlayerRiskFlags(player, totalDkp, lockedDkp);
     const markdown = this.buildUniversalMarkdown('Dossie Staff - Player', player.id, summary, [
+      '## Risk flags operacionais',
+      ...this.markdownList(riskFlags.map((flag) => `[${flag.severity}] ${flag.label}: ${flag.explanation} (${flag.evidenceHref})`)),
+      '',
       '## Requests recentes',
       ...this.markdownList(player.itemRequests.map((request) => `${request.itemName}: rank ${request.rankPosition}, restante ${request.remainingQuantity}/${request.totalQuantity}`)),
       '',
@@ -64,6 +76,7 @@ export class UniversalDossierService {
       id: player.id,
       title: `Dossie Staff - ${player.nickname}`,
       summary,
+      riskFlags,
       internalLinks: [
         { label: 'Perfil Staff', href: `/dashboard/staff/players/${player.id}` },
         { label: 'Comparar players', href: `/dashboard/staff/compare?playerIds=${player.id}` },
@@ -262,6 +275,139 @@ export class UniversalDossierService {
   private markdownList(items: string[]): string[] {
     if (items.length === 0) return ['- Nenhum registro.'];
     return items.map((item) => `- ${item}`);
+  }
+
+  private buildPlayerRiskFlags(
+    player: Prisma.PlayerGetPayload<{
+      include: {
+        dropHistories: { include: { itemCatalog: { select: { itemTier: true } } } };
+        progressUpdates: true;
+        combatProfile: true;
+        combatProfileRequests: true;
+        auctionDisputes: true;
+        attendances: true;
+      };
+    }>,
+    totalDkp: number,
+    lockedDkp: number,
+  ): UniversalDossierRiskFlag[] {
+    const now = Date.now();
+    const days = (value: Date | null | undefined) => value ? Math.floor((now - value.getTime()) / 86_400_000) : null;
+    const flags: UniversalDossierRiskFlag[] = [];
+    const playerHref = `/dashboard/staff/players/${player.id}`;
+    const add = (flag: UniversalDossierRiskFlag) => flags.push(flag);
+    const joinedDays = days(player.joinedAt) ?? 999;
+    const recentCutoff = new Date(now - 30 * 86_400_000);
+    const sixtyDaysCutoff = new Date(now - 60 * 86_400_000);
+
+    if (joinedDays <= 14) {
+      add({
+        key: 'trial',
+        label: 'Trial/recente',
+        severity: 'info',
+        explanation: `Entrou ha ${joinedDays} dias; validar contexto antes de decisao sensivel.`,
+        evidenceHref: playerHref,
+      });
+    }
+    if (player.attendancePercentage < 60) {
+      add({
+        key: 'low-attendance',
+        label: 'Baixa presenca',
+        severity: player.attendancePercentage < 40 ? 'danger' : 'warning',
+        explanation: `Presenca registrada em ${player.attendancePercentage.toFixed(2)}%.`,
+        evidenceHref: `${playerHref}?tab=attendance`,
+      });
+    }
+    const lastPresent = player.attendances.find((attendance) => attendance.attended)?.createdAt;
+    const absentDays = days(lastPresent);
+    if (absentDays === null || absentDays >= 14) {
+      add({
+        key: 'recent-absence',
+        label: 'Ausencia recente',
+        severity: absentDays === null || absentDays >= 30 ? 'danger' : 'warning',
+        explanation: absentDays === null ? 'Nenhuma presenca recente encontrada nos registros carregados.' : `Ultima presenca ha ${absentDays} dias.`,
+        evidenceHref: `${playerHref}?tab=attendance`,
+      });
+    }
+    const expensiveDrop = player.dropHistories.find((drop) => {
+      const deliveredAt = drop.deliveredAt ?? drop.createdAt;
+      const tier = drop.itemCatalog?.itemTier;
+      return deliveredAt >= recentCutoff && (tier === 'T4' || tier === 'LEGENDARY');
+    });
+    if (expensiveDrop) {
+      add({
+        key: 'recent-expensive-loot',
+        label: 'Loot caro recente',
+        severity: 'warning',
+        explanation: `${expensiveDrop.itemName ?? 'Item caro'} entregue ha ${days(expensiveDrop.deliveredAt ?? expensiveDrop.createdAt)} dias.`,
+        evidenceHref: '/dashboard/staff/drops',
+      });
+    }
+    const latestApprovedProgress = player.progressUpdates.find((progress) => progress.reviewStatus === ProgressReviewStatus.APPROVED);
+    const approvedProgressDays = days(latestApprovedProgress?.reviewedAt ?? latestApprovedProgress?.createdAt);
+    if (approvedProgressDays === null || approvedProgressDays > 21) {
+      add({
+        key: 'stale-approved-progress',
+        label: 'Sem progresso aprovado recente',
+        severity: approvedProgressDays === null || approvedProgressDays > 45 ? 'danger' : 'warning',
+        explanation: approvedProgressDays === null ? 'Nenhum progresso aprovado recente encontrado.' : `Ultimo progresso aprovado ha ${approvedProgressDays} dias.`,
+        evidenceHref: `${playerHref}?tab=progress`,
+      });
+    }
+    if (!player.combatProfile?.declaredBuild || !player.combatProfile.preferredRole || player.combatProfile.acceptedRoles.length === 0) {
+      add({
+        key: 'incomplete-build',
+        label: 'Build incompleta',
+        severity: 'warning',
+        explanation: 'Perfil de combate sem build declarada, papel preferido ou papeis aceitos completos.',
+        evidenceHref: '/dashboard/staff/players',
+      });
+    }
+    if (
+      player.class === PlayerClass.VANGUARD
+      || player.class === PlayerClass.DIVINE_CASTER
+      || player.class === PlayerClass.DEATHBRINGER
+    ) {
+      add({
+        key: 'critical-class',
+        label: 'Classe critica',
+        severity: 'info',
+        explanation: `${player.class} costuma pesar em composicao, escala e prioridade operacional.`,
+        evidenceHref: '/dashboard/staff/players',
+      });
+    }
+    const recentDisputes = player.auctionDisputes.filter((dispute) => dispute.createdAt >= sixtyDaysCutoff).length;
+    if (recentDisputes >= 2) {
+      add({
+        key: 'many-disputes',
+        label: 'Muita contestacao',
+        severity: recentDisputes >= 3 ? 'danger' : 'warning',
+        explanation: `${recentDisputes} contestacoes nos ultimos 60 dias.`,
+        evidenceHref: '/dashboard/staff/reviews',
+      });
+    }
+    const recentClassChanges = player.combatProfileRequests.filter((request) => (request.reviewedAt ?? request.createdAt) >= sixtyDaysCutoff).length;
+    if (recentClassChanges >= 2) {
+      add({
+        key: 'many-class-changes',
+        label: 'Muita troca de classe/build',
+        severity: recentClassChanges >= 3 ? 'danger' : 'warning',
+        explanation: `${recentClassChanges} mudancas de perfil de combate aprovadas nos ultimos 60 dias.`,
+        evidenceHref: '/dashboard/staff/players',
+      });
+    }
+    const lockedShare = totalDkp > 0 ? Math.round((lockedDkp / totalDkp) * 100) : 0;
+    if (lockedDkp >= 500 || lockedShare >= 50) {
+      add({
+        key: 'high-locked-dkp',
+        label: 'DKP travado alto',
+        severity: lockedDkp >= 1000 || lockedShare >= 75 ? 'danger' : 'warning',
+        explanation: `${lockedDkp} DKP travado (${lockedShare}% do saldo positivo calculado).`,
+        evidenceHref: '/dashboard/staff/dkp',
+      });
+    }
+
+    return flags;
   }
 
   private async loadDossierAuditLogs(or: Prisma.AuditLogWhereInput[]): Promise<UniversalDossier['auditLogs']> {

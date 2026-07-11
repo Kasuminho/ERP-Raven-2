@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 import { AuctionDiagnosticsService } from '../src/modules/operations/services/auction-diagnostics.service';
+import { ContextualEligibilityService } from '../src/modules/operations/services/contextual-eligibility.service';
 import { DiscordOperationsService } from '../src/modules/operations/services/discord-operations.service';
+import { GuildProgressReportService } from '../src/modules/operations/services/guild-progress-report.service';
 import { MeetingService } from '../src/modules/operations/services/meeting.service';
 import { OperationalBriefingService } from '../src/modules/operations/services/operational-briefing.service';
 import { OperationsAuditService } from '../src/modules/operations/services/operations-audit.service';
@@ -839,5 +841,148 @@ describe('Operations domain services', () => {
       service.getUniversalDossier('auction', 'auction-1'),
       /Tipo de dossie nao suportado/,
     );
+  });
+
+  it('adds Staff-only operational risk flags to player universal dossiers', async () => {
+    const now = new Date();
+    const recent = new Date(now.getTime() - 5 * 86_400_000);
+    const prisma = {
+      player: {
+        findUnique: mock.fn(async () => ({
+          id: 'player-1',
+          nickname: 'Aiko',
+          class: 'VANGUARD',
+          dimensionalLayer: 4,
+          combatPower: 10000,
+          attendancePercentage: 35,
+          joinedAt: new Date(now.getTime() - 3 * 86_400_000),
+          user: { discordId: 'discord-1', discordUsername: 'aiko', discordNickname: 'Aiko' },
+          dkpTransactions: [{ amount: 1200 }],
+          dkpLocks: [{ amount: 800, createdAt: recent }],
+          itemRequests: [],
+          dropHistories: [{ itemName: 'Cajado T4', deliveredAt: recent, createdAt: recent, itemCatalog: { itemTier: 'T4' } }],
+          progressUpdates: [{ category: 'STATUS', reviewStatus: 'PENDING', createdAt: recent }],
+          combatProfile: { declaredBuild: '', preferredRole: null, acceptedRoles: [] },
+          combatProfileRequests: [
+            { reviewedAt: recent, createdAt: recent },
+            { reviewedAt: recent, createdAt: recent },
+          ],
+          auctionDisputes: [
+            { createdAt: recent },
+            { createdAt: recent },
+          ],
+          attendances: [{ attended: false, createdAt: recent }],
+        })),
+      },
+      auditLog: {
+        findMany: mock.fn(async () => []),
+      },
+    };
+    const service = new UniversalDossierService(prisma as never);
+
+    const dossier = await service.getUniversalDossier('player', 'player-1');
+    const keys = new Set(dossier.riskFlags?.map((flag) => flag.key));
+
+    assert.equal(dossier.type, 'player');
+    assert.ok(keys.has('trial'));
+    assert.ok(keys.has('low-attendance'));
+    assert.ok(keys.has('recent-absence'));
+    assert.ok(keys.has('recent-expensive-loot'));
+    assert.ok(keys.has('stale-approved-progress'));
+    assert.ok(keys.has('incomplete-build'));
+    assert.ok(keys.has('critical-class'));
+    assert.ok(keys.has('many-disputes'));
+    assert.ok(keys.has('many-class-changes'));
+    assert.ok(keys.has('high-locked-dkp'));
+    assert.ok(dossier.riskFlags?.every((flag) => flag.evidenceHref.startsWith('/dashboard/staff')));
+    assert.match(dossier.markdown, /Risk flags operacionais/);
+    assert.match(dossier.markdown, /Baixa presenca/);
+  });
+
+  it('explains Staff-only contextual eligibility for item requests', async () => {
+    const now = new Date();
+    const prisma = {
+      player: {
+        findUnique: mock.fn(async () => ({
+          id: 'player-1',
+          nickname: 'Aiko',
+          class: 'VANGUARD',
+          dimensionalLayer: 3,
+          combatPower: 11000,
+          attendancePercentage: 72,
+          isActive: true,
+          combatProfile: {
+            declaredBuild: 'frontline sustain',
+            preferredRole: 'FRONTLINE',
+            acceptedRoles: ['FLEX'],
+            secondaryClass: null,
+          },
+          progressUpdates: [{ category: 'STATUS', reviewStatus: 'APPROVED', createdAt: now }],
+          dropHistories: [],
+          itemRequests: [],
+        })),
+      },
+      itemRequest: {
+        findUnique: mock.fn(async () => ({
+          id: 'request-1',
+          playerId: 'player-1',
+          playerName: 'Aiko',
+          itemName: 'Armadura T4',
+          rankPosition: 1,
+          remainingQuantity: 1,
+          totalQuantity: 1,
+          updateProofStatus: null,
+          itemCatalog: {
+            itemTier: 'T4',
+            itemType: 'ARMOR',
+            preferredClasses: ['VANGUARD'],
+          },
+          player: { id: 'player-1', nickname: 'Aiko' },
+        })),
+      },
+    };
+    const dkpService = { calculateAvailableDKP: mock.fn(async () => 430) };
+    const service = new ContextualEligibilityService(prisma as never, dkpService as never, {} as never);
+
+    const summary = await service.getContextualEligibility('player-1', { type: 'request', contextId: 'request-1' });
+
+    assert.equal(summary.context.type, 'request');
+    assert.equal(summary.context.label, 'Armadura T4');
+    assert.equal(summary.player.availableDkp, 430);
+    assert.equal(summary.decision, 'review');
+    assert.ok(summary.reasons.some((reason) => reason.key === 'layer' && reason.status === 'review'));
+    assert.ok(summary.reasons.some((reason) => reason.key === 'request-owner' && reason.status === 'eligible'));
+    assert.ok(summary.appliedRules.some((rule) => rule.includes('T4')));
+  });
+
+  it('builds Staff guild progress and player-safe summaries without rankings', async () => {
+    const prisma = {
+      event: { count: mock.fn(async () => 2) },
+      eventAttendance: { count: mock.fn(async () => 20) },
+      dropHistory: { count: mock.fn(async () => 3) },
+      auction: { count: mock.fn(async () => 4) },
+      itemRequest: { count: mock.fn(async () => 1) },
+      playerProgress: { count: mock.fn(async () => 5) },
+      warRoomOperation: { count: mock.fn(async () => 1) },
+      playerWishlistItem: { count: mock.fn(async () => 6) },
+      auctionDispute: { count: mock.fn(async () => 0) },
+      player: {
+        findMany: mock.fn(async () => [
+          { class: 'VANGUARD', dimensionalLayer: 4, attendancePercentage: 90 },
+          { class: 'DIVINE_CASTER', dimensionalLayer: 3, attendancePercentage: 55 },
+        ]),
+      },
+    };
+    const service = new GuildProgressReportService(prisma as never);
+
+    const staff = await service.getStaffReport('week');
+    const player = await service.getPlayerSafeSummary('week');
+
+    assert.equal(staff.counts.finalizedEvents, 2);
+    assert.ok(staff.classDistribution.some((row) => row.class === 'VANGUARD'));
+    assert.ok(staff.markdown.includes('Relatorio de progresso'));
+    assert.equal(player.collective.finalizedEvents, 2);
+    assert.doesNotMatch(player.summaryPt, /ranking/i);
+    assert.ok(player.actionLinks.every((link) => link.href.startsWith('/dashboard')));
   });
 });

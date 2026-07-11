@@ -11,16 +11,16 @@ import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useAttendanceStats, useCommentProgress, useCreateProgress, useMarkProgressCommentsRead, useMyHistory, usePlayerId, useUpdatePlayerProfile, useUpdatePreferences, useUploadImage } from '@/hooks/use-profile-api';
+import { useAttendanceStats, useCommentProgress, useCreateProgress, useMarkProgressCommentsRead, useMyCombatProfile, useMyHistory, usePlayerId, useRequestCombatProfileChange, useUpdatePlayerProfile, useUpdatePreferences, useUploadImage } from '@/hooks/use-profile-api';
 import { useConfirmCodexRequest, useCreateCodexRequest, useMyCodexRequests, useRetryCodexRequest } from '@/hooks/use-codex-api';
 import { useCreateMyItemRequest } from '@/hooks/use-requests-api';
 import { useDkpSummary } from '@/hooks/use-dkp-api';
 import { useRequestableItems } from '@/hooks/use-items-api';
 import { api } from '@/lib/api';
-import { itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
+import { combatAvailabilityLabel, combatRoleLabel, itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { Locale, useLocaleStore } from '@/store/locale-store';
-import type { PlayerClass, PlayerProgress, ProgressCategory } from '@/types/api';
+import type { PlayerClass, PlayerCombatAvailability, PlayerCombatRole, PlayerProgress, ProgressCategory } from '@/types/api';
 
 const playerClasses: PlayerClass[] = [
   'GUNSLINGER',
@@ -69,6 +69,9 @@ const timezoneOptions = [
   { value: 'Asia/Tokyo', label: 'Japan' },
 ];
 
+const combatRoles: PlayerCombatRole[] = ['FRONTLINE', 'BACKLINE', 'SUPPORT', 'CALLER', 'SCOUT', 'FLEX', 'RESERVE'];
+const availabilityOptions: PlayerCombatAvailability[] = ['UNSET', 'WEEKDAYS', 'WEEKENDS', 'DAILY', 'FLEX', 'LOW'];
+
 export default function ProfilePage() {
   const currentLocale = useLocaleStore((state) => state.locale);
   const setCurrentLocale = useLocaleStore((state) => state.setLocale);
@@ -76,9 +79,11 @@ export default function ProfilePage() {
   const dkp = useDkpSummary(playerId);
   const attendance = useAttendanceStats(playerId);
   const history = useMyHistory();
+  const combatProfile = useMyCombatProfile();
   const requestableItems = useRequestableItems();
   const updatePreferences = useUpdatePreferences();
   const updateProfile = useUpdatePlayerProfile();
+  const requestCombatProfileChange = useRequestCombatProfileChange();
   const createProgress = useCreateProgress();
   const commentProgress = useCommentProgress();
   const markProgressCommentsRead = useMarkProgressCommentsRead();
@@ -103,11 +108,21 @@ export default function ProfilePage() {
     combatPower: '',
     dimensionalLayer: '',
   });
+  const [combatRequest, setCombatRequest] = useState({
+    primaryClass: '' as '' | PlayerClass,
+    secondaryClass: '' as '' | PlayerClass,
+    declaredBuild: '',
+    preferredRole: '' as '' | PlayerCombatRole,
+    availability: 'UNSET' as PlayerCombatAvailability,
+    proofImageUrl: '',
+    note: '',
+  });
   const [progressUploading, setProgressUploading] = useState(false);
   const [progressCommentDrafts, setProgressCommentDrafts] = useState<Record<string, string>>({});
   const [request, setRequest] = useState({ itemCatalogId: '', quantity: 1, imageUrl: '' });
   const [codex, setCodex] = useState({ imageUrl: '', note: '' });
   const player = history.data?.player;
+  const currentCombatProfile = combatProfile.data?.combatProfile ?? player?.combatProfile;
   const selectedProgressCategory = progressCategories.find((category) => category.value === progress.category);
   const isStatusProgress = progress.category === 'STATUS';
   const isRiftProgress = progress.category === 'DIMENSIONAL_RIFT';
@@ -217,6 +232,78 @@ export default function ProfilePage() {
         </Card>
         <DKPCard {...dkp.data} />
       </div>
+      <Card>
+        <CardHeader><CardTitle>Perfil de combate / Combat profile</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+          <div className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">{t(currentLocale, 'class')}:</span> {playerClassLabel(currentCombatProfile?.primaryClass ?? player?.class, currentLocale)}</p>
+            <p><span className="text-muted-foreground">Secundaria / Secondary:</span> {playerClassLabel(currentCombatProfile?.secondaryClass ?? undefined, currentLocale) || '-'}</p>
+            <p><span className="text-muted-foreground">Build:</span> {currentCombatProfile?.declaredBuild ?? '-'}</p>
+            <p><span className="text-muted-foreground">Role:</span> {combatRoleLabel(currentCombatProfile?.preferredRole, currentLocale)}</p>
+            <p><span className="text-muted-foreground">Disponibilidade / Availability:</span> {combatAvailabilityLabel(currentCombatProfile?.availability, currentLocale)}</p>
+            <p className="text-xs text-muted-foreground">
+              PT-BR: A Staff usa isso para escala e War Room. EN: Staff uses this for rosters and War Room planning.
+            </p>
+            {(combatProfile.data?.combatProfileRequests ?? []).length > 0 && (
+              <div className="rounded-md border bg-background/35 p-3">
+                <p className="font-semibold">Pedidos recentes / Recent requests</p>
+                {(combatProfile.data?.combatProfileRequests ?? []).map((request) => (
+                  <p key={request.id} className="text-xs text-muted-foreground">
+                    {new Date(request.createdAt).toLocaleDateString()} - {request.status}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Select value={combatRequest.primaryClass} onChange={(event) => setCombatRequest((current) => ({ ...current, primaryClass: event.target.value as PlayerClass | '' }))}>
+              <option value="">Classe principal / Main class</option>
+              {playerClasses.map((playerClass) => <option key={playerClass} value={playerClass}>{playerClassLabel(playerClass, currentLocale)}</option>)}
+            </Select>
+            <Select value={combatRequest.secondaryClass} onChange={(event) => setCombatRequest((current) => ({ ...current, secondaryClass: event.target.value as PlayerClass | '' }))}>
+              <option value="">Classe secundaria / Secondary class</option>
+              {playerClasses.map((playerClass) => <option key={playerClass} value={playerClass}>{playerClassLabel(playerClass, currentLocale)}</option>)}
+            </Select>
+            <Input placeholder="Build / Build" value={combatRequest.declaredBuild} onChange={(event) => setCombatRequest((current) => ({ ...current, declaredBuild: event.target.value }))} />
+            <Select value={combatRequest.preferredRole} onChange={(event) => setCombatRequest((current) => ({ ...current, preferredRole: event.target.value as PlayerCombatRole | '' }))}>
+              <option value="">Role preferido / Preferred role</option>
+              {combatRoles.map((role) => <option key={role} value={role}>{combatRoleLabel(role, currentLocale)}</option>)}
+            </Select>
+            <Select value={combatRequest.availability} onChange={(event) => setCombatRequest((current) => ({ ...current, availability: event.target.value as PlayerCombatAvailability }))}>
+              {availabilityOptions.map((availability) => <option key={availability} value={availability}>{combatAvailabilityLabel(availability, currentLocale)}</option>)}
+            </Select>
+            <FileUploadButton label="Print / Screenshot" onFileSelect={(files) => {
+              const file = files?.[0];
+              if (file) uploadImage.mutate(file, { onSuccess: (data) => setCombatRequest((current) => ({ ...current, proofImageUrl: data.url })) });
+            }} />
+            {combatRequest.proofImageUrl && <p className="text-xs text-primary md:col-span-2">Print anexado / Screenshot attached</p>}
+            <Input className="md:col-span-2" placeholder="Nota para Staff / Note to Staff" value={combatRequest.note} onChange={(event) => setCombatRequest((current) => ({ ...current, note: event.target.value }))} />
+            <Button
+              className="md:col-span-2"
+              disabled={requestCombatProfileChange.isPending}
+              onClick={() => requestCombatProfileChange.mutate(
+                {
+                  primaryClass: combatRequest.primaryClass || undefined,
+                  secondaryClass: combatRequest.secondaryClass || undefined,
+                  declaredBuild: combatRequest.declaredBuild || undefined,
+                  preferredRole: combatRequest.preferredRole || undefined,
+                  availability: combatRequest.availability === 'UNSET' ? undefined : combatRequest.availability,
+                  proofImageUrl: combatRequest.proofImageUrl || undefined,
+                  note: combatRequest.note || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    setCombatRequest({ primaryClass: '', secondaryClass: '', declaredBuild: '', preferredRole: '', availability: 'UNSET', proofImageUrl: '', note: '' });
+                    notifyToast({ title: 'Pedido enviado para Staff / Request sent to Staff.', tone: 'success' });
+                  },
+                },
+              )}
+            >
+              Enviar pedido / Send request
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       <div className="grid gap-6 xl:grid-cols-3">
         <Card>
           <CardHeader><CardTitle>{t(currentLocale, 'completeProfile')}</CardTitle></CardHeader>

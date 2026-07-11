@@ -30,6 +30,27 @@ export type MaintenanceModeRules = {
   message: string;
 };
 
+export type DkpBidPolicyRules = {
+  enabled: boolean;
+  minimumCost: number;
+  winTaxPercent: number;
+  tierCaps: Record<string, number>;
+  itemTypeCaps: Record<string, number>;
+  layerCaps: Record<string, number>;
+  fixedCostByTier: Record<string, number>;
+  modeMultiplierPercent: Record<string, number>;
+  sourceSimulationId?: string;
+  sourceSimulationName?: string;
+  promotedAt?: string;
+  promotedById?: string;
+  reason?: string;
+};
+
+export type AuctionDisputeRules = {
+  enabled: boolean;
+  windowHours: number;
+};
+
 export const defaultEventRewardRules: EventRewardRules = {
   [EventType.LUNOS]: 20,
   [EventType.RIGRETO]: 20,
@@ -103,6 +124,22 @@ export const defaultMaintenanceModeRules: MaintenanceModeRules = {
   message: 'Operacao em manutencao. Leituras continuam liberadas; acoes sensiveis ficam pausadas ate a Staff liberar.',
 };
 
+export const defaultDkpBidPolicyRules: DkpBidPolicyRules = {
+  enabled: false,
+  minimumCost: 0,
+  winTaxPercent: 0,
+  tierCaps: {},
+  itemTypeCaps: {},
+  layerCaps: {},
+  fixedCostByTier: {},
+  modeMultiplierPercent: {},
+};
+
+export const defaultAuctionDisputeRules: AuctionDisputeRules = {
+  enabled: true,
+  windowHours: 48,
+};
+
 export const businessRuleDefaults = [
   {
     key: 'eventRewards',
@@ -138,5 +175,19 @@ export const businessRuleDefaults = [
     label: 'Modo manutencao',
     description: 'Bloqueia mutacoes sensiveis durante restore, incidente ou janela operacional controlada.',
     value: defaultMaintenanceModeRules,
+  },
+  {
+    key: 'dkpBidPolicy',
+    category: 'auctions',
+    label: 'Politica operacional de bids',
+    description: 'Documenta cap, taxa, floor e multiplicadores aprovados pela Staff a partir de simulacoes DKP.',
+    value: defaultDkpBidPolicyRules,
+  },
+  {
+    key: 'auctionDisputeRules',
+    category: 'auctions',
+    label: 'Contestacao pos-leilao',
+    description: 'Controla janela e disponibilidade da contestacao controlada depois do resultado.',
+    value: defaultAuctionDisputeRules,
   },
 ] as const;

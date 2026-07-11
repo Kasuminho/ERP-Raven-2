@@ -3,7 +3,7 @@ import { Event } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto } from '../dto';
+import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, MarkEventChecklistItemDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto } from '../dto';
 import { EventDetails } from '../repositories/events.repository';
 import { AttendanceService, EventBatchPanel, EventFinalizationChecklist, EventReadinessReport, FinalizeEventResult } from '../services/attendance.service';
 import { EventsService } from '../services/events.service';
@@ -64,6 +64,18 @@ export class EventsController {
   @Roles('STAFF', 'ADMIN')
   async finalizationChecklist(@Param('id') eventId: string): Promise<EventFinalizationChecklist> {
     return this.attendanceService.getFinalizationChecklist(eventId);
+  }
+
+  @Post('events/:id/checklist/:key')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async markChecklistItem(
+    @Param('id') eventId: string,
+    @Param('key') key: string,
+    @Body() dto: MarkEventChecklistItemDto,
+    @Req() req: AuthRequest,
+  ): Promise<Event> {
+    return this.attendanceService.markChecklistItem(eventId, key, dto, req.user?.userId);
   }
 
   @Get('events/:id/readiness')

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, type ComponentType } from 'react';
-import { BellRing, BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, Menu, ScrollText, ShieldAlert, UserRound, X } from 'lucide-react';
+import { BellRing, BookOpenCheck, CalendarCheck, ClipboardList, Clock3, Compass, Gem, Gavel, HandCoins, HandHeart, LayoutDashboard, LogOut, Menu, ScrollText, ShieldAlert, Swords, UserRound, X } from 'lucide-react';
 import { GlobalSearch } from '@/components/dashboard/global-search';
 import { ProfileLocaleSync } from '@/components/dashboard/profile-locale-sync';
 import { AuthGuard } from '@/components/guards/auth-guard';
@@ -20,14 +20,17 @@ type NavLabel = Parameters<typeof t>[1];
 const nav: Array<{ href: string; label: NavLabel; icon: ComponentType<{ className?: string }> }> = [
   { href: '/dashboard', label: 'command', icon: LayoutDashboard },
   { href: '/dashboard/notices', label: 'notices', icon: BellRing },
+  { href: '/dashboard/my-war-room', label: 'myWarRoom', icon: Swords },
   { href: '/dashboard/rules', label: 'rules', icon: ScrollText },
   { href: '/dashboard/onboarding', label: 'onboarding', icon: Compass },
   { href: '/dashboard/auctions', label: 'auctions', icon: Gavel },
   { href: '/dashboard/interests', label: 'interests', icon: HandHeart },
+  { href: '/dashboard/wishlist', label: 'wishlist', icon: Gem },
   { href: '/dashboard/item-requests', label: 'requests', icon: ClipboardList },
   { href: '/dashboard/codex', label: 'codex', icon: BookOpenCheck },
   { href: '/dashboard/daoshi', label: 'daoshi', icon: HandCoins },
   { href: '/dashboard/timeline', label: 'timeline', icon: Clock3 },
+  { href: '/dashboard/weekly-summary', label: 'weeklySummary', icon: ScrollText },
   { href: '/dashboard/drops', label: 'drops', icon: Gem },
   { href: '/dashboard/attendance', label: 'attendance', icon: CalendarCheck },
   { href: '/dashboard/profile', label: 'profile', icon: UserRound },
@@ -36,9 +39,9 @@ const nav: Array<{ href: string; label: NavLabel; icon: ComponentType<{ classNam
 const mobilePrimaryHrefs = new Set(['/dashboard', '/dashboard/auctions', '/dashboard/interests', '/dashboard/item-requests']);
 
 const navGroups: Array<{ label: string; hrefs: string[] }> = [
-  { label: 'Agora', hrefs: ['/dashboard', '/dashboard/notices', '/dashboard/onboarding'] },
-  { label: 'Loot', hrefs: ['/dashboard/auctions', '/dashboard/interests', '/dashboard/item-requests', '/dashboard/codex', '/dashboard/drops'] },
-  { label: 'Progresso', hrefs: ['/dashboard/daoshi', '/dashboard/timeline', '/dashboard/attendance', '/dashboard/rules'] },
+  { label: 'Agora', hrefs: ['/dashboard', '/dashboard/notices', '/dashboard/my-war-room', '/dashboard/onboarding'] },
+  { label: 'Loot', hrefs: ['/dashboard/auctions', '/dashboard/interests', '/dashboard/wishlist', '/dashboard/item-requests', '/dashboard/codex', '/dashboard/drops'] },
+  { label: 'Progresso', hrefs: ['/dashboard/daoshi', '/dashboard/timeline', '/dashboard/weekly-summary', '/dashboard/attendance', '/dashboard/rules'] },
   { label: 'Conta', hrefs: ['/dashboard/profile'] },
 ];
 

@@ -47,6 +47,16 @@ enum EventStatus {
   CANCELLED
 }
 
+enum EventOperationalCategory {
+  BOSS
+  ABYSS
+  GUILD_RAID
+  FARM
+  TRAINING
+  CLASH
+  CUSTOM
+}
+
 enum AuctionStatus {
   OPEN
   PENDING_REVIEW
@@ -124,6 +134,12 @@ enum AuctionBidCancellationStatus {
   REJECTED
 }
 
+enum AuctionDisputeStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum DiscordWebhookDeliveryStatus {
   PENDING
   SENDING
@@ -158,6 +174,110 @@ enum PlayerStaffNoteSeverity {
   STRIKE
 }
 
+enum PlayerCombatRole {
+  FRONTLINE
+  BACKLINE
+  SUPPORT
+  CALLER
+  SCOUT
+  FLEX
+  RESERVE
+}
+
+enum PlayerCombatAvailability {
+  UNSET
+  WEEKDAYS
+  WEEKENDS
+  DAILY
+  FLEX
+  LOW
+}
+
+enum PlayerCombatProfileChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WarRoomOperationType {
+  CLASH
+  ANCIENT_FORTRESS
+  ABYSS
+  GUILD_RAID
+  CUSTOM
+}
+
+enum WarRoomOperationStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum WarRoomOperationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum WarRoomRosterSlotStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  PRESENT
+  ABSENT
+  JUSTIFIED_ABSENCE
+}
+
+enum WarRoomTimelineEventType {
+  NOTE
+  CALL
+  ENGAGE
+  WIPE
+  OBJECTIVE_CAPTURED
+  BOSS
+  TARGET_SWAP
+  SUBSTITUTION
+  CONTRIBUTION
+  RISK
+  CLOSED
+}
+
+enum DkpPolicySimulationType {
+  DECAY
+  BID_POLICY
+}
+
+enum DkpPolicySimulationStatus {
+  DRAFT
+  PROMOTED
+  ARCHIVED
+}
+
+enum WishlistPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WishlistStatus {
+  ACTIVE
+  PAUSED
+  FULFILLED
+  REMOVED
+}
+
+enum RecruitmentApplicationStatus {
+  PENDING
+  TRIAGE
+  ACCEPTED
+  REJECTED
+  CONVERTED
+  ARCHIVED
+}
+
 enum NotificationAudience {
   PLAYER
   STAFF
@@ -185,15 +305,26 @@ model User {
   auctionReviewVotes       AuctionReviewVote[]             @relation("AuctionReviewVoteVoter")
   auctionBidInvalidationVotes AuctionBidInvalidationVote[]  @relation("AuctionBidInvalidationVoteVoter")
   reviewedBidCancellations AuctionBidCancellationRequest[] @relation("AuctionBidCancellationReviewedBy")
+  reviewedAuctionDisputes  AuctionDispute[]                @relation("AuctionDisputeReviewedBy")
   sentCodexRequests        CodexRequest[]                  @relation("CodexRequestSentBy")
   reviewedProgress         PlayerProgress[]                @relation("PlayerProgressReviewedBy")
   progressComments         PlayerProgressComment[]
   staffNotes               PlayerStaffNote[]               @relation("PlayerStaffNoteAuthor")
+  updatedCombatProfiles    PlayerCombatProfile[]           @relation("PlayerCombatProfileUpdatedBy")
+  reviewedCombatRequests   PlayerCombatProfileChangeRequest[] @relation("PlayerCombatRequestReviewedBy")
+  createdWarRoomOperations WarRoomOperation[]               @relation("WarRoomOperationCreatedBy")
+  createdWarRoomRosterSlots WarRoomRosterSlot[]             @relation("WarRoomRosterSlotCreatedBy")
+  markedWarRoomAttendanceSlots WarRoomRosterSlot[]          @relation("WarRoomRosterSlotAttendanceMarkedBy")
+  createdWarRoomTimelineEvents WarRoomTimelineEvent[]       @relation("WarRoomTimelineEventCreatedBy")
+  createdDkpPolicySimulations DkpPolicySimulation[]         @relation("DkpPolicySimulationCreatedBy")
+  promotedDkpPolicySimulations DkpPolicySimulation[]        @relation("DkpPolicySimulationPromotedBy")
   reviewedDaoshiReceipts   DaoshiCashReceipt[]             @relation("DaoshiReceiptReviewedBy")
   executedDaoshiRaffles    DaoshiRaffle[]                  @relation("DaoshiRaffleExecutedBy")
   auditLogs                AuditLog[]                      @relation("AuditLogActor")
   updatedBusinessRules     BusinessRule[]                  @relation("BusinessRuleUpdatedBy")
   notifications            Notification[]
+  reviewedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationReviewedBy")
+  convertedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationConvertedBy")
 
   @@index([discordUsername])
   @@index([discordGuildId])
@@ -218,23 +349,110 @@ model Player {
   dkpTransactions         DKPTransaction[]
   dkpLocks                DKPLock[]
   auctionBids             AuctionBid[]
+  auctionDisputes         AuctionDispute[]
   progressUpdates         PlayerProgress[]
   staffNotes              PlayerStaffNote[]
+  combatProfile           PlayerCombatProfile?
+  combatProfileRequests   PlayerCombatProfileChangeRequest[]
+  warRoomRosterSlots      WarRoomRosterSlot[]
   itemInterests           ItemInterestEntry[]
   itemInterestViews       ItemInterestView[]
   codexRequests           CodexRequest[]
   itemRequests            ItemRequest[]
+  wishlistItems           PlayerWishlistItem[]
   daoshiCashReceipts      DaoshiCashReceipt[]
   wonDaoshiRaffles        DaoshiRaffle[]
   dropHistories           DropHistory[]
   bidCancellationRequests AuctionBidCancellationRequest[]
   notifications           Notification[]
+  convertedRecruitmentApplication RecruitmentApplication? @relation("RecruitmentApplicationConvertedPlayer")
 
   @@index([userId])
   @@index([class])
   @@index([dimensionalLayer])
   @@index([attendancePercentage])
   @@index([isActive])
+}
+
+model RecruitmentApplication {
+  id             String                       @id @default(uuid())
+  nickname       String
+  discordTag     String?
+  playerClass    PlayerClass
+  combatPower    Int
+  dimensionalLayer Int                        @db.SmallInt
+  availability   String
+  focus          String
+  experience     String
+  proofImageUrl  String?
+  notes          String?
+  rulesAccepted  Boolean
+  status         RecruitmentApplicationStatus @default(PENDING)
+  reviewedById   String?
+  convertedById  String?
+  convertedPlayerId String?                   @unique
+  reviewedAt     DateTime?
+  convertedAt    DateTime?
+  reviewNote     String?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+  reviewedBy     User?                        @relation("RecruitmentApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  convertedBy    User?                        @relation("RecruitmentApplicationConvertedBy", fields: [convertedById], references: [id], onDelete: SetNull)
+  convertedPlayer Player?                     @relation("RecruitmentApplicationConvertedPlayer", fields: [convertedPlayerId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([playerClass])
+  @@index([dimensionalLayer])
+  @@index([reviewedById])
+  @@index([convertedById])
+}
+
+model PlayerCombatProfile {
+  playerId        String                   @id
+  primaryClass    PlayerClass
+  secondaryClass  PlayerClass?
+  declaredBuild   String?
+  preferredRole   PlayerCombatRole?
+  acceptedRoles   PlayerCombatRole[]       @default([])
+  availability    PlayerCombatAvailability @default(UNSET)
+  publicNote      String?
+  staffNote       String?
+  updatedById     String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  player          Player                   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  updatedBy       User?                    @relation("PlayerCombatProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([primaryClass])
+  @@index([secondaryClass])
+  @@index([preferredRole])
+  @@index([availability])
+  @@index([updatedById])
+}
+
+model PlayerCombatProfileChangeRequest {
+  id              String                           @id @default(uuid())
+  playerId        String
+  primaryClass    PlayerClass?
+  secondaryClass  PlayerClass?
+  declaredBuild   String?
+  preferredRole   PlayerCombatRole?
+  acceptedRoles   PlayerCombatRole[]               @default([])
+  availability    PlayerCombatAvailability?
+  proofImageUrl   String?
+  note            String?
+  status          PlayerCombatProfileChangeStatus  @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNote      String?
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+  player          Player                           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy      User?                            @relation("PlayerCombatRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([playerId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([reviewedById])
 }
 
 model BusinessRule {
@@ -352,24 +570,119 @@ model Event {
   name              String
   type              EventType
   status            EventStatus       @default(OPEN)
+  operationalCategory EventOperationalCategory @default(BOSS)
+  priority          WarRoomOperationPriority @default(MEDIUM)
   dkpReward         Int
   startsAt          DateTime
+  endsAt            DateTime?
   finalizedAt       DateTime?
   dkpDistributedAt  DateTime?
   createdById       String
+  responsibleUserId String?
   attendanceBatchId String?
   batchOrder        Int?
+  checklist         Json              @default("[]")
+  operationalNotes  String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   createdBy         User              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   attendances       EventAttendance[]
+  warRoomOperations WarRoomOperation[]
 
   @@index([type])
   @@index([status])
+  @@index([operationalCategory])
+  @@index([priority])
   @@index([startsAt])
+  @@index([endsAt])
   @@index([finalizedAt])
   @@index([createdById])
+  @@index([responsibleUserId])
   @@index([attendanceBatchId, batchOrder])
+}
+
+model WarRoomOperation {
+  id            String                   @id @default(uuid())
+  name          String
+  type          WarRoomOperationType
+  status        WarRoomOperationStatus   @default(DRAFT)
+  priority      WarRoomOperationPriority @default(MEDIUM)
+  startsAt      DateTime
+  endsAt        DateTime
+  mapRegion     String?
+  objective     String?
+  staffNotes    String?
+  result        String?
+  score         String?
+  improvementNotes String?
+  internalLinks Json                     @default("[]")
+  eventId       String?
+  createdById   String
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  event         Event?                   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdBy     User                     @relation("WarRoomOperationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  rosterSlots   WarRoomRosterSlot[]
+  timelineEvents WarRoomTimelineEvent[]
+
+  @@index([type])
+  @@index([status])
+  @@index([priority])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([eventId])
+  @@index([createdById])
+}
+
+model WarRoomRosterSlot {
+  id                   String                  @id @default(uuid())
+  operationId          String
+  playerId             String
+  role                 PlayerCombatRole
+  status               WarRoomRosterSlotStatus @default(PENDING)
+  requiredClass        PlayerClass?
+  requiredLayer        Int?                    @db.SmallInt
+  publicInstructionsPt String?
+  publicInstructionsEn String?
+  staffNote            String?
+  playerNote           String?
+  confirmedAt          DateTime?
+  attendanceMarkedAt   DateTime?
+  attendanceMarkedById String?
+  createdById          String
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  operation            WarRoomOperation        @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  player               Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy            User                    @relation("WarRoomRosterSlotCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  attendanceMarkedBy   User?                   @relation("WarRoomRosterSlotAttendanceMarkedBy", fields: [attendanceMarkedById], references: [id], onDelete: SetNull)
+
+  @@unique([operationId, playerId])
+  @@index([operationId, status])
+  @@index([playerId, status])
+  @@index([role])
+  @@index([requiredClass])
+  @@index([attendanceMarkedById])
+  @@index([createdById])
+}
+
+model WarRoomTimelineEvent {
+  id          String                   @id @default(uuid())
+  operationId String
+  type        WarRoomTimelineEventType @default(NOTE)
+  occurredAt  DateTime                 @default(now())
+  title       String
+  note        String?
+  metadata    Json                     @default("{}")
+  createdById String
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  operation   WarRoomOperation         @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  createdBy   User                     @relation("WarRoomTimelineEventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([operationId, occurredAt])
+  @@index([type])
+  @@index([createdById])
 }
 
 model EventAttendance {
@@ -463,6 +776,27 @@ model DKPLock {
   @@index([released])
 }
 
+model DkpPolicySimulation {
+  id          String                    @id @default(uuid())
+  type        DkpPolicySimulationType
+  status      DkpPolicySimulationStatus @default(DRAFT)
+  name        String
+  config      Json
+  result      Json
+  createdById String
+  promotedById String?
+  promotedAt  DateTime?
+  promotionReason String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  createdBy   User                      @relation("DkpPolicySimulationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  promotedBy  User?                     @relation("DkpPolicySimulationPromotedBy", fields: [promotedById], references: [id], onDelete: SetNull)
+
+  @@index([type, status, createdAt])
+  @@index([createdById])
+  @@index([promotedById])
+}
+
 model Auction {
   id                      String                          @id @default(uuid())
   itemCatalogId           String?
@@ -486,6 +820,7 @@ model Auction {
   reviewVotes             AuctionReviewVote[]
   bidInvalidationVotes     AuctionBidInvalidationVote[]
   bidCancellationRequests AuctionBidCancellationRequest[]
+  disputes                AuctionDispute[]
   dropHistory             DropHistory?
 
   @@index([itemCatalogId])
@@ -576,6 +911,30 @@ model AuctionBidCancellationRequest {
   @@index([reviewedById])
 }
 
+model AuctionDispute {
+  id             String               @id @default(uuid())
+  auctionId      String
+  playerId       String
+  reason         String
+  proofImageUrl  String?
+  status         AuctionDisputeStatus @default(PENDING)
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  externalNotePt String?
+  externalNoteEn String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  auction        Auction              @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  player         Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy     User?                @relation("AuctionDisputeReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([auctionId, playerId])
+  @@index([auctionId, status, createdAt])
+  @@index([playerId, status, createdAt])
+  @@index([reviewedById])
+}
+
 model EligibilityRule {
   id                  String   @id @default(uuid())
   itemTier            ItemTier
@@ -613,6 +972,7 @@ model ItemCatalog {
   dropHistories    DropHistory[]
   auctions         Auction[]
   interestPosts    ItemInterestPost[]
+  wishlistItems    PlayerWishlistItem[]
 
   @@index([nameEn, typeEn])
   @@index([nameEs, typeEs])
@@ -757,6 +1117,30 @@ model ItemInterestEntry {
   @@index([playerId])
   @@index([isTransmuteRequest])
   @@index([playerId, isTransmuteRequest])
+}
+
+model PlayerWishlistItem {
+  id            String           @id @default(uuid())
+  playerId      String
+  itemCatalogId String
+  priority      WishlistPriority @default(MEDIUM)
+  status        WishlistStatus   @default(ACTIVE)
+  reason        String
+  build         String?
+  note          String?
+  proofImageUrl String?
+  fulfilledById String?
+  fulfilledAt   DateTime?
+  fulfilledNote String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  player        Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  itemCatalog   ItemCatalog      @relation(fields: [itemCatalogId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, status, priority])
+  @@index([itemCatalogId, status, priority])
+  @@index([status, updatedAt])
+  @@index([fulfilledById])
 }
 
 model ItemInterestVote {

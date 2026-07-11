@@ -1,12 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Auction, AuctionBid, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionMode, AuctionStatus, ItemTier, Prisma } from '@prisma/client';
+import { Auction, AuctionBid, AuctionBidCancellationRequest, AuctionBidCancellationStatus, AuctionDispute, AuctionDisputeStatus, AuctionMode, AuctionStatus, DKPTransactionType, ItemTier, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { DkpService } from '../../dkp/services/dkp.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { RankingResponseDto } from '../../eligibility/dto';
 import { EligibilityService } from '../../eligibility/services/eligibility.service';
-import { CreateAuctionDto } from '../dto';
+import { CreateAuctionDisputeDto, CreateAuctionDto, ReviewAuctionDisputeDto } from '../dto';
 import {
   AuctionNotFoundException,
   DuplicateBidException,
@@ -32,6 +32,51 @@ export type AuctionFinalizationResult = {
 export type BidCancellationRequestResult = {
   request: AuctionBidCancellationRequest;
   autoApproved: boolean;
+};
+
+export type PlayerAuctionResultReceipt = {
+  auction: Pick<Auction, 'id' | 'itemName' | 'itemTier' | 'itemType' | 'minimumBid' | 'auctionMode' | 'requiresStaffReview' | 'minimumLayer' | 'status' | 'endsAt'>;
+  role: 'WINNER' | 'PARTICIPANT' | 'OBSERVER';
+  finalStatus: 'WON' | 'NOT_SELECTED' | 'NO_PARTICIPATION';
+  ownBidAmount?: number | null;
+  ownBidValid?: boolean | null;
+  winnerCost?: number | null;
+  deliveryStatus: 'PENDING_DELIVERY' | 'DELIVERED' | 'NOT_APPLICABLE';
+  deliveredAt?: Date | null;
+  ruleApplied: {
+    minimumBid: number;
+    auctionMode: AuctionMode;
+    requiresStaffReview: boolean;
+    minimumLayer: number | null;
+    itemTier: ItemTier;
+  };
+  safeReason: {
+    pt: string;
+    en: string;
+  };
+  nextSteps: {
+    pt: string;
+    en: string;
+  };
+};
+
+export type PlayerAuctionTimelineEvent = {
+  key: 'AUCTION_OPENED' | 'AUCTION_CLOSED' | 'STAFF_REVIEW' | 'RESULT_PUBLISHED' | 'DELIVERY_PENDING' | 'DELIVERED' | 'RELISTED' | 'CANCELLED';
+  occurredAt: Date;
+  tone: 'info' | 'warning' | 'success' | 'muted';
+  title: {
+    pt: string;
+    en: string;
+  };
+  description: {
+    pt: string;
+    en: string;
+  };
+};
+
+export type StaffAuctionDispute = AuctionDispute & {
+  auction: Pick<Auction, 'id' | 'itemName' | 'status' | 'auctionMode' | 'endsAt'>;
+  player: { id: string; nickname: string; dimensionalLayer: number };
 };
 
 type BidPlacementResult = {
@@ -305,6 +350,334 @@ export class AuctionsService {
     }
 
     return this.repository.findBidByPlayerAndAuction(player.id, auctionId);
+  }
+
+  async getPlayerResultReceipt(userId: string, auctionId: string): Promise<PlayerAuctionResultReceipt> {
+    if (!userId) {
+      throw new BadRequestException('Authenticated user is required to view auction result.');
+    }
+
+    const auction = await this.repository.findPublicDetailsById(auctionId);
+    if (!auction) {
+      throw new AuctionNotFoundException(auctionId);
+    }
+    if (auction.status !== AuctionStatus.FINISHED) {
+      throw new InvalidAuctionStateException('Auction result receipt is only available after final result.');
+    }
+
+    const player = await this.repository.client.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+    const [ownBid, win, drop] = await Promise.all([
+      player ? this.repository.findBidByPlayerAndAuction(player.id, auctionId) : Promise.resolve(null),
+      this.repository.client.dKPTransaction.findFirst({
+        where: {
+          referenceId: auctionId,
+          type: DKPTransactionType.AUCTION_WIN,
+        },
+        select: {
+          playerId: true,
+          amount: true,
+        },
+      }),
+      this.repository.client.dropHistory.findUnique({
+        where: { auctionId },
+        select: {
+          deliveredAt: true,
+        },
+      }),
+    ]);
+
+    const isWinner = Boolean(player && win?.playerId === player.id);
+    const role = isWinner ? 'WINNER' : ownBid ? 'PARTICIPANT' : 'OBSERVER';
+    const deliveryStatus = isWinner ? (drop?.deliveredAt ? 'DELIVERED' : 'PENDING_DELIVERY') : 'NOT_APPLICABLE';
+    return {
+      auction: {
+        id: auction.id,
+        itemName: auction.itemName,
+        itemTier: auction.itemTier,
+        itemType: auction.itemType,
+        minimumBid: auction.minimumBid,
+        auctionMode: auction.auctionMode,
+        requiresStaffReview: auction.requiresStaffReview,
+        minimumLayer: auction.minimumLayer,
+        status: auction.status,
+        endsAt: auction.endsAt,
+      },
+      role,
+      finalStatus: isWinner ? 'WON' : ownBid ? 'NOT_SELECTED' : 'NO_PARTICIPATION',
+      ownBidAmount: ownBid?.bidAmount ?? null,
+      ownBidValid: ownBid?.isValid ?? null,
+      winnerCost: isWinner ? Math.abs(win?.amount ?? 0) : null,
+      deliveryStatus,
+      deliveredAt: isWinner ? drop?.deliveredAt ?? null : null,
+      ruleApplied: {
+        minimumBid: auction.minimumBid,
+        auctionMode: auction.auctionMode,
+        requiresStaffReview: auction.requiresStaffReview,
+        minimumLayer: auction.minimumLayer,
+        itemTier: auction.itemTier,
+      },
+      safeReason: this.buildSafeResultReason(role, ownBid?.isValid ?? null),
+      nextSteps: this.buildResultNextSteps(role, deliveryStatus),
+    };
+  }
+
+  async getPlayerSafeTimeline(auctionId: string): Promise<PlayerAuctionTimelineEvent[]> {
+    const auction = await this.repository.findPublicDetailsById(auctionId);
+    if (!auction) {
+      throw new AuctionNotFoundException(auctionId);
+    }
+
+    const [win, drop] = await Promise.all([
+      this.repository.client.dKPTransaction.findFirst({
+        where: {
+          referenceId: auctionId,
+          type: DKPTransactionType.AUCTION_WIN,
+        },
+        select: {
+          createdAt: true,
+        },
+      }),
+      this.repository.client.dropHistory.findUnique({
+        where: { auctionId },
+        select: {
+          createdAt: true,
+          deliveredAt: true,
+        },
+      }),
+    ]);
+    const timeline: PlayerAuctionTimelineEvent[] = [
+      {
+        key: 'AUCTION_OPENED',
+        occurredAt: auction.createdAt,
+        tone: 'info',
+        title: { pt: 'Leilao aberto', en: 'Auction opened' },
+        description: {
+          pt: 'Item entrou na fila de bids com a regra publica do tier.',
+          en: 'The item entered the bid queue under the public tier rule.',
+        },
+      },
+    ];
+
+    if (auction.status === AuctionStatus.RELISTED) {
+      timeline.push({
+        key: 'RELISTED',
+        occurredAt: auction.updatedAt,
+        tone: 'warning',
+        title: { pt: 'Leilao relistado', en: 'Auction relisted' },
+        description: {
+          pt: 'O ciclo foi reaberto sem expor bids, locks ou concorrentes.',
+          en: 'The cycle was reopened without exposing bids, locks, or competitors.',
+        },
+      });
+    }
+    if (auction.status === AuctionStatus.CANCELLED) {
+      timeline.push({
+        key: 'CANCELLED',
+        occurredAt: auction.updatedAt,
+        tone: 'muted',
+        title: { pt: 'Leilao cancelado', en: 'Auction cancelled' },
+        description: {
+          pt: 'O leilao foi cancelado pela Staff.',
+          en: 'The auction was cancelled by Staff.',
+        },
+      });
+    }
+    if (auction.status === AuctionStatus.PENDING_REVIEW || auction.status === AuctionStatus.FINISHED) {
+      timeline.push({
+        key: 'AUCTION_CLOSED',
+        occurredAt: auction.endsAt,
+        tone: 'info',
+        title: { pt: 'Janela encerrada', en: 'Window closed' },
+        description: {
+          pt: 'A janela de bids encerrou. Dados de concorrentes continuam protegidos.',
+          en: 'The bid window closed. Competitor data remains protected.',
+        },
+      });
+      if (auction.requiresStaffReview) {
+        timeline.push({
+          key: 'STAFF_REVIEW',
+          occurredAt: auction.updatedAt,
+          tone: auction.status === AuctionStatus.PENDING_REVIEW ? 'warning' : 'info',
+          title: { pt: 'Review Staff', en: 'Staff review' },
+          description: {
+            pt: 'A Staff revisou o resultado conforme as regras do leilao.',
+            en: 'Staff reviewed the result according to auction rules.',
+          },
+        });
+      }
+    }
+    if (auction.status === AuctionStatus.FINISHED && win) {
+      timeline.push({
+        key: 'RESULT_PUBLISHED',
+        occurredAt: win.createdAt,
+        tone: 'success',
+        title: { pt: 'Resultado publicado', en: 'Result published' },
+        description: {
+          pt: 'O resultado final foi registrado sem abrir ranking ou bids de terceiros.',
+          en: 'The final result was recorded without exposing ranking or third-party bids.',
+        },
+      });
+      timeline.push({
+        key: drop?.deliveredAt ? 'DELIVERED' : 'DELIVERY_PENDING',
+        occurredAt: drop?.deliveredAt ?? drop?.createdAt ?? win.createdAt,
+        tone: drop?.deliveredAt ? 'success' : 'warning',
+        title: drop?.deliveredAt
+          ? { pt: 'Entrega concluida', en: 'Delivery completed' }
+          : { pt: 'Entrega pendente', en: 'Delivery pending' },
+        description: drop?.deliveredAt
+          ? {
+              pt: 'A entrega foi registrada pela Staff.',
+              en: 'Delivery was recorded by Staff.',
+            }
+          : {
+              pt: 'A entrega ainda precisa ser registrada pela Staff.',
+              en: 'Delivery still needs to be recorded by Staff.',
+            },
+      });
+    }
+
+    return timeline.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+  }
+
+  async getUserDispute(userId: string, auctionId: string): Promise<AuctionDispute | null> {
+    const player = await this.repository.client.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+    if (!player) return null;
+
+    return this.repository.client.auctionDispute.findUnique({
+      where: {
+        auctionId_playerId: {
+          auctionId,
+          playerId: player.id,
+        },
+      },
+    });
+  }
+
+  async createDisputeForUser(userId: string, auctionId: string, data: CreateAuctionDisputeDto): Promise<AuctionDispute> {
+    if (!userId) {
+      throw new BadRequestException('Authenticated user is required to create a dispute.');
+    }
+
+    const [rules, auction, player] = await Promise.all([
+      this.businessRules.getAuctionDisputeRules(),
+      this.repository.findPublicDetailsById(auctionId),
+      this.repository.client.player.findFirst({
+        where: { userId, isActive: true },
+        select: { id: true },
+        orderBy: { joinedAt: 'asc' },
+      }),
+    ]);
+    if (!rules.enabled) {
+      throw new BadRequestException('Auction disputes are currently disabled.');
+    }
+    if (!auction) {
+      throw new AuctionNotFoundException(auctionId);
+    }
+    if (!player) {
+      throw new NotFoundException('Authenticated user does not have an active player profile.');
+    }
+    if (auction.status !== AuctionStatus.FINISHED) {
+      throw new InvalidAuctionStateException('Disputes are only available after final result.');
+    }
+
+    const [ownBid, win] = await Promise.all([
+      this.repository.findBidByPlayerAndAuction(player.id, auctionId),
+      this.repository.client.dKPTransaction.findFirst({
+        where: {
+          referenceId: auctionId,
+          type: DKPTransactionType.AUCTION_WIN,
+        },
+        select: { createdAt: true },
+      }),
+    ]);
+    if (!ownBid) {
+      throw new BadRequestException('Only auction participants can create a dispute.');
+    }
+    const resultAt = win?.createdAt ?? auction.updatedAt;
+    const deadline = new Date(resultAt.getTime() + rules.windowHours * 60 * 60 * 1000);
+    if (deadline < new Date()) {
+      throw new BadRequestException('Auction dispute window is closed.');
+    }
+
+    const created = await this.repository.client.auctionDispute.create({
+      data: {
+        auction: { connect: { id: auctionId } },
+        player: { connect: { id: player.id } },
+        reason: data.reason.trim(),
+        proofImageUrl: data.proofImageUrl?.trim() || undefined,
+      },
+    });
+    await this.audit('AUCTION_DISPUTE_CREATED', 'AuctionDispute', created.id, userId, {
+      auctionId,
+      playerId: player.id,
+      windowHours: rules.windowHours,
+    });
+
+    return created;
+  }
+
+  async listStaffDisputes(status?: AuctionDisputeStatus): Promise<StaffAuctionDispute[]> {
+    return this.repository.client.auctionDispute.findMany({
+      where: status ? { status } : undefined,
+      include: {
+        auction: {
+          select: {
+            id: true,
+            itemName: true,
+            status: true,
+            auctionMode: true,
+            endsAt: true,
+          },
+        },
+        player: {
+          select: {
+            id: true,
+            nickname: true,
+            dimensionalLayer: true,
+          },
+        },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
+      take: 100,
+    });
+  }
+
+  async reviewDispute(disputeId: string, actorId: string, data: ReviewAuctionDisputeDto): Promise<AuctionDispute> {
+    const status = data.status === 'ACCEPTED' ? AuctionDisputeStatus.ACCEPTED : AuctionDisputeStatus.REJECTED;
+    const existing = await this.repository.client.auctionDispute.findUnique({ where: { id: disputeId } });
+    if (!existing) {
+      throw new NotFoundException('Auction dispute not found.');
+    }
+    if (existing.status !== AuctionDisputeStatus.PENDING) {
+      throw new BadRequestException('Only pending disputes can be reviewed.');
+    }
+
+    const reviewed = await this.repository.client.auctionDispute.update({
+      where: { id: disputeId },
+      data: {
+        status,
+        reviewedById: actorId,
+        reviewedAt: new Date(),
+        reviewNote: data.reviewNote.trim(),
+        externalNotePt: data.externalNotePt?.trim() || undefined,
+        externalNoteEn: data.externalNoteEn?.trim() || undefined,
+      },
+    });
+    await this.audit('AUCTION_DISPUTE_REVIEWED', 'AuctionDispute', disputeId, actorId, {
+      auctionId: reviewed.auctionId,
+      playerId: reviewed.playerId,
+      status,
+    });
+
+    return reviewed;
   }
 
   async validateBid(playerId: string, auctionId: string, amount?: number): Promise<{ bidAmount: number }> {
@@ -773,6 +1146,62 @@ export class AuctionsService {
     };
 
     return rules[itemTier];
+  }
+
+  private buildSafeResultReason(
+    role: PlayerAuctionResultReceipt['role'],
+    ownBidValid: boolean | null,
+  ): PlayerAuctionResultReceipt['safeReason'] {
+    if (role === 'WINNER') {
+      return {
+        pt: 'Voce venceu pela regra aplicada pela Staff no fechamento do leilao.',
+        en: 'You won under the rule applied by Staff when the auction was closed.',
+      };
+    }
+    if (role === 'PARTICIPANT' && ownBidValid === false) {
+      return {
+        pt: 'Seu bid nao estava valido no resultado final. Ranking, bids e locks de terceiros continuam sigilosos.',
+        en: 'Your bid was not valid in the final result. Third-party ranking, bids, and locks remain confidential.',
+      };
+    }
+    if (role === 'PARTICIPANT') {
+      return {
+        pt: 'Seu bid participou, mas outro resultado foi aprovado pela regra vigente. Sem placar de fofoca, so o recibo limpo.',
+        en: 'Your bid participated, but another result was approved under the active rule. No drama scoreboard, just the clean receipt.',
+      };
+    }
+    return {
+      pt: 'Voce nao participou deste leilao. O resultado publico seguro nao exibe concorrentes, bids ou locks.',
+      en: 'You did not participate in this auction. The safe public result does not expose competitors, bids, or locks.',
+    };
+  }
+
+  private buildResultNextSteps(
+    role: PlayerAuctionResultReceipt['role'],
+    deliveryStatus: PlayerAuctionResultReceipt['deliveryStatus'],
+  ): PlayerAuctionResultReceipt['nextSteps'] {
+    if (role === 'WINNER' && deliveryStatus === 'DELIVERED') {
+      return {
+        pt: 'Item marcado como entregue. Se algo estiver errado, fale com a Staff pelo canal oficial.',
+        en: 'Item marked as delivered. If anything is wrong, contact Staff through the official channel.',
+      };
+    }
+    if (role === 'WINNER') {
+      return {
+        pt: 'Aguarde a entrega da Staff e acompanhe o comprovante quando for registrado.',
+        en: 'Wait for Staff delivery and follow the proof once it is recorded.',
+      };
+    }
+    if (role === 'PARTICIPANT') {
+      return {
+        pt: 'Nenhuma acao sua e necessaria. Revise as regras do leilao antes do proximo bid.',
+        en: 'No action is required from you. Review the auction rules before the next bid.',
+      };
+    }
+    return {
+      pt: 'Sem acao necessaria. Voce pode consultar as regras gerais para entender o fechamento.',
+      en: 'No action required. You can check the general rules to understand finalization.',
+    };
   }
 
   private getNextBrtAuctionEnd(now = new Date()): Date {

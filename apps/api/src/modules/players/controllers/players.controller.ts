@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { PlayerClass, PlayerStaffNoteSeverity, ProgressCategory } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { CombatProfileChangeRequestParamDto, PlayerCombatProfileParamDto, RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto } from '../dto';
 import { PlayersService } from '../services/players.service';
 
 type AuthRequest = {
@@ -12,6 +13,7 @@ type AuthRequest = {
 };
 
 @Controller('players')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class PlayersController {
   constructor(private readonly service: PlayersService) {}
 
@@ -32,6 +34,65 @@ export class PlayersController {
   @Roles('STAFF', 'ADMIN')
   async listAuditIdentities() {
     return this.service.listAuditIdentities();
+  }
+
+  @Get('combat-profile/requests')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async listCombatProfileRequests() {
+    return this.service.listCombatProfileRequests();
+  }
+
+  @Get('combat-roster')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async combatRoster() {
+    return this.service.getCombatRosterMatrix();
+  }
+
+  @Post('combat-profile/requests/:requestId/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async approveCombatProfileRequest(
+    @Param() params: CombatProfileChangeRequestParamDto,
+    @Req() req: AuthRequest,
+    @Body() dto: ReviewCombatProfileChangeDto,
+  ) {
+    return this.service.approveCombatProfileRequest(params.requestId, req.user.userId, dto);
+  }
+
+  @Post('combat-profile/requests/:requestId/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async rejectCombatProfileRequest(
+    @Param() params: CombatProfileChangeRequestParamDto,
+    @Req() req: AuthRequest,
+    @Body() dto: ReviewCombatProfileChangeDto,
+  ) {
+    return this.service.rejectCombatProfileRequest(params.requestId, req.user.userId, dto.reviewNote);
+  }
+
+  @Get('me/combat-profile')
+  @UseGuards(JwtAuthGuard)
+  async myCombatProfile(@Req() req: AuthRequest) {
+    return this.service.getMyCombatProfile(req.user.userId);
+  }
+
+  @Post('me/combat-profile/requests')
+  @UseGuards(JwtAuthGuard)
+  async requestCombatProfileChange(@Req() req: AuthRequest, @Body() dto: RequestCombatProfileChangeDto) {
+    return this.service.requestCombatProfileChange(req.user.userId, dto);
+  }
+
+  @Patch(':playerId/combat-profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async updateCombatProfile(
+    @Param() params: PlayerCombatProfileParamDto,
+    @Req() req: AuthRequest,
+    @Body() dto: UpdateCombatProfileDto,
+  ) {
+    return this.service.updateCombatProfile(params.playerId, req.user.userId, dto);
   }
 
   @Get('audit/discord/:discordId/history')

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
-import type { Auction, AuctionBidInvalidationVote, AuctionReviewVote, EligibilityRow } from '@/types/api';
+import type { Auction, AuctionBidInvalidationVote, AuctionReviewVote, EligibilityRow, StaffReviewAlert } from '@/types/api';
 
 const STAFF_REVIEW_THRESHOLD = 3;
 
@@ -16,18 +16,30 @@ function voteName(vote: AuctionReviewVote | AuctionBidInvalidationVote): string 
   return vote.voter?.discordNickname || vote.voter?.discordUsername || vote.voterId;
 }
 
+function alertTone(severity: StaffReviewAlert['severity']) {
+  if (severity === 'danger') return 'red';
+  if (severity === 'warning') return 'gold';
+  return 'blue';
+}
+
+function alertInstanceKey(alert: StaffReviewAlert) {
+  return alert.playerId ? `${alert.key}:${alert.playerId}` : alert.key;
+}
+
 export function StaffReviewCard({
   auction,
   ranking = [],
   onApprove,
   onInvalidateBid,
+  onOverrideAlert,
   onReject,
   pending,
 }: {
-  auction: Auction;
+  auction: Auction & { assistedReview?: { alerts: StaffReviewAlert[]; overriddenAlertKeys: string[] } };
   ranking?: EligibilityRow[];
   onApprove?: (playerId: string) => void;
   onInvalidateBid?: (bidId: string) => void;
+  onOverrideAlert?: (alert: StaffReviewAlert) => void;
   onReject?: () => void;
   pending?: boolean;
 }) {
@@ -38,6 +50,8 @@ export function StaffReviewCard({
   const rejectionVotes = votes.filter((vote) => vote.action === 'REJECT');
   const approvalVotes = votes.filter((vote) => vote.action === 'APPROVE');
   const bidInvalidationVotes = auction.bidInvalidationVotes ?? [];
+  const assistedAlerts = auction.assistedReview?.alerts ?? [];
+  const overriddenAlertKeys = new Set(auction.assistedReview?.overriddenAlertKeys ?? []);
   const approvalsByPlayer = new Map<string, AuctionReviewVote[]>();
   const invalidationsByBid = new Map<string, AuctionBidInvalidationVote[]>();
 
@@ -66,6 +80,44 @@ export function StaffReviewCard({
           <Badge tone="gold">{auction.itemTier}</Badge>
           <Badge tone="red">{auction.status}</Badge>
         </div>
+        {assistedAlerts.length ? (
+          <div className="rounded-md border bg-background/35 p-3 text-xs">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">Review assistida</p>
+              <Badge tone="muted">{assistedAlerts.length} alerta(s)</Badge>
+            </div>
+            <div className="space-y-2">
+              {assistedAlerts.map((alert) => {
+                const overridden = overriddenAlertKeys.has(alertInstanceKey(alert));
+
+                return (
+                  <div key={alertInstanceKey(alert)} className="rounded-md border bg-background/45 p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone={overridden ? 'muted' : alertTone(alert.severity)}>{overridden ? 'ignorado' : alert.severity}</Badge>
+                        <span className="font-semibold">{alert.title}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={alert.evidenceHref} className="font-semibold text-primary hover:underline">Evidencia</Link>
+                        {!overridden ? (
+                          <button
+                            type="button"
+                            className="font-semibold text-primary hover:underline disabled:text-muted-foreground"
+                            disabled={pending}
+                            onClick={() => onOverrideAlert?.(alert)}
+                          >
+                            Ignorar
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{alert.explanation}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         {ranking.length ? (
           <div className="space-y-3">
             {ranking.map((candidate, index) => {

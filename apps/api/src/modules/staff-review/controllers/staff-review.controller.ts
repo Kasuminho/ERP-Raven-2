@@ -6,6 +6,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import {
   ApproveWinnerDto,
   OverridePriorityDto,
+  OverrideReviewAlertDto,
   RejectWinnerDto,
   RemoveBidDto,
   ReviewBidCancellationDto,
@@ -89,6 +90,15 @@ export class StaffReviewController {
     @Req() req: StaffRequest,
   ): Promise<Auction> {
     return this.service.overrideAuctionPriority(auctionId, dto.targetPlayerId, req.user.userId, dto.reason);
+  }
+
+  @Post(':auctionId/alerts/override')
+  async overrideAlert(
+    @Param('auctionId') auctionId: string,
+    @Body() dto: OverrideReviewAlertDto,
+    @Req() req: StaffRequest,
+  ): Promise<StaffReviewDetails> {
+    return this.service.overrideReviewAlert(auctionId, req.user.userId, dto.alertKey, dto.reason, dto.playerId);
   }
 
   @Post(':auctionId/remove-bid')

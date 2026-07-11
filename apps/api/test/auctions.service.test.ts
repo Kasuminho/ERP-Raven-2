@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
-import { AuctionMode, AuctionStatus, ItemTier } from '@prisma/client';
+import { AuctionDisputeStatus, AuctionMode, AuctionStatus, DKPTransactionType, ItemTier, ItemType } from '@prisma/client';
 import { AuctionsService } from '../src/modules/auctions/services/auctions.service';
 import { DuplicateBidException, InvalidBidException } from '../src/modules/auctions/exceptions/auction-domain.exceptions';
 
@@ -110,5 +110,199 @@ describe('AuctionsService relist rules', () => {
     assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, false);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, true);
+  });
+});
+
+function makeResultReceiptService(options: { userId: string; playerId: string; ownBid?: Record<string, unknown> | null; winnerPlayerId: string; dropDeliveredAt?: Date | null }) {
+  const auction = {
+    id: 'a1',
+    itemName: 'Espada limpa',
+    itemTier: ItemTier.T4,
+    itemType: ItemType.WEAPON,
+    minimumBid: 900,
+    auctionMode: AuctionMode.ALL_IN,
+    requiresStaffReview: true,
+    status: AuctionStatus.FINISHED,
+    minimumLayer: 4,
+    endsAt: new Date('2026-07-10T05:00:00.000Z'),
+    createdAt: new Date('2026-07-09T05:00:00.000Z'),
+    updatedAt: new Date('2026-07-10T06:00:00.000Z'),
+  };
+  const repository = {
+    findPublicDetailsById: mock.fn(async () => auction),
+    findBidByPlayerAndAuction: mock.fn(async () => options.ownBid ?? null),
+    client: {
+      player: {
+        findFirst: mock.fn(async () => ({ id: options.playerId })),
+      },
+      dKPTransaction: {
+        findFirst: mock.fn(async () => ({
+          playerId: options.winnerPlayerId,
+          amount: -1234,
+          type: DKPTransactionType.AUCTION_WIN,
+          createdAt: new Date('2026-07-10T06:10:00.000Z'),
+        })),
+      },
+      dropHistory: {
+        findUnique: mock.fn(async () => ({ createdAt: new Date('2026-07-10T06:30:00.000Z'), deliveredAt: options.dropDeliveredAt ?? null })),
+      },
+    },
+  };
+  const service = new AuctionsService(repository as never, {} as never, { log: mock.fn(async () => undefined) } as never, {} as never, {} as never, {} as never);
+  return { service, repository };
+}
+
+describe('AuctionsService player result receipt', () => {
+  it('shows the winner cost and delivery status only to the winner', async () => {
+    const deliveredAt = new Date('2026-07-11T12:00:00.000Z');
+    const { service } = makeResultReceiptService({
+      userId: 'u1',
+      playerId: 'p1',
+      winnerPlayerId: 'p1',
+      ownBid: { id: 'b1', bidAmount: 1234, isValid: true },
+      dropDeliveredAt: deliveredAt,
+    });
+
+    const receipt = await service.getPlayerResultReceipt('u1', 'a1');
+
+    assert.equal(receipt.role, 'WINNER');
+    assert.equal(receipt.finalStatus, 'WON');
+    assert.equal(receipt.ownBidAmount, 1234);
+    assert.equal(receipt.winnerCost, 1234);
+    assert.equal(receipt.deliveryStatus, 'DELIVERED');
+    assert.equal(receipt.deliveredAt?.toISOString(), deliveredAt.toISOString());
+  });
+
+  it('keeps third-party result data out of participant receipts', async () => {
+    const { service } = makeResultReceiptService({
+      userId: 'u2',
+      playerId: 'p2',
+      winnerPlayerId: 'p1',
+      ownBid: { id: 'b2', bidAmount: 900, isValid: true },
+    });
+
+    const receipt = await service.getPlayerResultReceipt('u2', 'a1');
+    const serialized = JSON.stringify(receipt);
+
+    assert.equal(receipt.role, 'PARTICIPANT');
+    assert.equal(receipt.finalStatus, 'NOT_SELECTED');
+    assert.equal(receipt.ownBidAmount, 900);
+    assert.equal(receipt.winnerCost, null);
+    assert.equal(receipt.deliveryStatus, 'NOT_APPLICABLE');
+    assert.ok(!serialized.includes('p1'));
+    assert.ok(!serialized.includes('1234'));
+    assert.ok(receipt.safeReason.pt.includes('sigilosos') || receipt.safeReason.pt.includes('recibo'));
+  });
+
+  it('builds a sanitized player timeline without winner, bid or lock data', async () => {
+    const { service } = makeResultReceiptService({
+      userId: 'u2',
+      playerId: 'p2',
+      winnerPlayerId: 'p1',
+      ownBid: { id: 'b2', bidAmount: 900, isValid: true },
+    });
+
+    const timeline = await service.getPlayerSafeTimeline('a1');
+    const serialized = JSON.stringify(timeline);
+
+    assert.ok(timeline.some((event) => event.key === 'AUCTION_OPENED'));
+    assert.ok(timeline.some((event) => event.key === 'RESULT_PUBLISHED'));
+    assert.ok(timeline.some((event) => event.key === 'DELIVERY_PENDING'));
+    assert.ok(!serialized.includes('p1'));
+    assert.ok(!serialized.includes('1234'));
+    assert.ok(!serialized.includes('b2'));
+    assert.ok(!serialized.includes('lock'));
+  });
+});
+
+describe('AuctionsService auction disputes', () => {
+  it('creates a dispute only for a participant inside the configured window', async () => {
+    const now = new Date();
+    const audit = { log: mock.fn(async () => undefined) };
+    const repository = {
+      findPublicDetailsById: mock.fn(async () => ({
+        id: 'a1',
+        itemName: 'Espada',
+        status: AuctionStatus.FINISHED,
+        updatedAt: now,
+      })),
+      findBidByPlayerAndAuction: mock.fn(async () => ({ id: 'b1', playerId: 'p1', bidAmount: 900 })),
+      client: {
+        player: {
+          findFirst: mock.fn(async () => ({ id: 'p1' })),
+        },
+        dKPTransaction: {
+          findFirst: mock.fn(async () => ({ createdAt: now })),
+        },
+        auctionDispute: {
+          create: mock.fn(async ({ data }: any) => ({
+            id: 'dispute-1',
+            auctionId: data.auction.connect.id,
+            playerId: data.player.connect.id,
+            reason: data.reason,
+            proofImageUrl: data.proofImageUrl,
+            status: AuctionDisputeStatus.PENDING,
+          })),
+        },
+      },
+    };
+    const service = new AuctionsService(
+      repository as never,
+      {} as never,
+      audit as never,
+      {} as never,
+      {} as never,
+      { getAuctionDisputeRules: mock.fn(async () => ({ enabled: true, windowHours: 48 })) } as never,
+    );
+
+    const dispute = await service.createDisputeForUser('u1', 'a1', {
+      reason: 'Quero revisar o resultado porque minha camada estava correta.',
+      proofImageUrl: 'https://example.com/proof.png',
+    });
+
+    assert.equal(dispute.id, 'dispute-1');
+    assert.equal(dispute.status, AuctionDisputeStatus.PENDING);
+    assert.equal(repository.client.auctionDispute.create.mock.callCount(), 1);
+    assert.equal(audit.log.mock.callCount(), 1);
+  });
+
+  it('reviews a pending dispute without reopening the auction automatically', async () => {
+    const audit = { log: mock.fn(async () => undefined) };
+    const repository = {
+      client: {
+        auctionDispute: {
+          findUnique: mock.fn(async () => ({
+            id: 'dispute-1',
+            auctionId: 'a1',
+            playerId: 'p1',
+            status: AuctionDisputeStatus.PENDING,
+          })),
+          update: mock.fn(async ({ data }: any) => ({
+            id: 'dispute-1',
+            auctionId: 'a1',
+            playerId: 'p1',
+            ...data,
+          })),
+        },
+        auction: {
+          update: mock.fn(async () => {
+            throw new Error('auction should not be updated by dispute review');
+          }),
+        },
+      },
+    };
+    const service = new AuctionsService(repository as never, {} as never, audit as never, {} as never, {} as never, {} as never);
+
+    const reviewed = await service.reviewDispute('dispute-1', 'staff-1', {
+      status: 'ACCEPTED',
+      reviewNote: 'Ajuste aceito para analise manual posterior.',
+      externalNotePt: 'Contestacao aceita para revisao operacional.',
+      externalNoteEn: 'Dispute accepted for operational review.',
+    });
+
+    assert.equal(reviewed.status, AuctionDisputeStatus.ACCEPTED);
+    assert.equal(repository.client.auctionDispute.update.mock.callCount(), 1);
+    assert.equal(repository.client.auction.update.mock.callCount(), 0);
+    assert.equal(audit.log.mock.callCount(), 1);
   });
 });

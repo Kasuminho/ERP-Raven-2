@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, ContextualEligibilitySummary, ContextualEligibilityType, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildProgressReport, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, PlayerWeeklySafeSummary, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
 export function useGuildRules() {
   return useQuery({
@@ -59,6 +59,22 @@ export function useWeeklySummary() {
   });
 }
 
+export function useGuildProgressReport(period: 'week' | 'month' = 'week') {
+  return useQuery({
+    queryKey: ['operations', 'staff', 'guild-progress', period],
+    queryFn: async () => (await api.get<GuildProgressReport>('/operations/staff/guild-progress', { params: { period } })).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePlayerWeeklySafeSummary(period: 'week' | 'month' = 'week') {
+  return useQuery({
+    queryKey: ['operations', 'me', 'weekly-summary', period],
+    queryFn: async () => (await api.get<PlayerWeeklySafeSummary>('/operations/me/weekly-summary', { params: { period } })).data,
+    staleTime: 60_000,
+  });
+}
+
 export function usePostWeeklySummary() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -82,6 +98,27 @@ export function useUniversalDossier(type: UniversalDossierType, id: string) {
     queryKey: ['operations', 'staff', 'dossiers', type, id],
     queryFn: async () => (await api.get<UniversalDossier>(`/operations/staff/dossiers/${type}/${id}`)).data,
     enabled: Boolean(type && id),
+  });
+}
+
+export function useContextualEligibility(
+  playerId: string,
+  params: { type: ContextualEligibilityType; contextId?: string; role?: string },
+) {
+  const needsContextId = params.type !== 'recruitment';
+
+  return useQuery({
+    queryKey: ['operations', 'staff', 'player-eligibility', playerId, params.type, params.contextId ?? '', params.role ?? ''],
+    queryFn: async () => (
+      await api.get<ContextualEligibilitySummary>(`/operations/staff/player-eligibility/${playerId}/context`, {
+        params: {
+          type: params.type,
+          contextId: params.contextId || undefined,
+          role: params.role || undefined,
+        },
+      })
+    ).data,
+    enabled: Boolean(playerId && params.type && (!needsContextId || params.contextId)),
   });
 }
 
