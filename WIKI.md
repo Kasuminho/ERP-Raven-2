@@ -117,7 +117,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
-- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-08 para evitar reciclar as frases das revisoes anteriores.
+- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-11 para evitar reciclar as frases das revisoes anteriores.
 
 ## Seguranca, sessao e uploads
 
@@ -382,6 +382,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-11 | Setima rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-11 | Fatia 2.3 do roadmap War/Guild implementada: War Room passou a consumir roster real com impacto de composicao e sugestoes explicaveis de escala, sem automacao de decisao. | roster/War Room |
 | 2026-07-11 | Frente 9 do roadmap War/Guild implementada: recrutamento publico pelo site, fila Staff por status e conversao auditada para player com perfil inicial e checklist de onboarding. | recrutamento |
 | 2026-07-11 | Frente 8 do roadmap War/Guild implementada: relatorio Staff semanal/mensal e resumo player seguro com numeros coletivos, riscos e proximas acoes. | relatorios/Staff |
