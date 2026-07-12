@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ItemCatalog, ItemRequest, ItemRequestUpdateStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
+import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { getRequestableCatalogKey, requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
 import { ImageStorageService } from '../../uploads/image-storage.service';
@@ -20,6 +21,7 @@ export class ItemRequestsService {
     private readonly imageStorage: ImageStorageService,
     private readonly notifications: NotificationService,
     private readonly queueService: ItemRequestQueueService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   async createRequest(data: CreateItemRequestDto, actorId?: string): Promise<ItemRequest> {
@@ -48,6 +50,11 @@ export class ItemRequestsService {
 
       if (!player || !player.isActive) {
         throw new NotFoundException(`Active player ${data.playerId} was not found.`);
+      }
+
+      const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
+      if (player.attendancePercentage < attendanceRules.participationMinimumPercent) {
+        throw new BadRequestException(`Minimum attendance to create an item request is ${attendanceRules.participationMinimumPercent}% in the last 30 days.`);
       }
 
       const item = await this.repository.findItemCatalog(data.itemCatalogId, tx);

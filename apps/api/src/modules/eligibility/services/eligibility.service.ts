@@ -78,6 +78,7 @@ export class EligibilityService {
   ): Promise<EligibilityValidationResponseDto> {
     const { auction, player } = await this.getAuctionAndPlayer(playerId, auctionId, client);
     const rules = await this.getEffectiveRules(auction, client);
+    const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
     const details = await this.buildEligibilityDetails(playerId, player, auction, rules, client);
 
     if (!player.isActive) {
@@ -110,6 +111,16 @@ export class EligibilityService {
         auctionId,
         rules.requiresStaffReview,
         `Player requires at least ${rules.minimumDKP} available DKP for this auction.`,
+        details,
+      );
+    }
+
+    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+      return this.ineligible(
+        playerId,
+        auctionId,
+        rules.requiresStaffReview,
+        `Player requires at least ${attendanceRules.bidMinimumPercent}% attendance in the last 30 days to bid.`,
         details,
       );
     }
@@ -154,6 +165,7 @@ export class EligibilityService {
     const { auction, player } = await this.getAuctionAndPlayer(playerId, auctionId, client);
     const bid = await this.repository.findValidBidByPlayerAndAuction(playerId, auctionId, client);
     const rules = await this.getEffectiveRules(auction, client);
+    const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
 
     if (!bid) {
       return this.ineligible(playerId, auctionId, rules.requiresStaffReview, 'Player does not have a valid bid.');
@@ -184,6 +196,15 @@ export class EligibilityService {
         auctionId,
         rules.requiresStaffReview,
         `Player bid must satisfy minimum ${rules.minimumDKP} DKP for this auction.`,
+      );
+    }
+
+    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+      return this.ineligible(
+        playerId,
+        auctionId,
+        rules.requiresStaffReview,
+        `Player requires at least ${attendanceRules.bidMinimumPercent}% attendance in the last 30 days to bid.`,
       );
     }
 
@@ -402,6 +423,7 @@ export class EligibilityService {
     client: Prisma.TransactionClient,
   ): Promise<Pick<EligibilityValidationResponseDto, 'eligibilityStatus' | 'eligibilityReason'>> {
     const rules = await this.getEffectiveRules(auction, client);
+    const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
 
     if (!player.isActive) {
       return { eligibilityStatus: 'INELIGIBLE', eligibilityReason: 'Player is not active.' };
@@ -424,6 +446,13 @@ export class EligibilityService {
       return {
         eligibilityStatus: 'INELIGIBLE',
         eligibilityReason: `Player requires at least ${rules.minimumDKP} available DKP for this auction.`,
+      };
+    }
+
+    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+      return {
+        eligibilityStatus: 'INELIGIBLE',
+        eligibilityReason: `Player requires at least ${attendanceRules.bidMinimumPercent}% attendance in the last 30 days to bid.`,
       };
     }
 

@@ -51,6 +51,11 @@ export type AuctionDisputeRules = {
   windowHours: number;
 };
 
+export type AttendanceEligibilityRules = {
+  bidMinimumPercent: number;
+  participationMinimumPercent: number;
+};
+
 export const defaultEventRewardRules: EventRewardRules = {
   [EventType.LUNOS]: 20,
   [EventType.RIGRETO]: 20,
@@ -140,6 +145,11 @@ export const defaultAuctionDisputeRules: AuctionDisputeRules = {
   windowHours: 48,
 };
 
+export const defaultAttendanceEligibilityRules: AttendanceEligibilityRules = {
+  bidMinimumPercent: 65,
+  participationMinimumPercent: 50,
+};
+
 export const businessRuleDefaults = [
   {
     key: 'eventRewards',
@@ -189,5 +199,12 @@ export const businessRuleDefaults = [
     label: 'Contestacao pos-leilao',
     description: 'Controla janela e disponibilidade da contestacao controlada depois do resultado.',
     value: defaultAuctionDisputeRules,
+  },
+  {
+    key: 'attendanceEligibilityRules',
+    category: 'eligibility',
+    label: 'Cortes de presenca D-30',
+    description: 'Controla a presenca minima dos ultimos 30 dias para bid, interesses e requests.',
+    value: defaultAttendanceEligibilityRules,
   },
 ] as const;

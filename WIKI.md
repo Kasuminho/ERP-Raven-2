@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-11
+**Ultima revisao:** 2026-07-12
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -127,6 +127,7 @@ Automacao ativa:
 - A API aplica headers defensivos, HSTS em producao, limite de body, rate limit para OAuth/upload, CORS com credenciais e `ValidationPipe` com transformacao.
 - O rate limit de OAuth/upload usa `apps/api/src/common/rate-limit`: `createRateLimiter`, regras por rota e `RateLimitStore`. O provider atual e `InMemoryRateLimitStore`, adequado para instancia unica; multi-replica deve trocar por Redis/gateway preservando a interface. O plano operacional fica em `docs/RATE_LIMIT_PROVIDER_PLAN_2026_07.md`, com memoria local como default e Redis/gateway sem ativacao por padrao. O health Staff mostra check `rate-limit` com essa condicao operacional.
 - O modo manutencao usa a regra de negocio `maintenanceMode` com `{ enabled, message }`. Quando ativo, um guard global bloqueia mutacoes sensiveis em leiloes, finalizacao/automacao, entregas/drops, ajustes DKP, progresso, requests, anuncios, interesses, eventos, Codex, Daoshi, uploads e webhooks operacionais; leituras e health continuam liberados. `PATCH /business-rules/maintenanceMode` permanece liberado para Staff desativar o modo, e `GET /operations/maintenance` alimenta o banner da Web.
+- A regra `attendanceEligibilityRules` em `BusinessRule` controla os cortes de presenca D-30: default 65% para bid em leilao e 50% para declarar interesse ou criar Item Request. A tela Staff `/dashboard/staff/rules` mostra campos numericos para esses dois percentuais alem do JSON bruto.
 - Nao habilitar `whitelist`/`forbidNonWhitelisted` globalmente enquanto os DTOs legados forem classes sem decorators; isso remove ou rejeita campos validos. A migracao deve ser feita por modulo, com teste do contrato antes de endurecer o pipe.
 - `staff-review` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam UUIDs, notas e motivos antes de aprovar/rejeitar vencedor, override, remover bid, reabrir/cancelar leilao ou revisar cancelamento de bid.
 - `codex` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam print do pedido, print de comprovante opcional, nota opcional e motivo de cancelamento antes do fluxo player/Staff.
@@ -169,6 +170,7 @@ Automacao ativa:
 - A tela Staff `/dashboard/staff/economy` consome `GET /dkp/staff/economy` e mostra snapshot Staff-only da economia DKP: distribuicao por faixas, media, mediana, concentracao dos top 10, atividade 30d, DKP travado, top acumuladores, ganhos/gastos, acumuladores inativos, sinais de inflacao/concentracao/rotatividade e Markdown copiavel. O simulador de decay usa `POST /dkp/staff/simulations/decay/preview` para calculo hipotetico read-only e `POST /dkp/staff/simulations/decay` para salvar rascunho auditado em `DkpPolicySimulation` tipo `DECAY`. O simulador de politica de bids usa `POST /dkp/staff/simulations/bid-policy/preview` e `POST /dkp/staff/simulations/bid-policy` para calcular/salvar rascunhos `BID_POLICY` sobre leiloes finalizados recentes com `AUCTION_WIN`, comparando gasto atual vs proposto por custo minimo, taxa do vencedor, teto por tier/tipo/camada, custo fixo por tier e multiplicador por modo de leilao. `POST /dkp/staff/simulations/:simulationId/promote` promove apenas rascunho `BID_POLICY` em `DRAFT` com `confirm` e motivo Staff, grava `DkpPolicySimulation.status = PROMOTED`, `promotedAt`, `promotedById`, `promotionReason`, audita a acao e publica a regra operacional documentada `dkpBidPolicy` em `BusinessRule`. `GET /dkp/staff/simulations` lista rascunhos recentes de todos os tipos. Players continuam sem acesso a distribuicao global, ranking Staff de economia ou simulacoes.
 - Em interesses abertos de equipamento, o player pode marcar o atalho de transmutar: a Web dispensa upload manual, usa o asset publico `/transmutar.png` como `imageUrl`, grava `ItemInterestEntry.isTransmuteRequest` e pede confirmacao do Aristolfo antes de registrar.
 - A tela player de interesses em `/dashboard/interests` permite selecionar varios posts abertos e declarar em lote. Cada post mantem nota, print ou transmutar proprio; a confirmacao unica envia cada declaracao pelo endpoint existente para preservar validacoes de duplicidade, janela aberta e print obrigatorio.
+- Declarar interesse exige presenca D-30 minima conforme `attendanceEligibilityRules.participationMinimumPercent` (default 50%).
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia automaticamente. Quem recebeu item de transmutar do mesmo `ItemType` nas ultimas 24h fica fora enquanto houver ao menos um interessado livre. Se todos os interessados estiverem nesse bloqueio de 24h, o post nao fecha vazio: o sistema faz fallback ponderado com base nos recebimentos de transmutar dos ultimos 30 dias, dando menos peso a quem recebeu mais.
 - As regras de sorteio/transmutar de interesses pertencem ao dominio `ItemInterestTransmuteRaffleService`; `ItemInterestsService` apenas coordena fechamento, status, auditoria e persistencia.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
@@ -206,6 +208,7 @@ Automacao ativa:
 - Players nao veem ranking, bids, locks nem participantes durante o leilao.
 - Endpoints sensiveis exigem papel Staff/Admin.
 - O player pode consultar apenas o proprio bid pelo contrato especifico.
+- Bid exige presenca D-30 minima conforme `attendanceEligibilityRules.bidMinimumPercent` (default 65%). A regra entra na validacao de bid, elegibilidade/ranking e aprovacao de bid existente.
 - Resultado e entrega liberam apenas as informacoes apropriadas ao fluxo publico.
 - Nunca reintroduzir listas de participantes em payload publico, pagina publica ou webhook de players.
 - Quando uma review de leilao e rejeitada com quorum ou um leilao e relistado manualmente, o sistema libera locks e invalida os bids antigos; a proxima abertura deve exigir novos bids e novos locks.
@@ -214,6 +217,8 @@ Automacao ativa:
 ## Eventos, presenca e DKP
 
 Cada evento distribui seu proprio DKP quando finalizado.
+
+O percentual operacional de presenca de `Player.attendancePercentage` e calculado sempre sobre eventos finalizados dos ultimos 30 dias (`startsAt >= agora - 30 dias`). A migration `20260712120000_attendance_d30_backfill` recalcula o valor atual em producao ao deploy.
 
 Criacao simples:
 
@@ -269,6 +274,7 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada por `ItemRequestQueueService` a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
 - Requests tambem podem receber `swapSuggestions`: ate tres itens requestaveis ativos da mesma categoria e, quando aplicavel, mesmo tier/tipo, com fila menor. A UI mostra posicao estimada, unidades na fila e trade-off PT-BR/EN; a troca continua manual/controlada pela Staff.
 - Requests tambem recebem `materialPriority`: requests de craft T3 mostram selo de prioridade operacional, e requests de Quintessencia afetados por craft T3 do mesmo material inferido mostram aviso simplificado para player e texto operacional para Staff.
+- Criar Item Request exige presenca D-30 minima conforme `attendanceEligibilityRules.participationMinimumPercent` (default 50%).
 - A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
 - A rota Web `/dashboard/item-requests` usa componentes locais em `_components`: `page.tsx` fica como guard/entrada, `item-request-panels.tsx` concentra os paineis player/Staff e `item-request-common.tsx` guarda paineis reutilizados de forecast, sugestoes e prioridade.
 
@@ -382,6 +388,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-12 | Presenca operacional passou a ser D-30; bids exigem 65% e interesses/Item Requests exigem 50%, ambos configuraveis pela tela Staff de regras. | elegibilidade/presenca |
 | 2026-07-11 | Setima rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-11 | Fatia 2.3 do roadmap War/Guild implementada: War Room passou a consumir roster real com impacto de composicao e sugestoes explicaveis de escala, sem automacao de decisao. | roster/War Room |
 | 2026-07-11 | Frente 9 do roadmap War/Guild implementada: recrutamento publico pelo site, fila Staff por status e conversao auditada para player com perfil inicial e checklist de onboarding. | recrutamento |

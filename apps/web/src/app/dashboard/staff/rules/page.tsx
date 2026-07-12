@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { notifyToast } from '@/components/ui/toaster';
 import { useBusinessRules, useResetBusinessRule, useUpdateBusinessRule } from '@/hooks/use-staff-operations-api';
@@ -28,6 +29,18 @@ function groupRules(rules: BusinessRule[]): Array<[string, BusinessRule[]]> {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
 }
 
+function attendanceEligibilityDraft(value: string): { bidMinimumPercent: number; participationMinimumPercent: number } {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return {
+      bidMinimumPercent: Number(parsed.bidMinimumPercent ?? 65),
+      participationMinimumPercent: Number(parsed.participationMinimumPercent ?? 50),
+    };
+  } catch {
+    return { bidMinimumPercent: 65, participationMinimumPercent: 50 };
+  }
+}
+
 export default function StaffBusinessRulesPage() {
   const locale = useLocaleStore((state) => state.locale);
   const rules = useBusinessRules();
@@ -39,6 +52,16 @@ export default function StaffBusinessRulesPage() {
 
   function draftFor(rule: BusinessRule): string {
     return drafts[rule.key] ?? prettyJson(rule.value);
+  }
+
+  function updateAttendanceDraft(rule: BusinessRule, key: 'bidMinimumPercent' | 'participationMinimumPercent', rawValue: string) {
+    const current = attendanceEligibilityDraft(draftFor(rule));
+    const parsed = Number(rawValue);
+    const next = {
+      ...current,
+      [key]: Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : current[key],
+    };
+    setDrafts((draft) => ({ ...draft, [rule.key]: prettyJson(next) }));
   }
 
   async function saveRule(rule: BusinessRule) {
@@ -109,6 +132,30 @@ export default function StaffBusinessRulesPage() {
                     {rule.description ? <p className="text-sm text-muted-foreground">{rule.description}</p> : null}
                   </CardHeader>
                   <CardContent className="space-y-3 pt-4">
+                    {rule.key === 'attendanceEligibilityRules' ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="space-y-1 text-sm font-semibold">
+                          <span>Bid minimo (%)</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={attendanceEligibilityDraft(draftFor(rule)).bidMinimumPercent}
+                            onChange={(event) => updateAttendanceDraft(rule, 'bidMinimumPercent', event.target.value)}
+                          />
+                        </label>
+                        <label className="space-y-1 text-sm font-semibold">
+                          <span>Interesse/request minimo (%)</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={attendanceEligibilityDraft(draftFor(rule)).participationMinimumPercent}
+                            onChange={(event) => updateAttendanceDraft(rule, 'participationMinimumPercent', event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
                     <label className="text-sm font-semibold" htmlFor={`rule-${rule.key}`}>
                       {t(locale, 'ruleValueJson')}
                     </label>

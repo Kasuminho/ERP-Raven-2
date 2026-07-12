@@ -7,6 +7,7 @@ import type {
   ItemInterestStaffComparison as SharedItemInterestStaffComparison,
 } from '@shared/types/interests';
 import { AuditService } from '../../audit/services/audit.service';
+import { BusinessRulesService } from '../../business-rules/business-rules.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { ImageStorageService } from '../../uploads/image-storage.service';
 import { BulkCreateItemInterestPostDto, CreateItemInterestPostDto, DeclareItemInterestDto, DeliverItemInterestDto } from '../dto';
@@ -95,6 +96,7 @@ export class ItemInterestsService {
     private readonly notificationService: NotificationService,
     private readonly imageStorage: ImageStorageService,
     private readonly transmuteRaffle: ItemInterestTransmuteRaffleService,
+    private readonly businessRules: BusinessRulesService,
   ) {}
 
   async listPosts(status?: ItemInterestStatus, userId?: string): Promise<ItemInterestDetails[]> {
@@ -245,6 +247,12 @@ export class ItemInterestsService {
       }
 
       const player = await this.getPrimaryPlayer(userId, tx);
+      const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
+
+      if (player.attendancePercentage < attendanceRules.participationMinimumPercent) {
+        throw new BadRequestException(`Minimum attendance to declare interest is ${attendanceRules.participationMinimumPercent}% in the last 30 days.`);
+      }
+
       const entry = await tx.itemInterestEntry.create({
         data: {
           postId,
@@ -639,10 +647,13 @@ export class ItemInterestsService {
     return namePt.trim().toLowerCase() === nameEn.trim().toLowerCase() ? namePt : `${namePt} / ${nameEn}`;
   }
 
-  private async getPrimaryPlayer(userId: string, tx: Prisma.TransactionClient | PrismaService): Promise<{ id: string }> {
+  private async getPrimaryPlayer(
+    userId: string,
+    tx: Prisma.TransactionClient | PrismaService,
+  ): Promise<{ id: string; attendancePercentage: number }> {
     const player = await tx.player.findFirst({
       where: { userId, isActive: true },
-      select: { id: true },
+      select: { id: true, attendancePercentage: true },
       orderBy: { joinedAt: 'asc' },
     });
 

@@ -6,10 +6,12 @@ import {
   AuctionTierRule,
   AuctionTierRules,
   AuctionDisputeRules,
+  AttendanceEligibilityRules,
   DkpBidPolicyRules,
   EventRewardRules,
   PriorityScoreRules,
   StaffPendingThresholdRules,
+  defaultAttendanceEligibilityRules,
   businessRuleDefaults,
   defaultAuctionDisputeRules,
   defaultAuctionTierRules,
@@ -170,6 +172,10 @@ export class BusinessRulesService {
     return this.mergeAuctionDisputeRules(await this.getRuleValue('auctionDisputeRules'), defaultAuctionDisputeRules);
   }
 
+  async getAttendanceEligibilityRules(): Promise<AttendanceEligibilityRules> {
+    return this.mergeAttendanceEligibilityRules(await this.getRuleValue('attendanceEligibilityRules'), defaultAttendanceEligibilityRules);
+  }
+
   private async ensureDefaults(): Promise<void> {
     const count = await this.prisma.businessRule.count();
 
@@ -207,6 +213,8 @@ export class BusinessRulesService {
         return this.mergeDkpBidPolicy(value, defaultDkpBidPolicyRules) as unknown as Prisma.InputJsonValue;
       case 'auctionDisputeRules':
         return this.mergeAuctionDisputeRules(value, defaultAuctionDisputeRules) as unknown as Prisma.InputJsonValue;
+      case 'attendanceEligibilityRules':
+        return this.mergeAttendanceEligibilityRules(value, defaultAttendanceEligibilityRules) as unknown as Prisma.InputJsonValue;
       default:
         throw new BadRequestException(`Unknown business rule: ${key}`);
     }
@@ -324,6 +332,22 @@ export class BusinessRulesService {
     return {
       enabled: typeof input.enabled === 'boolean' ? input.enabled : fallback.enabled,
       windowHours: this.boundedInteger(input.windowHours, fallback.windowHours, 1, 720),
+    };
+  }
+
+  private mergeAttendanceEligibilityRules(
+    value: unknown,
+    fallback: AttendanceEligibilityRules,
+  ): AttendanceEligibilityRules {
+    const input = this.asRecord(value);
+    return {
+      bidMinimumPercent: this.boundedInteger(input.bidMinimumPercent, fallback.bidMinimumPercent, 0, 100),
+      participationMinimumPercent: this.boundedInteger(
+        input.participationMinimumPercent,
+        fallback.participationMinimumPercent,
+        0,
+        100,
+      ),
     };
   }
 

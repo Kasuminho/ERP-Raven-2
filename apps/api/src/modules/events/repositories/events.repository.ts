@@ -133,18 +133,24 @@ export class EventsRepository {
     });
   }
 
-  async countFinalizedEvents(client: EventsClient = this.prisma): Promise<number> {
+  async countFinalizedEvents(client: EventsClient = this.prisma, since?: Date): Promise<number> {
     return client.event.count({
-      where: { status: EventStatus.FINALIZED },
+      where: {
+        status: EventStatus.FINALIZED,
+        startsAt: since ? { gte: since } : undefined,
+      },
     });
   }
 
-  async countPlayerFinalizedAttendance(playerId: string, client: EventsClient = this.prisma): Promise<number> {
+  async countPlayerFinalizedAttendance(playerId: string, client: EventsClient = this.prisma, since?: Date): Promise<number> {
     return client.eventAttendance.count({
       where: {
         playerId,
         attended: true,
-        event: { status: EventStatus.FINALIZED },
+        event: {
+          status: EventStatus.FINALIZED,
+          startsAt: since ? { gte: since } : undefined,
+        },
       },
     });
   }

@@ -38,6 +38,8 @@ type EventChecklistItem = {
 
 @Injectable()
 export class AttendanceService {
+  private readonly attendanceWindowDays = 30;
+
   constructor(
     private readonly repository: EventsRepository,
     private readonly dkpService: DkpService,
@@ -382,9 +384,10 @@ export class AttendanceService {
         throw new PlayerNotFoundForAttendanceException(playerId);
       }
 
+      const windowStart = this.attendanceWindowStart();
       const [participatedEvents, eligibleEvents] = await Promise.all([
-        this.repository.countPlayerFinalizedAttendance(playerId, tx),
-        this.repository.countFinalizedEvents(tx),
+        this.repository.countPlayerFinalizedAttendance(playerId, tx, windowStart),
+        this.repository.countFinalizedEvents(tx, windowStart),
       ]);
 
       return {
@@ -891,9 +894,10 @@ export class AttendanceService {
     playerId: string,
     tx: Prisma.TransactionClient,
   ): Promise<number> {
+    const windowStart = this.attendanceWindowStart();
     const [participatedEvents, eligibleEvents] = await Promise.all([
-      this.repository.countPlayerFinalizedAttendance(playerId, tx),
-      this.repository.countFinalizedEvents(tx),
+      this.repository.countPlayerFinalizedAttendance(playerId, tx, windowStart),
+      this.repository.countFinalizedEvents(tx, windowStart),
     ]);
 
     return this.toAttendancePercentage(participatedEvents, eligibleEvents);
@@ -905,6 +909,10 @@ export class AttendanceService {
     }
 
     return Number(((participatedEvents / eligibleEvents) * 100).toFixed(2));
+  }
+
+  private attendanceWindowStart(now = new Date()): Date {
+    return new Date(now.getTime() - this.attendanceWindowDays * 86_400_000);
   }
 
   private async requireEvent(eventId: string, tx?: Prisma.TransactionClient): Promise<Event> {
