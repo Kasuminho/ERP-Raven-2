@@ -11,6 +11,7 @@ type AuthState = {
   userId?: string;
   playerId?: string;
   initialized: boolean;
+  membershipStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING_REACTIVATION';
   initialize: (force?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   hasRole: (roles: UserRole[]) => boolean;
@@ -20,11 +21,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   authenticated: false,
   roles: ['MEMBER'],
   initialized: false,
+  membershipStatus: 'ACTIVE',
   initialize: async (force = false) => {
     if (get().initialized && !force) return get().authenticated;
 
     try {
-      const { data } = await api.get<{ userId: string; playerId?: string; roles?: UserRole[] }>('/auth/me', {
+      const { data } = await api.get<{ userId: string; playerId?: string; roles?: UserRole[]; membershipStatus?: AuthState['membershipStatus'] }>('/auth/me', {
         headers: { 'X-Suppress-Session-Toast': 'true' },
       });
       set({
@@ -33,10 +35,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         roles: data.roles?.length ? data.roles : ['MEMBER'],
         userId: data.userId,
         playerId: data.playerId,
+        membershipStatus: data.membershipStatus ?? 'ACTIVE',
       });
       return true;
     } catch {
-      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined });
+      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined, membershipStatus: 'ACTIVE' });
       return false;
     }
   },
@@ -44,7 +47,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       await api.post('/auth/logout', undefined, { headers: { 'X-Suppress-Session-Toast': 'true' } });
     } finally {
-      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined });
+      set({ authenticated: false, initialized: true, roles: ['MEMBER'], userId: undefined, playerId: undefined, membershipStatus: 'ACTIVE' });
     }
   },
   hasRole: (roles) => get().roles.some((role) => roles.includes(role)),

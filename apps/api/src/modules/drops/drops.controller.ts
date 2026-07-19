@@ -29,6 +29,12 @@ export class DropsController {
     return this.service.getPendingAuctionDeliveries({ page: Number(page), limit: Number(limit) });
   }
 
+  @Get('auction-results')
+  @UseGuards(JwtAuthGuard)
+  async auctionResults(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.service.getPublishedAuctionResults({ page: Number(page), limit: Number(limit) });
+  }
+
   @Get('audit/items')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')

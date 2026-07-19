@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { DKPTransactionType, PlayerClass, PlayerCombatAvailability, PlayerCombatProfileChangeStatus, PlayerCombatRole, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto } from '../dto';
+import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto } from '../dto';
 import { PlayersRepository } from '../repositories/players.repository';
 
 const reviewRequiredCategories = new Set<ProgressCategory>([
@@ -82,6 +82,52 @@ export class PlayersService {
       },
       orderBy: [{ isActive: 'desc' }, { nickname: 'asc' }],
     });
+  }
+
+  async updateMembership(playerId: string, actorId: string, dto: UpdatePlayerMembershipDto) {
+    const player = await this.repository.client.player.findUnique({ where: { id: playerId } });
+    if (!player) throw new NotFoundException('Player not found.');
+
+    const activate = dto.action === 'ACTIVATE';
+    if (!activate && player.userId === actorId) {
+      throw new BadRequestException('Voce nao pode desativar o proprio acesso.');
+    }
+    if (!activate && !dto.reason?.trim()) {
+      throw new BadRequestException('Informe o motivo da desativacao.');
+    }
+
+    const updated = await this.repository.client.player.update({
+      where: { id: playerId },
+      data: activate
+        ? {
+            isActive: true,
+            deactivatedAt: null,
+            deactivatedById: null,
+            deactivationReason: null,
+            reactivationRequestedAt: null,
+          }
+        : {
+            isActive: false,
+            deactivatedAt: new Date(),
+            deactivatedById: actorId,
+            deactivationReason: dto.reason!.trim(),
+            reactivationRequestedAt: null,
+          },
+      include: {
+        user: { select: { discordId: true, discordUsername: true, discordNickname: true, preferredLocale: true } },
+        roles: { include: { role: true } },
+        combatProfile: true,
+      },
+    });
+
+    await this.auditService.log({
+      action: activate ? 'PLAYER_REACTIVATED' : 'PLAYER_DEACTIVATED',
+      targetType: 'Player',
+      targetId: playerId,
+      actorId,
+      metadata: { reason: dto.reason?.trim() ?? null, previousIsActive: player.isActive },
+    });
+    return updated;
   }
 
   async getCombatRosterMatrix() {

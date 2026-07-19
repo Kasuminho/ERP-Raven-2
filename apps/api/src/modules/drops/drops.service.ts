@@ -105,6 +105,55 @@ export class DropsService {
     });
   }
 
+  async getPublishedAuctionResults(pagination: { page?: number; limit?: number } = {}) {
+    const { skip, take } = this.normalizePagination(pagination, 50, 100);
+    const drops = await this.prisma.dropHistory.findMany({
+      where: {
+        auctionId: { not: null },
+        deliveredAt: { not: null },
+        proofImageUrl: { not: null },
+        playerId: { not: null },
+      },
+      select: {
+        id: true,
+        auctionId: true,
+        itemName: true,
+        proofImageUrl: true,
+        deliveredAt: true,
+        player: { select: { id: true, nickname: true } },
+        auction: {
+          select: {
+            id: true,
+            itemName: true,
+            itemTier: true,
+            itemType: true,
+            auctionMode: true,
+            itemCatalog: {
+              select: { namePt: true, nameEn: true, image1Url: true, image2Url: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+      skip,
+      take,
+    });
+
+    return drops.map((drop) => ({
+      id: drop.id,
+      auctionId: drop.auctionId!,
+      itemNamePt: drop.auction?.itemCatalog?.namePt || drop.itemName || drop.auction?.itemName || 'Item',
+      itemNameEn: drop.auction?.itemCatalog?.nameEn || drop.itemName || drop.auction?.itemName || 'Item',
+      itemTier: drop.auction?.itemTier,
+      itemType: drop.auction?.itemType,
+      auctionMode: drop.auction?.auctionMode,
+      winner: drop.player!,
+      proofImageUrl: drop.proofImageUrl!,
+      itemImageUrl: drop.auction?.itemCatalog?.image1Url || drop.auction?.itemCatalog?.image2Url || null,
+      deliveredAt: drop.deliveredAt!,
+    }));
+  }
+
   async getItemAuditSummaries(search?: string) {
     const normalizedSearch = search?.trim();
     const where: Prisma.DropHistoryWhereInput | undefined = normalizedSearch

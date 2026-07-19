@@ -106,8 +106,16 @@ export class DiscordSyncService {
     return Boolean(await this.api.getGuildMember(discordId));
   }
 
-  async getSessionProfile(userId: string): Promise<{ playerId?: string; roles: string[] }> {
+  async getSessionProfile(userId: string) {
     return this.repository.getPrimaryPlayerSession(userId);
+  }
+
+  async requestReactivation(userId: string): Promise<Date | undefined> {
+    const requestedAt = await this.repository.requestPrimaryPlayerReactivation(userId);
+    if (requestedAt) {
+      await this.audit('PLAYER_REACTIVATION_REQUESTED', userId, { requestedAt: requestedAt.toISOString() });
+    }
+    return requestedAt;
   }
 
   private async syncRoleCatalog(): Promise<void> {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { PlayerClass, PlayerCombatAvailability, PlayerCombatRole } from '@prisma/client';
-import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto } from '../src/modules/players/dto';
+import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto } from '../src/modules/players/dto';
 
 const strictPipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
 
@@ -63,5 +63,21 @@ describe('Players combat profile DTO validation', () => {
     );
 
     assert.ok(review instanceof ReviewCombatProfileChangeDto);
+  });
+
+  it('validates Staff membership lifecycle actions', async () => {
+    const deactivation = await strictPipe.transform(
+      { action: 'DEACTIVATE', reason: 'Saiu da guilda.' },
+      { type: 'body', metatype: UpdatePlayerMembershipDto },
+    );
+    assert.ok(deactivation instanceof UpdatePlayerMembershipDto);
+
+    await assert.rejects(
+      () => strictPipe.transform(
+        { action: 'BAN', reason: 'Acao invalida', leaked: true },
+        { type: 'body', metatype: UpdatePlayerMembershipDto },
+      ),
+      BadRequestException,
+    );
   });
 });

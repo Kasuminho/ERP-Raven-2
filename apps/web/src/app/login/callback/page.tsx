@@ -11,7 +11,8 @@ export default function LoginCallbackPage() {
 
   useEffect(() => {
     void initialize(true).then((authenticated) => {
-      router.replace(authenticated ? '/dashboard' : '/login');
+      const membershipStatus = useAuthStore.getState().membershipStatus;
+      router.replace(authenticated ? (membershipStatus === 'ACTIVE' ? '/dashboard' : '/access-review') : '/login');
     });
   }, [initialize, router]);
 

@@ -183,6 +183,22 @@ export function usePlayers() {
   });
 }
 
+export function useUpdatePlayerMembership() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { playerId: string; action: 'DEACTIVATE' | 'ACTIVATE'; reason?: string }) => {
+      const { playerId, ...payload } = data;
+      return (await api.patch<StaffPlayer>(`/players/${playerId}/membership`, payload)).data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-roster'] }),
+      ]);
+    },
+  });
+}
+
 export function useMyCombatProfile() {
   return useQuery({
     queryKey: ['my-combat-profile'],

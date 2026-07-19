@@ -67,6 +67,7 @@ export class EventsRepository {
 
   async findPlayers(client: EventsClient = this.prisma): Promise<Player[]> {
     return client.player.findMany({
+      where: { isActive: true },
       orderBy: { nickname: 'asc' },
     });
   }

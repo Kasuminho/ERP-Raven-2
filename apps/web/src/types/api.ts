@@ -884,6 +884,20 @@ export type PendingAuctionDelivery = {
   priorityReason?: string;
 };
 
+export type PublishedAuctionResult = {
+  id: string;
+  auctionId: string;
+  itemNamePt: string;
+  itemNameEn: string;
+  itemTier?: ItemTier;
+  itemType?: ItemType;
+  auctionMode?: AuctionMode;
+  winner: { id: string; nickname: string };
+  proofImageUrl: string;
+  itemImageUrl?: string | null;
+  deliveredAt: string;
+};
+
 export type PlayerProgress = {
   id: string;
   playerId: string;
@@ -967,6 +981,9 @@ export type AuditIdentity = {
 
 export type StaffPlayer = PlayerProfile & {
   isActive: boolean;
+  deactivatedAt?: string;
+  deactivationReason?: string;
+  reactivationRequestedAt?: string;
   user: {
     discordId: string;
     discordUsername: string;

@@ -105,7 +105,8 @@ export class NotificationService {
     proofImageUrl?: string;
   }): Promise<void> {
     const locale = this.localeFor('drops', data.itemName);
-    const payload = { embeds: [buildAuctionDeliveryEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl), locale)] };
+    const resultUrl = this.dashboardUrl('/dashboard/drops');
+    const payload = { embeds: [buildAuctionDeliveryEmbed(data.itemName, data.playerName, this.publicImageUrl(data.proofImageUrl), locale, resultUrl)] };
     await this.sendChannel('drops', payload, 'DISCORD_NOTIFY_AUCTION_DROP_DELIVERED', data.auctionId);
 
     if (data.discordId) {

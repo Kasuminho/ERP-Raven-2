@@ -10,6 +10,7 @@ export function AuthGuard({ children, roles }: { children: ReactNode; roles?: Us
   const initialized = useAuthStore((state) => state.initialized);
   const initialize = useAuthStore((state) => state.initialize);
   const hasRole = useAuthStore((state) => state.hasRole);
+  const membershipStatus = useAuthStore((state) => state.membershipStatus);
 
   useEffect(() => {
     if (!initialized) {
@@ -17,10 +18,12 @@ export function AuthGuard({ children, roles }: { children: ReactNode; roles?: Us
       return;
     }
     if (!authenticated) router.replace('/login');
+    if (authenticated && membershipStatus !== 'ACTIVE') router.replace('/access-review');
     if (authenticated && roles && !hasRole(roles)) router.replace('/dashboard');
-  }, [authenticated, hasRole, initialize, initialized, roles, router]);
+  }, [authenticated, hasRole, initialize, initialized, membershipStatus, roles, router]);
 
   if (!initialized || !authenticated) return null;
+  if (membershipStatus !== 'ACTIVE') return null;
   if (roles && !hasRole(roles)) return null;
 
   return children;

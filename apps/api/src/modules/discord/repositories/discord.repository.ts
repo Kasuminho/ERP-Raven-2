@@ -148,7 +148,7 @@ export class DiscordRepository {
     });
   }
 
-  async getPrimaryPlayerSession(userId: string): Promise<{ playerId?: string; roles: string[] }> {
+  async getPrimaryPlayerSession(userId: string): Promise<{ playerId?: string; roles: string[]; membershipStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING_REACTIVATION'; reactivationRequestedAt?: Date }> {
     const player = await this.prisma.player.findFirst({
       where: { userId },
       orderBy: { createdAt: 'asc' },
@@ -162,7 +162,19 @@ export class DiscordRepository {
     return {
       playerId: player?.id,
       roles: player?.roles.map((row) => row.role.name) ?? [],
+      membershipStatus: !player || player.isActive ? 'ACTIVE' : player.reactivationRequestedAt ? 'PENDING_REACTIVATION' : 'INACTIVE',
+      reactivationRequestedAt: player?.reactivationRequestedAt ?? undefined,
     };
+  }
+
+  async requestPrimaryPlayerReactivation(userId: string): Promise<Date | undefined> {
+    const player = await this.prisma.player.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } });
+    if (!player || player.isActive) return undefined;
+    if (player.reactivationRequestedAt) return player.reactivationRequestedAt;
+
+    const requestedAt = new Date();
+    await this.prisma.player.update({ where: { id: player.id }, data: { reactivationRequestedAt: requestedAt } });
+    return requestedAt;
   }
 
   private async getAvailableNickname(base: string): Promise<string> {

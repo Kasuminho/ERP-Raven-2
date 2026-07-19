@@ -48,4 +48,43 @@ describe('DropsService pending auction deliveries', () => {
     assert.equal(prisma.auction.findMany.mock.calls.length, 1);
     assert.equal(prisma.dropHistory.findMany.mock.calls.length, 1);
   });
+
+  it('publishes only delivered auction results with proof and a winner', async () => {
+    const deliveredAt = new Date('2026-07-18T12:00:00.000Z');
+    const prisma = {
+      dropHistory: {
+        findMany: mock.fn(async () => [{
+          id: 'drop-1',
+          auctionId: 'auction-1',
+          itemName: 'Espada antiga',
+          proofImageUrl: '/uploads/proof.webp',
+          deliveredAt,
+          player: { id: 'player-1', nickname: 'Aiko' },
+          auction: {
+            id: 'auction-1',
+            itemName: 'Espada T4',
+            itemTier: 'T4',
+            itemType: 'WEAPON',
+            auctionMode: 'STANDARD',
+            itemCatalog: { namePt: 'Espada Solar', nameEn: 'Solar Sword', image1Url: '/uploads/item.webp', image2Url: null },
+          },
+        }]),
+      },
+    };
+    const service = new DropsService(prisma as never, {} as never, {} as never);
+
+    const results = await service.getPublishedAuctionResults();
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0]?.winner.nickname, 'Aiko');
+    assert.equal(results[0]?.itemNamePt, 'Espada Solar');
+    assert.equal(results[0]?.itemNameEn, 'Solar Sword');
+    assert.equal(results[0]?.proofImageUrl, '/uploads/proof.webp');
+    assert.deepEqual(prisma.dropHistory.findMany.mock.calls[0]?.arguments[0]?.where, {
+      auctionId: { not: null },
+      deliveredAt: { not: null },
+      proofImageUrl: { not: null },
+      playerId: { not: null },
+    });
+  });
 });

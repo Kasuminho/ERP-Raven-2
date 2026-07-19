@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Clipboard, Filter, Save, Swords, UserCheck, XCircle } from 'lucide-react';
+import { Clipboard, Filter, Save, Swords, UserCheck, UserMinus, XCircle } from 'lucide-react';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCombatProfileRequests, useCombatRosterMatrix, usePlayers, useReviewCombatProfileRequest, useUpdateCombatProfile } from '@/hooks/use-profile-api';
+import { useCombatProfileRequests, useCombatRosterMatrix, usePlayers, useReviewCombatProfileRequest, useUpdateCombatProfile, useUpdatePlayerMembership } from '@/hooks/use-profile-api';
 import { combatAvailabilityLabel, combatRoleLabel, playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -56,6 +56,7 @@ export default function StaffPlayersPage() {
   const updateCombatProfile = useUpdateCombatProfile();
   const approveRequest = useReviewCombatProfileRequest('approve');
   const rejectRequest = useReviewCombatProfileRequest('reject');
+  const updateMembership = useUpdatePlayerMembership();
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [combatForm, setCombatForm] = useState<CombatForm | null>(null);
   const [filters, setFilters] = useState({
@@ -68,6 +69,7 @@ export default function StaffPlayersPage() {
     status: 'ALL' as StatusFilter,
   });
   const rosterRows = roster.data?.rows ?? [];
+  const pendingReturns = (players.data ?? []).filter((player) => !player.isActive && player.reactivationRequestedAt);
   const filteredRosterRows = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
     const minLayer = filters.minLayer ? Number(filters.minLayer) : undefined;
@@ -148,6 +150,18 @@ export default function StaffPlayersPage() {
     );
   }
 
+  function changeMembership(player: StaffPlayer) {
+    const activating = !player.isActive;
+    const reason = activating ? undefined : window.prompt(`Motivo para desativar ${player.nickname}:`);
+    if (!activating && !reason?.trim()) return;
+    if (!window.confirm(activating ? `Liberar o retorno de ${player.nickname}?` : `Desativar ${player.nickname} e remover da presenca?`)) return;
+
+    updateMembership.mutate(
+      { playerId: player.id, action: activating ? 'ACTIVATE' : 'DEACTIVATE', reason: reason?.trim() },
+      { onSuccess: () => notifyToast({ title: activating ? 'Player reativado.' : 'Player desativado.', tone: 'success' }) },
+    );
+  }
+
   async function copyRosterMarkdown() {
     if (!roster.data?.markdown) return;
 
@@ -186,6 +200,25 @@ export default function StaffPlayersPage() {
             </Card>
           ))}
         </div>
+        {pendingReturns.length > 0 && (
+          <Card className="border-primary/50">
+            <CardHeader><CardTitle>Retornos aguardando liberacao</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">Conectaram novamente no site e continuam sem acesso. A Staff precisa revisar e liberar.</p>
+              {pendingReturns.map((player) => (
+                <div key={player.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background/35 p-3">
+                  <div>
+                    <p className="font-semibold">{player.nickname}</p>
+                    <p className="text-xs text-muted-foreground">Solicitado em {new Date(player.reactivationRequestedAt!).toLocaleString()}</p>
+                  </div>
+                  <Button type="button" disabled={updateMembership.isPending} onClick={() => changeMembership(player)}>
+                    <UserCheck className="h-4 w-4" /> Liberar retorno
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
         <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
           <Card>
             <CardHeader>
@@ -374,6 +407,7 @@ export default function StaffPlayersPage() {
                     <Badge>{combatRoleLabel(profile?.preferredRole, locale)}</Badge>
                     <Badge tone="muted">{combatAvailabilityLabel(profile?.availability, locale)}</Badge>
                     {player.roles.map((row) => <Badge key={row.role.name}>{row.role.name}</Badge>)}
+                    <Badge tone={player.isActive ? 'green' : player.reactivationRequestedAt ? 'gold' : 'red'}>{player.isActive ? 'ATIVO' : player.reactivationRequestedAt ? 'RETORNO PENDENTE' : 'DESATIVADO'}</Badge>
                   </div>
                 </div>
                 <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
@@ -417,9 +451,13 @@ export default function StaffPlayersPage() {
                     </div>
                   </div>
                 ) : (
-                  <Button type="button" variant="secondary" className="mt-3" onClick={() => startEdit(player)}>
-                    <Swords className="h-4 w-4" /> Editar perfil de combate
-                  </Button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {player.isActive && <Button type="button" variant="secondary" onClick={() => startEdit(player)}><Swords className="h-4 w-4" /> Editar perfil de combate</Button>}
+                    <Button type="button" variant={player.isActive ? 'danger' : 'primary'} disabled={updateMembership.isPending} onClick={() => changeMembership(player)}>
+                      {player.isActive ? <UserMinus className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      {player.isActive ? 'Desativar da guild' : player.reactivationRequestedAt ? 'Liberar retorno' : 'Reativar player'}
+                    </Button>
+                  </div>
                 )}
               </div>
               );

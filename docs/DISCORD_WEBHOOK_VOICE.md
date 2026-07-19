@@ -8,6 +8,7 @@ Todos os webhooks usam a identidade **Aristolfo, 570 anos de webhook** e o avata
 - Mensagens destinadas aos players usam PT-BR e EN no mesmo post.
 - Espanhol nao entra mais no fluxo de webhook.
 - Cada idioma fica em seu proprio bloco para continuar legivel.
+- Resultado de leilao e publicado no alvo logico `drops` somente depois da entrega com prova; o embed informa item e vencedor, anexa a prova e aponta para `/dashboard/drops`, sem ranking, bids, locks ou concorrentes.
 
 ## Personalidade
 

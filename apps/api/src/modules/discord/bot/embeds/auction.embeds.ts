@@ -79,7 +79,7 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
   return embed;
 }
 
-export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
+export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, proofImageUrl?: string, locale: DiscordLocale = 'pt-BR', resultUrl?: string): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
@@ -98,6 +98,13 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     }, itemName, playerName))
     .setColor(0xf2c94c)
     .setTimestamp(new Date());
+
+  if (resultUrl) {
+    embed.addFields({
+      name: localeCopy(locale, { 'pt-BR': 'Resultados no site', en: 'Results on the website' }),
+      value: resultUrl,
+    });
+  }
 
   if (isDiscordImageUrl(proofImageUrl)) {
     embed.setImage(proofImageUrl);

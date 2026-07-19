@@ -3,7 +3,7 @@ import { PlayerClass, PlayerStaffNoteSeverity, ProgressCategory } from '@prisma/
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CombatProfileChangeRequestParamDto, PlayerCombatProfileParamDto, RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto } from '../dto';
+import { CombatProfileChangeRequestParamDto, PlayerCombatProfileParamDto, PlayerMembershipParamDto, RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto } from '../dto';
 import { PlayersService } from '../services/players.service';
 
 type AuthRequest = {
@@ -27,6 +27,17 @@ export class PlayersController {
   @Roles('STAFF', 'ADMIN')
   async listPlayers() {
     return this.service.listPlayers();
+  }
+
+  @Patch(':playerId/membership')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async updateMembership(
+    @Param() params: PlayerMembershipParamDto,
+    @Req() req: AuthRequest,
+    @Body() dto: UpdatePlayerMembershipDto,
+  ) {
+    return this.service.updateMembership(params.playerId, req.user.userId, dto);
   }
 
   @Get('audit/identities')
