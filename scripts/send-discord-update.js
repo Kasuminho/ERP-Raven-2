@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo carimbou o changelog. Se algo chiar, abre ticket; terapia de caps lock nao escala.*',
-    '*Aristolfo publicou a ata. O deploy saiu; o caos que pegue senha e traga evidencia, sem novela.*',
-    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o log ja esta de print armado.*',
-    '*Aristolfo fechou a nota. Discordar pode, mas venha com contexto e sem freestyle juridico.*',
-    '*Aristolfo mandou o changelog. A planilha respirou fundo e parou de fingir surpresa.*',
+    '*Aristolfo carimbou o changelog. Se algo chiar, abre ticket; grito em caps lock nao passa no lint.*',
+    '*Aristolfo publicou a ata. Deploy saiu; o caos que traga log, contexto e menos novela de grupo.*',
+    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o print ja esta no inventario.*',
+    '*Aristolfo fechou a nota. Discordar pode; freestyle sem evidencia fica preso no tutorial.*',
+    '*Aristolfo mandou o changelog. A planilha piscou duas vezes e aceitou terapia de coluna.*',
   ],
   EN: [
-    '*Aristolfo stamped the changelog. If anything squeaks, open a ticket; caps-lock therapy does not scale.*',
-    '*Aristolfo published the minutes. Deploy shipped; chaos can take a number and bring evidence, no soap opera.*',
-    '*Aristolfo sent the note with a receipt. If reality improvises, the log already has screenshots ready.*',
-    '*Aristolfo closed the note. Disagree if needed, but bring context and skip legal freestyle.*',
-    '*Aristolfo shipped the changelog. The spreadsheet took a breath and stopped pretending surprise.*',
+    '*Aristolfo stamped the changelog. If anything squeaks, open a ticket; caps-lock yelling fails lint.*',
+    '*Aristolfo published the minutes. Deploy shipped; chaos can bring logs, context, and less group-chat drama.*',
+    '*Aristolfo sent the note with a receipt. If reality improvises, the screenshot is already in inventory.*',
+    '*Aristolfo closed the note. Disagree if needed; freestyle without evidence stays stuck in tutorial.*',
+    '*Aristolfo shipped the changelog. The spreadsheet blinked twice and accepted column therapy.*',
   ],
 };
 

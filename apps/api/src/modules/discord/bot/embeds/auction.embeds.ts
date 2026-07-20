@@ -27,16 +27,16 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setColor(0x2f80ed)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Leilao abriu.** Calcula antes de clicar; all-in emocional e boleto gourmet de arrependimento.',
-        '**Drop no balcao.** Quem bidar no reflexo vira estudo de caso no museu do vacilo.',
-        '**Janela de lance online.** Mira no item, nao no surto premium com skin de estrategia.',
-        '**Item na vitrine.** Entra com DKP e neuronio online; fe no lag nao passa no checkout.',
+        '**Leilao aberto.** Faz conta antes do clique; bid no impulso e boleto de skin lendaria do arrependimento.',
+        '**Drop apareceu.** Quem entrar no automatico vira clipe motivacional do "nao faca isso".',
+        '**Janela de lance no ar.** Mira no item, nao no ego com ping alto e plano premium de caos.',
+        '**Item na bancada.** DKP na mao e calma no mouse; freestyle financeiro nao da buff.',
       ],
       en: [
-        '**Auction opened.** Do the math before clicking; emotional all-in is premium regret billing.',
-        '**Drop is on the counter.** Reflex bidding becomes a case study in the fumble museum.',
-        '**Bid window is online.** Aim at the item, not premium panic wearing strategy cosplay.',
-        '**Item is on display.** Bring DKP and one working brain cell; faith in lag fails checkout.',
+        '**Auction opened.** Do the math before clicking; impulse bids invoice regret with legendary-skin pricing.',
+        '**Drop showed up.** Anyone autopiloting becomes a motivational clip called "do not do this".',
+        '**Bid window is live.** Aim at the item, not ego with high ping and a premium chaos plan.',
+        '**Item is on the bench.** DKP in hand and calm on the mouse; financial freestyle gives no buff.',
       ],
     }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
@@ -57,16 +57,16 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
     .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `**${playerName} levou o drop.** DKP debitado e o "calma, tenho uma teoria" tomou mute administrativo.`,
-        `**${playerName} fechou a conta.** Item definido; o chorinho tecnico foi enviado para fila casual.`,
-        `**${playerName} ganhou no martelo.** Lock cobrado, fanfic concorrente sem budget de segunda temporada.`,
-        `**${playerName} cravou o bid final.** O item tem dono e o debate dropou zero argumento raro.`,
+        `**${playerName} ficou com o drop.** DKP debitado; a teoria de mesa virou conteudo cortado do patch note.`,
+        `**${playerName} fechou o leilao.** Item definido e o "mas veja bem" tomou disconnect estrategico.`,
+        `**${playerName} levou no martelo.** Lock cobrado, replay revisado e drama sem loot bonus.`,
+        `**${playerName} cravou o resultado.** O item tem dono; o debate saiu com build de papel.`,
       ],
       en: [
-        `**${playerName} took the drop.** DKP was debited and "wait, I have a theory" got an admin mute.`,
-        `**${playerName} closed the bill.** Item decided; technical whining was queued for casual mode.`,
-        `**${playerName} won at the hammer.** Lock charged, rival fanfic got no second-season budget.`,
-        `**${playerName} landed the final bid.** The item has an owner and debate dropped zero rare arguments.`,
+        `**${playerName} got the drop.** DKP was debited; table theory became cut content from the patch notes.`,
+        `**${playerName} closed the auction.** Item decided and "but hear me out" took a strategic disconnect.`,
+        `**${playerName} won at the hammer.** Lock charged, replay reviewed, drama awarded no bonus loot.`,
+        `**${playerName} locked the result.** The item has an owner; the debate left with a paper build.`,
       ],
     }, itemName, playerName))
     .setColor(0x27ae60)
@@ -84,16 +84,16 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `Entrega confirmada para **${playerName}**. Print anexado antes que a CSI do Discord abra franquia.`,
-        `**${playerName}** recebeu e o log carimbou. O "confia" foi nerfado ate sumir do meta.`,
-        `Drop entregue para **${playerName}**. Prova no lugar antes da teoria de zap ganhar HP de boss.`,
-        `Tudo entregue a **${playerName}**. Registro feito; a fofoca ficou sem invite para a party.`,
+        `Entrega confirmada para **${playerName}**. Print anexado; o "confia" foi expulso do lobby.`,
+        `**${playerName}** recebeu e o log assinou. Auditoria sem print hoje fica sem passe de batalha.`,
+        `Drop entregue para **${playerName}**. Prova no lugar antes que o grupo invente lore alternativa.`,
+        `Tudo certo com **${playerName}**. Registro feito; a novela perdeu horario nobre no Discord.`,
       ],
       en: [
-        `Delivery confirmed for **${playerName}**. Screenshot attached before Discord CSI opened a franchise.`,
-        `**${playerName}** received it and the log stamped it. "Trust me" got nerfed out of the meta.`,
-        `Drop delivered to **${playerName}**. Proof in place before chat theory gained boss HP.`,
-        `Everything reached **${playerName}**. Record made; gossip lost the party invite.`,
+        `Delivery confirmed for **${playerName}**. Screenshot attached; "trust me" got kicked from the lobby.`,
+        `**${playerName}** received it and the log signed. Audit without proof gets no battle pass today.`,
+        `Drop delivered to **${playerName}**. Proof in place before the group invents alternate lore.`,
+        `All set with **${playerName}**. Record made; the Discord soap opera lost prime time.`,
       ],
     }, itemName, playerName))
     .setColor(0xf2c94c)

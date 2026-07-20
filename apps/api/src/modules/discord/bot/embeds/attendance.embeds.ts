@@ -11,16 +11,16 @@ export function buildAttendanceStartedEmbed(eventName: string, startsAt: Date, l
     .setTitle(localeCopy(locale, { 'pt-BR': `Presenca aberta: ${eventName}`, en: `Attendance open: ${eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Check-in abriu.** Marca no site antes que o "ja ja entro" vire patrimonio imaterial da call.',
-        '**Presenca valendo.** DKP nao le aura; clique feito pesa mais que audio com drama de fundo.',
-        '**Janela de presenca no ar.** Registra logo; lag de conveniencia nao passa no detector de migue.',
-        '**Ponto liberado.** Entra antes da raid andar e teu nome virar NPC decorativo no rodape.',
+        '**Check-in abriu.** Marca no site antes que o "to chegando" vire NFT de desculpa repetida.',
+        '**Presenca valendo.** DKP nao interpreta sentimento; clique registrado humilha audio dramatico.',
+        '**Janela de presenca no ar.** Registra logo; lag seletivo aqui toma report sem replay.',
+        '**Ponto liberado.** Entra antes da raid puxar e teu nome virar decoracao triste do rodape.',
       ],
       en: [
-        '**Check-in opened.** Mark it on the site before "joining soon" becomes call heritage.',
-        '**Attendance counts now.** DKP does not read auras; one click beats dramatic excuse audio.',
-        '**The attendance window is live.** Register early; convenient lag fails the excuse detector.',
-        '**Clock-in is unlocked.** Hit the site before the raid moves and your name becomes footer NPC decor.',
+        '**Check-in opened.** Mark it on the site before "almost there" becomes a repeated-excuse NFT.',
+        '**Attendance counts now.** DKP does not parse feelings; one registered click humiliates dramatic audio.',
+        '**The attendance window is live.** Register early; selective lag gets reported without replay.',
+        '**Clock-in is unlocked.** Hit the site before the raid pulls and your name becomes sad footer decor.',
       ],
     }, eventName, startsAt))
     .addFields({ name: localeCopy(locale, { 'pt-BR': 'Inicio', en: 'Starts' }), value: `${discordTimestamp(startsAt, 'F')}\n${discordTimestamp(startsAt, 'R')}`, inline: false })
@@ -39,16 +39,16 @@ export function buildEventFinalizedEmbed(data: {
     .setTitle(localeCopy(locale, { 'pt-BR': `Evento fechado: ${data.eventName}`, en: `Event closed: ${data.eventName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Raid fechada e DKP pago.** A conta bateu; ate a calculadora fingiu maturidade por 3 segundos.',
-        '**Distribuicao concluida.** Quem colou recebeu, quem faltou farmou "na proxima eu vou" em 4K.',
-        '**Resumo liquidado.** Numero alinhado sem ritual de planilha nem oferenda ao Ctrl+Z.',
-        '**Evento encerrado.** DKP entregue e a planilha saiu do ranked sem pedir remake.',
+        '**Raid fechada e DKP pago.** A conta bateu; a calculadora quase abriu live de superacao.',
+        '**Distribuicao concluida.** Quem apareceu recebeu, quem faltou desbloqueou o passe "sem farm hoje".',
+        '**Resumo liquidado.** Numero alinhado sem danca da planilha nem culto ao Ctrl+Z.',
+        '**Evento encerrado.** DKP entregue e a aba saiu do ranked sem pedir remake no all chat.',
       ],
       en: [
-        '**Raid closed and DKP paid.** The math matched; even the calculator pretended maturity for 3 seconds.',
-        '**Distribution complete.** Whoever showed got paid; whoever missed farmed "next time I will" in 4K.',
-        '**Wrap-up settled.** Numbers aligned without spreadsheet rituals or Ctrl+Z offerings.',
-        '**Event closed.** DKP delivered and the spreadsheet left ranked without requesting a remake.',
+        '**Raid closed and DKP paid.** The math matched; the calculator almost started a comeback stream.',
+        '**Distribution complete.** Whoever showed got paid; whoever missed unlocked the "no farm today" pass.',
+        '**Wrap-up settled.** Numbers aligned without spreadsheet dancing or a Ctrl+Z cult.',
+        '**Event closed.** DKP delivered and the tab left ranked without asking all chat for a remake.',
       ],
     }, data.eventName, data.rewardPerPlayer, data.totalDkp, data.presentCount, data.absentCount))
     .addFields(

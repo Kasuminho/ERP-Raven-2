@@ -44,16 +44,16 @@ export class NotificationService {
         localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon' }),
         pickBilingualVoice({
           'pt-BR': [
-            `**${data.itemName}** entrou nos minutos finais. Bid agora; depois o "bugou aqui" chega sem advogado.`,
-            `**${data.itemName}** esta no clutch. Piscou, vira react do proprio vacilo em tela cheia.`,
-            `**${data.itemName}** ja esta fechando a janela. Se quer lance, clica; podcast nao arremata loot.`,
-            `**${data.itemName}** chegou no ultimo round. Vontade sem bid segue zerada no scoreboard.`,
+            `**${data.itemName}** entrou nos minutos finais. Bid agora; depois o "foi mal" chega sem legenda.`,
+            `**${data.itemName}** esta no clutch. Piscou, vira print educativo no mural do timing ruim.`,
+            `**${data.itemName}** ja esta fechando a janela. Se quer lance, clica; monologo nao arremata loot.`,
+            `**${data.itemName}** chegou no ultimo round. Vontade sem bid continua zerada no placar.`,
           ],
           en: [
-            `**${data.itemName}** is in the final minutes. Bid now; "it bugged here" arrives with no lawyer.`,
-            `**${data.itemName}** is in clutch. Blink and become a full-screen reaction to your own fumble.`,
-            `**${data.itemName}** is already closing the window. If you want a bid, click; podcasts do not win loot.`,
-            `**${data.itemName}** reached the last round. Intent without a bid stays zero on the scoreboard.`,
+            `**${data.itemName}** is in the final minutes. Bid now; "my bad" arrives without subtitles later.`,
+            `**${data.itemName}** is in clutch. Blink and become an educational screenshot about bad timing.`,
+            `**${data.itemName}** is already closing the window. If you want a bid, click; monologues do not win loot.`,
+            `**${data.itemName}** reached the last round. Intent without a bid stays zero on the board.`,
           ],
         }, data.auctionId, data.itemName),
       )],
@@ -67,16 +67,16 @@ export class NotificationService {
           'Bid superado / Bid outbid',
           pickBilingualVoice({
             'pt-BR': [
-              `Passaram seu bid em **${data.itemName}**. Reage agora ou assiste o proprio prejuizo em cadeira premium.`,
-              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes do placar fechar a loja.`,
-              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba vire arqueologia.`,
-              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD vira aula de timing triste.`,
+              `Passaram seu bid em **${data.itemName}**. Reage agora ou compra ingresso pro proprio quase.`,
+              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes do placar baixar a porta.`,
+              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba fossilize.`,
+              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD vira tutorial de hesitacao.`,
             ],
             en: [
-              `Your bid on **${data.itemName}** got passed. React now or watch your own loss from premium seats.`,
-              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the board closes shop.`,
-              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab becomes archaeology.`,
-              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD become a sad-timing lesson.`,
+              `Your bid on **${data.itemName}** got passed. React now or buy tickets to your own almost-win.`,
+              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the board shuts down.`,
+              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab fossilizes.`,
+              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD become a hesitation tutorial.`,
             ],
           }, data.auctionId, data.itemName, data.discordId),
         )],
@@ -266,16 +266,16 @@ export class NotificationService {
     }[data.stage];
     const actionText = data.stage === 'dropped'
       ? pickStaffVoice([
-        'Rank ajustado no automatico. Agora e avisar antes que o player descubra em jumpscare full HD.',
-        'A fila aplicou o debuff sozinha. Vale alinhar antes que o drama peca microfone.',
-        'O cron derrubou uma posicao. Melhor explicar antes que a contestacao chegue chutando porta.',
-        'A queda ja entrou no log. Falta avisar o player antes que o chat escreva fanfic com capa dura.',
+        'Rank ajustado no automatico. Agora avisa antes que o player descubra pelo susto em 1080p.',
+        'A fila aplicou o debuff sozinha. Vale alinhar antes que o drama peca palco e iluminacao.',
+        'O cron derrubou uma posicao. Melhor explicar antes que a contestacao venha com trilha sonora.',
+        'A queda ja entrou no log. Falta avisar o player antes que o chat lance fanfic capa dura.',
       ], data.requestId, data.itemName, data.playerName, data.stage)
       : pickStaffVoice([
-        'Cobrar print novo no site; request parado nao ganha passe vitalicio.',
-        'Puxar o player para atualizar o request antes que a desculpa tente virar esporte oficial.',
-        'Lembrar o player de subir prova nova antes que o cron volte de havaiana na mao.',
-        'Cutucar o player hoje; amanha esse lembrete tenta vender segunda temporada.',
+        'Cobrar print novo no site; request parado nao desbloqueia cidadania permanente.',
+        'Puxar o player para atualizar o request antes que a desculpa tente virar modalidade olimpica.',
+        'Lembrar o player de subir prova nova antes que o cron volte com chinelo administrativo.',
+        'Cutucar o player hoje; amanha esse lembrete aparece vendendo season pass.',
       ], data.requestId, data.itemName, data.playerName, data.stage);
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,

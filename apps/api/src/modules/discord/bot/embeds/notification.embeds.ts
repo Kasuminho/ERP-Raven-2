@@ -72,16 +72,16 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
     .setColor(0xf2c94c)
     .setDescription(data.description?.trim() || pickBilingualVoice({
       'pt-BR': [
-        '**Aviso na tela.** Joga no calendario antes que a memoria feche o jogo sem salvar.',
-        '**Horario publicado.** Marca agora; "eu lembro" e build glass cannon contra vida adulta.',
-        '**Ping operacional entregue.** Agenda logo antes que o cerebro troque boss por scroll infinito.',
-        '**Waypoint fixado.** Salva o horario e evita speedrun de desculpa na portaria.',
+        '**Aviso na tela.** Poe no calendario antes que a memoria alt-f4 sem salvar progresso.',
+        '**Horario publicado.** Marca agora; "eu lembro" e build full dano contra boleto de vida adulta.',
+        '**Ping operacional entregue.** Agenda logo antes que o cerebro troque boss por feed infinito.',
+        '**Waypoint fixado.** Salva o horario e evita speedrun de desculpa com narrador cansado.',
       ],
       en: [
-        '**Announcement on screen.** Put it on the calendar before memory closes the game unsaved.',
-        '**Time published.** Mark it now; "I will remember" is a glass-cannon build against adult life.',
-        '**Operational ping delivered.** Schedule it before the brain swaps boss for infinite scroll.',
-        '**Waypoint pinned.** Save the time and avoid an excuse speedrun at the gate.',
+        '**Announcement on screen.** Put it on the calendar before memory alt-F4s without saving progress.',
+        '**Time published.** Mark it now; "I will remember" is a full-damage build against adult-life bills.',
+        '**Operational ping delivered.** Schedule it before the brain swaps boss for infinite feed.',
+        '**Waypoint pinned.** Save the time and avoid an excuse speedrun with a tired narrator.',
       ],
     }, data.stageLabel, data.type, data.title, data.eventTime))
     .addFields(
@@ -97,23 +97,23 @@ export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale
   const copy = (values: Record<DiscordLocale, string>) => staffOnly ? values['pt-BR'] : localeCopy(locale, values);
   const description = staffOnly
     ? pickStaffVoice([
-      '**Fila parada nao dropa update.** Cobra o print antes que o cron aplique voadora regulamentar.',
-      '**Request montou barraca.** Puxa o player agora antes que a pendencia vire ponto turistico.',
-      '**Feed sem novidade.** Cutuca hoje; amanha isso chega com textao e screenshot batata.',
-      '**Pedido estacionado em AFK.** Chama o player antes que a poeira abra epic no backlog.',
+      '**Fila travada nao dropa milagre.** Cobra o print antes que o cron volte com cara de fiscal.',
+      '**Request criou raiz.** Puxa o player agora antes que a pendencia ganhe CEP proprio.',
+      '**Feed sem novidade.** Cutuca hoje; amanha isso volta com textao e print em baixa resolucao.',
+      '**Pedido parado em AFK.** Chama o player antes que a poeira suba de elo no backlog.',
     ], data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition)
     : pickBilingualVoice({
       'pt-BR': [
-        '**Request parado nao upa.** Atualiza o print antes que teu rank tome nerf com VT no telao.',
-        '**Fila sem prova nao invoca loot.** Sobe print novo antes que teu lugar vire item cosmetico inutil.',
-        '**Sem update recente.** Resolve ja; deixar pro fim e comprar ingresso VIP do "vacilei".',
-        '**Teu request dormiu no ponto.** Atualiza a prova antes que a fila te coloque no banco de reservas.',
+        '**Request parado nao upa.** Atualiza o print antes que teu rank tome nerf televisionado.',
+        '**Fila sem prova nao invoca loot.** Sobe print novo antes que tua vaga vire skin sem efeito.',
+        '**Sem update recente.** Resolve ja; deixar pro fim e assinar o clube do "vacilei".',
+        '**Teu request ficou AFK.** Atualiza a prova antes que a fila te bote no banco com cobertor.',
       ],
       en: [
-        '**A stalled request does not level up.** Update the screenshot before your rank gets nerfed on the big screen.',
-        '**A queue without proof summons no loot.** Upload fresh proof before your spot becomes useless cosmetics.',
-        '**No recent update found.** Fix it now; leaving it late buys a VIP ticket to "my bad".',
-        '**Your request slept through the stop.** Update the proof before the queue sends you to reserves.',
+        '**A stalled request does not level up.** Update the screenshot before your rank gets televised-nerfed.',
+        '**A queue without proof summons no loot.** Upload fresh proof before your spot becomes effectless cosmetics.',
+        '**No recent update found.** Fix it now; leaving it late subscribes you to the "my bad" club.',
+        '**Your request went AFK.** Update the proof before the queue benches you with a blanket.',
       ],
     }, data.title, data.playerName, data.itemName, data.daysIdle, data.rankPosition);
 
@@ -137,16 +137,16 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
     .setColor(0x27ae60)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Interesse aberto.** Declara no site com print decente; gambiarra aqui toma ban da paciencia.',
-        '**Fila do loot liberada.** Escolhe direito e prova bem, antes que o Discord vire cartorio de build.',
-        '**Janela de interesse online.** Sem evidencia boa, a burocracia desbloqueia fase secreta.',
-        '**Registro valendo.** Entra com criterio antes que o screenshot vire audiencia de grupo.',
+        '**Interesse aberto.** Declara no site com print decente; gambiarra aqui nao passa nem no lobby.',
+        '**Fila do loot liberada.** Escolhe direito e prova bem antes que o Discord vire SAC de build.',
+        '**Janela de interesse online.** Sem evidencia boa, a burocracia invoca boss extra.',
+        '**Registro valendo.** Entra com criterio antes que o screenshot peca julgamento no grupo.',
       ],
       en: [
-        '**Interest is open.** Declare it on the site with a decent screenshot; hacks here get patience-banned.',
-        '**The loot queue is unlocked.** Choose properly and prove it well before Discord becomes a build notary.',
-        '**The interest window is online.** Without good evidence, bureaucracy unlocks a secret stage.',
-        '**Registration is live.** Join with criteria before the screenshot becomes group hearing.',
+        '**Interest is open.** Declare it on the site with a decent screenshot; hacks here do not pass the lobby.',
+        '**The loot queue is unlocked.** Choose properly and prove it well before Discord becomes build support.',
+        '**The interest window is online.** Without good evidence, bureaucracy summons an extra boss.',
+        '**Registration is live.** Join with criteria before the screenshot asks the group for trial.',
       ],
     }, data.title, data.itemName, data.mode, data.closesAt))
     .addFields(
@@ -172,16 +172,16 @@ export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbed
     .setColor(0xf2c94c)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Entrega logada.** O loot saiu da fila e o "cade meu item?" perdeu admin no chat.',
-        '**Interesse concluido.** Item entregue; teoria paralela caiu para serie B do argumento.',
-        '**Distribuicao confirmada.** Tudo no historico, sem podcast de contabilidade freestyle.',
-        '**Entrega fechada.** Item com destino certo e duvida vendo replay sem narracao.',
+        '**Entrega logada.** O loot saiu da fila e o "cade meu item?" perdeu prioridade no chat.',
+        '**Interesse concluido.** Item entregue; teoria paralela tomou nerf de argumento.',
+        '**Distribuicao confirmada.** Tudo no historico, sem podcast de contabilidade freestyle no fundo.',
+        '**Entrega fechada.** Item com destino certo e duvida assistindo replay sem narrador.',
       ],
       en: [
-        '**Delivery logged.** The loot left the queue and "where is my item?" lost chat admin.',
-        '**Interest completed.** Item delivered; the parallel theory got relegated to argument tier two.',
-        '**Distribution confirmed.** Everything is in history, with no freestyle-accounting podcast.',
-        '**Delivery closed.** Item has a proper destination and doubt is watching replay without commentary.',
+        '**Delivery logged.** The loot left the queue and "where is my item?" lost chat priority.',
+        '**Interest completed.** Item delivered; the parallel theory got its argument nerfed.',
+        '**Distribution confirmed.** Everything is in history, without a freestyle-accounting podcast underneath.',
+        '**Delivery closed.** Item has a proper destination and doubt is watching replay without a caster.',
       ],
     }, data.title, data.itemName, data.playerNames.join('|')))
     .addFields(
@@ -206,16 +206,16 @@ export function buildItemInterestSkillBatchEmbed(data: ItemInterestSkillBatchEmb
     .setColor(0x27ae60)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Pacote de skills no ar.** Pega upgrade que trabalha, nao purpurina fazendo cosplay de meta.',
-        '**Lote liberado.** Prioriza build de verdade; brilho sem impacto e skin cara de planilha.',
-        '**Mais skills na fila.** Mira no que muda o boneco, nao no tooltip palestrinha.',
-        '**Batch aberto.** Escolhe gameplay, nao item caro fazendo publi no inventario.',
+        '**Pacote de skills no ar.** Pega upgrade que entrega, nao brilho fazendo cosplay de meta.',
+        '**Lote liberado.** Prioriza build de verdade; purpurina sem impacto e imposto de inventario.',
+        '**Mais skills na fila.** Mira no que muda o boneco, nao no tooltip fazendo TED Talk.',
+        '**Batch aberto.** Escolhe gameplay, nao item caro pagando publi no inventario.',
       ],
       en: [
-        '**Skill batch is live.** Grab the upgrade that works, not glitter cosplaying as meta.',
-        '**Bundle unlocked.** Prioritize a real build; sparkle without impact is spreadsheet-expensive skin.',
-        '**More skills in queue.** Aim for what changes the character, not a tooltip giving a lecture.',
-        '**Batch is open.** Choose gameplay, not expensive gear doing sponsored posts in inventory.',
+        '**Skill batch is live.** Grab the upgrade that delivers, not glitter cosplaying as meta.',
+        '**Bundle unlocked.** Prioritize a real build; sparkle without impact is inventory tax.',
+        '**More skills in queue.** Aim for what changes the character, not a tooltip giving a TED Talk.',
+        '**Batch is open.** Choose gameplay, not expensive gear running ads in inventory.',
       ],
     }, data.count, data.mode, data.closesAt, data.sampleTitles.join('|')))
     .addFields(

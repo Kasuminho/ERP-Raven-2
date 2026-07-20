@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-18
+**Ultima revisao:** 2026-07-20
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -117,7 +117,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
-- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-11 para evitar reciclar as frases das revisoes anteriores.
+- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-20 para evitar reciclar as frases das revisoes anteriores.
 
 ## Seguranca, sessao e uploads
 
@@ -390,6 +390,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-20 | Oitava rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-18 | Entrega de item de leilao com prova passou a publicar resultado bilingue no Discord e no mural do site, expondo apenas item, vencedor, horario e comprovante. | leiloes/drops/Discord |
 | 2026-07-18 | Players que sairam da guilda podem ser desativados do roster/presenca; novo login gera retorno pendente e acesso bloqueado ate liberacao auditada pela Staff. | players/presenca/auth |
 | 2026-07-12 | Presenca operacional passou a ser D-30; bids exigem 65% e interesses/Item Requests exigem 50%, ambos configuraveis pela tela Staff de regras. | elegibilidade/presenca |
