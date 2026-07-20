@@ -36,6 +36,7 @@ export class ItemsService {
       image1Url: this.normalizeOptionalUrl(data.image1Url),
       image2Url: this.normalizeOptionalUrl(data.image2Url),
       isActive: true,
+      diamondSaleEnabled: data.diamondSaleEnabled ?? false,
     });
 
     await this.auditService.log({
@@ -119,6 +120,7 @@ export class ItemsService {
       image1Url: this.normalizeOptionalUrl(next.image1Url),
       image2Url: this.normalizeOptionalUrl(next.image2Url),
       isActive: data.isActive,
+      diamondSaleEnabled: data.diamondSaleEnabled,
     });
 
     await this.auditService.log({
@@ -136,6 +138,7 @@ export class ItemsService {
           nameEn: existing.nameEn,
           nameEs: existing.nameEs,
           preferredClasses: existing.preferredClasses,
+          diamondSaleEnabled: existing.diamondSaleEnabled,
         },
         next: {
           kind: updated.kind,
@@ -146,6 +149,7 @@ export class ItemsService {
           nameEn: updated.nameEn,
           nameEs: updated.nameEs,
           preferredClasses: updated.preferredClasses,
+          diamondSaleEnabled: updated.diamondSaleEnabled,
         },
       },
     });

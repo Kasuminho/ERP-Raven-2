@@ -1,6 +1,6 @@
 # Guia atual do Player - Raven2 G3X
 
-Ultima revisao: 2026-07-01
+Ultima revisao: 2026-07-20
 
 Este e o guia operacional atual dos players. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -181,7 +181,17 @@ A identidade oficial dos webhooks e:
 
 Staff-only fica em PT-BR. Posts normais atuais nao usam espanhol.
 
-### 12. Dicas rapidas
+### 12. Central do Player no Discord
+
+O forum `📚・central-do-player`, dentro da categoria `G3X`, reune os tutoriais oficiais do ERP em PT-BR e EN com imagens e links diretos.
+
+- Use a tag do assunto para localizar o tutorial.
+- Players podem responder nas threads para tirar duvidas.
+- Inclua tela, acao tentada, horario aproximado e texto do erro.
+- Casos pessoais de DKP, presenca, acesso, review ou comprovante devem ir para a Staff em canal privado.
+- Nunca publique token, cookie, senha, QR de login, conteudo de `.env`, comprovante financeiro ou informacao sigilosa de leilao.
+
+### 13. Dicas rapidas
 
 - Confira DKP disponivel antes de bidar.
 - Leia o painel de elegibilidade antes do bid.
@@ -367,7 +377,17 @@ Official webhook identity:
 
 Staff-only content stays PT-BR. Current normal posts do not use Spanish.
 
-### 12. Quick tips
+### 12. Player Hub on Discord
+
+The `📚・central-do-player` forum inside the `G3X` category contains the official ERP tutorials in PT-BR and EN with images and direct links.
+
+- Use topic tags to find the right tutorial.
+- Players may reply in threads to ask questions.
+- Include the screen, attempted action, approximate time, and error text.
+- Personal DKP, attendance, access, review, or receipt cases must go to Staff privately.
+- Never publish tokens, cookies, passwords, login QR codes, `.env` contents, financial receipts, or confidential auction information.
+
+### 13. Quick tips
 
 - Check available DKP before bidding.
 - Read the eligibility panel before bidding.

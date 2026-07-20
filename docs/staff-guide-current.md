@@ -1,6 +1,6 @@
 # Guia atual da Staff - Raven2 G3X
 
-Ultima revisao: 2026-07-02
+Ultima revisao: 2026-07-20
 
 Este e o guia operacional atual da Staff. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -128,6 +128,17 @@ Entregas de leilao:
 - anexe a prova antes de registrar a entrega;
 - pendencias de entrega tambem aparecem como tarefas `DROP_DELIVERY` no dashboard Staff e na pauta de reuniao.
 
+Vendas por diamantes:
+
+- em `/dashboard/admin/items`, habilite apenas os itens autorizados pela flag de venda por diamantes;
+- `/dashboard/staff/diamond-sales` e Staff-only e abre a venda com comprador da guilda ou externo, custodiante, total inteiro, print do item e prova da venda;
+- comprador da guilda precisa ser vinculado ao player e fica automaticamente fora da partilha;
+- a abertura grava um snapshot dos players ativos naquele instante; alteracoes posteriores de membresia nao mudam os destinatarios;
+- a Staff pode usar todos os ativos ou excluir players selecionados;
+- o valor individual usa divisao inteira arredondada para baixo e a sobra fica registrada;
+- cada destinatario exige prova individual de envio; o ultimo envio conclui a partilha e publica nomes e provas no canal de entregas em PT-BR/EN;
+- se a publicacao falhar, a venda concluida exibe acao de republicacao.
+
 Regra T4:
 
 - rejeicao/invalidacao sem bids antes da camada 1 desce camada e mantem ciclo aberto;
@@ -242,7 +253,17 @@ Envie changelog apenas depois de validar producao.
 
 Regras de negocio mudam comportamento real. Edite JSON com calma, valide efeito e registre contexto.
 
-## 15. Boas praticas
+## 15. Central da Staff no Discord
+
+O forum `🛡️・central-da-staff`, dentro da categoria Discord `staff`, reune os tutoriais internos do ERP com imagens, tags e links diretos.
+
+- Conteudo exclusivamente em PT-BR.
+- `@everyone` fica explicitamente sem acesso.
+- O cargo definido por `DISCORD_STAFF_ROLE_ID` pode visualizar, criar e responder.
+- Dúvidas operacionais podem ser discutidas nas threads.
+- Tokens, cookies, URLs completas de webhook, conteudo de `.env`, comprovantes financeiros e dados pessoais desnecessarios continuam proibidos.
+
+## 16. Boas praticas
 
 - Nao aprove winner inelegivel so porque "parece justo".
 - Nao marque presenca sem validacao.

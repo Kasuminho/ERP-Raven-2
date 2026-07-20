@@ -39,6 +39,7 @@ export type ItemForm = {
   image1Url: string;
   image2Url: string;
   isActive?: boolean;
+  diamondSaleEnabled?: boolean;
 };
 
 export type ItemFilters = {

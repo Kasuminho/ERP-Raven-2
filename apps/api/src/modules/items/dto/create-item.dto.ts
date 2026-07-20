@@ -14,5 +14,6 @@ export class CreateItemDto {
   preferredClasses?: PlayerClass[];
   image1Url?: string;
   image2Url?: string;
+  diamondSaleEnabled?: boolean;
   createdById?: string;
 }

@@ -47,6 +47,7 @@ import type {
 } from '@shared/types/war-room';
 import type { ItemRequestRecord as SharedItemRequestRecord } from '@shared/types/requests';
 import type { StaffWishlistDemand as SharedStaffWishlistDemand, WishlistItemRecord as SharedWishlistItemRecord, WishlistPriority as SharedWishlistPriority, WishlistStatus as SharedWishlistStatus } from '@shared/types/wishlist';
+import type { DiamondSaleRecord as SharedDiamondSaleRecord, DiamondSaleRecipientRecord as SharedDiamondSaleRecipientRecord } from '@shared/types/diamond-sales';
 
 export type ItemTier = 'T2' | 'T3' | 'T4' | 'LEGENDARY';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CELESTIAL_STONE';
@@ -219,6 +220,7 @@ export type ItemCatalog = {
   image1Url?: string;
   image2Url?: string;
   isActive: boolean;
+  diamondSaleEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -399,6 +401,22 @@ export type AuctionBidCancellationRequest = {
       discordNickname?: string;
     };
   };
+};
+
+export type DiamondSaleRecipient = SharedDiamondSaleRecipientRecord<string> & {
+  player?: { id: string; nickname: string; isActive: boolean };
+};
+
+export type DiamondSale = Omit<SharedDiamondSaleRecord<string>, 'recipients'> & {
+  itemCatalog?: ItemCatalog;
+  buyerPlayer?: { id: string; nickname: string; isActive: boolean } | null;
+  recipients: DiamondSaleRecipient[];
+};
+
+export type DiamondSaleSetup = {
+  items: ItemCatalog[];
+  activePlayers: Array<Pick<PlayerProfile, 'id' | 'nickname' | 'class' | 'dimensionalLayer'>>;
+  activePlayerCount: number;
 };
 
 export type PlayerAuctionResultReceipt = {

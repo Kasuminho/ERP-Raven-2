@@ -90,6 +90,15 @@ export function ItemCatalogCard({
                 <Input value={editForm.typeEn} onChange={(event) => onUpdateEdit(item.id, 'typeEn', event.target.value)} />
                 <Input value={editForm.typeEs} onChange={(event) => onUpdateEdit(item.id, 'typeEs', event.target.value)} />
               </div>
+              <label className="flex items-center gap-3 rounded-md border bg-background/35 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editForm.diamondSaleEnabled}
+                  onChange={(event) => onUpdateEdit(item.id, 'diamondSaleEnabled', event.target.checked)}
+                  className="h-4 w-4 accent-primary"
+                />
+                Habilitar venda por diamantes para terceiros
+              </label>
               <div className="space-y-2 rounded-md border bg-background/35 p-3">
                 <p className="text-sm font-semibold">Classes preferenciais para arma</p>
                 <div className="flex flex-wrap gap-2">
@@ -137,6 +146,7 @@ export function ItemCatalogCard({
                   {item.itemTier && <Badge>{item.itemTier}</Badge>}
                   {item.itemType && <Badge tone="blue">{item.itemType}</Badge>}
                   {!item.isActive && <Badge tone="red">inactive</Badge>}
+                  {item.diamondSaleEnabled && <Badge tone="gold">Venda por diamantes</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{item.nameEn}</p>
                 <p className="text-xs text-muted-foreground">{item.kind} - {item.category} - {itemTypeName(item, locale)}</p>

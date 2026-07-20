@@ -114,6 +114,58 @@ export class NotificationService {
     }
   }
 
+  async notifyDiamondSaleCompleted(data: {
+    saleId: string;
+    itemName: string;
+    diamondTotal: number;
+    shareAmount: number;
+    remainderAmount: number;
+    recipients: Array<{ playerName: string; diamondAmount: number; proofImageUrl: string }>;
+  }): Promise<void> {
+    const recipientNames = data.recipients.map((recipient) => recipient.playerName).join(', ');
+    const safeRecipientNames = recipientNames.length > 1400
+      ? `${recipientNames.slice(0, 1397)}...`
+      : recipientNames;
+    const summary = {
+      title: 'Partilha de diamantes concluida / Diamond distribution completed',
+      description: bilingualBlocks({
+        'pt-BR': [
+          `**Item:** ${data.itemName}`,
+          `**Total:** ${data.diamondTotal} diamantes`,
+          `**Por jogador:** ${data.shareAmount} diamantes`,
+          `**Saldo remanescente:** ${data.remainderAmount} diamante(s)`,
+          `**Receberam:** ${safeRecipientNames}`,
+          '',
+          'Partilha fechada com todas as provas. A planilha finalmente dropou loot.',
+        ].join('\n'),
+        en: [
+          `**Item:** ${data.itemName}`,
+          `**Total:** ${data.diamondTotal} diamonds`,
+          `**Per player:** ${data.shareAmount} diamonds`,
+          `**Remaining balance:** ${data.remainderAmount} diamond(s)`,
+          `**Recipients:** ${safeRecipientNames}`,
+          '',
+          'Distribution closed with every proof attached. The spreadsheet finally dropped loot.',
+        ].join('\n'),
+      }),
+      color: 0x22d3ee,
+      timestamp: new Date().toISOString(),
+    };
+
+    const proofEmbeds = data.recipients.map((recipient) => ({
+      title: `${recipient.playerName} - ${recipient.diamondAmount} diamantes`.slice(0, 256),
+      image: { url: this.publicImageUrl(recipient.proofImageUrl) ?? recipient.proofImageUrl },
+      color: 0xd4af37,
+    }));
+
+    const firstBatch = proofEmbeds.splice(0, 9);
+    await this.sendChannelStrict('drops', { embeds: [summary, ...firstBatch] }, 'DISCORD_NOTIFY_DIAMOND_SALE_COMPLETED', data.saleId);
+
+    while (proofEmbeds.length > 0) {
+      await this.sendChannelStrict('drops', { embeds: proofEmbeds.splice(0, 10) }, 'DISCORD_NOTIFY_DIAMOND_SALE_PROOFS', data.saleId);
+    }
+  }
+
   async notifyAttendanceStarted(data: { eventId: string; eventName: string; startsAt: Date }): Promise<void> {
     await this.sendChannel('attendance', {
       embeds: [buildAttendanceStartedEmbed(data.eventName, data.startsAt, this.localeFor('attendance', data.eventName))],
@@ -400,6 +452,29 @@ export class NotificationService {
     } catch (error) {
       await this.auditFailure(`${action}_FAILED`, targetId, error, { channelId });
     }
+  }
+
+  private async sendChannelStrict(
+    channelKey: 'auctions' | 'drops' | 'attendance' | 'staffReview' | 'dkp',
+    payload: DiscordNotificationPayload,
+    action: string,
+    targetId: string,
+  ): Promise<void> {
+    const webhookUrl = this.config.get<string>(`discord.webhooks.${channelKey}`) ?? '';
+    if (webhookUrl) {
+      await this.sendWebhook(webhookUrl, payload, {
+        webhookKey: channelKey,
+        channelLabel: this.webhookChannelLabel(channelKey),
+        action,
+        targetId,
+      });
+      await this.audit(action, targetId, { webhook: channelKey });
+      return;
+    }
+
+    const channelId = this.config.get<string>(`discord.channels.${channelKey}`) ?? '';
+    await this.bot.sendChannelMessage(channelId, payload);
+    await this.audit(action, targetId, { channelId });
   }
 
   private async sendWebhookChannel(

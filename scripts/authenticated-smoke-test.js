@@ -64,6 +64,7 @@ async function main() {
   checks.push(assertCheck(await request('/auth/me'), (body) => Boolean(body?.userId || body?.discordId)));
   checks.push(assertCheck(await request('/operations/staff'), (body) => Array.isArray(body?.tasks) && Boolean(body?.counts)));
   checks.push(assertCheck(await request('/drops/pending-auction-deliveries?page=1&limit=5'), (body) => Boolean(body)));
+  checks.push(assertCheck(await request('/diamond-sales/setup'), (body) => Array.isArray(body?.items) && Array.isArray(body?.activePlayers)));
   checks.push(assertCheck(await request('/health/details'), (body) => Array.isArray(body?.checks) && Boolean(body?.status)));
   checks.push(assertCheck(await request('/operations/staff/deploy'), (body) => Boolean(body?.currentApiVersion && body?.publicSmoke)));
 

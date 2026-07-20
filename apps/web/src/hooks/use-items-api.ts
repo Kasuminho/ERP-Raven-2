@@ -34,6 +34,7 @@ export function useCreateItem() {
       preferredClasses?: PlayerClass[];
       image1Url?: string;
       image2Url?: string;
+      diamondSaleEnabled?: boolean;
       createdById?: string;
     }) => (await api.post<ItemCatalog>('/items', data)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['items'] }),
@@ -59,6 +60,7 @@ export function useUpdateItem() {
       image1Url?: string;
       image2Url?: string;
       isActive?: boolean;
+      diamondSaleEnabled?: boolean;
     }) => {
       const { id, ...payload } = data;
       return (await api.patch<ItemCatalog>(`/items/${id}`, payload)).data;

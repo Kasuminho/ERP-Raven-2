@@ -15,5 +15,6 @@ export class UpdateItemDto {
   image1Url?: string;
   image2Url?: string;
   isActive?: boolean;
+  diamondSaleEnabled?: boolean;
   updatedById?: string;
 }

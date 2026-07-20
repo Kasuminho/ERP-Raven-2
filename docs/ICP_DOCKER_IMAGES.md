@@ -124,7 +124,7 @@ Variables, without values:
 - `PRODUCTION_SMOKE_BEARER_TOKEN`: GitHub Actions secret used by `deploy-smoke`.
 
 The authenticated smoke validates `/auth/me`, Staff operations, auction
-diagnostics, pending auction deliveries, private health and the deploy panel. It
+diagnostics, pending auction deliveries, diamond-sale setup, private health and the deploy panel. It
 does not print the token.
 
 ## Verified backup health

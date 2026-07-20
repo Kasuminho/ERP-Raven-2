@@ -66,6 +66,33 @@ Mudancas triviais de estilo, typo ou texto isolado nao exigem alterar o wiki.
 - Toda alteracao de schema Prisma precisa de migration versionada.
 - Preserve compatibilidade de API quando possivel; quando o contrato mudar, atualize API, Web e `WIKI.md` juntos.
 
+## Sincronizacao obrigatoria dos tutoriais Discord
+
+Toda nova implementacao ou alteracao que mude um fluxo visivel do site deve atualizar, no mesmo trabalho, a Central correspondente no Discord.
+
+1. Classifique o impacto como `player`, `Staff`, `ambos` ou `sem impacto de tutorial`.
+2. Se a mudanca ampliar uma jornada existente, atualize o post canonico. Se criar uma jornada independente, publique um tutorial ou passo novo.
+3. Fluxos de player usam `scripts/player-forum-content.js`; mantenha PT-BR e EN em blocos separados.
+4. Fluxos Staff usam `scripts/staff-forum-content.js`; mantenha somente PT-BR.
+5. Atualize texto, rota, ordem dos passos, alertas, regras e imagem sempre que algum deles deixar de representar o site real.
+6. Regenere as imagens e valide o publicador antes do commit:
+
+```powershell
+npm.cmd run discord:player-forum:assets
+npm.cmd run discord:player-forum -- --dry-run
+npm.cmd run discord:staff-forum:assets
+npm.cmd run discord:staff-forum -- --dry-run
+```
+
+Execute apenas os comandos da audiencia afetada. Mudancas que alcancem os dois publicos exigem as duas centrais.
+
+- Nao publique no Discord um fluxo que ainda nao esteja disponivel em producao.
+- No protocolo completo, sincronize o forum afetado somente depois de verificar a mudanca em producao e antes do changelog final.
+- Depois da sincronizacao, confirme post/indice, imagem, idioma, links, tags e permissoes pela API do Discord.
+- Se o usuario nao autorizou deploy/publicacao, deixe texto e assets canonicos atualizados no codigo, informe que a sincronizacao live ficou pendente e nao descreva o fluxo futuro como ja disponivel.
+- Mudanca puramente interna, sem efeito em tela, regra percebida, permissao ou sequencia operacional, pode ser classificada como `sem impacto de tutorial`; registre essa conclusao na entrega.
+- Nao conclua uma tarefa com fluxo visivel novo ou alterado deixando o tutorial correspondente desatualizado.
+
 ## Validacao minima
 
 Conforme o escopo, execute:
@@ -84,11 +111,12 @@ O warning conhecido em `eligibility.service.ts` sobre o argumento `client` nao u
 
 Quando o usuario autorizar o protocolo completo:
 
-1. Validar codigo e revisar `git diff --check`.
-2. Criar commit objetivo e enviar para `master`.
-3. Confirmar o GitHub Actions `Build Docker images`.
-4. Aguardar o Watchtower e verificar producao por um sinal especifico da mudanca.
-5. Enviar changelog da Staff somente em PT-BR, apenas depois da verificacao de producao.
-6. Atualizar `WIKI.md` antes do commit final.
+1. Atualizar codigo, `WIKI.md`, guias e o conteudo canonico dos tutoriais Discord afetados.
+2. Regenerar assets de tutorial, executar os `--dry-run` aplicaveis, validar codigo e revisar `git diff --check`.
+3. Criar commit objetivo e enviar para `master`.
+4. Confirmar o GitHub Actions `Build Docker images`.
+5. Aguardar o Watchtower e verificar producao por um sinal especifico da mudanca.
+6. Sincronizar cada Central Discord afetada e verificar post, imagem, links, tags, idioma e permissoes.
+7. Enviar changelog da Staff somente em PT-BR, depois das verificacoes de producao e dos tutoriais.
 
-Leia `docs/ICP_DOCKER_IMAGES.md` e `docs/DISCORD_WEBHOOK_VOICE.md` para detalhes.
+Leia `docs/ICP_DOCKER_IMAGES.md`, `docs/DISCORD_WEBHOOK_VOICE.md`, `docs/PLAYER_DISCORD_FORUM.md` e `docs/STAFF_DISCORD_FORUM.md` para detalhes.

@@ -51,6 +51,7 @@ const tools: StaffTool[] = [
   { href: '/dashboard/staff/reviews', titleKey: 'reviews', descriptionKey: 'staffReviewsDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/bid-cancellations', titleKey: 'bidCancellations', descriptionKey: 'bidCancellationsShortDescription', icon: ShieldAlert },
   { href: '/dashboard/staff/deliveries', titleKey: 'delivered', descriptionKey: 'staffDeliveriesDescription', icon: PackageCheck },
+  { href: '/dashboard/staff/diamond-sales', titleKey: 'diamondSales', descriptionKey: 'staffDiamondSalesDescription', icon: Gem },
   { href: '/dashboard/admin/events', titleKey: 'events', descriptionKey: 'staffEventsDescription', icon: CalendarCheck },
   { href: '/dashboard/admin/items', titleKey: 'items', descriptionKey: 'staffItemsDescription', icon: PackagePlus },
   { href: '/dashboard/staff/interests', titleKey: 'interests', descriptionKey: 'staffInterestsDescription', icon: HandHeart },
@@ -72,7 +73,7 @@ const toolGroups: Array<{
     key: 'resolve',
     label: 'Resolver agora',
     description: 'Pendencias, entregas, reviews, eventos e filas que pedem acao.',
-    hrefs: ['/dashboard/staff/day', '/dashboard/staff/war-room', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/admin/events', '/dashboard/staff/interests', '/dashboard/staff/wishlist', '/dashboard/staff/recruitment', '/dashboard/staff/codex', '/dashboard/staff/progress'],
+    hrefs: ['/dashboard/staff/day', '/dashboard/staff/war-room', '/dashboard/staff/meeting', '/dashboard/staff/reviews', '/dashboard/staff/bid-cancellations', '/dashboard/staff/deliveries', '/dashboard/staff/diamond-sales', '/dashboard/admin/events', '/dashboard/staff/interests', '/dashboard/staff/wishlist', '/dashboard/staff/recruitment', '/dashboard/staff/codex', '/dashboard/staff/progress'],
   },
   {
     key: 'audit',

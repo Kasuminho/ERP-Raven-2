@@ -33,6 +33,7 @@ import { WarRoomModule } from './modules/war-room/war-room.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { RecruitmentModule } from './modules/recruitment/recruitment.module';
 import { MaintenanceModeGuard } from './common/guards/maintenance-mode.guard';
+import { DiamondSalesModule } from './modules/diamond-sales/diamond-sales.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { MaintenanceModeGuard } from './common/guards/maintenance-mode.guard';
     WarRoomModule,
     WishlistModule,
     RecruitmentModule,
+    DiamondSalesModule,
   ],
   providers: [
     {

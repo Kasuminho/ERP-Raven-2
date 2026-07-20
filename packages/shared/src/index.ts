@@ -7,3 +7,4 @@ export * from './types/roster';
 export * from './types/war-room';
 export * from './types/interests';
 export * from './types/wishlist';
+export * from './types/diamond-sales';

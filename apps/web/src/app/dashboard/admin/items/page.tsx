@@ -35,6 +35,7 @@ export default function AdminItemsPage() {
     preferredClasses: [],
     image1Url: '',
     image2Url: '',
+    diamondSaleEnabled: false,
   });
   const [auctionQuantities, setAuctionQuantities] = useState<Record<string, number>>({});
   const [editingItemId, setEditingItemId] = useState('');
@@ -133,6 +134,7 @@ export default function AdminItemsPage() {
             preferredClasses: [],
             image1Url: '',
             image2Url: '',
+            diamondSaleEnabled: false,
           });
           notifyToast({ title: 'Item cadastrado.', tone: 'success' });
         },
@@ -164,6 +166,7 @@ export default function AdminItemsPage() {
         image1Url: item.image1Url ?? '',
         image2Url: item.image2Url ?? '',
         isActive: item.isActive,
+        diamondSaleEnabled: item.diamondSaleEnabled,
       },
     }));
   }

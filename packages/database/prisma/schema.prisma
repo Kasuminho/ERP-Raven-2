@@ -148,6 +148,21 @@ enum DiscordWebhookDeliveryStatus {
   RETRYING
 }
 
+enum DiamondSaleBuyerType {
+  GUILD_MEMBER
+  EXTERNAL
+}
+
+enum DiamondSaleRecipientMode {
+  ALL_ACTIVE
+  EXCLUDE_SELECTED
+}
+
+enum DiamondSaleStatus {
+  OPEN
+  COMPLETED
+}
+
 enum ProgressCategory {
   STELLAS_AMPLIFICATION
   EQUIPMENT
@@ -325,6 +340,9 @@ model User {
   notifications            Notification[]
   reviewedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationReviewedBy")
   convertedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationConvertedBy")
+  createdDiamondSales       DiamondSale[]                    @relation("DiamondSaleCreatedBy")
+  completedDiamondSales     DiamondSale[]                    @relation("DiamondSaleCompletedBy")
+  deliveredDiamondShares   DiamondSaleRecipient[]           @relation("DiamondSaleRecipientDeliveredBy")
 
   @@index([discordUsername])
   @@index([discordGuildId])
@@ -370,6 +388,8 @@ model Player {
   bidCancellationRequests AuctionBidCancellationRequest[]
   notifications           Notification[]
   convertedRecruitmentApplication RecruitmentApplication? @relation("RecruitmentApplicationConvertedPlayer")
+  purchasedDiamondSales     DiamondSale[]                    @relation("DiamondSaleBuyerPlayer")
+  diamondSaleRecipients     DiamondSaleRecipient[]
 
   @@index([userId])
   @@index([class])
@@ -970,6 +990,7 @@ model ItemCatalog {
   image1Url        String?
   image2Url        String?
   isActive         Boolean            @default(true)
+  diamondSaleEnabled Boolean          @default(false)
   legacyCreatedAt  DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -978,6 +999,7 @@ model ItemCatalog {
   auctions         Auction[]
   interestPosts    ItemInterestPost[]
   wishlistItems    PlayerWishlistItem[]
+  diamondSales     DiamondSale[]
 
   @@index([nameEn, typeEn])
   @@index([nameEs, typeEs])
@@ -1122,6 +1144,63 @@ model ItemInterestEntry {
   @@index([playerId])
   @@index([isTransmuteRequest])
   @@index([playerId, isTransmuteRequest])
+}
+
+model DiamondSale {
+  id                    String                    @id @default(uuid())
+  itemCatalogId         String
+  itemName              String
+  buyerType             DiamondSaleBuyerType
+  buyerPlayerId         String?
+  buyerName             String
+  diamondCustodian      String
+  diamondTotal          Int
+  itemProofImageUrl     String
+  saleProofImageUrl     String
+  recipientMode         DiamondSaleRecipientMode
+  shareAmount           Int
+  remainderAmount       Int
+  activePlayerCount     Int
+  recipientCount        Int
+  status                DiamondSaleStatus         @default(OPEN)
+  openedAt              DateTime                  @default(now())
+  completedAt           DateTime?
+  discordPublishedAt    DateTime?
+  createdById           String
+  completedById         String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  itemCatalog           ItemCatalog               @relation(fields: [itemCatalogId], references: [id], onDelete: Restrict)
+  buyerPlayer           Player?                   @relation("DiamondSaleBuyerPlayer", fields: [buyerPlayerId], references: [id], onDelete: Restrict)
+  createdBy             User                      @relation("DiamondSaleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  completedBy           User?                     @relation("DiamondSaleCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  recipients            DiamondSaleRecipient[]
+
+  @@index([itemCatalogId, openedAt])
+  @@index([buyerPlayerId])
+  @@index([status, openedAt])
+  @@index([createdById])
+}
+
+model DiamondSaleRecipient {
+  id                  String      @id @default(uuid())
+  saleId              String
+  playerId            String
+  playerNickname      String
+  diamondAmount       Int
+  proofImageUrl       String?
+  deliveredAt         DateTime?
+  deliveredById       String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  sale                DiamondSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  player              Player      @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  deliveredBy         User?       @relation("DiamondSaleRecipientDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
+
+  @@unique([saleId, playerId])
+  @@index([playerId, deliveredAt])
+  @@index([saleId, deliveredAt])
+  @@index([deliveredById])
 }
 
 model PlayerWishlistItem {

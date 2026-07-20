@@ -15,6 +15,7 @@ export class MaintenanceModeGuard implements CanActivate {
     '/daoshi',
     '/dkp',
     '/drops',
+    '/diamond-sales',
     '/events',
     '/item-interests',
     '/item-requests',
