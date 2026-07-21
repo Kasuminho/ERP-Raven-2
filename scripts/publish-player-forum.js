@@ -27,7 +27,11 @@ function loadEnvFile(filePath) {
 }
 
 function validateContent() {
+  const tagKeys = new Set(tags.map((tag) => tag.key));
   for (const post of posts) {
+    if (!tagKeys.has(post.tag)) {
+      throw new Error(`Unknown canonical tag ${post.tag} in ${post.slug}.`);
+    }
     const total = post.pt.length + post.en.length;
     if (post.pt.length > 4096 || post.en.length > 4096 || total > 5900) {
       throw new Error(`Embed limits exceeded by ${post.slug}: pt=${post.pt.length}, en=${post.en.length}, total=${total}`);
@@ -67,11 +71,10 @@ async function allForumThreads(forum) {
 async function upsertPost({ forum, post, tagId, existing, links }) {
   const assetPath = path.join(root, 'docs', 'player-forum', 'assets', `${post.slug}.png`);
   const file = new AttachmentBuilder(assetPath, { name: `${post.slug}.png` });
-  const indexPt = post.slug === 'comece-aqui' ? `\n\n### 📚 Índice\n${links.map((row) => `- [${row.title}](https://discord.com/channels/${forum.guildId}/${row.id})`).join('\n')}` : '';
-  const indexEn = post.slug === 'comece-aqui' ? `\n\n### 📚 Index\n${links.map((row) => `- [${row.title}](https://discord.com/channels/${forum.guildId}/${row.id})`).join('\n')}` : '';
+  const sharedIndex = post.slug === 'comece-aqui' ? `\n\n### 📚 Índice / Index\n${links.map((row) => `- [${row.title}](https://discord.com/channels/${forum.guildId}/${row.id})`).join('\n')}` : '';
   const payload = {
     content: '📘 Tutorial oficial · Official tutorial — dúvidas e respostas são bem-vindas nesta thread.',
-    embeds: [embedFor(post, 'pt', indexPt), embedFor(post, 'en', indexEn)],
+    embeds: [embedFor(post, 'pt', sharedIndex), embedFor(post, 'en')],
     files: [file],
     allowedMentions: { parse: [] },
   };
@@ -150,6 +153,11 @@ async function main() {
       });
     }
 
+    forum = await guild.channels.fetch(forum.id);
+    if (!forum || forum.type !== ChannelType.GuildForum) {
+      throw new Error('Player forum could not be refreshed after tag synchronization.');
+    }
+
     await forum.permissionOverwrites.edit(guild.roles.everyone, {
       ViewChannel: true,
       ReadMessageHistory: true,
@@ -184,6 +192,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message);
+  console.error(error?.stack || error?.message || error);
   process.exitCode = 1;
 });

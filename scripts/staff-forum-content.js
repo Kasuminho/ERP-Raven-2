@@ -9,6 +9,7 @@ const tags = [
   { key: 'routine', name: 'Rotina', emoji: '📋' },
   { key: 'players', name: 'Players', emoji: '👥' },
   { key: 'events', name: 'Eventos', emoji: '⚔️' },
+  { key: 'war', name: 'Operações', emoji: '🗺️' },
   { key: 'loot', name: 'Loot', emoji: '💎' },
   { key: 'dkp', name: 'DKP', emoji: '🪙' },
   { key: 'guild', name: 'Guilda', emoji: '🏰' },

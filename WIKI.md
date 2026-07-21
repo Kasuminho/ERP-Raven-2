@@ -422,6 +422,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-21 | Publicadores das Centrais passaram a recarregar o forum depois de sincronizar tags, evitando falso `tag not found` quando uma tag canonica e criada no mesmo envio. | Discord/tutoriais/confiabilidade |
 | 2026-07-21 | Lockfile recebeu patches sem quebra de major para dependencias transitivas de Next/Discord e utilitarios; auditoria de producao caiu de 10 para 7 altas sem afrouxar o baseline do CI. | seguranca/dependencias/CI |
 | 2026-07-21 | Reenvio duplicado de Codex ja marcado como enviado foi bloqueado; falha da cobranca Web imediata agora fica auditada sem corromper o estado enviado. | Codex/cobrancas/confiabilidade |
 | 2026-07-21 | Roadmap Staff ganhou gate persistente da Frente 0, entrevistas sem identidade e baseline semanal congelado com telemetria automatica separada de declaracoes manuais. | produto/validacao/roadmap |

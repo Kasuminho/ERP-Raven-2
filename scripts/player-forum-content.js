@@ -11,6 +11,7 @@ const tags = [
   { key: 'loot', name: 'Loot', emoji: '💎' },
   { key: 'progress', name: 'Progresso', emoji: '📈' },
   { key: 'events', name: 'Eventos', emoji: '⚔️' },
+  { key: 'war', name: 'Operações', emoji: '🗺️' },
   { key: 'guild', name: 'Guilda', emoji: '🏰' },
   { key: 'help', name: 'Ajuda', emoji: '🛟' },
 ];

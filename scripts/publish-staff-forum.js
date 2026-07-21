@@ -27,7 +27,11 @@ function loadEnvFile(filePath) {
 }
 
 function validateContent() {
+  const tagKeys = new Set(tags.map((tag) => tag.key));
   for (const post of posts) {
+    if (!tagKeys.has(post.tag)) {
+      throw new Error(`Unknown canonical tag ${post.tag} in ${post.slug}.`);
+    }
     if (post.body.length > 4096) throw new Error(`Embed limit exceeded by ${post.slug}: ${post.body.length}`);
     const asset = path.join(root, 'docs', 'staff-forum', 'assets', `${post.slug}.png`);
     if (!fs.existsSync(asset)) throw new Error(`Missing Staff tutorial asset: ${asset}`);
@@ -60,8 +64,15 @@ async function allForumThreads(forum) {
 async function upsertPost({ forum, post, tagId, existing, links }) {
   const assetPath = path.join(root, 'docs', 'staff-forum', 'assets', `${post.slug}.png`);
   const file = new AttachmentBuilder(assetPath, { name: `${post.slug}.png` });
+  const compactIndex = [];
+  for (let offset = 0; offset < links.length; offset += 10) {
+    compactIndex.push(links.slice(offset, offset + 10).map((row) => {
+      const number = row.title.match(/^\d{2}/)?.[0] ?? String(offset + 1).padStart(2, '0');
+      return `[${number}](https://discord.com/channels/${forum.guildId}/${row.id})`;
+    }).join(' · '));
+  }
   const index = post.slug === 'staff-comece-aqui'
-    ? `\n\n### 📚 Índice da Central\n${links.map((row) => `- [${row.title}](https://discord.com/channels/${forum.guildId}/${row.id})`).join('\n')}`
+    ? `\n\n### 📚 Índice da Central\n${compactIndex.join('\n')}`
     : '';
   const payload = {
     content: '🛡️ Tutorial interno da Staff · PT-BR — dúvidas operacionais podem ser respondidas nesta thread.',
@@ -136,6 +147,11 @@ async function main() {
       });
     }
 
+    forum = await guild.channels.fetch(forum.id);
+    if (!forum || forum.type !== ChannelType.GuildForum) {
+      throw new Error('Staff forum could not be refreshed after tag synchronization.');
+    }
+
     await forum.permissionOverwrites.edit(guild.roles.everyone, {
       ViewChannel: false,
       SendMessages: false,
@@ -178,6 +194,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message);
+  console.error(error?.stack || error?.message || error);
   process.exitCode = 1;
 });
