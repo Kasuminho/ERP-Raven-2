@@ -68,17 +68,27 @@ export class NotificationsService {
     body: string;
     href?: string;
     metadata?: Prisma.InputJsonObject;
+    deduplicationKey?: string;
   }): Promise<Notification> {
-    return this.prisma.notification.create({
-      data: {
-        playerId: data.playerId,
-        audience: NotificationAudience.PLAYER,
-        type: data.type,
-        title: data.title,
-        body: data.body,
-        href: data.href,
-        metadata: data.metadata,
-      },
-    });
+    try {
+      return await this.prisma.notification.create({
+        data: {
+          playerId: data.playerId,
+          audience: NotificationAudience.PLAYER,
+          type: data.type,
+          title: data.title,
+          body: data.body,
+          href: data.href,
+          metadata: data.metadata,
+          deduplicationKey: data.deduplicationKey,
+        },
+      });
+    } catch (error) {
+      if (data.deduplicationKey && error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const existing = await this.prisma.notification.findUnique({ where: { deduplicationKey: data.deduplicationKey } });
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 }

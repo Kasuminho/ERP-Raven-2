@@ -64,13 +64,27 @@ Em [Players](${route('/dashboard/staff/players')}) consulte cadastro, atividade,
 
 **Roster e perfil de combate:** revise função, disponibilidade, classe, camada e build. Mudanças pedidas pelo player entram em revisão; aprove ou rejeite com contexto.
 
+O ERP cobra cada player ativo em DM, uma vez por dia e de forma consolidada, quando houver build, função ou disponibilidade ausente, STATUS sem atualização há 21 dias ou presença abaixo de 50% nos bosses finalizados dos últimos 15 dias. Players sem boss elegível na janela não recebem sinal de presença baixa.
+
 Use [Comparar players](${route('/dashboard/staff/compare')}) e [Fairness](${route('/dashboard/staff/fairness')}) como apoio. Nenhum score substitui regra, prova e decisão humana documentada.`,
   },
   {
     slug: 'staff-eventos-presenca', title: '03 · Eventos, presença, bosses em lote e prontidão', tag: 'events', route: '/dashboard/admin/events',
-    visual: ['Trate cada boss separado', 'Revise o checklist', 'Finalize e copie com cuidado'],
+    visual: ['Revise RSVP, gaps e reserva', 'Controle séries e exceções', 'Finalize cada boss separado'],
     body: `## ⚔️ Operação de eventos
 Na tela de [Eventos](${route('/dashboard/admin/events')}) crie eventos, registre presença e finalize a distribuição de DKP.
+
+No evento selecionado, o painel de RSVP mostra **confirmados, talvez, recusas e sem resposta**, além da composição confirmada por classe, role e camada. A Staff vê as notas; para outros players, só aparece nota marcada pelo autor como pública.
+
+Períodos de ausência cobrem automaticamente os eventos do intervalo. O painel mostra a quantidade indisponível e os detalhes para a Staff, sem enviar cobrança invasiva. Motivos são privados por padrão; players veem somente o total, salvo quando o autor escolhe compartilhar.
+
+**Séries recorrentes:** configure primeiro horário, duração, intervalo semanal, timezone e exceções. O cron mantém o horizonte materializado. Pausar cancela as instâncias futuras da série; retomar restaura somente datas que não sejam exceção.
+
+**Composição e reserva:** defina alvos mínimos por role/classe para medir cobertura e gaps, nunca para selecionar players automaticamente. Reserva exige ordem e motivo Staff-only. Ao oferecer vaga, o player precisa aceitar; só então o RSVP vira confirmado. O histórico da reserva e a auditoria permanecem. Conflitos aparecem no timezone cadastrado pelo membro.
+
+**Lembretes e no-show:** nas 24h anteriores, o cron chama somente players sem resposta ou confirmados e respeita Web/Discord/ambos/nenhum para comunicação não crítica. Talvez, recusas, ausências e reservas não promovidas ficam fora. Ao finalizar, confirmado sem presença e sem ausência registrada vira contexto de no-show; o player pode justificar e a Staff vê o texto. Uma ocorrência isolada não pune, não altera DKP/elegibilidade e não cria risk flag automática.
+
+RSVP é previsão operacional. Ele não marca presença, não concede DKP e não substitui a conferência real de cada boss.
 
 **Regra central:** cada boss possui evento, presença e DKP independentes, mesmo em lote. O lote usa ordem e identificador comum, mas nunca transforma vários bosses em uma presença única.
 
@@ -160,11 +174,13 @@ Ao concluir, selecione o candidato permitido, anexe o comprovante e registre a e
   },
   {
     slug: 'staff-requests-codex-progresso', title: '09 · Requests, Codex e progresso', tag: 'routine', route: '/dashboard/staff/codex',
-    visual: ['Trate filas no prazo', 'Revise prints com critério', 'Finalize no fluxo de origem'],
+    visual: ['Trate filas no prazo', 'Marque Codex uma única vez', 'Finalize no fluxo de origem'],
     body: `## 📚 Filas que pedem revisão
 Requests aparecem nas tarefas operacionais e no perfil do player. Revise criação/atualização, posição, unidades restantes, prazo do print e prioridade de material. Craft T3 pode bloquear entrega de Quintessência do mesmo material; o bloqueio é regra auditada, não preferência improvisada.
 
-Em [Codex Staff](${route('/dashboard/staff/codex')}) confira pedido e print, marque o envio com comprovante e aguarde o player confirmar sucesso ou falha. Cancelamento e retry usam o próprio fluxo.
+Em [Codex Staff](${route('/dashboard/staff/codex')}) confira pedido e print, marque o envio com comprovante e aguarde o player confirmar sucesso ou falha. Um Codex já marcado como enviado não aceita novo envio: o player precisa confirmar ou pedir retry antes de outra tentativa. Cancelamento e retry usam o próprio fluxo.
+
+Ao marcar como enviado, o ERP chama o player imediatamente em DM. Enquanto o pedido permanecer em **SENT**, a pendência entra também na cobrança diária até confirmação ou retry.
 
 Em [Progresso](${route('/dashboard/staff/progress')}) revise prints:
 - STATUS aprovado atualiza CP/level operacional;
@@ -227,25 +243,43 @@ Ao converter uma candidatura aprovada:
 1. confirme identidade Discord;
 2. revise nickname, classe e camada iniciais;
 3. crie/vincule o player uma única vez;
-4. confira o checklist de onboarding;
-5. oriente STATUS, Fenda, timezone e perfil de combate.
+4. registre a nota inicial e confira o plano instanciado;
+5. oriente regras, timezone, build, wishlist, presença, primeiro evento e canais.
+
+Em [Onboarding Staff](${route('/dashboard/staff/onboarding')}) publique templates versionados com prazo e etapas obrigatórias/opcionais. Título e descrição de cada etapa exigem PT-BR/EN. Conversões futuras recebem um snapshot; publicar template novo não reescreve o plano de quem já entrou. Planos atrasados pedem acompanhamento humano, nunca punição automática.
 
 Conversão é auditada e não deve ser repetida. Recrutamento bom termina com player orientado, não apenas com uma linha verde na fila.`,
   },
   {
-    slug: 'staff-regras-dossies-integridade', title: '14 · Regras, dossiês, integridade e legado', tag: 'audit', route: '/dashboard/staff/integrity',
+    slug: 'staff-casos-recursos-privados', title: '14 · Casos, denúncias e recursos privados', tag: 'audit', route: '/dashboard/staff/cases',
+    visual: ['Separe resposta de nota interna', 'Defina dono, prazo e status', 'Decisão disciplinar continua humana'],
+    body: `## 🛡️ Caixa privada com trilha, não tribunal automático
+Em [Casos e recursos](${route('/dashboard/staff/cases')}) trate dúvidas, denúncias operacionais e recursos. Revise fatos, classifique severidade, associe responsável Staff, defina prazo e mantenha status coerente.
+
+**Separação obrigatória:** nota interna fica somente para Staff. Resposta ao player exige blocos PT-BR e EN e gera aviso privado. Novo contexto do player pode reabrir um caso resolvido; toda ação relevante fica no histórico e na auditoria.
+
+Contestações de leilão aparecem como referência do fluxo nativo e continuam sendo revisadas no domínio do leilão. Não copie status, review ou evidência para um caso genérico.
+
+Volume, severidade e atraso ajudam a organizar trabalho. Nenhum deles pune, expulsa ou decide disciplina automaticamente. Planilha com capa não vira juiz de raid.`,
+  },
+  {
+    slug: 'staff-regras-dossies-integridade', title: '15 · Regras, dossiês, integridade e legado', tag: 'audit', route: '/dashboard/staff/integrity',
     visual: ['Consulte antes de decidir', 'Mude regras com contexto', 'Resolva vínculos legados com prova'],
     body: `## 🔎 Ferramentas de investigação
 Em [Dossiê universal](${route('/dashboard/staff/dossier')}) consulte player, leilão, request, interesse, drop ou evento com resumo, links e audit logs. Use [Integridade](${route('/dashboard/staff/integrity')}) para inconsistências atuais e [Auditoria legada](${route('/dashboard/staff/legacy-audit')}) para importações ainda sem vínculo.
 
 Em [Regras](${route('/dashboard/staff/rules')}) edite configurações que controlam comportamento real, incluindo elegibilidade de presença e modo manutenção. Leia valor atual, valide o formato e registre motivo/contexto.
 
+**Política versionada:** BusinessRule muda a operação, mas não reescreve o documento vigente. Crie rascunho com título/resumo PT-BR e EN, defina vigência, atualize o snapshot e revise o drift. Publicar grava versão sequencial, autoria e diff; depois disso o snapshot fica imutável e qualquer mudança exige nova versão.
+
+Se for emergência, marque o selo e informe um motivo objetivo. A publicação cria recibos e chama os players ativos. A cobertura mostra quantos abriram, quantos marcaram **Li e entendi** e os nomes de quem ainda não abriu quando houver necessidade operacional. Recibo é ciência, não aceite jurídico amplo; cobre comunicação, não obediência por algoritmo.
+
 **Sequência segura:** diagnosticar → reunir evidência → escolher ação de domínio → confirmar impacto → verificar auditoria.
 
 Não altere JSON por tentativa em produção. Chave de regra não é código de Konami; apertar tudo não libera final secreto.`,
   },
   {
-    slug: 'staff-discord-comunicacao', title: '15 · Anúncios, Discord, webhooks e changelog', tag: 'comms', route: '/dashboard/staff/discord-templates',
+    slug: 'staff-discord-comunicacao', title: '16 · Anúncios, Discord, webhooks e changelog', tag: 'comms', route: '/dashboard/staff/discord-templates',
     visual: ['Faça preview do payload', 'Preserve idioma e sigilo', 'Envie changelog após produção'],
     body: `## 📣 Comunicação operacional
 Em [Anúncios](${route('/dashboard/admin/announcements')}) crie avisos com tipo, título, descrição, horário e menção somente quando necessária. Anúncio não substitui evento/presença.
@@ -262,7 +296,7 @@ Use [Templates Discord](${route('/dashboard/staff/discord-templates')}) para rev
 Changelog Staff só é enviado depois da verificação de produção. Retry usa a chave lógica no servidor e nunca expõe o segredo.`,
   },
   {
-    slug: 'staff-health-deploy', title: '16 · Saúde, deploy, smoke e rollback', tag: 'system', route: '/dashboard/staff/deploy',
+    slug: 'staff-health-deploy', title: '17 · Saúde, deploy, smoke e rollback', tag: 'system', route: '/dashboard/staff/deploy',
     visual: ['Confira versão esperada', 'Leia health e smoke', 'Comunique somente após validar'],
     body: `## 🚀 Operação de produção
 Em [Deploy](${route('/dashboard/staff/deploy')}) compare versão atual/esperada, workflow, smoke público, recibo de changelog e sinais da fila de webhooks. Em [Saúde](${route('/dashboard/staff/health')}) confira banco, storage, webhooks, automação, backup, rate limit e falhas recentes.
@@ -307,6 +341,108 @@ Ao confirmar, a lista de players ativos fica congelada. Entradas, saídas ou mud
 **Entrega individual:** confira nome e valor, anexe a prova de envio e registre uma única vez. Depois da última prova, a partilha é concluída e o Aristolfo publica no canal de entregas os nomes e todas as provas em PT-BR/EN. Se o Discord falhar, use a republicação exibida na própria venda.
 
 Diamante sem prova é só fanfic premium com brilho azul.`,
+  },
+  {
+    slug: 'staff-trials', title: '19 · Trial com criterio visivel', tag: 'players', route: '/dashboard/staff/trials',
+    visual: ['Publique criterios antes', 'Registre fatos em D7/D14/D30', 'Decida com motivo auditado'],
+    body: `## Avaliacao transparente, sem score oculto
+Em [Trials Staff](${route('/dashboard/staff/trials')}) publique inicio/fim, objetivo e criterios PT-BR/EN antes de avaliar o player.
+
+Registre check-ins D7, D14 e D30 com texto bilingue visivel ao player. A nota interna possui campo separado e nunca aparece na resposta dele. Ausencias declaradas pausam o periodo e ajustam o fim exibido.
+
+Aprovar, estender ou encerrar exige motivo PT-BR/EN e gera auditoria. O dominio nao cria score, nao pune automaticamente e nao altera loot, ranking, bids, locks ou sigilo. Criterio surpresa e boss invisivel: os dois so servem para dar wipe.`,
+  },
+  {
+    slug: 'staff-mentoria', title: '20 · Mentoria voluntaria e acolhimento', tag: 'players', route: '/dashboard/staff/mentorship',
+    visual: ['Use apenas voluntarios', 'Encaminhe ajuda por tema/role', 'Nunca exponha notas Staff'],
+    body: `## Acolhimento com limite de poder
+Em [Mentoria Staff](${route('/dashboard/staff/mentorship')}) associe somente um mentor que registrou consentimento/disponibilidade ou escolha um grupo de acolhimento.
+
+Pedidos de ajuda entram por conteudo e role, sem depender de DM. Encaminhe ao voluntario adequado e resolva no ERP. Primeiro evento, boss, request, interesse e War Room sao marcos por data, nunca pontos.
+
+Mentor nao recebe poder disciplinar nem acesso a notas Staff. Se o caso exige decisao ou registro sensivel, continua sendo trabalho da Staff no dominio correto.`,
+  },
+  {
+    slug: 'staff-pulso-anonimo', title: '21 · Pulso anonimo e politica de dados', tag: 'players', route: '/dashboard/staff/pulse',
+    visual: ['Defina grupo minimo', 'Nunca veja score individual', 'Modere e respeite a retencao'],
+    body: `## Tendencia coletiva, nao vigilancia
+Em [Pulso Staff](${route('/dashboard/staff/pulse')}) crie o ciclo em rascunho, configure abertura, fechamento, grupo minimo e retencao do texto. Revise antes de publicar.
+
+A resposta numerica nao possui identidade. O recibo de participacao fica separado. Abaixo do grupo minimo, medias e comentarios continuam bloqueados; acima dele, a Staff recebe somente medias e texto anonimo para aprovar ou ocultar. Cron diario apaga texto vencido.
+
+Pular nao gera consequencia. E proibido tentar reidentificar, criar score de lealdade ou usar o pulso para loot, DKP, acesso ou disciplina. Leia a politica de dados canonica antes de operar.`,
+  },
+  {
+    slug: 'staff-saude-explicavel', title: '22 · Sinais de saude explicaveis', tag: 'players', route: '/dashboard/staff/guild-health',
+    visual: ['Leia fato e janela', 'Converse antes de concluir', 'Nenhuma acao automatica'],
+    body: `## Sinal e pergunta, nao sentenca
+Em [Saude explicavel](${route('/dashboard/staff/guild-health')}) veja queda de participacao, onboarding parado, confirmacoes revertidas, retorno de inativo e coorte de classe pouco presente.
+
+Cada card informa fatos, amostra e janela. Queda compara dois periodos de 15 dias; reversao de confirmacao vem do historico auditado; coorte exige ao menos tres ativos. Abra a evidencia e converse antes de concluir.
+
+Nao existe score unico de churn/lealdade. O painel nao remove, bloqueia, pune nem altera loot. A recomendacao sempre e humana: acolher, perguntar, ajustar ou oferecer ajuda.`,
+  },
+  {
+    slug: 'staff-saude-lideranca', title: '23 · Carga, plantao e cobertura da Staff', tag: 'routine', route: '/dashboard/staff/leadership-health',
+    visual: ['Registre carga real', 'Identifique area sem backup', 'Delegue ou pause'],
+    body: `## Guilda saudavel tambem precisa de Staff respirando
+Em [Saude da lideranca](${route('/dashboard/staff/leadership-health')}) registre carga de 1 a 5 e disponibilidade de plantao por eventos, loot, recrutamento, Discord, deploy, tesouraria ou cuidado com players.
+
+O painel usa o check-in mais recente e 14 dias de acoes auditadas para mostrar area sem substituto e trabalho concentrado. Alerta de carga alta recomenda delegar, reduzir escopo ou pausar. Nao e convite para cobrar ainda mais de quem ja esta segurando o boss nas costas.
+
+Responsabilidade nao concede permissao, alerta nao escala sozinho e nenhum check-in vira avaliacao disciplinar.`,
+  },
+  {
+    slug: 'staff-fila-handoff-roadmap', title: '24 · Fila, handoff e roadmap visivel', tag: 'routine', route: '/dashboard/staff/tasks',
+    visual: ['Revise frentes e evidencias', 'Registre entrevistas sem identidade', 'Congele 4 semanas reais'],
+    body: `## Trabalho visivel sobrevive ao logout do lider
+Em [Fila Staff](${route('/dashboard/staff/tasks')}) registre area, prioridade, dono, substituto, prazo, estado e link direto para o objeto. Sugestoes do briefing, pauta e sinais nao criam nada sozinhas: revise e confirme a conversao.
+
+No handoff, escreva contexto final e proximo passo antes de transferir o dono. A trilha fica auditada e a chave da origem impede duplicar a mesma sugestao.
+
+Use o [Roadmap visivel](${route('/dashboard/staff/roadmap')}) para validar frentes, estado e evidencias. A Frente 0 so libera decisao depois dos tres perfis Staff, pelo menos cinco entrevistas cobrindo veterano/novato/ativo/baixa atividade, quatro semanas consecutivas congeladas e confirmacao de que RSVP reduz cobranca manual real.
+
+Entrevista nao guarda nome nem conteudo privado de voz/DM: registre apenas perfil, canais acompanhados, visibilidade aceitavel de ausencia e sintese operacional. Na semana encerrada iniciada na segunda-feira, o ERP calcula eventos, presenca, no-shows, recruits com atividade e tarefas sem substituto; informe presenca esperada, quando conhecida, e minutos de cobranca. IMPLEMENTADO significa codigo local validado; producao e Centrais live continuam pendentes ate o protocolo completo.`,
+  },
+  {
+    slug: 'staff-cobertura-areas', title: '25 · Areas, plantao e cobertura', tag: 'routine', route: '/dashboard/staff/coverage',
+    visual: ['Defina primario e backup', 'Declare indisponibilidade', 'Nao confunda responsabilidade com permissao'],
+    body: `## Cobertura declarada, sem adivinhar silencio
+Em [Cobertura da Staff](${route('/dashboard/staff/coverage')}) configure responsavel primario, backup, janela de plantao e timezone para eventos, loot, recrutamento, Discord, deploy, tesouraria e cuidado com players.
+
+Cada membro registra a propria indisponibilidade com inicio e fim. Durante esse periodo, o painel aponta o backup como responsavel efetivo. Fora dele, continua o primario. Silencio, demora ou ausencia de clique nunca aciona escalonamento automatico.
+
+Responsabilidade operacional nao concede role, permissao nem acesso adicional. Se uma area ficar sem cobertura, redistribua ou reduza o plantao conscientemente; nao promova alguem no susto porque o boss piscou vermelho.`,
+  },
+  {
+    slug: 'staff-automacao-segura', title: '26 · Automacao segura e kill switch', tag: 'routine', route: '/dashboard/staff/automations',
+    visual: ['Exija padrao observado', 'Revise dry-run e confirme', 'Use limites e kill switch'],
+    body: `## Automatize a rotina, nao a autoridade
+Em [Automacoes seguras](${route('/dashboard/staff/automations')}) aparecem somente padroes com pelo menos tres tarefas concluidas nos ultimos 90 dias. Criar o dry-run salva a regra desligada e mostra exatamente qual tarefa seria criada.
+
+Depois da revisao, uma confirmacao separada ativa a rotina. Frequencia minima, limite diario, chave idempotente e auditoria evitam spam e duplicacao. O kill switch desliga a regra imediatamente; libera-lo nao reativa a rotina sozinho.
+
+A unica acao disponivel e criar tarefa Staff sem dono. Automacao nunca aprova loot, remove player, muda permissao ou altera politica social. Robo bom carrega checklist; martelo de ban continua na mao humana.`,
+  },
+  {
+    slug: 'staff-playbooks-licoes', title: '27 · Playbooks, licoes e leitura por papel', tag: 'war', route: '/dashboard/staff/playbooks',
+    visual: ['Publique versao imutavel', 'Decida a licao com dono e revisao', 'Anexe a versao exata'],
+    body: `## Planejar, executar, aprender e reutilizar
+Em [Playbooks Staff](${route('/dashboard/staff/playbooks')}) registre objetivo/brief PT-BR e EN, composicao, posicionamento, chamadas, riscos, links, checklist e instrucoes por papel. Notas Staff ficam em campo separado. Cada publicacao cria versao imutavel.
+
+Anexe a versao escolhida ao evento ou War Room. O vinculo preserva o contexto usado mesmo quando surgir v2. No after-action, os sinais sao candidatos: a Staff decide **manter, testar ou descartar**, define dono e data de revisao. Manter/testar pode gerar nova versao com origem na operacao e na licao.
+
+Players escalados recebem apenas o brief publico e o trecho do proprio papel. **Li minha funcao** e diferente de RSVP/presenca; a Staff enxerga lacunas de leitura sem expor nota interna. Estrategia sem versao vira lenda oral — e lenda oral costuma dar wipe.`,
+  },
+  {
+    slug: 'staff-comunicacao-adaptativa', title: '28 · Comunicacao adaptativa e estado canonico', tag: 'comms', route: '/dashboard/communications',
+    visual: ['Respeite canal e quiet hours', 'Agrupe no digest', 'Bot chama o mesmo dominio da Web'],
+    body: `## Menos ping manual, sem criar dois bancos
+Em [Comunicacao](${route('/dashboard/communications')}) cada membro configura canal por categoria, timezone, quiet hours, digest e teste. Defaults usam Web; alerta critico so fura silencio quando foi explicitamente classificado.
+
+O digest diario/semanal agrupa notificacoes do proprio player por tipo e link canonico, preserva prazo quando existe e nao consulta dados de terceiros. Entrega possui chave por periodo para evitar duplicacao.
+
+Os comandos /erp-rsvp, /erp-ausencia, /erp-instrucao e /erp-regra resolvem a conta Discord vinculada e chamam os mesmos servicos de dominio da Web. A resposta confirma o estado salvo e devolve a rota de revisao. Discord e controle remoto; o site continua sendo o console e a fonte de verdade.`,
   },
 ];
 

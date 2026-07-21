@@ -452,6 +452,7 @@ describe('Operations domain services', () => {
       auction: { findMany: mock.fn(async () => [suggestedAuction]) },
       dKPLock: { findMany: mock.fn(async () => [{ auctionId: bid.auctionId, amount: 450 }]) },
       daoshiCashReceipt: { aggregate: mock.fn(async () => ({ _count: 1 })) },
+      guildPolicyReceipt: { findMany: mock.fn(async () => []) },
     };
     const service = new PlayerOperationsService(prisma as never);
 

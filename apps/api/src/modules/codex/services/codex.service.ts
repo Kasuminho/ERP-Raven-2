@@ -3,6 +3,7 @@ import { CodexRequest, CodexRequestStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationService as DiscordNotificationService } from '../../discord/services/notification.service';
 import { ImageStorageService } from '../../uploads/image-storage.service';
 import { CreateCodexRequestDto, SendCodexRequestDto } from '../dto';
 
@@ -26,6 +27,7 @@ export class CodexService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly discordNotifications: DiscordNotificationService,
     private readonly imageStorage: ImageStorageService,
   ) {}
 
@@ -67,8 +69,11 @@ export class CodexService {
   async markSent(id: string, actorId: string, data: SendCodexRequestDto): Promise<CodexRequest> {
     const request = await this.getExisting(id);
 
-    if (request.status === 'CONFIRMED' || request.status === 'CANCELLED') {
-      throw new BadRequestException('Confirmed or cancelled codex requests cannot be sent.');
+    if (
+      request.status !== CodexRequestStatus.PENDING &&
+      request.status !== CodexRequestStatus.NEEDS_RETRY
+    ) {
+      throw new BadRequestException('Only pending or retry-requested codex requests can be sent.');
     }
 
     const updated = await this.prisma.codexRequest.update({
@@ -85,17 +90,39 @@ export class CodexService {
       playerId: request.playerId,
       proofImageUrl: updated.proofImageUrl,
     });
-    await this.notificationsService.createForPlayer({
-      playerId: request.playerId,
-      type: 'CODEX_SENT',
-      title: 'Codex enviado',
-      body: 'A Staff marcou seu codex como enviado. Confirme se deu certo ou solicite retry se quebrou.',
-      href: '/dashboard/codex',
-      metadata: {
-        codexRequestId: id,
-        proofImageUrl: updated.proofImageUrl,
-      },
+    try {
+      await this.notificationsService.createForPlayer({
+        playerId: request.playerId,
+        type: 'CODEX_SENT',
+        title: 'Codex enviado / Codex sent',
+        body: 'PT-BR: A Staff marcou seu Codex como enviado. Confirme se deu certo ou solicite retry se quebrou. EN: Staff marked your Codex as sent. Confirm it worked or request a retry if it broke.',
+        href: '/dashboard/codex',
+        metadata: {
+          codexRequestId: id,
+          proofImageUrl: updated.proofImageUrl,
+        },
+      });
+    } catch (error) {
+      await this.audit('CODEX_REQUEST_SENT_WEB_NOTIFICATION_FAILED', id, actorId, {
+        playerId: request.playerId,
+        message: error instanceof Error ? error.message : 'Unknown notification error',
+      });
+    }
+    const player = await this.prisma.player.findUnique({
+      where: { id: request.playerId },
+      select: { nickname: true, user: { select: { discordId: true } } },
     });
+    if (player?.user.discordId) {
+      await this.discordNotifications.notifyPlayerDailyReminder({
+        playerId: request.playerId,
+        playerName: player.nickname,
+        discordId: player.user.discordId,
+        reasonsPt: ['A Staff enviou seu Codex. Confirme se deu certo ou informe que quebrou.'],
+        reasonsEn: ['Staff sent your Codex. Confirm it worked or report that it broke.'],
+        hasProfileSignals: false,
+        hasCodex: true,
+      });
+    }
 
     return updated;
   }

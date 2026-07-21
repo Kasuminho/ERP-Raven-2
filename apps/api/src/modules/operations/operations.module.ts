@@ -15,6 +15,7 @@ import { OperationalBriefingService } from './services/operational-briefing.serv
 import { OperationsAuditService } from './services/operations-audit.service';
 import { OperationsRulesService } from './services/operations-rules.service';
 import { PlayerOperationsService } from './services/player-operations.service';
+import { ProductTelemetryService } from './services/product-telemetry.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { UniversalDossierService } from './services/universal-dossier.service';
@@ -34,10 +35,12 @@ import { WeeklySummaryService } from './services/weekly-summary.service';
     OperationsAuditService,
     OperationsRulesService,
     PlayerOperationsService,
+    ProductTelemetryService,
     StaffInsightsService,
     StaffSummaryService,
     UniversalDossierService,
     WeeklySummaryService,
   ],
+  exports: [MeetingService, OperationalBriefingService],
 })
 export class OperationsModule {}

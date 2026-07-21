@@ -1,15 +1,16 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ItemInterestEntry, ItemInterestPost, ItemInterestStatus } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { BulkCreateItemInterestPostDto, CreateItemInterestPostDto, DeclareItemInterestDto, DeliverItemInterestDto, VoteItemInterestDto } from '../dto';
+import { BulkCreateItemInterestPostDto, CancelItemInterestDto, CreateItemInterestPostDto, DeclareItemInterestDto, DeliverItemInterestDto, VoteItemInterestDto } from '../dto';
 import { ItemInterestDetails, ItemInterestsService } from '../services/item-interests.service';
 
 type AuthRequest = { user: { userId: string } };
 
 @Controller('item-interests')
 @UseGuards(JwtAuthGuard)
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class ItemInterestsController {
   constructor(private readonly service: ItemInterestsService) {}
 
@@ -64,8 +65,8 @@ export class ItemInterestsController {
   @Post(':id/cancel')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async cancel(@Param('id') id: string, @Body('reason') reason: string, @Req() req: AuthRequest): Promise<ItemInterestPost> {
-    return this.service.cancelPost(id, req.user.userId, reason);
+  async cancel(@Param('id') id: string, @Body() dto: CancelItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestPost> {
+    return this.service.cancelPost(id, req.user.userId, dto.reason);
   }
 
   @Post(':id/vote')

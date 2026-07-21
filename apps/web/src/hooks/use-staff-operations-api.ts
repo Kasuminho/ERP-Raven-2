@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, ContextualEligibilitySummary, ContextualEligibilityType, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildProgressReport, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, PlayerWeeklySafeSummary, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
+import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, ContextualEligibilitySummary, ContextualEligibilityType, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildPolicyPublicWorkspace, GuildPolicyStaffWorkspace, GuildPolicyVersion, GuildProgressReport, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, PlayerWeeklySafeSummary, ProductValidationAbsenceVisibility, ProductValidationInterviewProfile, ProductValidationWorkspace, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
 export function useGuildRules() {
   return useQuery({
@@ -56,6 +56,101 @@ export function useWeeklySummary() {
     queryKey: ['operations', 'staff', 'weekly'],
     queryFn: async () => (await api.get<WeeklyGuildSummary>('/operations/staff/weekly')).data,
     refetchInterval: 60_000,
+  });
+}
+
+export function useProductValidation() {
+  return useQuery({
+    queryKey: ['product-validation'],
+    queryFn: async () => (await api.get<ProductValidationWorkspace>('/product-validation')).data,
+  });
+}
+
+export function useCreateProductValidationInterview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      profile: ProductValidationInterviewProfile;
+      channels: string[];
+      absenceVisibility: ProductValidationAbsenceVisibility;
+      rsvpWouldReduceManualCharge: boolean;
+      summary: string;
+      interviewedAt: string;
+    }) => (await api.post('/product-validation/interviews', data)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['product-validation'] }),
+  });
+}
+
+export function useCaptureProductValidationWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      weekStart: string;
+      expectedAttendance?: number;
+      staffConfirmationMinutes: number;
+      note?: string;
+    }) => (await api.post('/product-validation/weeks', data)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['product-validation'] }),
+  });
+}
+
+export function useGuildPolicies() {
+  return useQuery({
+    queryKey: ['guild-policies'],
+    queryFn: async () => (await api.get<GuildPolicyPublicWorkspace>('/guild-policies')).data,
+    staleTime: 60_000,
+  });
+}
+
+export function useGuildPolicyStaffWorkspace() {
+  return useQuery({
+    queryKey: ['guild-policies', 'staff'],
+    queryFn: async () => (await api.get<GuildPolicyStaffWorkspace>('/guild-policies/staff')).data,
+  });
+}
+
+export function useCreateGuildPolicyDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { titlePt: string; titleEn: string; summaryPt: string; summaryEn: string; effectiveAt: string; isEmergency?: boolean; emergencyReason?: string }) =>
+      (await api.post<GuildPolicyVersion>('/guild-policies/drafts', data)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['guild-policies'] }),
+  });
+}
+
+export function useMarkGuildPolicyOpened() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (policyId: string) => (await api.post(`/guild-policies/${policyId}/open`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['guild-policies'] }),
+  });
+}
+
+export function useAcknowledgeGuildPolicy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (policyId: string) => (await api.post(`/guild-policies/${policyId}/acknowledge`)).data,
+    onSuccess: async () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['guild-policies'] }),
+      queryClient.invalidateQueries({ queryKey: ['operations', 'me', 'action-plan'] }),
+      queryClient.invalidateQueries({ queryKey: ['guild-policies', 'staff'] }),
+    ]),
+  });
+}
+
+export function useRefreshGuildPolicyDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (policyId: string) => (await api.post<GuildPolicyVersion>(`/guild-policies/drafts/${policyId}/refresh-snapshot`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['guild-policies'] }),
+  });
+}
+
+export function usePublishGuildPolicyDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (policyId: string) => (await api.post<GuildPolicyVersion>(`/guild-policies/drafts/${policyId}/publish`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['guild-policies'] }),
   });
 }
 

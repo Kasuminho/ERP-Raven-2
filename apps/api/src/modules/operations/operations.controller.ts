@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -11,11 +13,13 @@ import { OperationalBriefingService } from './services/operational-briefing.serv
 import { OperationsAuditService } from './services/operations-audit.service';
 import { OperationsRulesService } from './services/operations-rules.service';
 import { PlayerOperationsService } from './services/player-operations.service';
+import { ProductTelemetryService, ProductTelemetrySummary } from './services/product-telemetry.service';
 import { StaffInsightsService } from './services/staff-insights.service';
 import { StaffSummaryService } from './services/staff-summary.service';
 import { UniversalDossierService } from './services/universal-dossier.service';
 import { WeeklySummaryService } from './services/weekly-summary.service';
 import { ContextualEligibilityService } from './services/contextual-eligibility.service';
+import { ProductTelemetryQueryDto } from './dto/product-telemetry-query.dto';
 import {
   AuctionDossier,
   ContextualEligibilitySummary,
@@ -50,10 +54,31 @@ import {
 } from './operations.types';
 
 type AuthRequest = { user: { userId: string } };
-type ResolveMeetingItemBody = { title?: string; type?: string; href?: string };
+class ResolveMeetingItemBody {
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  title?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  type?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\/dashboard(?:\/|$)/)
+  @MaxLength(300)
+  href?: string;
+}
 
 @Controller('operations')
 @UseGuards(JwtAuthGuard)
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class OperationsController {
   constructor(
     private readonly auctionDiagnosticsService: AuctionDiagnosticsService,
@@ -70,6 +95,7 @@ export class OperationsController {
     private readonly staffSummary: StaffSummaryService,
     private readonly universalDossiers: UniversalDossierService,
     private readonly weeklySummary: WeeklySummaryService,
+    private readonly productTelemetry: ProductTelemetryService,
   ) {}
 
   @Get('me')
@@ -121,6 +147,13 @@ export class OperationsController {
   @Roles('STAFF', 'ADMIN')
   async operationalHealth(): Promise<OperationalHealthSummary> {
     return this.staffSummary.getOperationalHealth();
+  }
+
+  @Get('staff/product-telemetry')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async productTelemetrySummary(@Query() query: ProductTelemetryQueryDto): Promise<ProductTelemetrySummary> {
+    return this.productTelemetry.getSummary(query.days ?? 30);
   }
 
   @Get('staff/deploy')

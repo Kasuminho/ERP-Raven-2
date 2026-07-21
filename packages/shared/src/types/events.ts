@@ -22,6 +22,147 @@ export type EventStatus = 'OPEN' | 'ATTENDANCE_REGISTRATION' | 'FINALIZED' | 'CA
 export type EventOperationalCategory = 'BOSS' | 'ABYSS' | 'GUILD_RAID' | 'FARM' | 'TRAINING' | 'CLASH' | 'CUSTOM';
 
 export type EventOperationalPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type EventRsvpStatus = 'CONFIRMED' | 'TENTATIVE' | 'DECLINED';
+export type EventRsvpNoteVisibility = 'STAFF_ONLY' | 'PLAYER_PUBLIC';
+export type PlayerAbsenceReasonVisibility = 'STAFF_ONLY' | 'PLAYER_PUBLIC';
+export type EventReserveStatus = 'RESERVE' | 'PROMOTION_PENDING' | 'PROMOTED' | 'DECLINED' | 'REMOVED';
+export type EventReminderChannel = 'WEB' | 'DISCORD' | 'BOTH' | 'NONE';
+
+export type EventCompositionTarget = {
+  role?: string | null;
+  playerClass?: string | null;
+  minimum: number;
+  label?: string | null;
+};
+
+export type EventSeriesRecord<TDate = string | Date> = {
+  id: string;
+  name: string;
+  type: EventType;
+  operationalCategory: EventOperationalCategory;
+  priority: EventOperationalPriority;
+  dkpReward: number;
+  timezone: string;
+  firstStartsAt: TDate;
+  durationMinutes: number;
+  intervalWeeks: number;
+  horizonDays: number;
+  exceptionDates: string[];
+  compositionTargets: EventCompositionTarget[];
+  pausedAt?: TDate | null;
+  materializedThrough?: TDate | null;
+};
+
+export type EventReserveEntryRecord<TDate = string | Date> = {
+  id: string;
+  eventId: string;
+  playerId: string;
+  position: number;
+  reason: string;
+  status: EventReserveStatus;
+  promotionRequestedAt?: TDate | null;
+  respondedAt?: TDate | null;
+  promotedAt?: TDate | null;
+  playerResponseNote?: string | null;
+  createdAt: TDate;
+  updatedAt: TDate;
+};
+
+export type PlayerAbsenceRecord<TDate = string | Date> = {
+  id: string;
+  playerId: string;
+  startsAt: TDate;
+  endsAt: TDate;
+  reason?: string | null;
+  reasonVisibility: PlayerAbsenceReasonVisibility;
+  createdAt: TDate;
+  updatedAt: TDate;
+};
+
+export type EventRsvpRecord<TDate = string | Date> = {
+  id: string;
+  eventId: string;
+  playerId: string;
+  status: EventRsvpStatus;
+  note?: string | null;
+  noteVisibility: EventRsvpNoteVisibility;
+  noShowDetectedAt?: TDate | null;
+  noShowJustification?: string | null;
+  noShowJustifiedAt?: TDate | null;
+  createdAt: TDate;
+  updatedAt: TDate;
+};
+
+export type EventNoShowRecord<TDate = string | Date> = {
+  eventId: string;
+  eventName: string;
+  startsAt: TDate;
+  detectedAt: TDate;
+  justification?: string | null;
+  justifiedAt?: TDate | null;
+};
+
+export type PlayerEventCommitment<TDate = string | Date> = {
+  event: EventRecord<TDate>;
+  myRsvp: EventRsvpRecord<TDate> | null;
+  absence: PlayerAbsenceRecord<TDate> | null;
+  requiresResponse: boolean;
+  reserve: Omit<EventReserveEntryRecord<TDate>, 'reason'> | null;
+  absenceSummary: {
+    unavailableCount: number;
+    sharedReasons: Array<{ nickname: string; reason: string }>;
+  };
+  publicResponses: Array<{
+    nickname: string;
+    status: EventRsvpStatus;
+    note: string;
+    updatedAt: TDate;
+  }>;
+};
+
+export type EventRsvpStaffSummary<TDate = string | Date> = {
+  eventId: string;
+  activePlayers: number;
+  counts: Record<EventRsvpStatus | 'UNANSWERED' | 'UNAVAILABLE_BY_ABSENCE', number>;
+  confirmedComposition: {
+    byClass: Record<string, number>;
+    byRole: Record<string, number>;
+    byLayer: Record<string, number>;
+  };
+  responses: Array<EventRsvpRecord<TDate> & {
+    nickname: string;
+    playerClass: string;
+    dimensionalLayer: number;
+    preferredRole: string | null;
+    unavailableByAbsence: boolean;
+  }>;
+  absenceImpacts: Array<PlayerAbsenceRecord<TDate> & {
+    nickname: string;
+  }>;
+  compositionTargets: Array<EventCompositionTarget & { confirmed: number; gap: number }>;
+  reserveEntries: Array<EventReserveEntryRecord<TDate> & {
+    nickname: string;
+    playerClass: string;
+    dimensionalLayer: number;
+    preferredRole: string | null;
+  }>;
+  scheduleConflicts: Array<{
+    playerId: string;
+    nickname: string;
+    timezone: string;
+    conflictingEventId: string;
+    conflictingEventName: string;
+    currentEventLocal: string;
+    conflictingEventLocal: string;
+  }>;
+  noShows: Array<{
+    playerId: string;
+    nickname: string;
+    detectedAt: TDate;
+    justification?: string | null;
+    justifiedAt?: TDate | null;
+  }>;
+};
 
 export type EventChecklistItem<TDate = string | Date> = {
   key: string;
@@ -49,6 +190,10 @@ export type EventRecord<TDate = string | Date> = {
   responsibleUserId?: string | null;
   checklist: EventChecklistItem<TDate>[];
   operationalNotes?: string | null;
+  eventSeriesId?: string | null;
+  seriesOccurrence?: number | null;
+  compositionTargets?: EventCompositionTarget[];
+  seriesExceptionSkipped?: boolean;
 };
 
 export type FinalizeEventResult<TEvent = EventRecord, TDate = string | Date> = {

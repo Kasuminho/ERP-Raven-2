@@ -90,13 +90,7 @@ O [Dashboard](${route('/dashboard')}) mostra seu DKP total, travado e disponíve
 
 Use [Avisos](${route('/dashboard/notices')}) para reunir pendências operacionais e notificações internas. Leia o aviso e abra o botão da própria ação; isso evita caçar tela no menu como se fosse drop de 0,01%.
 
-O [Checklist inicial](${route('/dashboard/onboarding')}) acompanha:
-- perfil configurado;
-- STATUS enviado;
-- Fenda Dimensional enviada;
-- entendimento de DKP;
-- acompanhamento de pedidos;
-- preparação da Daoshi.
+O [Plano de onboarding](${route('/dashboard/onboarding')}) não é mais checklist decorativo. Cada recruit convertido recebe versão do template, prazo, progresso obrigatório/total e próximo passo PT-BR/EN. Ele acompanha regras, perfil, timezone, build, wishlist, presença/DKP, primeiro evento e canais. Algumas etapas usam evidência automática; outras pedem sua confirmação depois de executar o fluxo. Template novo não reescreve seu plano em andamento.
 
 O dashboard só mostra dados seguros para você. Ranking, concorrentes, bids de terceiros e locks alheios permanecem ocultos.`,
     en: `## ⚡ Your action hub
@@ -104,13 +98,7 @@ The [Dashboard](${route('/dashboard')}) shows total, locked, and available DKP p
 
 Use [Notices](${route('/dashboard/notices')}) to collect operational tasks and internal notifications. Read the notice and use its action button instead of hunting through the menu like a 0.01% drop.
 
-The [Onboarding checklist](${route('/dashboard/onboarding')}) tracks:
-- configured profile;
-- submitted STATUS;
-- submitted Dimensional Rift;
-- DKP understanding;
-- request follow-up;
-- Daoshi preparation.
+The [Onboarding plan](${route('/dashboard/onboarding')}) is no longer a decorative checklist. Each converted recruit receives a template version, deadline, required/total progress, and a PT-BR/EN next step. It tracks rules, profile, timezone, build, wishlist, attendance/DKP, first event, and channels. Some steps use automatic evidence; others ask for your confirmation after completing the flow. A new template never rewrites your active plan.
 
 The dashboard only shows data safe for you. Rankings, competitors, third-party bids, and other players' locks remain hidden.`,
   },
@@ -123,6 +111,10 @@ The dashboard only shows data safe for you. Rankings, competitors, third-party b
     visualEn: ['Review name and timezone', 'Upload readable proof', 'Wait for Staff approval'],
     pt: `## 📈 Perfil e progresso
 No [Perfil](${route('/dashboard/profile')}) você ajusta nickname, classe, camada operacional, idioma e timezone. Preferências de combate, disponibilidade e build ajudam a Staff na escala; mudanças sensíveis podem entrar em revisão.
+
+O ERP envia uma cobrança diária privada enquanto faltar build, função ou disponibilidade; também cobra STATUS quando não houver atualização nos últimos 21 dias e presença quando ficar abaixo de 50% nos bosses finalizados dos últimos 15 dias. As pendências do dia chegam consolidadas em uma única mensagem.
+
+Em **Preferências**, escolha Web, Discord, ambos ou nenhum para lembretes não críticos de evento. Essa escolha não desliga cobranças obrigatórias de perfil/Codex nem alertas críticos.
 
 **CP não é editado diretamente.** Publique progresso na categoria **STATUS** com print legível. Para validar camada, envie **Fenda Dimensional**. A Staff analisa e, quando aprovar, atualiza os dados operacionais.
 
@@ -138,6 +130,10 @@ Também existem categorias como Stellas, equipamentos, relíquias, estigma, cole
 Print cortado gera pergunta, pergunta gera fila, fila alimenta o Aristolfo.`,
     en: `## 📈 Profile and progress
 In [Profile](${route('/dashboard/profile')}) you can update nickname, class, operational layer, language, and timezone. Combat role, availability, and build preferences help Staff with rosters; sensitive changes may require review.
+
+The ERP sends one private daily reminder while build, role, or availability is missing. It also reminds you when no STATUS was posted in the last 21 days or attendance is below 50% across finalized bosses in the last 15 days. Daily items are consolidated into a single message.
+
+Under **Preferences**, choose Web, Discord, both, or neither for non-critical event reminders. This choice does not disable required profile/Codex reminders or critical alerts.
 
 **CP is not edited directly.** Submit progress under **STATUS** with readable proof. Use **Dimensional Rift** to validate your layer. Staff reviews the submission and updates operational data after approval.
 
@@ -157,10 +153,18 @@ Cropped proof creates questions, questions create queues, and queues feed Aristo
     title: '04 · DKP, presença, eventos e regras',
     tag: 'events',
     route: '/dashboard/attendance',
-    visualPt: ['Staff registra presença', 'Cada boss vale separado', 'Confira DKP disponível'],
-    visualEn: ['Staff records attendance', 'Each boss is independent', 'Check available DKP'],
+    visualPt: ['Responda vou, talvez ou não', 'Registre ausência e reserva', 'RSVP não concede DKP'],
+    visualEn: ['Answer yes, maybe, or no', 'Track absence and reserve', 'RSVP grants no DKP'],
     pt: `## ⚔️ DKP e presença sem ritual obscuro
 Em [Presença](${route('/dashboard/attendance')}) você consulta seu histórico. O player **não marca a própria presença**: a Staff abre o evento, registra os presentes e finaliza.
+
+Antes do evento, responda o RSVP como **vou participar**, **talvez** ou **não vou**. A nota opcional fica privada para a Staff por padrão; torne-a pública somente se quiser que outros players a vejam. Você pode mudar a resposta até o evento começar. RSVP prevê composição: não marca presença e não concede DKP.
+
+Se ficar indisponível por alguns dias, registre um **período de ausência** com início, fim e motivo opcional. Os eventos da janela ficam indisponíveis automaticamente, sem obrigar você a recusar um por um. O motivo é privado para a Staff por padrão; outros players veem apenas o total indisponível, salvo quando você decide compartilhar o motivo.
+
+Se entrar na **reserva**, você vê a posição, mas não o motivo interno da Staff. Quando uma vaga abrir, aceite ou recuse a oferta na tela. Aceitar confirma o RSVP; não marca presença nem concede DKP.
+
+Nas 24h antes do evento, o ERP lembra somente quem ainda não respondeu ou confirmou, usando o canal escolhido. Se você confirmou e não apareceu, pode explicar depois nesta tela. A justificativa fica com a Staff; uma falta isolada não gera punição nem risk flag automática.
 
 Cada boss possui evento, presença e DKP independentes, mesmo quando criado em lote. Estar no primeiro boss não marca automaticamente os seguintes.
 
@@ -171,9 +175,21 @@ No dashboard:
 
 Leia as [Regras da guild](${route('/dashboard/rules')}) para os valores vigentes. A presença D-30 entra na elegibilidade: atualmente a regra possui cortes separados para bid e para participação em interesses/requests. A tela do leilão ou formulário informa quando você não atende ao requisito.
 
+A mesma tela mostra a **política publicada** com número da versão, autoria, vigência, diff em linguagem simples e snapshot imutável. Ajustar uma regra operacional não reescreve a versão antiga; a Staff precisa publicar outra. Versão futura fica marcada separadamente até entrar em vigor.
+
+Ao abrir a política, o ERP registra a abertura. Depois de ler, use **Li e entendi**: o recibo comprova somente ciência daquela informação, não concordância jurídica ampla. Até confirmar, a pendência aparece no plano de ação. Mudança emergencial recebe selo e mostra o motivo da Staff.
+
 Se uma presença parecer errada, informe boss, data e contexto à Staff. Não use o post público para discutir saldo ou caso pessoal detalhado.`,
     en: `## ⚔️ DKP and attendance without dark rituals
 Use [Attendance](${route('/dashboard/attendance')}) to review your history. Players **do not mark their own attendance**: Staff opens the event, records present members, and finalizes it.
+
+Before the event, answer RSVP with **I will attend**, **maybe**, or **cannot attend**. The optional note is private to Staff by default; make it public only when you want other players to see it. You may change your answer until the event starts. RSVP forecasts composition: it does not mark attendance or grant DKP.
+
+If you will be unavailable for several days, register an **absence period** with a start, end, and optional reason. Events in that window become unavailable automatically, so you do not have to decline them one by one. The reason is private to Staff by default; other players only see the unavailable total unless you choose to share the reason.
+
+If you enter the **reserve list**, you see your position but not Staff's internal reason. When a slot opens, accept or decline the offer on screen. Accepting confirms RSVP; it does not mark attendance or grant DKP.
+
+During the 24 hours before an event, the ERP only reminds unanswered or confirmed players through their chosen channel. If you confirmed and missed it, you can explain afterward on this screen. The explanation stays with Staff; one missed event creates no automatic punishment or risk flag.
 
 Each boss has independent event, attendance, and DKP records, even when created as a batch. Attending the first boss does not automatically mark later bosses.
 
@@ -183,6 +199,10 @@ On the dashboard:
 - **available** is what you can use now.
 
 Read the live [Guild rules](${route('/dashboard/rules')}). D-30 attendance affects eligibility, with separate current thresholds for bidding and for interests/requests. The auction or form explains when you do not meet the requirement.
+
+The same screen shows the **published policy** with its version number, author, effective date, plain-language diff, and immutable snapshot. Changing an operational rule does not rewrite an older version; Staff must publish a new one. A future version remains separate until it takes effect.
+
+Opening the policy records that it was opened. After reading, use **I read and understood**: the receipt proves awareness of that information only, not broad legal agreement. Until you acknowledge it, the item remains in your action plan. An emergency change carries a badge and shows Staff's reason.
 
 If attendance looks wrong, send Staff the boss, date, and context. Do not discuss detailed personal balances or cases in a public reply.`,
   },
@@ -263,6 +283,8 @@ Em [Codex](${route('/dashboard/codex')}) envie o print do pedido. Depois que a S
 3. use **Falhou/Tentar novamente** se não funcionou;
 4. acompanhe o comprovante e o status.
 
+Ao marcar o envio, o ERP chama você diretamente; enquanto o Codex continuar aguardando resposta, ele também aparece na cobrança diária. A cobrança termina quando você confirma ou pede retry.
+
 Não confirme sucesso antes de verificar. Botão verde por impulso é uma build estranha.`,
     en: `## 📋 Item Requests
 Use [Item Requests](${route('/dashboard/item-requests')}) to join a queue for requestable items. Choose the item, provide required proof, and track estimated position, units ahead, update age, last delivery, and shorter-queue alternatives.
@@ -275,6 +297,8 @@ In [Codex](${route('/dashboard/codex')}) upload the request screenshot. After St
 2. choose **Worked** if received correctly;
 3. choose **Failed/Retry** if it did not work;
 4. track proof and status.
+
+When Staff marks it as sent, the ERP messages you directly. While the Codex is still waiting for your response, it also appears in the daily reminder. Reminders stop when you confirm or request a retry.
 
 Do not confirm success before checking. Clicking green by instinct is a strange build.`,
   },
@@ -405,8 +429,32 @@ The [Weekly summary](${route('/dashboard/weekly-summary')}) switches between wee
 To investigate a personal issue, start with the timeline and then check the source screen. If it still differs, send Staff the link and approximate date. Good context reduces the answer respawn timer.`,
   },
   {
+    slug: 'casos-privados-recursos',
+    title: '12 · Casos privados, denúncias e recursos',
+    tag: 'help',
+    route: '/dashboard/cases',
+    visualPt: ['Escolha categoria e urgência', 'Converse somente com a Staff', 'Acompanhe prazo e resposta'],
+    visualEn: ['Choose category and urgency', 'Talk only with Staff', 'Track deadline and response'],
+    pt: `## 🛡️ Fale com a Staff sem abrir praça pública
+Use [Casos privados](${route('/dashboard/cases')}) para dúvida, denúncia operacional ou recurso. Escolha categoria e urgência, descreva fatos, datas e o resultado que precisa. Somente você e a Staff autorizada veem a conversa.
+
+As respostas ficam no histórico. Se o caso já foi resolvido e você enviar contexto novo, ele reabre. Notas internas da Staff nunca aparecem para você; decisões disciplinares não são automáticas por volume ou severidade.
+
+Contestação de resultado de leilão continua dentro da página do próprio leilão. Assim o ERP preserva participantes, bids, locks e regras específicas sem criar duas verdades para o mesmo problema.
+
+Caso privado é para contexto sensível. Token, cookie, senha e conteúdo de .env continuam sendo oferenda proibida ao Aristolfo.`,
+    en: `## 🛡️ Talk to Staff without creating a public square
+Use [Private cases](${route('/dashboard/cases')}) for a question, operational report, or appeal. Choose a category and urgency, then describe facts, dates, and the outcome you need. Only you and authorized Staff can see the thread.
+
+Replies remain in the history. If a case was resolved and you send new context, it reopens. Staff internal notes are never shown to you; disciplinary decisions are never automated from case volume or severity.
+
+Auction-result disputes stay inside the auction page. This preserves participant, bid, lock, and domain-specific secrecy without creating two sources of truth.
+
+A private case is for sensitive context. Tokens, cookies, passwords, and .env contents are still forbidden offerings to Aristolfo.`,
+  },
+  {
     slug: 'ajuda-seguranca',
-    title: '12 · Ajuda, privacidade e solução de problemas',
+    title: '13 · Ajuda, privacidade e solução de problemas',
     tag: 'help',
     route: '/dashboard/rules',
     visualPt: ['Copie o texto do erro', 'Inclua tela e horário', 'Nunca envie segredos'],
@@ -435,6 +483,99 @@ When replying to a tutorial, include the **route/screen, attempted action, appro
 **Never publish:** tokens, cookies, passwords, login QR codes, .env contents, financial receipts, personal data, or confidential auction information. Rankings, bids, locks, and participant identities stay private until a result/delivery is safely published by the system.
 
 For personal DKP, attendance, discipline, review, receipt, or access cases, contact Staff privately. This forum welcomes questions and answers, but it does not need to become a public gamer medical chart.`,
+  },
+  {
+    slug: 'trial-transparente',
+    title: '14 · Trial transparente e check-ins',
+    tag: 'now',
+    route: '/dashboard/trial',
+    visualPt: ['Leia objetivo e criterios', 'Acompanhe D7, D14 e D30', 'Declare ausencia quando precisar'],
+    visualEn: ['Read objective and criteria', 'Follow days 7, 14, and 30', 'Declare an absence when needed'],
+    pt: `## Trial visivel antes da decisao
+Se a Staff iniciar uma avaliacao, abra [Meu trial](${route('/dashboard/trial')}). O objetivo, o periodo e todos os criterios PT-BR/EN aparecem antes de qualquer decisao.
+
+Os check-ins D7, D14 e D30 registram fatos visiveis para voce. Notas internas da Staff continuam privadas. Uma ausencia declarada pausa o periodo e ajusta o fim exibido.
+
+Aprovar, estender ou encerrar exige decisao humana com motivo. Trial nao cria ranking de lealdade, nao pune automaticamente e nao altera as regras ou o sigilo de loot.`,
+    en: `## A visible trial before any decision
+If Staff starts an evaluation, open [My trial](${route('/dashboard/trial')}). Its objective, period, and every PT-BR/EN criterion are published before any decision.
+
+Day 7, 14, and 30 check-ins record facts visible to you. Internal Staff notes remain private. A declared absence pauses the period and adjusts the displayed end.
+
+Approval, extension, or closure requires a reasoned human decision. Trial creates no loyalty ranking, applies no automatic punishment, and never changes loot rules or secrecy.`,
+  },
+  {
+    slug: 'mentoria-primeiros-marcos', title: '15 · Mentoria e primeiros marcos', tag: 'guild', route: '/dashboard/mentorship',
+    visualPt: ['Peca ajuda por tema/role', 'Veja seu acolhimento', 'Marcos sao datas, nao pontos'],
+    visualEn: ['Ask by topic/role', 'View your welcome contact', 'Milestones are dates, not points'],
+    pt: `## Ajuda sem cacar DM
+Em [Mentoria](${route('/dashboard/mentorship')}) veja seu mentor voluntario ou grupo de acolhimento e peca ajuda por boss, build, role, evento, request, interesse ou War Room. O pedido fica no ERP e nao depende de conversa privada perdida.
+
+Primeiro evento, boss, request, interesse e War Room aparecem como datas reais. Sao marcos de integracao, nunca score ou ranking. Voce pode se voluntariar como mentor e retirar a disponibilidade; mentor nao ganha poder disciplinar nem acesso a notas Staff.`,
+    en: `## Help without hunting for a DM
+On [Mentorship](${route('/dashboard/mentorship')}), view your volunteer mentor or welcome group and ask for help with bosses, builds, roles, events, requests, interests, or War Room. The request stays in the ERP instead of a lost private conversation.
+
+Your first event, boss, request, interest, and War Room appear as real dates. They are integration milestones, never a score or ranking. You may volunteer and withdraw availability; mentors receive no disciplinary power or Staff notes.`,
+  },
+  {
+    slug: 'pulso-anonimo-voluntario', title: '16 · Pulso anonimo e voluntario', tag: 'guild', route: '/dashboard/pulse',
+    visualPt: ['Responda ou pule', 'Identidade fica separada', 'Sem efeito em loot ou disciplina'],
+    visualEn: ['Answer or skip', 'Identity stays separate', 'No loot or discipline effect'],
+    pt: `## Sua voz sem score escondido
+Em [Pulso da guilda](${route('/dashboard/pulse')}) responda pertencimento, clareza, carga, diversao e seguranca para pedir ajuda, de 1 a 5. Comentario e opcional. Voce tambem pode pular sem consequencia.
+
+A resposta nao guarda player, nick ou Discord. O recibo de participacao fica em tabela separada. A Staff so ve medias e textos depois do grupo minimo; nunca recebe notas individuais. Texto aberto e moderado e apagado no prazo mostrado.
+
+Pulso nao cria score de lealdade e nao afeta loot, DKP, trial, acesso ou disciplina.`,
+    en: `## Your voice without a hidden score
+On [Guild pulse](${route('/dashboard/pulse')}), rate belonging, clarity, workload, fun, and safety asking for help from 1 to 5. The comment is optional. You may also skip without consequences.
+
+The response stores no player, nickname, or Discord identity. The participation receipt lives separately. Staff only sees averages and text after the minimum group size and never receives individual scores. Open text is moderated and deleted on the displayed schedule.
+
+Pulse creates no loyalty score and never affects loot, DKP, trial, access, or discipline.`,
+  },
+  {
+    slug: 'sinais-explicaveis-sem-score', title: '17 · Sinais explicaveis, sem score', tag: 'guild', route: '/dashboard/pulse',
+    visualPt: ['Fatos usam janelas claras', 'Servem para conversa', 'Nunca bloqueiam ou punem'],
+    visualEn: ['Facts use clear windows', 'They start conversations', 'They never block or punish'],
+    pt: `## Contexto para conversar, nao vigiar
+O ERP pode apontar para a Staff mudanca de participacao, onboarding parado, confirmacoes revertidas, retorno de inativo ou uma classe pouco presente. Cada sinal mostra fatos e a janela usada.
+
+Nao existe score de lealdade/churn. Um sinal nao remove player, bloqueia acesso, reduz loot ou aplica punicao. Ele so recomenda uma conversa para entender contexto, horario, carga ou ajuda necessaria.`,
+    en: `## Context for a conversation, not surveillance
+The ERP may show Staff a participation change, stalled onboarding, reverted confirmations, an inactive-member return, or a class cohort with low recent attendance. Every signal includes its facts and time window.
+
+There is no loyalty/churn score. A signal never removes a player, blocks access, reduces loot, or applies punishment. It only recommends a conversation to understand context, schedule, workload, or needed help.`,
+  },
+  {
+    slug: 'playbook-minha-funcao', title: '18 · Playbook e minha funcao', tag: 'war', route: '/dashboard/playbook',
+    visualPt: ['Leia o brief publico', 'Veja somente seu papel', 'Confirme leitura separada do RSVP'],
+    visualEn: ['Read the public brief', 'See only your role', 'Confirm reading separately from RSVP'],
+    pt: `## Preparacao sem vazar call interna
+Em [Playbook](${route('/dashboard/playbook')}) veja o objetivo e o brief publico PT-BR/EN da versao anexada ao seu evento ou War Room. O sistema mostra apenas a instrucao do seu papel; notas Staff e funcoes dos outros ficam privadas.
+
+Clique em **Li minha funcao** depois de ler. Esse recibo nao confirma RSVP, nao marca presenca e nao gera DKP. Se a estrategia ganhar nova versao, a operacao continua ligada exatamente a versao escolhida pela Staff.`,
+    en: `## Preparation without leaking internal calls
+On [Playbook](${route('/dashboard/playbook')}), read the PT-BR/EN objective and public brief from the version attached to your event or War Room. The system shows only your role instruction; Staff notes and other roles remain private.
+
+Click **I read my role** after reading. This receipt does not confirm RSVP, mark attendance, or grant DKP. If the strategy gets a new version, the operation remains linked to the exact version selected by Staff.`,
+  },
+  {
+    slug: 'comunicacao-digest-discord', title: '19 · Canais, digest e acoes Discord', tag: 'guild', route: '/dashboard/communications',
+    visualPt: ['Escolha canal por categoria', 'Configure quiet hours', 'Revise no site apos usar o bot'],
+    visualEn: ['Choose a channel per category', 'Configure quiet hours', 'Review on the site after using the bot'],
+    pt: `## Menos ruido, mesmo estado
+Em [Comunicacao](${route('/dashboard/communications')}) escolha Web, Discord, ambos ou nenhum para eventos, seu loot, requests, progresso, comunicados e lembretes. Configure timezone, quiet hours, digest diario/semanal e envie um teste.
+
+O digest agrupa mudancas repetidas do mesmo objeto, mostra link/prazo e nunca inclui informacao de terceiros. Alerta critico precisa estar explicitamente classificado para furar o silencio.
+
+Com o bot configurado, use /erp-rsvp, /erp-ausencia, /erp-instrucao e /erp-regra. A resposta confirma o estado salvo e oferece a rota de revisao. O site continua funcional sem Discord e permanece a fonte de verdade.`,
+    en: `## Less noise, same state
+On [Communication](${route('/dashboard/communications')}), choose Web, Discord, both, or none for events, your loot, requests, progress, announcements, and reminders. Configure timezone, quiet hours, a daily/weekly digest, and send a test.
+
+The digest groups repeated changes to the same object, shows its link/deadline, and never includes third-party information. A critical alert must be explicitly classified to bypass quiet hours.
+
+With the bot configured, use /erp-rsvp, /erp-ausencia, /erp-instrucao, and /erp-regra. The reply confirms the saved state and provides a review route. The website remains functional without Discord and stays the source of truth.`,
   },
 ];
 

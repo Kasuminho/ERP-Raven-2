@@ -1,36 +1,53 @@
-import { CanActivate, ExecutionContext, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { Request } from 'express';
-import { BusinessRulesService } from '../../modules/business-rules/business-rules.service';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import { Request } from "express";
+import { BusinessRulesService } from "../../modules/business-rules/business-rules.service";
 
 @Injectable()
 export class MaintenanceModeGuard implements CanActivate {
-  private readonly writeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  private readonly writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
   private readonly sensitivePrefixes = [
-    '/announcements',
-    '/auctions',
-    '/automation/finalize',
-    '/automation/relist',
-    '/business-rules',
-    '/codex',
-    '/daoshi',
-    '/dkp',
-    '/drops',
-    '/diamond-sales',
-    '/events',
-    '/item-interests',
-    '/item-requests',
-    '/operations/staff/discord-webhooks',
-    '/operations/staff/weekly/post',
-    '/players/me/progress',
-    '/players/progress',
-    '/staff-review',
-    '/uploads',
+    "/announcements",
+    "/auctions",
+    "/automation/finalize",
+    "/automation/relist",
+    "/business-rules",
+    "/codex",
+    "/daoshi",
+    "/dkp",
+    "/drops",
+    "/diamond-sales",
+    "/events",
+    "/guild-cases",
+    "/onboarding",
+    "/player-trials",
+    "/mentorship",
+    "/guild-pulse",
+    "/guild-health",
+    "/leadership-health",
+    "/staff-tasks",
+    "/staff-coverage",
+    "/staff-automations",
+    "/playbooks",
+    "/communications",
+    "/item-interests",
+    "/item-requests",
+    "/operations/staff/discord-webhooks",
+    "/operations/staff/weekly/post",
+    "/players/me/progress",
+    "/players/progress",
+    "/staff-review",
+    "/uploads",
   ];
 
   constructor(private readonly businessRules: BusinessRulesService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    if (context.getType() !== 'http') {
+    if (context.getType() !== "http") {
       return true;
     }
 
@@ -54,20 +71,25 @@ export class MaintenanceModeGuard implements CanActivate {
     }
 
     throw new ServiceUnavailableException({
-      code: 'MAINTENANCE_MODE',
+      code: "MAINTENANCE_MODE",
       message: maintenance.message,
     });
   }
 
   private normalizedPath(request: Request): string {
-    return request.path.replace(/^\/api\/v1/, '').replace(/\/+$/, '') || '/';
+    return request.path.replace(/^\/api\/v1/, "").replace(/\/+$/, "") || "/";
   }
 
   private isMaintenanceToggle(path: string, method: string): boolean {
-    return method.toUpperCase() === 'PATCH' && path === '/business-rules/maintenanceMode';
+    return (
+      method.toUpperCase() === "PATCH" &&
+      path === "/business-rules/maintenanceMode"
+    );
   }
 
   private isSensitiveWrite(path: string): boolean {
-    return this.sensitivePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+    return this.sensitivePrefixes.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    );
   }
 }

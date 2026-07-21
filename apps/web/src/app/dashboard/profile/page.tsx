@@ -20,7 +20,7 @@ import { api } from '@/lib/api';
 import { combatAvailabilityLabel, combatRoleLabel, itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { Locale, useLocaleStore } from '@/store/locale-store';
-import type { PlayerClass, PlayerCombatAvailability, PlayerCombatRole, PlayerProgress, ProgressCategory } from '@/types/api';
+import type { EventReminderChannel, PlayerClass, PlayerCombatAvailability, PlayerCombatRole, PlayerProgress, ProgressCategory } from '@/types/api';
 
 const playerClasses: PlayerClass[] = [
   'GUNSLINGER',
@@ -95,6 +95,7 @@ export default function ProfilePage() {
   const uploadImage = useUploadImage();
   const [timezone, setTimezone] = useState('');
   const [locale, setLocale] = useState<Locale>('pt');
+  const [eventReminderChannel, setEventReminderChannel] = useState<EventReminderChannel>('WEB');
   const [profileForm, setProfileForm] = useState({
     nickname: '',
     class: 'VANGUARD' as PlayerClass,
@@ -185,6 +186,7 @@ export default function ProfilePage() {
     if (!player) return;
 
     setTimezone(player.timezone ?? '');
+    setEventReminderChannel(player.eventReminderChannel ?? 'WEB');
     setProfileForm({
       nickname: player.nickname ?? '',
       class: player.class ?? 'VANGUARD',
@@ -341,9 +343,19 @@ export default function ProfilePage() {
               <option value="en">English</option>
               <option value="es">Espanol</option>
             </Select>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Lembretes de evento / Event reminders</span>
+              <Select value={eventReminderChannel} onChange={(event) => setEventReminderChannel(event.target.value as EventReminderChannel)}>
+                <option value="WEB">Web</option>
+                <option value="DISCORD">Discord</option>
+                <option value="BOTH">Web + Discord</option>
+                <option value="NONE">Nenhum / None</option>
+              </Select>
+            </label>
+            <p className="text-xs text-muted-foreground">PT-BR: vale apenas para lembretes não críticos de eventos. EN: this only affects non-critical event reminders.</p>
             <Button
               onClick={() => updatePreferences.mutate(
-                { timezone, locale },
+                { timezone, locale, eventReminderChannel },
                 {
                   onSuccess: () => {
                     setCurrentLocale(locale);

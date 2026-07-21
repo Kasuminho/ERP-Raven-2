@@ -9,6 +9,7 @@ import { DkpBidPolicySimulationSummary, DkpDecaySimulationSummary, DkpEconomySum
 type AuthRequest = { user?: { userId?: string } };
 
 @Controller('dkp')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class DkpController {
   constructor(private readonly service: DkpService) {}
 
@@ -116,7 +117,7 @@ export class DkpController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async createTransaction(@Body() dto: CreateDkpTransactionDto, @Req() req: AuthRequest): Promise<DKPTransaction> {
-    return this.service.createTransaction({ ...dto, createdById: req.user?.userId ?? dto.createdById });
+    return this.service.createTransaction({ ...dto, createdById: req.user?.userId ?? '' });
   }
 
   @Post('lock')

@@ -256,6 +256,7 @@ export class PlayerOperationsService {
       upcomingEvents,
       activeAuctions,
       locks,
+      pendingPolicyReceipts,
     ] = await Promise.all([
       this.prisma.itemRequest.findMany({
         where: { playerId: player.id, remainingQuantity: { gt: 0 } },
@@ -352,12 +353,34 @@ export class PlayerOperationsService {
         where: { playerId: player.id, released: false },
         select: { auctionId: true, amount: true },
       }),
+      this.prisma.guildPolicyReceipt.findMany({
+        where: { playerId: player.id, acknowledgedAt: null, policy: { status: 'PUBLISHED' } },
+        include: { policy: true },
+        orderBy: [{ policy: { isEmergency: 'desc' } }, { policy: { effectiveAt: 'asc' } }],
+        take: 5,
+      }),
     ]);
 
     const declaredInterestIds = new Set(myInterestEntries.map((entry) => entry.postId));
     const bidAuctionIds = new Set(bids.map((bid) => bid.auctionId));
     const lockByAuctionId = new Map(locks.map((lock) => [lock.auctionId, lock.amount]));
     const cards: PlayerActionPlan['cards'] = [];
+
+    for (const receipt of pendingPolicyReceipts) {
+      cards.push(this.actionCard({
+        id: receipt.policyId,
+        type: receipt.policy.isEmergency ? 'GUILD_POLICY_EMERGENCY' : 'GUILD_POLICY_ACKNOWLEDGEMENT',
+        title: receipt.policy.isEmergency ? 'Leia a mudanca emergencial' : `Leia a politica v${receipt.policy.version ?? '-'}`,
+        description: receipt.policy.summaryPt,
+        actionLabel: 'Abrir regras',
+        href: '/dashboard/rules',
+        priority: receipt.policy.isEmergency ? 'high' : 'medium',
+        reason: 'Existe uma versao publicada sem recibo de ciencia registrado.',
+        impact: 'Confirma apenas que voce abriu e entendeu a informacao; nao e concordancia juridica ampla.',
+        dueAt: receipt.policy.effectiveAt,
+        metadata: { policyId: receipt.policyId, version: receipt.policy.version, isEmergency: receipt.policy.isEmergency },
+      }));
+    }
 
     for (const request of codexRequests) {
       if (request.status === CodexRequestStatus.SENT) {

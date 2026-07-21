@@ -16,6 +16,7 @@
     "lint": "npm run -w @guild/api lint",
     "test": "npm run -w @guild/api test",
     "test:ci": "npm run -w @guild/api test:ci",
+    "test:e2e": "npm run -w @guild/api test:e2e",
     "audit:ci": "node scripts/audit-policy.js",
     "smoke:public": "node scripts/public-smoke-test.js",
     "smoke:auth": "node scripts/authenticated-smoke-test.js",

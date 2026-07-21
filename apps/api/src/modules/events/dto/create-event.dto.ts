@@ -62,8 +62,7 @@ export class CreateEventDto {
   @Type(() => EventChecklistItemDto)
   checklist?: EventChecklistItemDto[];
 
-  @IsOptional()
-  @IsUUID()
+  // Internal audit context. Controllers must overwrite this with the authenticated actor.
   createdById?: string;
 
   @IsOptional()

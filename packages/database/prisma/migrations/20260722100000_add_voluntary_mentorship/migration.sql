@@ -1,0 +1,20 @@
+CREATE TYPE "MentorshipStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "MentorshipHelpTopic" AS ENUM ('BOSS', 'BUILD', 'ROLE', 'EVENTS', 'REQUESTS', 'INTERESTS', 'WAR_ROOM', 'OTHER');
+CREATE TYPE "MentorshipHelpStatus" AS ENUM ('OPEN', 'ASSIGNED', 'RESOLVED', 'CANCELLED');
+
+CREATE TABLE "MentorProfile" ("playerId" TEXT NOT NULL, "isAvailable" BOOLEAN NOT NULL DEFAULT false, "topics" "MentorshipHelpTopic"[] DEFAULT ARRAY[]::"MentorshipHelpTopic"[], "roles" "PlayerCombatRole"[] DEFAULT ARRAY[]::"PlayerCombatRole"[], "notePt" TEXT, "noteEn" TEXT, "consentedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "MentorProfile_pkey" PRIMARY KEY ("playerId"));
+CREATE TABLE "MentorshipAssignment" ("id" TEXT NOT NULL, "menteeId" TEXT NOT NULL, "mentorId" TEXT, "groupName" TEXT, "status" "MentorshipStatus" NOT NULL DEFAULT 'ACTIVE', "assignedById" TEXT NOT NULL, "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "endedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "MentorshipAssignment_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "MentorshipHelpRequest" ("id" TEXT NOT NULL, "requesterId" TEXT NOT NULL, "topic" "MentorshipHelpTopic" NOT NULL, "requestedRole" "PlayerCombatRole", "body" TEXT, "status" "MentorshipHelpStatus" NOT NULL DEFAULT 'OPEN', "assignedMentorId" TEXT, "resolvedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "MentorshipHelpRequest_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "MentorProfile_isAvailable_updatedAt_idx" ON "MentorProfile"("isAvailable", "updatedAt");
+CREATE INDEX "MentorshipAssignment_menteeId_status_idx" ON "MentorshipAssignment"("menteeId", "status");
+CREATE INDEX "MentorshipAssignment_mentorId_status_idx" ON "MentorshipAssignment"("mentorId", "status");
+CREATE INDEX "MentorshipAssignment_assignedById_idx" ON "MentorshipAssignment"("assignedById");
+CREATE INDEX "MentorshipHelpRequest_requesterId_status_createdAt_idx" ON "MentorshipHelpRequest"("requesterId", "status", "createdAt");
+CREATE INDEX "MentorshipHelpRequest_assignedMentorId_status_idx" ON "MentorshipHelpRequest"("assignedMentorId", "status");
+CREATE INDEX "MentorshipHelpRequest_topic_requestedRole_status_idx" ON "MentorshipHelpRequest"("topic", "requestedRole", "status");
+ALTER TABLE "MentorProfile" ADD CONSTRAINT "MentorProfile_playerId_fkey" FOREIGN KEY ("playerId") REFERENCES "Player"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MentorshipAssignment" ADD CONSTRAINT "MentorshipAssignment_menteeId_fkey" FOREIGN KEY ("menteeId") REFERENCES "Player"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MentorshipAssignment" ADD CONSTRAINT "MentorshipAssignment_mentorId_fkey" FOREIGN KEY ("mentorId") REFERENCES "Player"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "MentorshipAssignment" ADD CONSTRAINT "MentorshipAssignment_assignedById_fkey" FOREIGN KEY ("assignedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MentorshipHelpRequest" ADD CONSTRAINT "MentorshipHelpRequest_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "Player"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MentorshipHelpRequest" ADD CONSTRAINT "MentorshipHelpRequest_assignedMentorId_fkey" FOREIGN KEY ("assignedMentorId") REFERENCES "Player"("id") ON DELETE SET NULL ON UPDATE CASCADE;

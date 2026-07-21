@@ -1,8 +1,8 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { DiscordNotifyDto, DiscordSyncDto } from '../dto';
+import { DiscordNotifyDto } from '../dto';
 import { DiscordSyncedUser, DiscordSyncService } from '../services/discord-sync.service';
 import { NotificationService } from '../services/notification.service';
 
@@ -13,6 +13,7 @@ type AuthenticatedRequest = {
 };
 
 @Controller('discord')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class DiscordController {
   constructor(
     private readonly syncService: DiscordSyncService,
@@ -21,11 +22,8 @@ export class DiscordController {
 
   @Post('sync')
   @UseGuards(JwtAuthGuard)
-  async sync(@Body() dto: DiscordSyncDto, @Req() req: AuthenticatedRequest): Promise<DiscordSyncedUser> {
-    return this.syncService.syncUser({
-      userId: dto.userId ?? req.user.userId,
-      discordId: dto.discordId,
-    });
+  async sync(@Req() req: AuthenticatedRequest): Promise<DiscordSyncedUser> {
+    return this.syncService.syncUser({ userId: req.user.userId });
   }
 
   @Post('notify')

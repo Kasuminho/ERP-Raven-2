@@ -2,8 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { DKPTransactionType, PlayerClass, PlayerCombatAvailability, PlayerCombatProfileChangeStatus, PlayerCombatRole, PlayerStaffNoteSeverity, Prisma, ProgressCategory, ProgressReviewStatus } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto } from '../dto';
+import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto, UpdatePlayerPreferencesDto } from '../dto';
 import { PlayersRepository } from '../repositories/players.repository';
+import { buildRosterSignals, PLAYER_ATTENDANCE_WINDOW_DAYS, PLAYER_STATUS_MAX_AGE_DAYS, RosterSignal } from './player-reminder-policy';
 
 const reviewRequiredCategories = new Set<ProgressCategory>([
   ProgressCategory.STATUS,
@@ -37,8 +38,6 @@ type PlayerTimelineCopy = {
   descriptionEn: string;
   tone: PlayerTimelineTone;
 };
-
-type RosterSignal = 'SEM_BUILD' | 'SEM_ROLE' | 'SEM_STATUS_RECENTE' | 'PRESENCA_BAIXA' | 'SEM_DISPONIBILIDADE';
 
 @Injectable()
 export class PlayersService {
@@ -131,8 +130,10 @@ export class PlayersService {
   }
 
   async getCombatRosterMatrix() {
-    const staleStatusCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-    const [players, progressRows, attendanceRows] = await Promise.all([
+    const now = Date.now();
+    const staleStatusCutoff = new Date(now - PLAYER_STATUS_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+    const attendanceCutoff = new Date(now - PLAYER_ATTENDANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const [players, progressRows, finalizedEvents] = await Promise.all([
       this.repository.client.player.findMany({
         where: { isActive: true },
         include: {
@@ -160,17 +161,19 @@ export class PlayersService {
         orderBy: { createdAt: 'desc' },
         take: 2000,
       }),
-      this.repository.client.eventAttendance.findMany({
+      this.repository.client.event.findMany({
         where: {
-          player: { isActive: true },
-          attended: true,
+          status: 'FINALIZED',
+          startsAt: { gte: attendanceCutoff, lte: new Date(now) },
         },
         select: {
-          playerId: true,
-          createdAt: true,
+          startsAt: true,
+          attendances: {
+            where: { player: { isActive: true } },
+            select: { playerId: true, attended: true },
+          },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 2000,
+        orderBy: { startsAt: 'desc' },
       }),
     ]);
 
@@ -188,9 +191,11 @@ export class PlayersService {
       }
     }
 
-    for (const row of attendanceRows) {
-      if (!lastAttendanceAt.has(row.playerId)) {
-        lastAttendanceAt.set(row.playerId, row.createdAt);
+    for (const event of finalizedEvents) {
+      for (const attendance of event.attendances) {
+        if (attendance.attended && !lastAttendanceAt.has(attendance.playerId)) {
+          lastAttendanceAt.set(attendance.playerId, event.startsAt);
+        }
       }
     }
 
@@ -200,13 +205,17 @@ export class PlayersService {
       const preferredRole = profile?.preferredRole ?? null;
       const availability = profile?.availability ?? PlayerCombatAvailability.UNSET;
       const playerLastStatusAt = lastStatusAt.get(player.id) ?? null;
-      const signals: RosterSignal[] = [];
-
-      if (!profile?.declaredBuild) signals.push('SEM_BUILD');
-      if (!preferredRole) signals.push('SEM_ROLE');
-      if (!playerLastStatusAt || playerLastStatusAt < staleStatusCutoff) signals.push('SEM_STATUS_RECENTE');
-      if (player.attendancePercentage < 50) signals.push('PRESENCA_BAIXA');
-      if (availability === PlayerCombatAvailability.UNSET) signals.push('SEM_DISPONIBILIDADE');
+      const eligibleEvents = finalizedEvents.filter((event) => event.startsAt >= player.joinedAt);
+      const attendedEvents = eligibleEvents.filter((event) => event.attendances.some((attendance) => attendance.playerId === player.id && attendance.attended));
+      const signals: RosterSignal[] = buildRosterSignals({
+        declaredBuild: profile?.declaredBuild,
+        preferredRole,
+        availability,
+        lastStatusAt: playerLastStatusAt,
+        statusCutoff: staleStatusCutoff,
+        eligibleEvents: eligibleEvents.length,
+        attendedEvents: attendedEvents.length,
+      });
 
       return {
         playerId: player.id,
@@ -215,6 +224,7 @@ export class PlayersService {
         dimensionalLayer: player.dimensionalLayer,
         combatPower: player.combatPower,
         attendancePercentage: player.attendancePercentage,
+        attendance15dPercentage: eligibleEvents.length > 0 ? Math.round((attendedEvents.length / eligibleEvents.length) * 1000) / 10 : null,
         isActive: player.isActive,
         primaryClass,
         secondaryClass: profile?.secondaryClass ?? null,
@@ -633,19 +643,30 @@ export class PlayersService {
     return user?.players[0] ?? null;
   }
 
-  async updatePreferences(userId: string, data: { timezone?: string; locale?: string }) {
+  async updatePreferences(userId: string, data: UpdatePlayerPreferencesDto) {
     const locale = data.locale && ['pt', 'en', 'es'].includes(data.locale) ? data.locale : undefined;
     const timezone = data.timezone?.trim() || undefined;
 
-    return this.repository.client.$transaction(async (tx) => {
+    if (timezone) {
+      try {
+        new Intl.DateTimeFormat('pt-BR', { timeZone: timezone }).format(new Date());
+      } catch {
+        throw new BadRequestException('Invalid IANA timezone.');
+      }
+    }
+
+    const result = await this.repository.client.$transaction(async (tx) => {
       if (locale) {
         await tx.user.update({ where: { id: userId }, data: { preferredLocale: locale } });
       }
 
       const player = await tx.player.findFirst({ where: { userId } });
 
-      if (player && timezone) {
-        await tx.player.update({ where: { id: player.id }, data: { timezone } });
+      if (player && (timezone || data.eventReminderChannel)) {
+        await tx.player.update({
+          where: { id: player.id },
+          data: { timezone, eventReminderChannel: data.eventReminderChannel },
+        });
       }
 
       return tx.user.findUnique({
@@ -653,6 +674,18 @@ export class PlayersService {
         include: { players: true },
       });
     });
+
+    const player = result?.players[0];
+    if (player && data.eventReminderChannel) {
+      await this.auditService.log({
+        actorId: userId,
+        action: 'PLAYER_EVENT_REMINDER_PREFERENCE_UPDATED',
+        targetType: 'Player',
+        targetId: player.id,
+        metadata: { eventReminderChannel: data.eventReminderChannel },
+      });
+    }
+    return result;
   }
 
   async updatePrimaryPlayerProfile(
@@ -1736,7 +1769,7 @@ export class PlayersService {
         key: 'stale-status',
         severity: 'medium',
         title: 'STATUS recente faltando',
-        description: `${totals.staleStatus} player(s) estao sem STATUS nos ultimos 14 dias.`,
+        description: `${totals.staleStatus} player(s) estao sem STATUS nos ultimos 21 dias.`,
         playerIds: rows.filter((row) => row.signals.includes('SEM_STATUS_RECENTE')).map((row) => row.playerId),
       });
     }
@@ -1746,7 +1779,7 @@ export class PlayersService {
         key: 'low-attendance',
         severity: 'low',
         title: 'Presenca baixa',
-        description: `${totals.lowAttendance} player(s) ativos estao abaixo de 50% de presenca.`,
+        description: `${totals.lowAttendance} player(s) ativos estao abaixo de 50% de presenca nos ultimos 15 dias.`,
         playerIds: rows.filter((row) => row.signals.includes('PRESENCA_BAIXA')).map((row) => row.playerId),
       });
     }

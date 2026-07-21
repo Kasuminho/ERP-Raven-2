@@ -1,6 +1,6 @@
 # Guia atual da Staff - Raven2 G3X
 
-Ultima revisao: 2026-07-20
+Ultima revisao: 2026-07-21
 
 Este e o guia operacional atual da Staff. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -66,6 +66,14 @@ DKP travado em leilao nao deve ser mexido por fora do fluxo salvo em excecao ope
 ## 6. Eventos, presenca e bosses em lote
 
 - `/dashboard/admin/events`: cria eventos, registra presenca e finaliza.
+- No evento selecionado, o painel RSVP mostra confirmados, talvez, recusas, sem resposta e composicao confirmada por classe, role e camada.
+- Periodos de ausencia cobrem automaticamente os eventos do intervalo. O painel mostra o impacto agregado e os detalhes para a Staff, sem disparar cobranca invasiva.
+- Series recorrentes materializam instancias semanais em horizonte configurado; pausa cancela instancias futuras da serie e retomada restaura apenas as que nao forem excecao. O cron diario amplia o horizonte.
+- Cada evento pode ter alvos minimos por role/classe. O painel calcula cobertura e gap, mas nunca escolhe pessoas automaticamente.
+- Reserva exige ordem e motivo Staff-only. Oferecer vaga muda para `PROMOTION_PENDING`; somente a resposta do player promove e confirma RSVP, preservando o registro e auditoria.
+- Conflitos entre RSVPs confirmados aparecem no timezone cadastrado pelo player.
+- Lembretes pre-evento rodam nas 24h anteriores e alcancam apenas sem resposta ou confirmados, respeitando o canal nao critico escolhido pelo player. Talvez, recusas, ausencias e reservas ainda nao promovidas ficam fora.
+- Na finalizacao, confirmado sem presenca e sem ausencia registrada vira no-show explicavel. A Staff ve a justificativa no resumo; uma ocorrencia isolada nao pune, nao altera DKP/elegibilidade e nao cria risk flag automatica.
 
 Regras atuais:
 
@@ -75,6 +83,9 @@ Regras atuais:
 - finalizar um boss pode copiar presenca para o proximo evento ativo do lote;
 - eventos cancelados sao pulados;
 - presenca ja existente no proximo evento nunca e sobrescrita.
+- RSVP e previsao: nao cria `EventAttendance`, nao concede DKP e continua independente por boss.
+- Notas RSVP sao Staff-only por padrao; somente `PLAYER_PUBLIC` aparece para outros players.
+- Motivos de ausencia sao Staff-only por padrao. Players veem apenas a contagem indisponivel; nome/motivo so aparecem quando o autor escolhe `PLAYER_PUBLIC`.
 
 Antes de finalizar:
 
@@ -82,7 +93,7 @@ Antes de finalizar:
 - revise presentes, ausentes ativos, DKP por pessoa, total distribuido e proximo boss;
 - use a prontidao do boss em `GET /events/:id/readiness` para ver camadas, classes, CP aprovado e STATUS recente.
 
-STATUS ausente ou com mais de 14 dias entra como desatualizado. Roles operacionais: `VANGUARD` tank, `DIVINE_CASTER` healer, `DEATHBRINGER` suporte/off-heal, demais classes DPS.
+STATUS ausente ou com mais de 21 dias entra como desatualizado. Roles operacionais: `VANGUARD` tank, `DIVINE_CASTER` healer, `DEATHBRINGER` suporte/off-heal, demais classes DPS.
 
 ## 7. Anuncios
 
@@ -201,7 +212,7 @@ Use drops para auditar entrega, nao para inventar historico sem origem. Quando h
 
 ## 12. Codex, Daoshi e progresso
 
-- `/dashboard/staff/codex`: fila de ajuda Codex.
+- `/dashboard/staff/codex`: fila de ajuda Codex. Marcar envio dispara a cobrança direta e só é permitido para pedido pendente ou com retry solicitado; um Codex já enviado aguarda confirmação/quebra do player e não pode ser reenviado por duplo clique.
 - `/dashboard/staff/daoshi`: recibos, cash e sorteio Daoshi.
 - `/dashboard/staff/progress`: review de progresso.
 
@@ -211,6 +222,34 @@ Progress:
 - Fenda Dimensional aprovada atualiza andar;
 - categorias sem review ficam como historico visual;
 - rejeite com nota objetiva quando o print nao prova o progresso.
+
+## 12.1 Recrutamento e onboarding
+
+Ao converter uma candidatura aceita em `/dashboard/staff/recruitment`, o ERP cria player, perfil inicial, nota Staff e um plano de onboarding na mesma transacao. O plano usa o template ativo e preserva um snapshot de textos, links, obrigatoriedade e tipo de verificacao.
+
+Em `/dashboard/staff/onboarding`, revise prazo, planos em andamento/atrasados e publique novas versoes do template. Configure etapas obrigatorias ou opcionais em PT-BR/EN. A nova versao vale para conversoes futuras e nunca reescreve silenciosamente planos existentes. Prazo vencido organiza acompanhamento; nao gera punicao automatica.
+
+Em `/dashboard/staff/trials`, publique periodo, objetivo e criterios PT-BR/EN antes de avaliar. Registre check-ins factuais D7/D14/D30 com resposta visivel bilingue e nota interna separada. Ausencias declaradas pausam o periodo e ajustam o fim. Aprovacao, extensao ou encerramento exigem motivo bilingue e geram auditoria; o fluxo nao cria score, pune automaticamente ou altera loot/sigilo.
+
+Em `/dashboard/staff/mentorship`, associe apenas voluntarios disponiveis ou um grupo de acolhimento. Pedidos de ajuda entram por conteudo/role no ERP e podem ser encaminhados sem conversa perdida em DM. Primeiro evento, boss, request, interesse e War Room aparecem como datas, nao pontos. Mentor nao recebe poder disciplinar nem qualquer nota Staff.
+
+Em `/dashboard/staff/pulse`, crie o ciclo em rascunho, configure grupo minimo e retencao, revise e publique. Abaixo do minimo, medias e textos ficam bloqueados. Acima dele, veja apenas medias e modere comentarios sem identidade. Scores individuais nao existem na API Staff. Skip e opcional e nunca entra como risco; cron diario apaga texto vencido. Consulte `docs/GUILD_PULSE_DATA_POLICY.md`.
+
+Em `/dashboard/staff/guild-health`, sinais de queda de participacao, onboarding parado, confirmacoes revertidas, retorno de inativo e coorte de classe isolada mostram fatos, amostra e janela. Sao convites para conversa. Nao existe score unico, remocao, bloqueio, perda de loot ou outra acao automatica.
+
+Em `/dashboard/staff/leadership-health`, cada Staff registra carga de 1 a 5 e disponibilidade de plantao por area. O painel usa o ultimo check-in em 14 dias, mostra areas com zero/um substituto e concentracao de acoes auditadas. Alertas recomendam delegar, reduzir escopo ou pausar; nunca mudam permissao, escalam sozinhos ou cobram mais atividade.
+
+Em `/dashboard/staff/tasks`, tarefas persistem com area, prioridade, dono, substituto, prazo, status e link profundo. Briefing, pauta e sinais aparecem somente como sugestoes; clique em converter para confirmar e evitar tarefa automatica/duplicada. Handoff exige contexto final e proximo passo e pode transferir o dono com auditoria.
+
+Em `/dashboard/staff/coverage`, configure responsavel primario, backup, janela de plantao e timezone por area. Cada membro declara e remove a propria indisponibilidade; somente uma declaracao vigente aciona o backup. Silencio nunca gera escalonamento. Responsabilidade operacional nao concede role, permissao nem acesso adicional.
+
+Em `/dashboard/staff/automations`, somente padroes com tres tarefas concluidas em 90 dias aparecem como candidatos. Criar dry-run salva uma regra desligada; ativar exige confirmacao separada. A unica acao permitida e criar tarefa Staff sem dono, com frequencia, limite diario, idempotencia, auditoria e kill switch. A automacao nunca aprova loot, remove player ou altera politica social.
+
+Em `/dashboard/staff/playbooks`, publique objetivo/brief PT-BR e EN, notas internas, checklist e instrucoes por papel. Cada versao e imutavel e a atribuicao ao evento ou War Room preserva o contexto usado. Sinais do after-action viram apenas candidatos; registrar uma licao exige `manter`, `testar` ou `descartar`, dono e data de revisao. Promover `manter/testar` cria nova versao com origem. A Staff acompanha recibos sem expor notas internas.
+
+Em `/dashboard/communications`, cada membro controla canais por categoria, quiet hours/timezone, digest e teste. O cron entrega resumo diario/semanal fora do silencio, agrupado pelo objeto canonico. Os comandos Discord `/erp-rsvp`, `/erp-ausencia`, `/erp-instrucao` e `/erp-regra` resolvem a conta vinculada e chamam os mesmos servicos/permissoes da Web; a resposta confirma o estado e indica a rota de revisao. O site continua sendo a fonte de verdade.
+
+Em `/dashboard/staff/roadmap`, a Staff ve todas as frentes do Guild Operating System, estado e links de evidencia de forma organizada. Na Frente 0, o gate mostra cobertura dos tres perfis Staff, minimo de cinco entrevistas cobrindo veterano/novato/ativo/baixa atividade, quatro semanas consecutivas e confirmacao de que RSVP reduz cobranca manual real. Registre entrevistas sem nome ou conteudo privado de voz/DM; informe perfil, canais acompanhados, visibilidade aceitavel para ausencia e uma sintese operacional. Ao congelar uma semana ja encerrada iniciada na segunda-feira, o ERP calcula eventos criados, presenca real, no-shows, recruits com atividade e tarefas sem substituto; a Staff declara apenas presenca esperada, quando conhecida, e minutos gastos cobrando confirmacao. Uma semana congelada nao pode ser regravada. O selo implementado descreve codigo local validado; producao e tutoriais live so mudam depois do protocolo completo.
 
 ## 13. Discord e webhooks
 
@@ -252,6 +291,12 @@ Envie changelog apenas depois de validar producao.
 - `/dashboard/staff/legacy-audit`: dados importados ainda sem vinculo.
 
 Regras de negocio mudam comportamento real. Edite JSON com calma, valide efeito e registre contexto.
+
+`BusinessRule` e politica publicada nao sao a mesma coisa. Depois de ajustar e validar a operacao, crie um rascunho bilingue, confira titulo, resumo e vigencia, atualize o snapshot e publique somente apos revisao. A versao publicada fica imutavel, com autoria e diff; novos ajustes aparecem como drift e exigem outra versao para atualizar a referencia dos players.
+
+Se a mudança for emergencial, marque o selo e registre um motivo objetivo antes de publicar. A publicação cria recibos e aviso bilíngue para os players ativos. A cobertura mostra quantos abriram, quantos marcaram **Li e entendi** e, quando necessário, quem ainda não abriu. O recibo é ciência operacional, não aceite jurídico amplo; use a lista para comunicação, nunca como punição automática.
+
+Em `/dashboard/staff/cases`, trate dúvidas, denúncias operacionais e recursos privados. Defina severidade, responsável, prazo e status; escreva notas internas somente no campo Staff e respostas ao player em blocos PT-BR/EN. A central referencia contestações de leilão existentes, mas a revisão continua no fluxo do leilão. Nenhuma quantidade de casos, severidade ou atraso autoriza punição automática: decisão disciplinar continua humana e auditada.
 
 ## 15. Central da Staff no Discord
 

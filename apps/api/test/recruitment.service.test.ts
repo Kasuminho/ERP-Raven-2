@@ -108,6 +108,12 @@ describe('RecruitmentService', () => {
       playerStaffNote: {
         create: mock.fn(async () => ({ id: 'note-1' })),
       },
+      onboardingTemplate: {
+        findFirst: mock.fn(async () => ({ id: 'template-1', dueDays: 30, steps: [{ key: 'RULES', titlePt: 'Regras', titleEn: 'Rules', descriptionPt: 'Leia.', descriptionEn: 'Read.', href: '/dashboard/rules', isRequired: true, completionType: 'RULES_ACK', displayOrder: 0 }] })),
+      },
+      playerOnboardingPlan: {
+        create: mock.fn(async () => ({ id: 'plan-1', playerId: player.id })),
+      },
       auditLog: {
         create: mock.fn(async () => ({ id: 'audit-1' })),
       },
@@ -127,6 +133,9 @@ describe('RecruitmentService', () => {
     assert.equal(tx.player.create.mock.calls[0].arguments[0].data.nickname, 'Aiko');
     assert.equal(tx.player.create.mock.calls[0].arguments[0].data.combatProfile.create.primaryClass, PlayerClass.VANGUARD);
     assert.equal(tx.playerStaffNote.create.mock.callCount(), 1);
+    assert.equal(tx.playerOnboardingPlan.create.mock.callCount(), 1);
+    assert.equal(tx.playerOnboardingPlan.create.mock.calls[0].arguments[0].data.steps.create[0].key, 'RULES');
     assert.equal(tx.auditLog.create.mock.calls[0].arguments[0].data.action, 'RECRUITMENT_APPLICATION_CONVERTED');
+    assert.equal(tx.auditLog.create.mock.calls[0].arguments[0].data.metadata.onboardingPlanId, 'plan-1');
   });
 });

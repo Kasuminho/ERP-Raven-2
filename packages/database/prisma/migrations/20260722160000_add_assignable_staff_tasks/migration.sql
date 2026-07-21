@@ -1,0 +1,18 @@
+CREATE TYPE "StaffTaskPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
+CREATE TYPE "StaffTaskStatus" AS ENUM ('OPEN', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED');
+CREATE TABLE "StaffTask" ("id" TEXT NOT NULL, "title" TEXT NOT NULL, "description" TEXT NOT NULL, "area" "LeadershipArea" NOT NULL, "priority" "StaffTaskPriority" NOT NULL DEFAULT 'MEDIUM', "status" "StaffTaskStatus" NOT NULL DEFAULT 'OPEN', "ownerId" TEXT, "substituteId" TEXT, "dueAt" TIMESTAMP(3), "href" TEXT NOT NULL, "sourceType" TEXT, "sourceKey" TEXT, "createdById" TEXT NOT NULL, "completedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "StaffTask_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "StaffTaskHandoff" ("id" TEXT NOT NULL, "taskId" TEXT NOT NULL, "authorId" TEXT NOT NULL, "context" TEXT NOT NULL, "nextStep" TEXT NOT NULL, "toOwnerId" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "StaffTaskHandoff_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "StaffTask_sourceKey_key" ON "StaffTask"("sourceKey");
+CREATE INDEX "StaffTask_status_priority_dueAt_idx" ON "StaffTask"("status", "priority", "dueAt");
+CREATE INDEX "StaffTask_area_status_idx" ON "StaffTask"("area", "status");
+CREATE INDEX "StaffTask_ownerId_status_idx" ON "StaffTask"("ownerId", "status");
+CREATE INDEX "StaffTask_substituteId_status_idx" ON "StaffTask"("substituteId", "status");
+CREATE INDEX "StaffTask_createdById_idx" ON "StaffTask"("createdById");
+CREATE INDEX "StaffTaskHandoff_taskId_createdAt_idx" ON "StaffTaskHandoff"("taskId", "createdAt");
+CREATE INDEX "StaffTaskHandoff_authorId_idx" ON "StaffTaskHandoff"("authorId");
+CREATE INDEX "StaffTaskHandoff_toOwnerId_idx" ON "StaffTaskHandoff"("toOwnerId");
+ALTER TABLE "StaffTask" ADD CONSTRAINT "StaffTask_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "StaffTask" ADD CONSTRAINT "StaffTask_substituteId_fkey" FOREIGN KEY ("substituteId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "StaffTask" ADD CONSTRAINT "StaffTask_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "StaffTaskHandoff" ADD CONSTRAINT "StaffTaskHandoff_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "StaffTask"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "StaffTaskHandoff" ADD CONSTRAINT "StaffTaskHandoff_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

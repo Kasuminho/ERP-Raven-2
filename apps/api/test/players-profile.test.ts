@@ -96,6 +96,7 @@ test('combat roster matrix reports composition gaps and stale status', async () 
           combatPower: 1000,
           attendancePercentage: 82,
           isActive: true,
+          joinedAt: new Date('2026-01-01T00:00:00.000Z'),
           combatProfile: {
             primaryClass: PlayerClass.WARLORD,
             secondaryClass: null,
@@ -113,6 +114,7 @@ test('combat roster matrix reports composition gaps and stale status', async () 
           combatPower: 800,
           attendancePercentage: 35,
           isActive: true,
+          joinedAt: new Date('2026-01-01T00:00:00.000Z'),
           combatProfile: null,
         },
       ],
@@ -123,10 +125,11 @@ test('combat roster matrix reports composition gaps and stale status', async () 
         { playerId: 'player-2', category: ProgressCategory.STATUS, createdAt: stale },
       ],
     },
-    eventAttendance: {
-      findMany: async () => [
-        { playerId: 'player-1', createdAt: now },
-      ],
+    event: {
+      findMany: async () => [{
+        startsAt: now,
+        attendances: [{ playerId: 'player-1', attended: true }],
+      }],
     },
   };
   const service = new PlayersService(

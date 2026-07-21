@@ -293,6 +293,28 @@ export class AttendanceService {
         const players = await this.repository.findPlayers(tx);
         const presentCount = attendances.length;
         const absentCount = Math.max(activePlayerCount - presentCount, 0);
+        const confirmedRsvps = await tx.eventRsvp.findMany({
+          where: { eventId, status: 'CONFIRMED' },
+          select: { id: true, playerId: true },
+        });
+        const confirmedPlayerIds = confirmedRsvps.map((rsvp) => rsvp.playerId);
+        const coveredAbsences = confirmedPlayerIds.length > 0
+          ? await tx.playerAbsence.findMany({
+              where: { playerId: { in: confirmedPlayerIds }, startsAt: { lte: event.startsAt }, endsAt: { gt: event.startsAt } },
+              select: { playerId: true },
+            })
+          : [];
+        const presentPlayerIds = new Set(attendances.map((attendance) => attendance.playerId));
+        const excusedPlayerIds = new Set(coveredAbsences.map((absence) => absence.playerId));
+        const noShowRsvpIds = confirmedRsvps
+          .filter((rsvp) => !presentPlayerIds.has(rsvp.playerId) && !excusedPlayerIds.has(rsvp.playerId))
+          .map((rsvp) => rsvp.id);
+        if (noShowRsvpIds.length > 0) {
+          await tx.eventRsvp.updateMany({
+            where: { id: { in: noShowRsvpIds } },
+            data: { noShowDetectedAt: new Date() },
+          });
+        }
 
         for (const player of players) {
           await this.updatePlayerAttendanceMetric(player.id, tx);
@@ -305,6 +327,7 @@ export class AttendanceService {
           absentCount,
           totalDkp: presentCount * event.dkpReward,
           rewardTransactionIds,
+          noShowCount: noShowRsvpIds.length,
         });
 
         const nextEvent = await this.findNextBatchEvent(event, tx);
@@ -675,7 +698,7 @@ export class AttendanceService {
           combatPower: player.combatPower,
           isPresent: presentPlayerIds.has(player.id),
         }));
-      const statusFreshAfter = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      const statusFreshAfter = Date.now() - 21 * 24 * 60 * 60 * 1000;
       const staleStatusPlayers = activePlayers
         .map((player) => {
           const latestStatus = latestStatusByPlayer.get(player.id);
@@ -1183,7 +1206,7 @@ export class AttendanceService {
     }
 
     if (staleStatusCount > 0) {
-      notes.push(`${staleStatusCount} player(s) ativo(s) estao sem STATUS recente nos ultimos 14 dias.`);
+      notes.push(`${staleStatusCount} player(s) ativo(s) estao sem STATUS recente nos ultimos 21 dias.`);
     }
 
     if (notes.length === 0) {

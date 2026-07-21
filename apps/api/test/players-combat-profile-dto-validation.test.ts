@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import { PlayerClass, PlayerCombatAvailability, PlayerCombatRole } from '@prisma/client';
-import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto } from '../src/modules/players/dto';
+import { EventReminderChannel, PlayerClass, PlayerCombatAvailability, PlayerCombatRole } from '@prisma/client';
+import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto, UpdatePlayerPreferencesDto } from '../src/modules/players/dto';
 
 const strictPipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
 
@@ -77,6 +77,18 @@ describe('Players combat profile DTO validation', () => {
         { action: 'BAN', reason: 'Acao invalida', leaked: true },
         { type: 'body', metatype: UpdatePlayerMembershipDto },
       ),
+      BadRequestException,
+    );
+  });
+
+  it('validates player event reminder channel preferences', async () => {
+    const result = await strictPipe.transform(
+      { timezone: 'America/Manaus', locale: 'pt', eventReminderChannel: EventReminderChannel.BOTH },
+      { type: 'body', metatype: UpdatePlayerPreferencesDto },
+    );
+    assert.equal(result.eventReminderChannel, EventReminderChannel.BOTH);
+    await assert.rejects(
+      () => strictPipe.transform({ eventReminderChannel: 'SMS' }, { type: 'body', metatype: UpdatePlayerPreferencesDto }),
       BadRequestException,
     );
   });

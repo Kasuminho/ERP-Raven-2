@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { DiscordLocale, localeCopy } from './discord-locale';
-import { pickBilingualVoice, pickStaffVoice } from './webhook-voice';
+import { bilingualBlocks, pickBilingualVoice, pickStaffVoice } from './webhook-voice';
 
 export type AnnouncementEmbedData = {
   stageLabel: string;
@@ -45,12 +45,66 @@ export type ItemInterestSkillBatchEmbedData = {
   sampleTitles: string[];
 };
 
+export type PlayerDailyReminderEmbedData = {
+  playerName: string;
+  reasonsPt: string[];
+  reasonsEn: string[];
+  profileUrl?: string;
+  codexUrl?: string;
+  hasCodex: boolean;
+};
+
+export type EventReminderEmbedData = {
+  playerName: string;
+  eventName: string;
+  startsAt: Date;
+  timezone: string;
+  requiresRsvp: boolean;
+  url: string;
+};
+
 function discordTimestamp(date: Date, style: 'F' | 'R' = 'F'): string {
   return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
 }
 
 function isDiscordImageUrl(url?: string): url is string {
   return Boolean(url && /^https?:\/\//i.test(url));
+}
+
+export function buildPlayerDailyReminderEmbed(data: PlayerDailyReminderEmbedData): EmbedBuilder {
+  const linksPt = [
+    data.profileUrl ? `[Corrigir perfil e progresso](${data.profileUrl})` : null,
+    data.hasCodex && data.codexUrl ? `[Confirmar Codex ou informar falha](${data.codexUrl})` : null,
+  ].filter(Boolean).join('\n');
+  const linksEn = [
+    data.profileUrl ? `[Fix profile and progress](${data.profileUrl})` : null,
+    data.hasCodex && data.codexUrl ? `[Confirm Codex or report a failure](${data.codexUrl})` : null,
+  ].filter(Boolean).join('\n');
+
+  return new EmbedBuilder()
+    .setTitle('Pendencias do dia / Daily action required')
+    .setColor(0xeb5757)
+    .setDescription(bilingualBlocks({
+      'pt-BR': `**${data.playerName}, o checklist encontrou isto:**\n${data.reasonsPt.map((reason) => `- ${reason}`).join('\n')}\n\n${linksPt}\n\nResolve hoje; pendencia nao ganha buff por ficar AFK.`,
+      en: `**${data.playerName}, the checklist found this:**\n${data.reasonsEn.map((reason) => `- ${reason}`).join('\n')}\n\n${linksEn}\n\nHandle it today; pending work gets no buff from going AFK.`,
+    }))
+    .setTimestamp(new Date());
+}
+
+export function buildEventReminderEmbed(data: EventReminderEmbedData): EmbedBuilder {
+  const localTime = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: data.timezone,
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(data.startsAt);
+  return new EmbedBuilder()
+    .setTitle(data.requiresRsvp ? 'RSVP pendente / RSVP required' : 'Evento confirmado / Confirmed event')
+    .setColor(data.requiresRsvp ? 0xf2c94c : 0x27ae60)
+    .setDescription(bilingualBlocks({
+      'pt-BR': `**${data.playerName}**, **${data.eventName}** comeca em ate 24h (${localTime}, ${data.timezone}). ${data.requiresRsvp ? 'Responda vou, talvez ou nao vou.' : 'Voce confirmou; revise o horario e avise se o plano mudou.'}\n\n[Ver compromissos](${data.url})\n\nCalendario nao tanka esquecimento sozinho.`,
+      en: `**${data.playerName}**, **${data.eventName}** starts within 24h (${localTime}, ${data.timezone}). ${data.requiresRsvp ? 'Answer attending, maybe, or cannot attend.' : 'You confirmed; check the time and update your answer if plans changed.'}\n\n[View commitments](${data.url})\n\nThe calendar cannot tank forgetfulness alone.`,
+    }))
+    .setTimestamp(new Date());
 }
 
 function announcementStageLabel(label: string, locale: DiscordLocale): string {

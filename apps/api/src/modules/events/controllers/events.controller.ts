@@ -1,12 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Event } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, MarkEventChecklistItemDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto } from '../dto';
+import { AttendanceStatsResponseDto, CancelEventDto, CreateEventDto, CreateEventSeriesDto, JustifyEventNoShowDto, MarkEventChecklistItemDto, PlayerAttendanceHistoryRowDto, RegisterAttendanceDto, RespondEventReservePromotionDto, RespondEventRsvpDto, UpdateEventCompositionTargetsDto, UpdateEventSeriesExceptionsDto, UpsertEventReserveDto, UpsertPlayerAbsenceDto } from '../dto';
 import { EventDetails } from '../repositories/events.repository';
 import { AttendanceService, EventBatchPanel, EventFinalizationChecklist, EventReadinessReport, FinalizeEventResult } from '../services/attendance.service';
 import { EventsService } from '../services/events.service';
+import { EventRsvpService } from '../services/event-rsvp.service';
+import { EventAbsenceService } from '../services/event-absence.service';
+import { EventSeriesService } from '../services/event-series.service';
+import { EventReserveService } from '../services/event-reserve.service';
 
 type AuthRequest = { user?: { userId?: string } };
 
@@ -16,6 +20,10 @@ export class EventsController {
   constructor(
     private readonly service: EventsService,
     private readonly attendanceService: AttendanceService,
+    private readonly rsvpService: EventRsvpService,
+    private readonly absenceService: EventAbsenceService,
+    private readonly seriesService: EventSeriesService,
+    private readonly reserveService: EventReserveService,
   ) {}
 
   @Get('events/health')
@@ -27,7 +35,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async createEvent(@Body() dto: CreateEventDto, @Req() req: AuthRequest): Promise<Event> {
-    return this.attendanceService.createEvent({ ...dto, createdById: dto.createdById ?? req.user?.userId });
+    return this.attendanceService.createEvent({ ...dto, createdById: req.user?.userId });
   }
 
   @Post('events/:id/attendance')
@@ -57,6 +65,136 @@ export class EventsController {
   @Roles('STAFF', 'ADMIN')
   async finalizeEvent(@Param('id') eventId: string): Promise<FinalizeEventResult> {
     return this.attendanceService.finalizeEvent(eventId);
+  }
+
+  @Get('events/commitments/me')
+  @UseGuards(JwtAuthGuard)
+  async myCommitments(@Req() req: AuthRequest) {
+    return this.rsvpService.listMyCommitments(req.user!.userId!);
+  }
+
+  @Get('events/no-shows/me')
+  @UseGuards(JwtAuthGuard)
+  async myNoShows(@Req() req: AuthRequest) {
+    return this.rsvpService.listMyNoShows(req.user!.userId!);
+  }
+
+  @Put('events/:id/no-show-justification')
+  @UseGuards(JwtAuthGuard)
+  async justifyNoShow(@Param('id') eventId: string, @Body() dto: JustifyEventNoShowDto, @Req() req: AuthRequest) {
+    return this.rsvpService.justifyNoShow(eventId, req.user!.userId!, dto);
+  }
+
+  @Get('events/absences/me')
+  @UseGuards(JwtAuthGuard)
+  async myAbsences(@Req() req: AuthRequest) {
+    return this.absenceService.listMine(req.user!.userId!);
+  }
+
+  @Get('events/series')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async eventSeries() {
+    return this.seriesService.listSeries();
+  }
+
+  @Post('events/series')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async createEventSeries(@Body() dto: CreateEventSeriesDto, @Req() req: AuthRequest) {
+    return this.seriesService.create(dto, req.user!.userId!);
+  }
+
+  @Post('events/series/:seriesId/pause')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async pauseEventSeries(@Param('seriesId') seriesId: string, @Req() req: AuthRequest) {
+    return this.seriesService.setPaused(seriesId, true, req.user!.userId!);
+  }
+
+  @Post('events/series/:seriesId/resume')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async resumeEventSeries(@Param('seriesId') seriesId: string, @Req() req: AuthRequest) {
+    return this.seriesService.setPaused(seriesId, false, req.user!.userId!);
+  }
+
+  @Put('events/series/:seriesId/exceptions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async updateEventSeriesExceptions(@Param('seriesId') seriesId: string, @Body() dto: UpdateEventSeriesExceptionsDto, @Req() req: AuthRequest) {
+    return this.seriesService.updateExceptions(seriesId, dto.exceptionDates, req.user!.userId!);
+  }
+
+  @Post('events/absences/me')
+  @UseGuards(JwtAuthGuard)
+  async createAbsence(@Body() dto: UpsertPlayerAbsenceDto, @Req() req: AuthRequest) {
+    return this.absenceService.create(req.user!.userId!, dto);
+  }
+
+  @Put('events/absences/me/:absenceId')
+  @UseGuards(JwtAuthGuard)
+  async updateAbsence(@Param('absenceId') absenceId: string, @Body() dto: UpsertPlayerAbsenceDto, @Req() req: AuthRequest) {
+    return this.absenceService.update(absenceId, req.user!.userId!, dto);
+  }
+
+  @Delete('events/absences/me/:absenceId')
+  @UseGuards(JwtAuthGuard)
+  async removeAbsence(@Param('absenceId') absenceId: string, @Req() req: AuthRequest): Promise<void> {
+    return this.absenceService.remove(absenceId, req.user!.userId!);
+  }
+
+  @Put('events/:id/rsvp')
+  @UseGuards(JwtAuthGuard)
+  async respondRsvp(@Param('id') eventId: string, @Body() dto: RespondEventRsvpDto, @Req() req: AuthRequest) {
+    return this.rsvpService.respond(eventId, req.user!.userId!, dto);
+  }
+
+  @Get('events/:id/rsvp/staff')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async rsvpStaffSummary(@Param('id') eventId: string) {
+    return this.rsvpService.getStaffSummary(eventId);
+  }
+
+  @Get('events/:id/rsvp/public')
+  @UseGuards(JwtAuthGuard)
+  async publicRsvps(@Param('id') eventId: string) {
+    return this.rsvpService.getPublicResponses(eventId);
+  }
+
+  @Put('events/:id/composition-targets')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async updateCompositionTargets(@Param('id') eventId: string, @Body() dto: UpdateEventCompositionTargetsDto, @Req() req: AuthRequest) {
+    return this.seriesService.updateEventTargets(eventId, dto.targets, req.user!.userId!);
+  }
+
+  @Put('events/:id/reserves/:playerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async upsertReserve(@Param('id') eventId: string, @Param('playerId') playerId: string, @Body() dto: UpsertEventReserveDto, @Req() req: AuthRequest) {
+    return this.reserveService.upsert(eventId, playerId, dto, req.user!.userId!);
+  }
+
+  @Delete('events/:id/reserves/:playerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async removeReserve(@Param('id') eventId: string, @Param('playerId') playerId: string, @Req() req: AuthRequest) {
+    return this.reserveService.remove(eventId, playerId, req.user!.userId!);
+  }
+
+  @Post('events/:id/reserves/:playerId/promote')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async promoteReserve(@Param('id') eventId: string, @Param('playerId') playerId: string, @Req() req: AuthRequest) {
+    return this.reserveService.requestPromotion(eventId, playerId, req.user!.userId!);
+  }
+
+  @Put('events/:id/reserve-response')
+  @UseGuards(JwtAuthGuard)
+  async respondReservePromotion(@Param('id') eventId: string, @Body() dto: RespondEventReservePromotionDto, @Req() req: AuthRequest) {
+    return this.reserveService.respond(eventId, req.user!.userId!, dto);
   }
 
   @Get('events/:id/finalization-checklist')

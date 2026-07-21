@@ -298,98 +298,350 @@ enum NotificationAudience {
   STAFF
 }
 
+enum EventRsvpStatus {
+  CONFIRMED
+  TENTATIVE
+  DECLINED
+}
+
+enum EventRsvpNoteVisibility {
+  STAFF_ONLY
+  PLAYER_PUBLIC
+}
+
+enum PlayerAbsenceReasonVisibility {
+  STAFF_ONLY
+  PLAYER_PUBLIC
+}
+
+enum EventReserveStatus {
+  RESERVE
+  PROMOTION_PENDING
+  PROMOTED
+  DECLINED
+  REMOVED
+}
+
+enum EventReminderChannel {
+  WEB
+  DISCORD
+  BOTH
+  NONE
+}
+
+enum GuildPolicyStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum GuildCaseCategory {
+  QUESTION
+  OPERATIONAL_REPORT
+  APPEAL
+}
+
+enum GuildCaseSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GuildCaseStatus {
+  OPEN
+  IN_REVIEW
+  WAITING_PLAYER
+  RESOLVED
+  CLOSED
+}
+
+enum GuildCaseEntryKind {
+  CREATED
+  PLAYER_MESSAGE
+  STAFF_RESPONSE
+  INTERNAL_NOTE
+  STATUS_CHANGED
+  ASSIGNED
+}
+
+enum GuildCaseEntryVisibility {
+  PLAYER
+  STAFF
+}
+
+enum OnboardingCompletionType {
+  MANUAL
+  RULES_ACK
+  PROFILE
+  TIMEZONE
+  BUILD
+  WISHLIST
+  FIRST_EVENT
+}
+
+enum PlayerTrialStatus {
+  ACTIVE
+  EXTENDED
+  APPROVED
+  CLOSED
+}
+
+enum PlayerTrialDecisionType {
+  APPROVE
+  EXTEND
+  CLOSE
+}
+
+enum MentorshipStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum MentorshipHelpTopic {
+  BOSS
+  BUILD
+  ROLE
+  EVENTS
+  REQUESTS
+  INTERESTS
+  WAR_ROOM
+  OTHER
+}
+
+enum MentorshipHelpStatus {
+  OPEN
+  ASSIGNED
+  RESOLVED
+  CANCELLED
+}
+
+enum GuildPulseStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum GuildPulseParticipationStatus {
+  SUBMITTED
+  SKIPPED
+}
+
+enum GuildPulseModerationStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
+enum LeadershipArea {
+  EVENTS
+  LOOT
+  RECRUITMENT
+  DISCORD
+  DEPLOY
+  TREASURY
+  PLAYER_CARE
+}
+
+enum StaffTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum StaffTaskStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum StaffAutomationAction {
+  CREATE_STAFF_TASK
+}
+
+enum PlaybookLessonDisposition {
+  KEEP
+  TEST
+  DISCARD
+}
+
+enum CommunicationChannel {
+  WEB
+  DISCORD
+  BOTH
+  NONE
+}
+
+enum DigestCadence {
+  DAILY
+  WEEKLY
+  NONE
+}
+
+enum ProductValidationInterviewProfile {
+  STAFF_LEADERSHIP
+  STAFF_EVENTS
+  STAFF_LOOT
+  PLAYER_VETERAN
+  PLAYER_NEW
+  PLAYER_ACTIVE
+  PLAYER_LOW_ACTIVITY
+}
+
+enum ProductValidationAbsenceVisibility {
+  PUBLIC
+  STAFF_ONLY
+  ANONYMOUS
+  DEPENDS_ON_REASON
+}
+
 model User {
-  id                       String                          @id @default(uuid())
-  discordId                String                          @unique
-  discordUsername          String
-  avatar                   String?
-  discordGuildId           String?
-  discordNickname          String?
-  discordRoles             Json?
-  preferredLocale          String                          @default("pt")
-  lastDiscordSyncAt        DateTime?
-  createdAt                DateTime                        @default(now())
-  updatedAt                DateTime                        @updatedAt
-  players                  Player[]
-  createdEvents            Event[]                         @relation("EventCreatedBy")
-  dkpTransactions          DKPTransaction[]                @relation("DKPTransactionCreatedBy")
-  createdAuctions          Auction[]                       @relation("AuctionCreatedBy")
-  announcements            Announcement[]                  @relation("AnnouncementCreatedBy")
-  interestPosts            ItemInterestPost[]              @relation("ItemInterestPostCreatedBy")
-  interestVotes            ItemInterestVote[]              @relation("ItemInterestVoteVoter")
-  auctionReviewVotes       AuctionReviewVote[]             @relation("AuctionReviewVoteVoter")
-  auctionBidInvalidationVotes AuctionBidInvalidationVote[]  @relation("AuctionBidInvalidationVoteVoter")
-  reviewedBidCancellations AuctionBidCancellationRequest[] @relation("AuctionBidCancellationReviewedBy")
-  reviewedAuctionDisputes  AuctionDispute[]                @relation("AuctionDisputeReviewedBy")
-  sentCodexRequests        CodexRequest[]                  @relation("CodexRequestSentBy")
-  reviewedProgress         PlayerProgress[]                @relation("PlayerProgressReviewedBy")
-  progressComments         PlayerProgressComment[]
-  staffNotes               PlayerStaffNote[]               @relation("PlayerStaffNoteAuthor")
-  updatedCombatProfiles    PlayerCombatProfile[]           @relation("PlayerCombatProfileUpdatedBy")
-  reviewedCombatRequests   PlayerCombatProfileChangeRequest[] @relation("PlayerCombatRequestReviewedBy")
-  createdWarRoomOperations WarRoomOperation[]               @relation("WarRoomOperationCreatedBy")
-  createdWarRoomRosterSlots WarRoomRosterSlot[]             @relation("WarRoomRosterSlotCreatedBy")
-  markedWarRoomAttendanceSlots WarRoomRosterSlot[]          @relation("WarRoomRosterSlotAttendanceMarkedBy")
-  createdWarRoomTimelineEvents WarRoomTimelineEvent[]       @relation("WarRoomTimelineEventCreatedBy")
-  createdDkpPolicySimulations DkpPolicySimulation[]         @relation("DkpPolicySimulationCreatedBy")
-  promotedDkpPolicySimulations DkpPolicySimulation[]        @relation("DkpPolicySimulationPromotedBy")
-  reviewedDaoshiReceipts   DaoshiCashReceipt[]             @relation("DaoshiReceiptReviewedBy")
-  executedDaoshiRaffles    DaoshiRaffle[]                  @relation("DaoshiRaffleExecutedBy")
-  auditLogs                AuditLog[]                      @relation("AuditLogActor")
-  updatedBusinessRules     BusinessRule[]                  @relation("BusinessRuleUpdatedBy")
-  notifications            Notification[]
-  reviewedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationReviewedBy")
-  convertedRecruitmentApplications RecruitmentApplication[] @relation("RecruitmentApplicationConvertedBy")
-  createdDiamondSales       DiamondSale[]                    @relation("DiamondSaleCreatedBy")
-  completedDiamondSales     DiamondSale[]                    @relation("DiamondSaleCompletedBy")
-  deliveredDiamondShares   DiamondSaleRecipient[]           @relation("DiamondSaleRecipientDeliveredBy")
+  id                                  String                             @id @default(uuid())
+  discordId                           String                             @unique
+  discordUsername                     String
+  avatar                              String?
+  discordGuildId                      String?
+  discordNickname                     String?
+  discordRoles                        Json?
+  preferredLocale                     String                             @default("pt")
+  lastDiscordSyncAt                   DateTime?
+  createdAt                           DateTime                           @default(now())
+  updatedAt                           DateTime                           @updatedAt
+  players                             Player[]
+  createdEvents                       Event[]                            @relation("EventCreatedBy")
+  createdEventSeries                  EventSeries[]                      @relation("EventSeriesCreatedBy")
+  createdEventReserves                EventReserveEntry[]                @relation("EventReserveCreatedBy")
+  updatedEventReserves                EventReserveEntry[]                @relation("EventReserveUpdatedBy")
+  dkpTransactions                     DKPTransaction[]                   @relation("DKPTransactionCreatedBy")
+  createdAuctions                     Auction[]                          @relation("AuctionCreatedBy")
+  announcements                       Announcement[]                     @relation("AnnouncementCreatedBy")
+  interestPosts                       ItemInterestPost[]                 @relation("ItemInterestPostCreatedBy")
+  interestVotes                       ItemInterestVote[]                 @relation("ItemInterestVoteVoter")
+  auctionReviewVotes                  AuctionReviewVote[]                @relation("AuctionReviewVoteVoter")
+  auctionBidInvalidationVotes         AuctionBidInvalidationVote[]       @relation("AuctionBidInvalidationVoteVoter")
+  reviewedBidCancellations            AuctionBidCancellationRequest[]    @relation("AuctionBidCancellationReviewedBy")
+  reviewedAuctionDisputes             AuctionDispute[]                   @relation("AuctionDisputeReviewedBy")
+  sentCodexRequests                   CodexRequest[]                     @relation("CodexRequestSentBy")
+  reviewedProgress                    PlayerProgress[]                   @relation("PlayerProgressReviewedBy")
+  progressComments                    PlayerProgressComment[]
+  staffNotes                          PlayerStaffNote[]                  @relation("PlayerStaffNoteAuthor")
+  updatedCombatProfiles               PlayerCombatProfile[]              @relation("PlayerCombatProfileUpdatedBy")
+  reviewedCombatRequests              PlayerCombatProfileChangeRequest[] @relation("PlayerCombatRequestReviewedBy")
+  createdWarRoomOperations            WarRoomOperation[]                 @relation("WarRoomOperationCreatedBy")
+  createdWarRoomRosterSlots           WarRoomRosterSlot[]                @relation("WarRoomRosterSlotCreatedBy")
+  markedWarRoomAttendanceSlots        WarRoomRosterSlot[]                @relation("WarRoomRosterSlotAttendanceMarkedBy")
+  createdWarRoomTimelineEvents        WarRoomTimelineEvent[]             @relation("WarRoomTimelineEventCreatedBy")
+  createdDkpPolicySimulations         DkpPolicySimulation[]              @relation("DkpPolicySimulationCreatedBy")
+  promotedDkpPolicySimulations        DkpPolicySimulation[]              @relation("DkpPolicySimulationPromotedBy")
+  reviewedDaoshiReceipts              DaoshiCashReceipt[]                @relation("DaoshiReceiptReviewedBy")
+  executedDaoshiRaffles               DaoshiRaffle[]                     @relation("DaoshiRaffleExecutedBy")
+  auditLogs                           AuditLog[]                         @relation("AuditLogActor")
+  updatedBusinessRules                BusinessRule[]                     @relation("BusinessRuleUpdatedBy")
+  notifications                       Notification[]
+  reviewedRecruitmentApplications     RecruitmentApplication[]           @relation("RecruitmentApplicationReviewedBy")
+  convertedRecruitmentApplications    RecruitmentApplication[]           @relation("RecruitmentApplicationConvertedBy")
+  createdDiamondSales                 DiamondSale[]                      @relation("DiamondSaleCreatedBy")
+  completedDiamondSales               DiamondSale[]                      @relation("DiamondSaleCompletedBy")
+  deliveredDiamondShares              DiamondSaleRecipient[]             @relation("DiamondSaleRecipientDeliveredBy")
+  createdGuildPolicies                GuildPolicyVersion[]               @relation("GuildPolicyCreatedBy")
+  publishedGuildPolicies              GuildPolicyVersion[]               @relation("GuildPolicyPublishedBy")
+  assignedGuildCases                  GuildCase[]                        @relation("GuildCaseAssignedTo")
+  guildCaseEntries                    GuildCaseEntry[]                   @relation("GuildCaseEntryActor")
+  createdOnboardingTemplates          OnboardingTemplate[]               @relation("OnboardingTemplateCreatedBy")
+  completedOnboardingSteps            PlayerOnboardingStep[]             @relation("OnboardingStepCompletedBy")
+  createdPlayerTrials                 PlayerTrial[]                      @relation("PlayerTrialCreatedBy")
+  decidedPlayerTrials                 PlayerTrial[]                      @relation("PlayerTrialDecidedBy")
+  playerTrialCheckIns                 PlayerTrialCheckIn[]               @relation("PlayerTrialCheckInAuthor")
+  assignedMentorships                 MentorshipAssignment[]             @relation("MentorshipAssignedBy")
+  createdGuildPulseCycles             GuildPulseCycle[]                  @relation("GuildPulseCreatedBy")
+  moderatedGuildPulseResponses        GuildPulseResponse[]               @relation("GuildPulseModeratedBy")
+  leadershipCheckIns                  LeadershipCheckIn[]
+  createdStaffTasks                   StaffTask[]                        @relation("StaffTaskCreatedBy")
+  ownedStaffTasks                     StaffTask[]                        @relation("StaffTaskOwner")
+  substituteStaffTasks                StaffTask[]                        @relation("StaffTaskSubstitute")
+  staffTaskHandoffs                   StaffTaskHandoff[]                 @relation("StaffTaskHandoffAuthor")
+  primaryStaffAreaCoverages           StaffAreaCoverage[]                @relation("StaffAreaCoveragePrimary")
+  backupStaffAreaCoverages            StaffAreaCoverage[]                @relation("StaffAreaCoverageBackup")
+  updatedStaffAreaCoverages           StaffAreaCoverage[]                @relation("StaffAreaCoverageUpdatedBy")
+  staffAvailabilityPeriods            StaffAvailabilityPeriod[]
+  createdStaffAutomationRules         StaffAutomationRule[]              @relation("StaffAutomationRuleCreatedBy")
+  createdPlaybookVersions             GuildPlaybookVersion[]             @relation("GuildPlaybookVersionCreatedBy")
+  assignedPlaybooks                   GuildPlaybookAssignment[]          @relation("GuildPlaybookAssignedBy")
+  ownedPlaybookLessons                GuildPlaybookLesson[]              @relation("GuildPlaybookLessonOwner")
+  createdPlaybookLessons              GuildPlaybookLesson[]              @relation("GuildPlaybookLessonCreatedBy")
+  recordedProductValidationInterviews ProductValidationInterview[]       @relation("ProductValidationInterviewRecordedBy")
+  capturedProductValidationWeeks      ProductValidationWeek[]            @relation("ProductValidationWeekCapturedBy")
 
   @@index([discordUsername])
   @@index([discordGuildId])
 }
 
 model Player {
-  id                      String                          @id @default(uuid())
-  userId                  String
-  nickname                String                          @unique
-  class                   PlayerClass
-  dimensionalLayer        Int                             @db.SmallInt
-  combatPower             Int                             @default(0)
-  timezone                String?
-  attendancePercentage    Float                           @default(0)
-  isActive                Boolean                         @default(true)
-  deactivatedAt           DateTime?
-  deactivatedById         String?
-  deactivationReason      String?
-  reactivationRequestedAt DateTime?
-  joinedAt                DateTime                        @default(now())
-  createdAt               DateTime                        @default(now())
-  updatedAt               DateTime                        @updatedAt
-  user                    User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roles                   PlayerRole[]
-  attendances             EventAttendance[]
-  dkpTransactions         DKPTransaction[]
-  dkpLocks                DKPLock[]
-  auctionBids             AuctionBid[]
-  auctionDisputes         AuctionDispute[]
-  progressUpdates         PlayerProgress[]
-  staffNotes              PlayerStaffNote[]
-  combatProfile           PlayerCombatProfile?
-  combatProfileRequests   PlayerCombatProfileChangeRequest[]
-  warRoomRosterSlots      WarRoomRosterSlot[]
-  itemInterests           ItemInterestEntry[]
-  itemInterestViews       ItemInterestView[]
-  codexRequests           CodexRequest[]
-  itemRequests            ItemRequest[]
-  wishlistItems           PlayerWishlistItem[]
-  daoshiCashReceipts      DaoshiCashReceipt[]
-  wonDaoshiRaffles        DaoshiRaffle[]
-  dropHistories           DropHistory[]
-  bidCancellationRequests AuctionBidCancellationRequest[]
-  notifications           Notification[]
-  convertedRecruitmentApplication RecruitmentApplication? @relation("RecruitmentApplicationConvertedPlayer")
-  purchasedDiamondSales     DiamondSale[]                    @relation("DiamondSaleBuyerPlayer")
-  diamondSaleRecipients     DiamondSaleRecipient[]
+  id                              String                             @id @default(uuid())
+  userId                          String
+  nickname                        String                             @unique
+  class                           PlayerClass
+  dimensionalLayer                Int                                @db.SmallInt
+  combatPower                     Int                                @default(0)
+  timezone                        String?
+  attendancePercentage            Float                              @default(0)
+  eventReminderChannel            EventReminderChannel               @default(WEB)
+  isActive                        Boolean                            @default(true)
+  deactivatedAt                   DateTime?
+  deactivatedById                 String?
+  deactivationReason              String?
+  reactivationRequestedAt         DateTime?
+  joinedAt                        DateTime                           @default(now())
+  createdAt                       DateTime                           @default(now())
+  updatedAt                       DateTime                           @updatedAt
+  user                            User                               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playbookInstructionReceipts     PlaybookInstructionReceipt[]
+  communicationPreference         PlayerCommunicationPreference?
+  digestDeliveries                PlayerDigestDelivery[]
+  roles                           PlayerRole[]
+  attendances                     EventAttendance[]
+  eventRsvps                      EventRsvp[]
+  absences                        PlayerAbsence[]
+  eventReserves                   EventReserveEntry[]
+  dkpTransactions                 DKPTransaction[]
+  dkpLocks                        DKPLock[]
+  auctionBids                     AuctionBid[]
+  auctionDisputes                 AuctionDispute[]
+  progressUpdates                 PlayerProgress[]
+  staffNotes                      PlayerStaffNote[]
+  combatProfile                   PlayerCombatProfile?
+  combatProfileRequests           PlayerCombatProfileChangeRequest[]
+  warRoomRosterSlots              WarRoomRosterSlot[]
+  itemInterests                   ItemInterestEntry[]
+  itemInterestViews               ItemInterestView[]
+  codexRequests                   CodexRequest[]
+  itemRequests                    ItemRequest[]
+  wishlistItems                   PlayerWishlistItem[]
+  daoshiCashReceipts              DaoshiCashReceipt[]
+  wonDaoshiRaffles                DaoshiRaffle[]
+  dropHistories                   DropHistory[]
+  bidCancellationRequests         AuctionBidCancellationRequest[]
+  notifications                   Notification[]
+  reminderDeliveries              PlayerReminderDelivery[]
+  eventReminderDeliveries         EventReminderDelivery[]
+  guildPolicyReceipts             GuildPolicyReceipt[]
+  guildCases                      GuildCase[]
+  onboardingPlan                  PlayerOnboardingPlan?
+  trials                          PlayerTrial[]
+  mentorProfile                   MentorProfile?
+  mentorshipsAsMentee             MentorshipAssignment[]             @relation("MentorshipMentee")
+  mentorshipsAsMentor             MentorshipAssignment[]             @relation("MentorshipMentor")
+  mentorshipHelpRequests          MentorshipHelpRequest[]            @relation("MentorshipHelpRequester")
+  assignedMentorshipHelpRequests  MentorshipHelpRequest[]            @relation("MentorshipHelpMentor")
+  guildPulseParticipations        GuildPulseParticipation[]
+  convertedRecruitmentApplication RecruitmentApplication?            @relation("RecruitmentApplicationConvertedPlayer")
+  purchasedDiamondSales           DiamondSale[]                      @relation("DiamondSaleBuyerPlayer")
+  diamondSaleRecipients           DiamondSaleRecipient[]
 
   @@index([userId])
   @@index([class])
@@ -400,30 +652,30 @@ model Player {
 }
 
 model RecruitmentApplication {
-  id             String                       @id @default(uuid())
-  nickname       String
-  discordTag     String?
-  playerClass    PlayerClass
-  combatPower    Int
-  dimensionalLayer Int                        @db.SmallInt
-  availability   String
-  focus          String
-  experience     String
-  proofImageUrl  String?
-  notes          String?
-  rulesAccepted  Boolean
-  status         RecruitmentApplicationStatus @default(PENDING)
-  reviewedById   String?
-  convertedById  String?
-  convertedPlayerId String?                   @unique
-  reviewedAt     DateTime?
-  convertedAt    DateTime?
-  reviewNote     String?
-  createdAt      DateTime                     @default(now())
-  updatedAt      DateTime                     @updatedAt
-  reviewedBy     User?                        @relation("RecruitmentApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  convertedBy    User?                        @relation("RecruitmentApplicationConvertedBy", fields: [convertedById], references: [id], onDelete: SetNull)
-  convertedPlayer Player?                     @relation("RecruitmentApplicationConvertedPlayer", fields: [convertedPlayerId], references: [id], onDelete: SetNull)
+  id                String                       @id @default(uuid())
+  nickname          String
+  discordTag        String?
+  playerClass       PlayerClass
+  combatPower       Int
+  dimensionalLayer  Int                          @db.SmallInt
+  availability      String
+  focus             String
+  experience        String
+  proofImageUrl     String?
+  notes             String?
+  rulesAccepted     Boolean
+  status            RecruitmentApplicationStatus @default(PENDING)
+  reviewedById      String?
+  convertedById     String?
+  convertedPlayerId String?                      @unique
+  reviewedAt        DateTime?
+  convertedAt       DateTime?
+  reviewNote        String?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  reviewedBy        User?                        @relation("RecruitmentApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  convertedBy       User?                        @relation("RecruitmentApplicationConvertedBy", fields: [convertedById], references: [id], onDelete: SetNull)
+  convertedPlayer   Player?                      @relation("RecruitmentApplicationConvertedPlayer", fields: [convertedPlayerId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([playerClass])
@@ -433,20 +685,20 @@ model RecruitmentApplication {
 }
 
 model PlayerCombatProfile {
-  playerId        String                   @id
-  primaryClass    PlayerClass
-  secondaryClass  PlayerClass?
-  declaredBuild   String?
-  preferredRole   PlayerCombatRole?
-  acceptedRoles   PlayerCombatRole[]       @default([])
-  availability    PlayerCombatAvailability @default(UNSET)
-  publicNote      String?
-  staffNote       String?
-  updatedById     String?
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
-  player          Player                   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  updatedBy       User?                    @relation("PlayerCombatProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  playerId       String                   @id
+  primaryClass   PlayerClass
+  secondaryClass PlayerClass?
+  declaredBuild  String?
+  preferredRole  PlayerCombatRole?
+  acceptedRoles  PlayerCombatRole[]       @default([])
+  availability   PlayerCombatAvailability @default(UNSET)
+  publicNote     String?
+  staffNote      String?
+  updatedById    String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  player         Player                   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  updatedBy      User?                    @relation("PlayerCombatProfileUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([primaryClass])
   @@index([secondaryClass])
@@ -456,24 +708,24 @@ model PlayerCombatProfile {
 }
 
 model PlayerCombatProfileChangeRequest {
-  id              String                           @id @default(uuid())
-  playerId        String
-  primaryClass    PlayerClass?
-  secondaryClass  PlayerClass?
-  declaredBuild   String?
-  preferredRole   PlayerCombatRole?
-  acceptedRoles   PlayerCombatRole[]               @default([])
-  availability    PlayerCombatAvailability?
-  proofImageUrl   String?
-  note            String?
-  status          PlayerCombatProfileChangeStatus  @default(PENDING)
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewNote      String?
-  createdAt       DateTime                         @default(now())
-  updatedAt       DateTime                         @updatedAt
-  player          Player                           @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  reviewedBy      User?                            @relation("PlayerCombatRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id             String                          @id @default(uuid())
+  playerId       String
+  primaryClass   PlayerClass?
+  secondaryClass PlayerClass?
+  declaredBuild  String?
+  preferredRole  PlayerCombatRole?
+  acceptedRoles  PlayerCombatRole[]              @default([])
+  availability   PlayerCombatAvailability?
+  proofImageUrl  String?
+  note           String?
+  status         PlayerCombatProfileChangeStatus @default(PENDING)
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  createdAt      DateTime                        @default(now())
+  updatedAt      DateTime                        @updatedAt
+  player         Player                          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewedBy     User?                           @relation("PlayerCombatRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([playerId, status, createdAt])
   @@index([status, createdAt])
@@ -497,20 +749,635 @@ model BusinessRule {
   @@index([isActive])
 }
 
-model Notification {
+model GuildPolicyVersion {
+  id              String               @id @default(uuid())
+  version         Int?                 @unique
+  status          GuildPolicyStatus    @default(DRAFT)
+  titlePt         String
+  titleEn         String
+  summaryPt       String
+  summaryEn       String
+  effectiveAt     DateTime
+  isEmergency     Boolean              @default(false)
+  emergencyReason String?
+  snapshot        Json
+  diffPt          Json                 @default("[]")
+  diffEn          Json                 @default("[]")
+  createdById     String
+  publishedById   String?
+  publishedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  createdBy       User                 @relation("GuildPolicyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  publishedBy     User?                @relation("GuildPolicyPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  receipts        GuildPolicyReceipt[]
+
+  @@index([status, effectiveAt])
+  @@index([createdById])
+  @@index([publishedById])
+}
+
+model GuildPolicyReceipt {
+  id             String             @id @default(uuid())
+  policyId       String
+  playerId       String
+  openedAt       DateTime?
+  acknowledgedAt DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  policy         GuildPolicyVersion @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  player         Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, playerId])
+  @@index([policyId, openedAt, acknowledgedAt])
+  @@index([playerId, acknowledgedAt])
+}
+
+model GuildCase {
+  id           String            @id @default(uuid())
+  playerId     String
+  category     GuildCaseCategory
+  severity     GuildCaseSeverity @default(MEDIUM)
+  status       GuildCaseStatus   @default(OPEN)
+  subject      String
+  description  String
+  assignedToId String?
+  dueAt        DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  player       Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  assignedTo   User?             @relation("GuildCaseAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  entries      GuildCaseEntry[]
+
+  @@index([playerId, status, createdAt])
+  @@index([status, severity, dueAt])
+  @@index([assignedToId, status])
+}
+
+model GuildCaseEntry {
+  id         String                   @id @default(uuid())
+  caseId     String
+  actorId    String?
+  kind       GuildCaseEntryKind
+  visibility GuildCaseEntryVisibility
+  bodyPt     String?
+  bodyEn     String?
+  metadata   Json?
+  createdAt  DateTime                 @default(now())
+  guildCase  GuildCase                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor      User?                    @relation("GuildCaseEntryActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model OnboardingTemplate {
+  id          String                   @id @default(uuid())
+  name        String
+  version     Int                      @unique
+  dueDays     Int                      @default(30)
+  isActive    Boolean                  @default(false)
+  createdById String
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  createdBy   User                     @relation("OnboardingTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  steps       OnboardingTemplateStep[]
+  plans       PlayerOnboardingPlan[]
+
+  @@index([isActive, version])
+  @@index([createdById])
+}
+
+model OnboardingTemplateStep {
+  id             String                   @id @default(uuid())
+  templateId     String
+  key            String
+  titlePt        String
+  titleEn        String
+  descriptionPt  String
+  descriptionEn  String
+  href           String
+  isRequired     Boolean                  @default(true)
+  completionType OnboardingCompletionType @default(MANUAL)
+  displayOrder   Int
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  template       OnboardingTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key])
+  @@index([templateId, displayOrder])
+}
+
+model PlayerOnboardingPlan {
+  id          String                 @id @default(uuid())
+  playerId    String                 @unique
+  templateId  String
+  startedAt   DateTime               @default(now())
+  dueAt       DateTime
+  completedAt DateTime?
+  staffNote   String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  player      Player                 @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  template    OnboardingTemplate     @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  steps       PlayerOnboardingStep[]
+
+  @@index([templateId, completedAt])
+  @@index([dueAt, completedAt])
+}
+
+model PlayerOnboardingStep {
+  id             String                   @id @default(uuid())
+  planId         String
+  key            String
+  titlePt        String
+  titleEn        String
+  descriptionPt  String
+  descriptionEn  String
+  href           String
+  isRequired     Boolean                  @default(true)
+  completionType OnboardingCompletionType
+  displayOrder   Int
+  completedAt    DateTime?
+  completedById  String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  plan           PlayerOnboardingPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  completedBy    User?                    @relation("OnboardingStepCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@unique([planId, key])
+  @@index([planId, displayOrder])
+  @@index([completedById])
+}
+
+model PlayerTrial {
+  id               String                   @id @default(uuid())
+  playerId         String
+  objectivePt      String
+  objectiveEn      String
+  plannedStartAt   DateTime
+  plannedEndAt     DateTime
+  status           PlayerTrialStatus        @default(ACTIVE)
+  decisionType     PlayerTrialDecisionType?
+  decisionReasonPt String?
+  decisionReasonEn String?
+  decidedAt        DateTime?
+  createdById      String
+  decidedById      String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  player           Player                   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy        User                     @relation("PlayerTrialCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  decidedBy        User?                    @relation("PlayerTrialDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  criteria         PlayerTrialCriterion[]
+  checkIns         PlayerTrialCheckIn[]
+
+  @@index([playerId, status, plannedStartAt])
+  @@index([status, plannedEndAt])
+  @@index([createdById])
+  @@index([decidedById])
+}
+
+model PlayerTrialCriterion {
+  id            String      @id @default(uuid())
+  trialId       String
+  key           String
+  titlePt       String
+  titleEn       String
+  descriptionPt String
+  descriptionEn String
+  isRequired    Boolean     @default(true)
+  displayOrder  Int
+  createdAt     DateTime    @default(now())
+  trial         PlayerTrial @relation(fields: [trialId], references: [id], onDelete: Cascade)
+
+  @@unique([trialId, key])
+  @@unique([trialId, displayOrder])
+  @@index([trialId, displayOrder])
+}
+
+model PlayerTrialCheckIn {
+  id           String      @id @default(uuid())
+  trialId      String
+  day          Int
+  scheduledAt  DateTime
+  completedAt  DateTime?
+  bodyPt       String?
+  bodyEn       String?
+  internalNote String?
+  authorId     String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  trial        PlayerTrial @relation(fields: [trialId], references: [id], onDelete: Cascade)
+  author       User?       @relation("PlayerTrialCheckInAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([trialId, day])
+  @@index([scheduledAt, completedAt])
+  @@index([authorId])
+}
+
+model MentorProfile {
+  playerId    String                @id
+  isAvailable Boolean               @default(false)
+  topics      MentorshipHelpTopic[] @default([])
+  roles       PlayerCombatRole[]    @default([])
+  notePt      String?
+  noteEn      String?
+  consentedAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  player      Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([isAvailable, updatedAt])
+}
+
+model MentorshipAssignment {
+  id           String           @id @default(uuid())
+  menteeId     String
+  mentorId     String?
+  groupName    String?
+  status       MentorshipStatus @default(ACTIVE)
+  assignedById String
+  startedAt    DateTime         @default(now())
+  endedAt      DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  mentee       Player           @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  mentor       Player?          @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+  assignedBy   User             @relation("MentorshipAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@index([menteeId, status])
+  @@index([mentorId, status])
+  @@index([assignedById])
+}
+
+model MentorshipHelpRequest {
+  id               String               @id @default(uuid())
+  requesterId      String
+  topic            MentorshipHelpTopic
+  requestedRole    PlayerCombatRole?
+  body             String?
+  status           MentorshipHelpStatus @default(OPEN)
+  assignedMentorId String?
+  resolvedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  requester        Player               @relation("MentorshipHelpRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  assignedMentor   Player?              @relation("MentorshipHelpMentor", fields: [assignedMentorId], references: [id], onDelete: SetNull)
+
+  @@index([requesterId, status, createdAt])
+  @@index([assignedMentorId, status])
+  @@index([topic, requestedRole, status])
+}
+
+model GuildPulseCycle {
+  id             String                    @id @default(uuid())
+  titlePt        String
+  titleEn        String
+  opensAt        DateTime
+  closesAt       DateTime
+  status         GuildPulseStatus          @default(DRAFT)
+  minGroupSize   Int                       @default(5) @db.SmallInt
+  openTextDays   Int                       @default(30) @db.SmallInt
+  createdById    String
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  createdBy      User                      @relation("GuildPulseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  responses      GuildPulseResponse[]
+  participations GuildPulseParticipation[]
+
+  @@index([status, opensAt, closesAt])
+  @@index([createdById])
+}
+
+model GuildPulseResponse {
+  id                String                     @id @default(uuid())
+  cycleId           String
+  belonging         Int                        @db.SmallInt
+  clarity           Int                        @db.SmallInt
+  workload          Int                        @db.SmallInt
+  fun               Int                        @db.SmallInt
+  helpSafety        Int                        @db.SmallInt
+  openText          String?
+  openTextExpiresAt DateTime?
+  moderationStatus  GuildPulseModerationStatus @default(NOT_REQUIRED)
+  moderatedById     String?
+  moderatedAt       DateTime?
+  createdAt         DateTime                   @default(now())
+  cycle             GuildPulseCycle            @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  moderatedBy       User?                      @relation("GuildPulseModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
+
+  @@index([cycleId, createdAt])
+  @@index([moderationStatus, openTextExpiresAt])
+  @@index([moderatedById])
+}
+
+model GuildPulseParticipation {
+  id        String                        @id @default(uuid())
+  cycleId   String
+  playerId  String
+  status    GuildPulseParticipationStatus
+  createdAt DateTime                      @default(now())
+  updatedAt DateTime                      @updatedAt
+  cycle     GuildPulseCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  player    Player                        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, playerId])
+  @@index([cycleId, status])
+  @@index([playerId, createdAt])
+}
+
+model LeadershipCheckIn {
+  id              String         @id @default(uuid())
+  userId          String
+  area            LeadershipArea
+  workload        Int            @db.SmallInt
+  availableOnCall Boolean
+  note            String?
+  createdAt       DateTime       @default(now())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([area, createdAt])
+  @@index([userId, area, createdAt])
+}
+
+model StaffTask {
+  id           String             @id @default(uuid())
+  title        String
+  description  String
+  area         LeadershipArea
+  priority     StaffTaskPriority  @default(MEDIUM)
+  status       StaffTaskStatus    @default(OPEN)
+  ownerId      String?
+  substituteId String?
+  dueAt        DateTime?
+  href         String
+  sourceType   String?
+  sourceKey    String?            @unique
+  createdById  String
+  completedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  owner        User?              @relation("StaffTaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  substitute   User?              @relation("StaffTaskSubstitute", fields: [substituteId], references: [id], onDelete: SetNull)
+  createdBy    User               @relation("StaffTaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  handoffs     StaffTaskHandoff[]
+
+  @@index([status, priority, dueAt])
+  @@index([area, status])
+  @@index([ownerId, status])
+  @@index([substituteId, status])
+  @@index([createdById])
+}
+
+model StaffTaskHandoff {
+  id        String    @id @default(uuid())
+  taskId    String
+  authorId  String
+  context   String
+  nextStep  String
+  toOwnerId String?
+  createdAt DateTime  @default(now())
+  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User      @relation("StaffTaskHandoffAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+  @@index([authorId])
+  @@index([toOwnerId])
+}
+
+model StaffAreaCoverage {
+  id             String         @id @default(uuid())
+  area           LeadershipArea @unique
+  primaryUserId  String?
+  backupUserId   String?
+  onCallStartsAt String
+  onCallEndsAt   String
+  timezone       String
+  updatedById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  primaryUser    User?          @relation("StaffAreaCoveragePrimary", fields: [primaryUserId], references: [id], onDelete: SetNull)
+  backupUser     User?          @relation("StaffAreaCoverageBackup", fields: [backupUserId], references: [id], onDelete: SetNull)
+  updatedBy      User           @relation("StaffAreaCoverageUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([primaryUserId])
+  @@index([backupUserId])
+  @@index([updatedById])
+}
+
+model StaffAvailabilityPeriod {
+  id        String   @id @default(uuid())
+  userId    String
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startsAt, endsAt])
+  @@index([startsAt, endsAt])
+}
+
+model StaffAutomationRule {
+  id               String                @id @default(uuid())
+  name             String
+  action           StaffAutomationAction @default(CREATE_STAFF_TASK)
+  sourcePattern    String
+  taskTitle        String
+  taskDescription  String
+  taskArea         LeadershipArea
+  taskHref         String
+  frequencyMinutes Int
+  maxRunsPerDay    Int
+  enabled          Boolean               @default(false)
+  killSwitch       Boolean               @default(false)
+  dryRunPreview    Json
+  createdById      String
+  activatedAt      DateTime?
+  lastRunAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  createdBy        User                  @relation("StaffAutomationRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  runs             StaffAutomationRun[]
+
+  @@index([enabled, killSwitch, lastRunAt])
+  @@index([sourcePattern])
+  @@index([createdById])
+}
+
+model StaffAutomationRun {
+  id        String              @id @default(uuid())
+  ruleId    String
+  dedupKey  String              @unique
+  taskId    String?
+  status    String
+  createdAt DateTime            @default(now())
+  rule      StaffAutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, createdAt])
+}
+
+model GuildPlaybook {
+  id          String                 @id @default(uuid())
+  key         String                 @unique
+  title       String
+  contentType String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  versions    GuildPlaybookVersion[]
+  lessons     GuildPlaybookLesson[]
+
+  @@index([contentType])
+}
+
+model GuildPlaybookVersion {
+  id                String                    @id @default(uuid())
+  playbookId        String
+  version           Int
+  objectivePt       String
+  objectiveEn       String
+  publicBriefPt     String
+  publicBriefEn     String
+  staffNotes        String?
+  compositionTarget Json                      @default("[]")
+  positioning       Json                      @default("[]")
+  calls             Json                      @default("[]")
+  risks             Json                      @default("[]")
+  links             Json                      @default("[]")
+  checklist         Json                      @default("[]")
+  lessons           Json                      @default("[]")
+  originOperationId String?
+  originLessonId    String?
+  createdById       String
+  createdAt         DateTime                  @default(now())
+  playbook          GuildPlaybook             @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  createdBy         User                      @relation("GuildPlaybookVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  roleInstructions  PlaybookRoleInstruction[]
+  assignments       GuildPlaybookAssignment[]
+  promotedLessons   GuildPlaybookLesson[]     @relation("GuildPlaybookLessonPromotedVersion")
+
+  @@unique([playbookId, version])
+  @@index([originOperationId])
+  @@index([createdById])
+}
+
+model PlaybookRoleInstruction {
   id        String               @id @default(uuid())
-  userId    String?
-  playerId  String?
-  audience  NotificationAudience @default(PLAYER)
-  type      String
-  title     String
-  body      String
-  href      String?
-  metadata  Json?
-  readAt    DateTime?
-  createdAt DateTime             @default(now())
-  user      User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  player    Player?              @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  versionId String
+  roleKey   String
+  titlePt   String
+  titleEn   String
+  bodyPt    String
+  bodyEn    String
+  version   GuildPlaybookVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, roleKey])
+  @@index([roleKey])
+}
+
+model GuildPlaybookAssignment {
+  id           String                       @id @default(uuid())
+  versionId    String
+  eventId      String?                      @unique
+  operationId  String?                      @unique
+  assignedById String
+  assignedAt   DateTime                     @default(now())
+  version      GuildPlaybookVersion         @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  event        Event?                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  operation    WarRoomOperation?            @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  assignedBy   User                         @relation("GuildPlaybookAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  receipts     PlaybookInstructionReceipt[]
+
+  @@index([versionId])
+  @@index([assignedById])
+}
+
+model PlaybookInstructionReceipt {
+  id           String                  @id @default(uuid())
+  assignmentId String
+  playerId     String
+  roleKey      String
+  confirmedAt  DateTime                @default(now())
+  assignment   GuildPlaybookAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  player       Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, playerId])
+  @@index([playerId, confirmedAt])
+}
+
+model GuildPlaybookLesson {
+  id                String                    @id @default(uuid())
+  operationId       String
+  sourceKey         String
+  playbookId        String?
+  title             String
+  lessonPt          String
+  lessonEn          String
+  disposition       PlaybookLessonDisposition
+  ownerId           String
+  reviewAt          DateTime
+  createdById       String
+  promotedVersionId String?
+  createdAt         DateTime                  @default(now())
+  playbook          GuildPlaybook?            @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  owner             User                      @relation("GuildPlaybookLessonOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy         User                      @relation("GuildPlaybookLessonCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  promotedVersion   GuildPlaybookVersion?     @relation("GuildPlaybookLessonPromotedVersion", fields: [promotedVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([operationId, sourceKey])
+  @@index([playbookId])
+  @@index([ownerId, reviewAt])
+  @@index([createdById])
+}
+
+model PlayerCommunicationPreference {
+  playerId                   String               @id
+  eventChannel               CommunicationChannel @default(WEB)
+  ownLootChannel             CommunicationChannel @default(WEB)
+  requestChannel             CommunicationChannel @default(WEB)
+  progressChannel            CommunicationChannel @default(WEB)
+  announcementChannel        CommunicationChannel @default(WEB)
+  reminderChannel            CommunicationChannel @default(WEB)
+  quietStartsAt              String?
+  quietEndsAt                String?
+  timezone                   String               @default("America/Sao_Paulo")
+  digestCadence              DigestCadence        @default(DAILY)
+  criticalBypassesQuietHours Boolean              @default(true)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  player                     Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model PlayerDigestDelivery {
+  id        String   @id @default(uuid())
+  playerId  String
+  periodKey String
+  itemKeys  Json
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, periodKey])
+  @@index([periodKey])
+  @@index([playerId, createdAt])
+}
+
+model Notification {
+  id               String               @id @default(uuid())
+  userId           String?
+  playerId         String?
+  audience         NotificationAudience @default(PLAYER)
+  type             String
+  title            String
+  body             String
+  href             String?
+  metadata         Json?
+  deduplicationKey String?              @unique
+  readAt           DateTime?
+  createdAt        DateTime             @default(now())
+  user             User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player           Player?              @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
   @@index([playerId, readAt, createdAt])
@@ -591,29 +1458,39 @@ model PlayerRole {
 }
 
 model Event {
-  id                String            @id @default(uuid())
-  name              String
-  type              EventType
-  status            EventStatus       @default(OPEN)
-  operationalCategory EventOperationalCategory @default(BOSS)
-  priority          WarRoomOperationPriority @default(MEDIUM)
-  dkpReward         Int
-  startsAt          DateTime
-  endsAt            DateTime?
-  finalizedAt       DateTime?
-  dkpDistributedAt  DateTime?
-  createdById       String
-  responsibleUserId String?
-  attendanceBatchId String?
-  batchOrder        Int?
-  checklist         Json              @default("[]")
-  operationalNotes  String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  createdBy         User              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  attendances       EventAttendance[]
-  warRoomOperations WarRoomOperation[]
+  id                     String                   @id @default(uuid())
+  name                   String
+  type                   EventType
+  status                 EventStatus              @default(OPEN)
+  operationalCategory    EventOperationalCategory @default(BOSS)
+  priority               WarRoomOperationPriority @default(MEDIUM)
+  dkpReward              Int
+  startsAt               DateTime
+  endsAt                 DateTime?
+  finalizedAt            DateTime?
+  dkpDistributedAt       DateTime?
+  createdById            String
+  responsibleUserId      String?
+  attendanceBatchId      String?
+  batchOrder             Int?
+  checklist              Json                     @default("[]")
+  operationalNotes       String?
+  eventSeriesId          String?
+  seriesOccurrence       Int?
+  compositionTargets     Json                     @default("[]")
+  seriesExceptionSkipped Boolean                  @default(false)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdBy              User                     @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  eventSeries            EventSeries?             @relation(fields: [eventSeriesId], references: [id], onDelete: SetNull)
+  attendances            EventAttendance[]
+  rsvps                  EventRsvp[]
+  reserveEntries         EventReserveEntry[]
+  reminderDeliveries     EventReminderDelivery[]
+  warRoomOperations      WarRoomOperation[]
+  playbookAssignment     GuildPlaybookAssignment?
 
+  @@unique([eventSeriesId, seriesOccurrence])
   @@index([type])
   @@index([status])
   @@index([operationalCategory])
@@ -624,31 +1501,79 @@ model Event {
   @@index([createdById])
   @@index([responsibleUserId])
   @@index([attendanceBatchId, batchOrder])
+  @@index([eventSeriesId, startsAt])
+}
+
+model EventSeries {
+  id                  String                   @id @default(uuid())
+  name                String
+  type                EventType
+  operationalCategory EventOperationalCategory @default(BOSS)
+  priority            WarRoomOperationPriority @default(MEDIUM)
+  dkpReward           Int
+  timezone            String                   @default("America/Sao_Paulo")
+  firstStartsAt       DateTime
+  durationMinutes     Int
+  intervalWeeks       Int                      @default(1)
+  horizonDays         Int                      @default(56)
+  exceptionDates      Json                     @default("[]")
+  compositionTargets  Json                     @default("[]")
+  pausedAt            DateTime?
+  materializedThrough DateTime?
+  createdById         String
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  createdBy           User                     @relation("EventSeriesCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  events              Event[]
+
+  @@index([pausedAt])
+  @@index([firstStartsAt])
+  @@index([createdById])
+}
+
+model PlayerReminderDelivery {
+  id                String    @id @default(uuid())
+  playerId          String
+  reminderDate      String
+  signals           Json
+  webNotifiedAt     DateTime?
+  discordClaimedAt  DateTime?
+  discordNotifiedAt DateTime?
+  discordAttempts   Int       @default(0)
+  lastDiscordError  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  player            Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, reminderDate])
+  @@index([reminderDate])
+  @@index([discordNotifiedAt, discordClaimedAt])
 }
 
 model WarRoomOperation {
-  id            String                   @id @default(uuid())
-  name          String
-  type          WarRoomOperationType
-  status        WarRoomOperationStatus   @default(DRAFT)
-  priority      WarRoomOperationPriority @default(MEDIUM)
-  startsAt      DateTime
-  endsAt        DateTime
-  mapRegion     String?
-  objective     String?
-  staffNotes    String?
-  result        String?
-  score         String?
-  improvementNotes String?
-  internalLinks Json                     @default("[]")
-  eventId       String?
-  createdById   String
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  event         Event?                   @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  createdBy     User                     @relation("WarRoomOperationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  rosterSlots   WarRoomRosterSlot[]
-  timelineEvents WarRoomTimelineEvent[]
+  id                 String                   @id @default(uuid())
+  name               String
+  type               WarRoomOperationType
+  status             WarRoomOperationStatus   @default(DRAFT)
+  priority           WarRoomOperationPriority @default(MEDIUM)
+  startsAt           DateTime
+  endsAt             DateTime
+  mapRegion          String?
+  objective          String?
+  staffNotes         String?
+  result             String?
+  score              String?
+  improvementNotes   String?
+  internalLinks      Json                     @default("[]")
+  eventId            String?
+  createdById        String
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  event              Event?                   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdBy          User                     @relation("WarRoomOperationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  rosterSlots        WarRoomRosterSlot[]
+  timelineEvents     WarRoomTimelineEvent[]
+  playbookAssignment GuildPlaybookAssignment?
 
   @@index([type])
   @@index([status])
@@ -724,16 +1649,98 @@ model EventAttendance {
   @@index([attended])
 }
 
+model EventRsvp {
+  id                  String                  @id @default(uuid())
+  eventId             String
+  playerId            String
+  status              EventRsvpStatus
+  note                String?
+  noteVisibility      EventRsvpNoteVisibility @default(STAFF_ONLY)
+  noShowDetectedAt    DateTime?
+  noShowJustification String?
+  noShowJustifiedAt   DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  event               Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  player              Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, playerId])
+  @@index([eventId, status])
+  @@index([playerId, updatedAt])
+}
+
+model EventReminderDelivery {
+  id                String    @id @default(uuid())
+  eventId           String
+  playerId          String
+  rsvpStatus        String?
+  webNotifiedAt     DateTime?
+  discordClaimedAt  DateTime?
+  discordNotifiedAt DateTime?
+  discordAttempts   Int       @default(0)
+  lastDiscordError  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  event             Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  player            Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, playerId])
+  @@index([playerId, createdAt])
+  @@index([discordNotifiedAt, discordClaimedAt])
+}
+
+model EventReserveEntry {
+  id                   String             @id @default(uuid())
+  eventId              String
+  playerId             String
+  position             Int
+  reason               String
+  status               EventReserveStatus @default(RESERVE)
+  promotionRequestedAt DateTime?
+  respondedAt          DateTime?
+  promotedAt           DateTime?
+  playerResponseNote   String?
+  createdById          String
+  updatedById          String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  event                Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  player               Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy            User               @relation("EventReserveCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy            User               @relation("EventReserveUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, playerId])
+  @@index([eventId, status, position])
+  @@index([playerId, status])
+  @@index([createdById])
+  @@index([updatedById])
+}
+
+model PlayerAbsence {
+  id               String                        @id @default(uuid())
+  playerId         String
+  startsAt         DateTime
+  endsAt           DateTime
+  reason           String?
+  reasonVisibility PlayerAbsenceReasonVisibility @default(STAFF_ONLY)
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+  player           Player                        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, startsAt, endsAt])
+  @@index([startsAt, endsAt])
+}
+
 model DKPTransaction {
-  id          String             @id @default(uuid())
-  playerId    String
-  amount      Int
-  type        DKPTransactionType
-  referenceId String?
-  createdById String
-  createdAt   DateTime           @default(now())
-  player      Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  createdBy   User               @relation("DKPTransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  id                 String                 @id @default(uuid())
+  playerId           String
+  amount             Int
+  type               DKPTransactionType
+  referenceId        String?
+  createdById        String
+  createdAt          DateTime               @default(now())
+  player             Player                 @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy          User                   @relation("DKPTransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   discordLogDelivery DiscordDkpLogDelivery?
 
   @@unique([playerId, type, referenceId])
@@ -802,20 +1809,20 @@ model DKPLock {
 }
 
 model DkpPolicySimulation {
-  id          String                    @id @default(uuid())
-  type        DkpPolicySimulationType
-  status      DkpPolicySimulationStatus @default(DRAFT)
-  name        String
-  config      Json
-  result      Json
-  createdById String
-  promotedById String?
-  promotedAt  DateTime?
+  id              String                    @id @default(uuid())
+  type            DkpPolicySimulationType
+  status          DkpPolicySimulationStatus @default(DRAFT)
+  name            String
+  config          Json
+  result          Json
+  createdById     String
+  promotedById    String?
+  promotedAt      DateTime?
   promotionReason String?
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
-  createdBy   User                      @relation("DkpPolicySimulationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  promotedBy  User?                     @relation("DkpPolicySimulationPromotedBy", fields: [promotedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  createdBy       User                      @relation("DkpPolicySimulationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  promotedBy      User?                     @relation("DkpPolicySimulationPromotedBy", fields: [promotedById], references: [id], onDelete: SetNull)
 
   @@index([type, status, createdAt])
   @@index([createdById])
@@ -843,7 +1850,7 @@ model Auction {
   bids                    AuctionBid[]
   dkpLocks                DKPLock[]
   reviewVotes             AuctionReviewVote[]
-  bidInvalidationVotes     AuctionBidInvalidationVote[]
+  bidInvalidationVotes    AuctionBidInvalidationVote[]
   bidCancellationRequests AuctionBidCancellationRequest[]
   disputes                AuctionDispute[]
   dropHistory             DropHistory?
@@ -974,32 +1981,32 @@ model EligibilityRule {
 }
 
 model ItemCatalog {
-  id               String             @id @default(uuid())
-  legacyId         Int?               @unique
-  kind             String
-  category         String
-  itemTier         ItemTier?
-  itemType         ItemType?
-  namePt           String
-  nameEn           String
-  nameEs           String?
-  typePt           String
-  typeEn           String
-  typeEs           String?
-  preferredClasses PlayerClass[]      @default([])
-  image1Url        String?
-  image2Url        String?
-  isActive         Boolean            @default(true)
-  diamondSaleEnabled Boolean          @default(false)
-  legacyCreatedAt  DateTime?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  itemRequests     ItemRequest[]
-  dropHistories    DropHistory[]
-  auctions         Auction[]
-  interestPosts    ItemInterestPost[]
-  wishlistItems    PlayerWishlistItem[]
-  diamondSales     DiamondSale[]
+  id                 String               @id @default(uuid())
+  legacyId           Int?                 @unique
+  kind               String
+  category           String
+  itemTier           ItemTier?
+  itemType           ItemType?
+  namePt             String
+  nameEn             String
+  nameEs             String?
+  typePt             String
+  typeEn             String
+  typeEs             String?
+  preferredClasses   PlayerClass[]        @default([])
+  image1Url          String?
+  image2Url          String?
+  isActive           Boolean              @default(true)
+  diamondSaleEnabled Boolean              @default(false)
+  legacyCreatedAt    DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  itemRequests       ItemRequest[]
+  dropHistories      DropHistory[]
+  auctions           Auction[]
+  interestPosts      ItemInterestPost[]
+  wishlistItems      PlayerWishlistItem[]
+  diamondSales       DiamondSale[]
 
   @@index([nameEn, typeEn])
   @@index([nameEs, typeEs])
@@ -1147,34 +2154,34 @@ model ItemInterestEntry {
 }
 
 model DiamondSale {
-  id                    String                    @id @default(uuid())
-  itemCatalogId         String
-  itemName              String
-  buyerType             DiamondSaleBuyerType
-  buyerPlayerId         String?
-  buyerName             String
-  diamondCustodian      String
-  diamondTotal          Int
-  itemProofImageUrl     String
-  saleProofImageUrl     String
-  recipientMode         DiamondSaleRecipientMode
-  shareAmount           Int
-  remainderAmount       Int
-  activePlayerCount     Int
-  recipientCount        Int
-  status                DiamondSaleStatus         @default(OPEN)
-  openedAt              DateTime                  @default(now())
-  completedAt           DateTime?
-  discordPublishedAt    DateTime?
-  createdById           String
-  completedById         String?
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  itemCatalog           ItemCatalog               @relation(fields: [itemCatalogId], references: [id], onDelete: Restrict)
-  buyerPlayer           Player?                   @relation("DiamondSaleBuyerPlayer", fields: [buyerPlayerId], references: [id], onDelete: Restrict)
-  createdBy             User                      @relation("DiamondSaleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  completedBy           User?                     @relation("DiamondSaleCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
-  recipients            DiamondSaleRecipient[]
+  id                 String                   @id @default(uuid())
+  itemCatalogId      String
+  itemName           String
+  buyerType          DiamondSaleBuyerType
+  buyerPlayerId      String?
+  buyerName          String
+  diamondCustodian   String
+  diamondTotal       Int
+  itemProofImageUrl  String
+  saleProofImageUrl  String
+  recipientMode      DiamondSaleRecipientMode
+  shareAmount        Int
+  remainderAmount    Int
+  activePlayerCount  Int
+  recipientCount     Int
+  status             DiamondSaleStatus        @default(OPEN)
+  openedAt           DateTime                 @default(now())
+  completedAt        DateTime?
+  discordPublishedAt DateTime?
+  createdById        String
+  completedById      String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  itemCatalog        ItemCatalog              @relation(fields: [itemCatalogId], references: [id], onDelete: Restrict)
+  buyerPlayer        Player?                  @relation("DiamondSaleBuyerPlayer", fields: [buyerPlayerId], references: [id], onDelete: Restrict)
+  createdBy          User                     @relation("DiamondSaleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  completedBy        User?                    @relation("DiamondSaleCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  recipients         DiamondSaleRecipient[]
 
   @@index([itemCatalogId, openedAt])
   @@index([buyerPlayerId])
@@ -1183,19 +2190,19 @@ model DiamondSale {
 }
 
 model DiamondSaleRecipient {
-  id                  String      @id @default(uuid())
-  saleId              String
-  playerId            String
-  playerNickname      String
-  diamondAmount       Int
-  proofImageUrl       String?
-  deliveredAt         DateTime?
-  deliveredById       String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  sale                DiamondSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  player              Player      @relation(fields: [playerId], references: [id], onDelete: Restrict)
-  deliveredBy         User?       @relation("DiamondSaleRecipientDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
+  id             String      @id @default(uuid())
+  saleId         String
+  playerId       String
+  playerNickname String
+  diamondAmount  Int
+  proofImageUrl  String?
+  deliveredAt    DateTime?
+  deliveredById  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  sale           DiamondSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  player         Player      @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  deliveredBy    User?       @relation("DiamondSaleRecipientDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
 
   @@unique([saleId, playerId])
   @@index([playerId, deliveredAt])
@@ -1354,4 +2361,47 @@ model AuditLog {
   @@index([action])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+model ProductValidationInterview {
+  id                          String                             @id @default(uuid())
+  campaignKey                 String                             @default("G3X-2026-07")
+  profile                     ProductValidationInterviewProfile
+  channels                    String[]
+  absenceVisibility           ProductValidationAbsenceVisibility
+  rsvpWouldReduceManualCharge Boolean
+  summary                     String
+  interviewedAt               DateTime
+  recordedById                String
+  createdAt                   DateTime                           @default(now())
+  updatedAt                   DateTime                           @updatedAt
+  recordedBy                  User                               @relation("ProductValidationInterviewRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([campaignKey, profile])
+  @@index([interviewedAt])
+  @@index([recordedById])
+}
+
+model ProductValidationWeek {
+  id                       String   @id @default(uuid())
+  campaignKey              String   @default("G3X-2026-07")
+  weekStart                DateTime
+  weekEnd                  DateTime
+  eventsCreated            Int
+  expectedAttendance       Int?
+  actualAttendance         Int
+  noShows                  Int
+  staffConfirmationMinutes Int
+  recruitsConverted        Int
+  recruitsWithActivity     Int
+  singlePersonTasks        Int
+  note                     String?
+  capturedById             String
+  capturedAt               DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  capturedBy               User     @relation("ProductValidationWeekCapturedBy", fields: [capturedById], references: [id], onDelete: Restrict)
+
+  @@unique([campaignKey, weekStart])
+  @@index([campaignKey, weekEnd])
+  @@index([capturedById])
 }

@@ -1,96 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { CheckCircle2, Circle, Compass } from 'lucide-react';
+import { CheckCircle2, Circle, Clock3, Compass } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMyHistory } from '@/hooks/use-profile-api';
+import { notifyToast } from '@/components/ui/toaster';
+import { useCompleteOnboardingStep, useMyOnboarding } from '@/hooks/use-onboarding-api';
 import { useLocaleStore } from '@/store/locale-store';
 
-const copy = {
-  pt: {
-    eyebrow: 'Primeiros passos',
-    title: 'Checklist do jogador',
-    help: 'Use isso pra nao ficar perdido e evitar perder fila, DKP ou informacao importante.',
-    done: 'Pronto',
-    open: 'Pendente',
-    steps: [
-      ['Perfil configurado', 'Confirme nick, classe, camada e timezone no perfil.', '/dashboard/profile'],
-      ['Status enviado', 'Envie seu print de Status para a Staff validar CP.', '/dashboard/profile'],
-      ['Fenda enviada', 'Envie seu print de Fenda Dimensional para validar camada.', '/dashboard/profile'],
-      ['DKP entendido', 'Acompanhe total, travado e disponivel no dashboard.', '/dashboard'],
-      ['Pedidos acompanhados', 'Veja filas e atualize print quando o sistema pedir.', '/dashboard/item-requests'],
-      ['Daoshi configurado', 'Se cashar com Daoshi, envie comprovante pela area propria.', '/dashboard/daoshi'],
-    ],
-  },
-  en: {
-    eyebrow: 'First steps',
-    title: 'Player checklist',
-    help: 'Use this to avoid missing queues, DKP, or important guild information.',
-    done: 'Done',
-    open: 'Pending',
-    steps: [
-      ['Profile configured', 'Confirm nickname, class, layer, and timezone in your profile.', '/dashboard/profile'],
-      ['Status submitted', 'Upload your Status screenshot so Staff can validate CP.', '/dashboard/profile'],
-      ['Rift submitted', 'Upload your Dimensional Rift screenshot so Staff can validate layer.', '/dashboard/profile'],
-      ['DKP understood', 'Track total, locked, and available DKP on the dashboard.', '/dashboard'],
-      ['Requests tracked', 'Watch queues and update screenshots when the system asks.', '/dashboard/item-requests'],
-      ['Daoshi ready', 'If you buy through Daoshi, upload the receipt in its page.', '/dashboard/daoshi'],
-    ],
-  },
-  es: {
-    eyebrow: 'Primeros pasos',
-    title: 'Checklist del jugador',
-    help: 'Usa esto para no perder filas, DKP o informacion importante.',
-    done: 'Listo',
-    open: 'Pendiente',
-    steps: [
-      ['Perfil configurado', 'Confirma nick, clase, capa y timezone en tu perfil.', '/dashboard/profile'],
-      ['Status enviado', 'Sube tu print de Status para que Staff valide CP.', '/dashboard/profile'],
-      ['Fisura enviada', 'Sube tu print de Fisura Dimensional para validar capa.', '/dashboard/profile'],
-      ['DKP entendido', 'Acompana total, bloqueado y disponible en el dashboard.', '/dashboard'],
-      ['Pedidos acompanados', 'Mira filas y actualiza prints cuando el sistema pida.', '/dashboard/item-requests'],
-      ['Daoshi listo', 'Si compras con Daoshi, sube el comprobante en su pagina.', '/dashboard/daoshi'],
-    ],
-  },
-} as const;
-
 export default function OnboardingPage() {
-  const locale = useLocaleStore((state) => state.locale);
-  const t = copy[locale];
-  const history = useMyHistory();
-  const player = history.data?.player;
-  const hasStatus = (history.data?.progress ?? []).some((row) => row.category === 'STATUS');
-  const hasRift = (history.data?.progress ?? []).some((row) => row.category === 'DIMENSIONAL_RIFT');
-  const checks = [Boolean(player?.nickname && player?.timezone), hasStatus, hasRift, true, true, true];
+  const english = useLocaleStore((state) => state.locale) === 'en';
+  const workspace = useMyOnboarding();
+  const complete = useCompleteOnboardingStep();
+  const data = workspace.data;
+  const plan = data?.plan;
 
+  if (workspace.isLoading) return <p className="text-sm text-muted-foreground">{english ? 'Loading onboarding plan...' : 'Carregando plano de onboarding...'}</p>;
+  if (!plan) return <Card><CardContent className="p-6"><h1 className="font-[var(--font-cinzel)] text-2xl font-bold">{english ? 'No active onboarding plan' : 'Sem plano de onboarding ativo'}</h1><p className="mt-2 text-sm text-muted-foreground">{english ? 'Your profile predates the plan workflow. Staff can guide the next steps without changing your existing records.' : 'Seu perfil é anterior ao fluxo de planos. A Staff pode orientar os próximos passos sem alterar seus registros existentes.'}</p></CardContent></Card>;
+
+  const percent = data.progress.total > 0 ? Math.round((data.progress.completed / data.progress.total) * 100) : 0;
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm uppercase text-primary">{t.eyebrow}</p>
-        <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t.title}</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t.help}</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Compass className="h-5 w-5 text-primary" /> {t.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {t.steps.map(([title, description, href], index) => {
-            const done = checks[index];
-            return (
-              <Link key={title} href={href} className="grid gap-2 rounded-md border bg-background/35 p-3 text-sm transition hover:border-primary md:grid-cols-[32px_1fr_120px]">
-                {done ? <CheckCircle2 className="h-5 w-5 text-emerald-300" /> : <Circle className="h-5 w-5 text-primary" />}
-                <span>
-                  <strong className="block">{title}</strong>
-                  <span className="text-muted-foreground">{description}</span>
-                </span>
-                <span className={done ? 'text-emerald-300' : 'text-primary'}>{done ? t.done : t.open}</span>
-              </Link>
-            );
-          })}
-        </CardContent>
-      </Card>
+      <div><p className="text-sm uppercase text-primary">{english ? 'First steps' : 'Primeiros passos'}</p><h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{english ? 'Your onboarding plan' : 'Seu plano de onboarding'}</h1><p className="mt-2 max-w-3xl text-sm text-muted-foreground">{english ? 'A real plan with a deadline and verifiable progress. No decorative green checks.' : 'Um plano real, com prazo e progresso verificável. Sem check verde decorativo.'}</p></div>
+      <div className="grid gap-3 sm:grid-cols-3"><Card><CardContent className="p-4"><p className="text-xs uppercase text-muted-foreground">{english ? 'Progress' : 'Progresso'}</p><p className="mt-1 text-2xl font-bold">{percent}%</p><p className="text-xs text-muted-foreground">{data.progress.completed}/{data.progress.total}</p></CardContent></Card><Card><CardContent className="p-4"><p className="text-xs uppercase text-muted-foreground">{english ? 'Required' : 'Obrigatórias'}</p><p className="mt-1 text-2xl font-bold">{data.progress.requiredCompleted}/{data.progress.requiredTotal}</p></CardContent></Card><Card><CardContent className="p-4"><p className="text-xs uppercase text-muted-foreground">{english ? 'Deadline' : 'Prazo'}</p><p className="mt-1 font-semibold">{new Date(plan.dueAt).toLocaleDateString()}</p><p className="text-xs text-muted-foreground">{plan.template.name} · v{plan.template.version}</p></CardContent></Card></div>
+      {data.nextStep ? <Card className="border-primary/35"><CardHeader><CardTitle className="flex items-center gap-2"><Compass className="h-5 w-5 text-primary" />{english ? 'Next step' : 'Próximo passo'}</CardTitle></CardHeader><CardContent><p className="font-semibold">{english ? data.nextStep.titleEn : data.nextStep.titlePt}</p><p className="mt-1 text-sm text-muted-foreground">{english ? data.nextStep.descriptionEn : data.nextStep.descriptionPt}</p><Link className="mt-3 inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground" href={data.nextStep.href}>{english ? 'Open step' : 'Abrir etapa'}</Link></CardContent></Card> : null}
+      <Card><CardHeader><CardTitle>{english ? 'Plan steps' : 'Etapas do plano'}</CardTitle></CardHeader><CardContent className="space-y-3">{plan.steps.map((step) => { const done = Boolean(step.completedAt); return <div key={step.id} className="grid gap-3 rounded-md border bg-background/35 p-3 md:grid-cols-[32px_1fr_auto]"><div>{done ? <CheckCircle2 className="h-5 w-5 text-emerald-300" /> : <Circle className="h-5 w-5 text-primary" />}</div><div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{english ? step.titleEn : step.titlePt}</p><Badge tone={step.isRequired ? 'gold' : 'blue'}>{step.isRequired ? (english ? 'Required' : 'Obrigatória') : (english ? 'Optional' : 'Opcional')}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{english ? step.descriptionEn : step.descriptionPt}</p><p className="mt-1 text-xs text-muted-foreground">{step.completionType === 'MANUAL' ? (english ? 'Manual confirmation' : 'Confirmação manual') : (english ? 'Automatic verification' : 'Verificação automática')}</p></div><div className="flex flex-wrap items-center gap-2"><Link className="inline-flex h-10 items-center rounded-md border border-white/10 bg-secondary px-4 text-sm font-semibold" href={step.href}>{english ? 'Open' : 'Abrir'}</Link>{!done && step.completionType === 'MANUAL' ? <Button disabled={complete.isPending} onClick={() => complete.mutate(step.id, { onSuccess: () => notifyToast({ title: english ? 'Step completed.' : 'Etapa concluída.', tone: 'success' }) })}>{english ? 'Mark done' : 'Marcar concluída'}</Button> : null}{done ? <span className="flex items-center gap-1 text-xs text-emerald-300"><Clock3 className="h-3.5 w-3.5" />{new Date(step.completedAt!).toLocaleDateString()}</span> : null}</div></div>; })}</CardContent></Card>
     </div>
   );
 }

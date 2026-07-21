@@ -1029,7 +1029,7 @@ export class WarRoomService {
       overlapsByPlayer.set(overlap.playerId, [...(overlapsByPlayer.get(overlap.playerId) ?? []), overlap]);
     }
 
-    const staleBefore = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const staleBefore = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
 
     return slots.map((slot) => {
       const conflicts = [];
@@ -1051,7 +1051,7 @@ export class WarRoomService {
         conflicts.push({
           key: 'STALE_STATUS',
           label: 'Status desatualizado',
-          detail: latestStatus ? 'Ultimo status tem mais de 14 dias.' : 'Nenhum status recente encontrado.',
+          detail: latestStatus ? 'Ultimo status tem mais de 21 dias.' : 'Nenhum status recente encontrado.',
           severity: 'warning',
         });
       }

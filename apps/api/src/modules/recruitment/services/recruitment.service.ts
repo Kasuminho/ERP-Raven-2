@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, HttpException, HttpStatus, Inje
 import { PlayerCombatAvailability, PlayerStaffNoteSeverity, Prisma, RecruitmentApplicationStatus } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
+import { instantiateOnboardingPlan } from '../../onboarding/onboarding.service';
 import { ConvertRecruitmentApplicationDto, CreateRecruitmentApplicationDto } from '../dto';
 
 @Injectable()
@@ -157,6 +158,8 @@ export class RecruitmentService {
         },
       });
 
+      const onboardingPlan = await instantiateOnboardingPlan(tx, player.id, actorId, data.onboardingNote);
+
       const updated = await tx.recruitmentApplication.update({
         where: { id: applicationId },
         data: {
@@ -187,6 +190,7 @@ export class RecruitmentService {
             nickname,
             playerClass: application.playerClass,
             dimensionalLayer: application.dimensionalLayer,
+            onboardingPlanId: onboardingPlan.id,
           } satisfies Prisma.InputJsonObject,
         },
       });

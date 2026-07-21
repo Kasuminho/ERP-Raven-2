@@ -9,6 +9,7 @@ import { AuctionFinalizationResult, AuctionsService, BidCancellationRequestResul
 type AuthRequest = { user?: { userId?: string } };
 
 @Controller('auctions')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class AuctionsController {
   constructor(private readonly service: AuctionsService) {}
 
@@ -20,8 +21,8 @@ export class AuctionsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')
-  async create(@Body() dto: CreateAuctionDto): Promise<Auction> {
-    return this.service.createAuction(dto);
+  async create(@Body() dto: CreateAuctionDto, @Req() req: AuthRequest): Promise<Auction> {
+    return this.service.createAuction({ ...dto, createdById: req.user?.userId ?? '' });
   }
 
   @Post(':id/bid')

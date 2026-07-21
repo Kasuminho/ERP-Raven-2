@@ -1,0 +1,3 @@
+import { useMutation,useQuery,useQueryClient } from '@tanstack/react-query';import { api } from '@/lib/api';import type { LeadershipArea,LeadershipHealthWorkspace } from '@/types/api';
+export function useLeadershipHealth(){return useQuery({queryKey:['leadership-health'],queryFn:async()=>(await api.get<LeadershipHealthWorkspace>('/leadership-health')).data});}
+export function useCreateLeadershipCheckIn(){const qc=useQueryClient();return useMutation({mutationFn:(body:{area:LeadershipArea;workload:number;availableOnCall:boolean;note?:string})=>api.post('/leadership-health/check-ins',body),onSuccess:()=>qc.invalidateQueries({queryKey:['leadership-health']})});}

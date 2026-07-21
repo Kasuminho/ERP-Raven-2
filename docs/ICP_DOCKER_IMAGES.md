@@ -3,6 +3,12 @@
 Use this flow when the ICP Node.js deploy is compiling too much on the VPS.
 GitHub Actions builds the API and Web Docker images, then ICP only pulls and runs them.
 
+Before publishing images, the `quality` job starts an isolated PostgreSQL 16
+database named `raven2_e2e`, applies the complete migration chain and runs
+`npm run test:e2e`. The test exercises the real Nest HTTP contracts for the four
+critical transactional journeys and refuses any `E2E_DATABASE_URL` that does not
+explicitly identify a disposable test database. It never reuses production data.
+
 ## Images
 
 - `ghcr.io/kasuminho/erp-raven-2-api:latest`
@@ -126,6 +132,11 @@ Variables, without values:
 The authenticated smoke validates `/auth/me`, Staff operations, auction
 diagnostics, pending auction deliveries, diamond-sale setup, private health and the deploy panel. It
 does not print the token.
+
+It also checks the Staff task queue, declared coverage, safe automations,
+playbooks and communication preferences. The script writes a sanitized result
+with per-check latency and total duration to `SMOKE_RESULT_PATH`; GitHub Actions
+uploads it for 30 days as `authenticated-smoke-GIT_SHA`.
 
 ## Verified backup health
 

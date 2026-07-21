@@ -9,12 +9,12 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCancelEvent, useCreateEvent, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEventReadiness, useEvents, useFinalizeEvent, useMarkEventChecklistItem, useRegisterAttendance, useRemoveAttendance } from '@/hooks/use-events-api';
+import { useCancelEvent, useCreateEvent, useCreateEventSeries, useEventAttendance, useEventBatchPanel, useEventFinalizationChecklist, useEventReadiness, useEventRsvpStaffSummary, useEventSeries, useEvents, useFinalizeEvent, useMarkEventChecklistItem, usePromoteEventReserve, useRegisterAttendance, useRemoveAttendance, useRemoveEventReserve, useSetEventSeriesPaused, useUpdateEventCompositionTargets, useUpdateEventSeriesExceptions, useUpsertEventReserve } from '@/hooks/use-events-api';
 import { usePlayers } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
-import type { EventOperationalCategory, EventOperationalPriority, EventType } from '@/types/api';
+import type { EventCompositionTarget, EventOperationalCategory, EventOperationalPriority, EventType, PlayerClass } from '@/types/api';
 
 const eventTypes: EventType[] = [
   'LUNOS',
@@ -38,12 +38,22 @@ const eventTypes: EventType[] = [
 
 const operationalCategories: EventOperationalCategory[] = ['BOSS', 'ABYSS', 'GUILD_RAID', 'FARM', 'TRAINING', 'CLASH', 'CUSTOM'];
 const priorities: EventOperationalPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
+const combatRoles = ['FRONTLINE', 'BACKLINE', 'SUPPORT', 'CALLER', 'SCOUT', 'FLEX', 'RESERVE'];
+const playerClasses: PlayerClass[] = ['GUNSLINGER', 'BERSERKER', 'DESTROYER', 'DEATHBRINGER', 'ASSASSIN', 'DIVINE_CASTER', 'NIGHT_RANGER', 'VANGUARD', 'ELEMENTALIST', 'WARLORD'];
 
 export default function AdminEventsPage() {
   const events = useEvents();
+  const eventSeries = useEventSeries();
   const locale = useLocaleStore((state) => state.locale);
   const players = usePlayers();
   const createEvent = useCreateEvent();
+  const createEventSeries = useCreateEventSeries();
+  const setSeriesPaused = useSetEventSeriesPaused();
+  const updateSeriesExceptions = useUpdateEventSeriesExceptions();
+  const updateCompositionTargets = useUpdateEventCompositionTargets();
+  const upsertReserve = useUpsertEventReserve();
+  const removeReserve = useRemoveEventReserve();
+  const promoteReserve = usePromoteEventReserve();
   const registerAttendance = useRegisterAttendance();
   const removeAttendance = useRemoveAttendance();
   const finalizeEvent = useFinalizeEvent();
@@ -56,6 +66,19 @@ export default function AdminEventsPage() {
   const [operationalCategory, setOperationalCategory] = useState<EventOperationalCategory>('BOSS');
   const [priority, setPriority] = useState<EventOperationalPriority>('MEDIUM');
   const [operationalNotes, setOperationalNotes] = useState('');
+  const [seriesName, setSeriesName] = useState('');
+  const [seriesStartsAt, setSeriesStartsAt] = useState('');
+  const [seriesDuration, setSeriesDuration] = useState(120);
+  const [seriesInterval, setSeriesInterval] = useState(1);
+  const [seriesTimezone, setSeriesTimezone] = useState('America/Sao_Paulo');
+  const [seriesExceptions, setSeriesExceptions] = useState<Record<string, string>>({});
+  const [targetRole, setTargetRole] = useState('');
+  const [targetClass, setTargetClass] = useState('');
+  const [targetMinimum, setTargetMinimum] = useState(1);
+  const [reservePlayerId, setReservePlayerId] = useState('');
+  const [reservePosition, setReservePosition] = useState(1);
+  const [reserveReason, setReserveReason] = useState('');
+  const [reserveAction, setReserveAction] = useState<{ type: 'promote' | 'remove'; playerId: string; nickname: string }>();
   const [selectedEventId, setSelectedEventId] = useState('');
   const [hideFinalized, setHideFinalized] = useState(true);
   const [confirmation, setConfirmation] = useState<'finalize' | 'cancel'>();
@@ -63,6 +86,7 @@ export default function AdminEventsPage() {
   const attendance = useEventAttendance(selectedEventId);
   const finalizationChecklist = useEventFinalizationChecklist(selectedEventId);
   const readiness = useEventReadiness(selectedEventId);
+  const rsvpSummary = useEventRsvpStaffSummary(selectedEventId);
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
   const selectedBatchId = selectedEvent?.attendanceBatchId ?? '';
   const batchPanel = useEventBatchPanel(selectedBatchId);
@@ -104,6 +128,42 @@ export default function AdminEventsPage() {
         },
       },
     );
+  }
+
+  function createSeries() {
+    if (!seriesName.trim() || !seriesStartsAt) return;
+    createEventSeries.mutate({
+      name: seriesName.trim(),
+      type: eventType,
+      firstStartsAt: new Date(seriesStartsAt).toISOString(),
+      durationMinutes: seriesDuration,
+      intervalWeeks: seriesInterval,
+      timezone: seriesTimezone,
+      operationalCategory,
+      priority,
+    }, {
+      onSuccess: () => {
+        setSeriesName('');
+        setSeriesStartsAt('');
+        notifyToast({ title: 'Série criada e instâncias materializadas.', tone: 'success' });
+      },
+    });
+  }
+
+  function addCompositionTarget() {
+    if (!selectedEventId || (!targetRole && !targetClass)) return;
+    const next: EventCompositionTarget[] = [
+      ...(rsvpSummary.data?.compositionTargets ?? []).map(({ confirmed: _confirmed, gap: _gap, ...target }) => target),
+      { role: targetRole || null, playerClass: targetClass || null, minimum: targetMinimum },
+    ];
+    updateCompositionTargets.mutate({ eventId: selectedEventId, targets: next }, {
+      onSuccess: () => {
+        setTargetRole('');
+        setTargetClass('');
+        setTargetMinimum(1);
+        notifyToast({ title: 'Alvo de composição atualizado.', tone: 'success' });
+      },
+    });
   }
 
   function toggleAttendance(playerId: string) {
@@ -192,6 +252,64 @@ export default function AdminEventsPage() {
             <Button onClick={create} disabled={!name.trim() || !startsAt || createEvent.isPending}>{t(locale, 'create')}</Button>
             <Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
             <Input className="xl:col-span-4" placeholder="Notas operacionais" value={operationalNotes} onChange={(event) => setOperationalNotes(event.target.value)} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Séries recorrentes</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_180px_180px_140px_140px_200px_auto]">
+              <Input placeholder="Nome da série" value={seriesName} onChange={(event) => setSeriesName(event.target.value)} />
+              <Select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)}>
+                {eventTypes.map((value) => <option key={value}>{value}</option>)}
+              </Select>
+              <Input type="datetime-local" value={seriesStartsAt} onChange={(event) => setSeriesStartsAt(event.target.value)} />
+              <Input type="number" min={15} max={1440} value={seriesDuration} onChange={(event) => setSeriesDuration(Number(event.target.value))} title="Duração em minutos" />
+              <Input type="number" min={1} max={12} value={seriesInterval} onChange={(event) => setSeriesInterval(Number(event.target.value))} title="Intervalo em semanas" />
+              <Input value={seriesTimezone} onChange={(event) => setSeriesTimezone(event.target.value)} placeholder="Timezone IANA" />
+              <Button onClick={createSeries} disabled={!seriesName.trim() || !seriesStartsAt || createEventSeries.isPending}>Criar série</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Duração em minutos, intervalo em semanas e timezone IANA. O cron mantém o horizonte futuro materializado; pausa impede novas instâncias.</p>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {(eventSeries.data ?? []).map((series) => {
+                const exceptions = seriesExceptions[series.id] ?? (series.exceptionDates ?? []).join(', ');
+                return (
+                  <div key={series.id} className="space-y-3 rounded-md border bg-background/35 p-3 text-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{series.name}</p>
+                        <p className="text-xs text-muted-foreground">{series.type} · a cada {series.intervalWeeks} semana(s) · {series.timezone} · {series._count?.events ?? 0} instância(s)</p>
+                        <p className="text-xs text-muted-foreground">Materializado até {series.materializedThrough ? new Date(series.materializedThrough).toLocaleString() : '-'}</p>
+                      </div>
+                      <Button
+                        variant={series.pausedAt ? 'primary' : 'secondary'}
+                        className="h-8 px-3 text-xs"
+                        disabled={setSeriesPaused.isPending}
+                        onClick={() => setSeriesPaused.mutate({ seriesId: series.id, paused: !series.pausedAt }, { onSuccess: () => notifyToast({ title: series.pausedAt ? 'Série retomada.' : 'Série pausada.', tone: 'success' }) })}
+                      >
+                        {series.pausedAt ? 'Retomar' : 'Pausar'}
+                      </Button>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        className="flex-1"
+                        placeholder="Exceções YYYY-MM-DD, separadas por vírgula"
+                        value={exceptions}
+                        onChange={(event) => setSeriesExceptions((current) => ({ ...current, [series.id]: event.target.value }))}
+                      />
+                      <Button
+                        variant="secondary"
+                        disabled={updateSeriesExceptions.isPending}
+                        onClick={() => updateSeriesExceptions.mutate({
+                          seriesId: series.id,
+                          exceptionDates: exceptions.split(',').map((value) => value.trim()).filter(Boolean),
+                        }, { onSuccess: () => notifyToast({ title: 'Exceções aplicadas às instâncias futuras.', tone: 'success' }) })}
+                      >Salvar exceções</Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
@@ -304,6 +422,164 @@ export default function AdminEventsPage() {
                       <p className="truncate font-semibold">{selectedEvent?.responsibleUserId ?? '-'}</p>
                     </div>
                   </div>
+                  {rsvpSummary.data && (
+                    <div className="space-y-3 rounded-md border bg-background/35 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-muted-foreground">RSVP e composição prevista</p>
+                          <p className="text-xs text-muted-foreground">Previsão não marca presença e não concede DKP.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge tone="green">{rsvpSummary.data.counts.CONFIRMED} confirmados</Badge>
+                          <Badge tone="gold">{rsvpSummary.data.counts.TENTATIVE} talvez</Badge>
+                          <Badge tone="red">{rsvpSummary.data.counts.DECLINED} não vão</Badge>
+                          <Badge tone="red">{rsvpSummary.data.counts.UNAVAILABLE_BY_ABSENCE} em ausência</Badge>
+                          <Badge tone="muted">{rsvpSummary.data.counts.UNANSWERED} sem resposta</Badge>
+                        </div>
+                      </div>
+                      <div className="grid gap-2 text-xs md:grid-cols-3">
+                        <div className="rounded border bg-background/45 p-2">
+                          <p className="uppercase text-muted-foreground">Classes confirmadas</p>
+                          <p>{Object.entries(rsvpSummary.data.confirmedComposition.byClass).map(([key, value]) => `${key}: ${value}`).join(' · ') || '-'}</p>
+                        </div>
+                        <div className="rounded border bg-background/45 p-2">
+                          <p className="uppercase text-muted-foreground">Roles confirmadas</p>
+                          <p>{Object.entries(rsvpSummary.data.confirmedComposition.byRole).map(([key, value]) => `${key}: ${value}`).join(' · ') || '-'}</p>
+                        </div>
+                        <div className="rounded border bg-background/45 p-2">
+                          <p className="uppercase text-muted-foreground">Camadas confirmadas</p>
+                          <p>{Object.entries(rsvpSummary.data.confirmedComposition.byLayer).map(([key, value]) => `${key}: ${value}`).join(' · ') || '-'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3 rounded border bg-background/45 p-3">
+                        <div className="flex flex-wrap items-end gap-2">
+                          <label className="min-w-40 flex-1 space-y-1 text-xs text-muted-foreground">
+                            <span>Role alvo</span>
+                            <Select value={targetRole} onChange={(event) => setTargetRole(event.target.value)}>
+                              <option value="">Qualquer role</option>
+                              {combatRoles.map((role) => <option key={role}>{role}</option>)}
+                            </Select>
+                          </label>
+                          <label className="min-w-40 flex-1 space-y-1 text-xs text-muted-foreground">
+                            <span>Classe alvo</span>
+                            <Select value={targetClass} onChange={(event) => setTargetClass(event.target.value)}>
+                              <option value="">Qualquer classe</option>
+                              {playerClasses.map((playerClass) => <option key={playerClass}>{playerClass}</option>)}
+                            </Select>
+                          </label>
+                          <label className="w-28 space-y-1 text-xs text-muted-foreground">
+                            <span>Mínimo</span>
+                            <Input type="number" min={1} max={100} value={targetMinimum} onChange={(event) => setTargetMinimum(Number(event.target.value))} />
+                          </label>
+                          <Button className="h-10" onClick={addCompositionTarget} disabled={(!targetRole && !targetClass) || updateCompositionTargets.isPending}>Adicionar alvo</Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Alvos descrevem a necessidade; nunca selecionam pessoas automaticamente.</p>
+                        <div className="flex flex-wrap gap-2">
+                          {rsvpSummary.data.compositionTargets.map((target, index) => (
+                            <div key={`${target.role}-${target.playerClass}-${index}`} className="flex items-center gap-2 rounded border px-2 py-1 text-xs">
+                              <span>{target.label || [target.role, target.playerClass].filter(Boolean).join(' + ')}: {target.confirmed}/{target.minimum}</span>
+                              <Badge tone={target.gap > 0 ? 'red' : 'green'}>{target.gap > 0 ? `gap ${target.gap}` : 'coberto'}</Badge>
+                              <button
+                                type="button"
+                                className="text-red-300 hover:text-red-200"
+                                aria-label="Remover alvo"
+                                onClick={() => updateCompositionTargets.mutate({
+                                  eventId: selectedEventId,
+                                  targets: rsvpSummary.data.compositionTargets
+                                    .filter((_item, itemIndex) => itemIndex !== index)
+                                    .map(({ confirmed: _confirmed, gap: _gap, ...item }) => item),
+                                })}
+                              >×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-3 rounded border bg-background/45 p-3">
+                        <div className="grid gap-2 md:grid-cols-[1fr_100px_2fr_auto]">
+                          <Select value={reservePlayerId} onChange={(event) => setReservePlayerId(event.target.value)}>
+                            <option value="">Player para reserva</option>
+                            {activePlayers.map((player) => <option key={player.id} value={player.id}>{player.nickname}</option>)}
+                          </Select>
+                          <Input type="number" min={1} max={999} value={reservePosition} onChange={(event) => setReservePosition(Number(event.target.value))} />
+                          <Input value={reserveReason} onChange={(event) => setReserveReason(event.target.value)} placeholder="Motivo Staff-only obrigatório" />
+                          <Button
+                            disabled={!reservePlayerId || reserveReason.trim().length < 3 || upsertReserve.isPending}
+                            onClick={() => upsertReserve.mutate({ eventId: selectedEventId, playerId: reservePlayerId, position: reservePosition, reason: reserveReason.trim() }, {
+                              onSuccess: () => {
+                                setReservePlayerId('');
+                                setReserveReason('');
+                                notifyToast({ title: 'Reserva registrada com motivo interno.', tone: 'success' });
+                              },
+                            })}
+                          >Salvar reserva</Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">A ordem e o motivo ficam auditados e Staff-only. Promoção sempre pede confirmação ao player.</p>
+                        <div className="space-y-2">
+                          {rsvpSummary.data.reserveEntries.map((entry) => (
+                            <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-xs">
+                              <div>
+                                <p className="font-semibold">#{entry.position} · {entry.nickname} · {entry.playerClass} · C{entry.dimensionalLayer}</p>
+                                <p className="text-muted-foreground">{entry.status} · {entry.reason}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                {entry.status === 'RESERVE' && <Button className="h-8 px-3 text-xs" onClick={() => setReserveAction({ type: 'promote', playerId: entry.playerId, nickname: entry.nickname })}>Oferecer vaga</Button>}
+                                {!['PROMOTED', 'REMOVED'].includes(entry.status) && <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => setReserveAction({ type: 'remove', playerId: entry.playerId, nickname: entry.nickname })}>Remover</Button>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {rsvpSummary.data.scheduleConflicts.length > 0 && (
+                        <div className="rounded border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
+                          <p className="mb-2 uppercase text-muted-foreground">Conflitos de horário no timezone do player</p>
+                          {rsvpSummary.data.scheduleConflicts.map((conflict) => (
+                            <p key={`${conflict.playerId}-${conflict.conflictingEventId}`}><strong>{conflict.nickname}</strong> ({conflict.timezone}): atual {conflict.currentEventLocal} × {conflict.conflictingEventName} {conflict.conflictingEventLocal}</p>
+                          ))}
+                        </div>
+                      )}
+                      {rsvpSummary.data.noShows.length > 0 && (
+                        <div className="rounded border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
+                          <p className="mb-2 uppercase text-muted-foreground">Confirmou, mas não esteve presente</p>
+                          <p className="mb-2 text-muted-foreground">Contexto operacional apenas: uma falta isolada não pune nem gera risk flag automaticamente.</p>
+                          <div className="space-y-2">
+                            {rsvpSummary.data.noShows.map((noShow) => (
+                              <div key={noShow.playerId}>
+                                <p className="font-semibold">{noShow.nickname} · detectado {new Date(noShow.detectedAt).toLocaleString()}</p>
+                                <p>{noShow.justification || 'Aguardando justificativa do player.'}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {rsvpSummary.data.responses.length > 0 && (
+                        <div className="grid gap-2 md:grid-cols-2">
+                          {rsvpSummary.data.responses.map((response) => (
+                            <div key={response.id} className="rounded border bg-background/45 p-2 text-xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-semibold">{response.nickname} · {response.playerClass} · C{response.dimensionalLayer}</p>
+                                <Badge tone={response.unavailableByAbsence ? 'red' : response.status === 'CONFIRMED' ? 'green' : response.status === 'DECLINED' ? 'red' : 'gold'}>{response.unavailableByAbsence ? 'AUSÊNCIA' : response.status}</Badge>
+                              </div>
+                              <p className="text-muted-foreground">{response.preferredRole ?? 'SEM_ROLE'} · atualizado {new Date(response.updatedAt).toLocaleString()}</p>
+                              {response.note ? <p className="mt-1">{response.note} <span className="text-muted-foreground">({response.noteVisibility === 'STAFF_ONLY' ? 'privada' : 'pública'})</span></p> : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {rsvpSummary.data.absenceImpacts.length > 0 && (
+                        <div className="rounded border border-red-400/25 bg-red-500/10 p-3 text-xs">
+                          <p className="mb-2 uppercase text-muted-foreground">Ausências que cobrem este evento</p>
+                          <div className="space-y-2">
+                            {rsvpSummary.data.absenceImpacts.map((absence) => (
+                              <div key={absence.id}>
+                                <p className="font-semibold">{absence.nickname} · {new Date(absence.startsAt).toLocaleString()} — {new Date(absence.endsAt).toLocaleString()}</p>
+                                <p>{absence.reason || 'Motivo não informado'} <span className="text-muted-foreground">({absence.reasonVisibility === 'STAFF_ONLY' ? 'privado para Staff' : 'público para players'})</span></p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {(selectedEvent?.checklist ?? []).length > 0 ? (
                     <div className="space-y-3 rounded-md border bg-background/35 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -650,6 +926,26 @@ export default function AdminEventsPage() {
             <Input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} placeholder={t(locale, 'eventCancelReasonPrompt')} />
           </label>
         </ConfirmationDialog>
+        <ConfirmationDialog
+          open={Boolean(reserveAction)}
+          title={reserveAction?.type === 'promote' ? 'Oferecer vaga da reserva?' : 'Remover da reserva?'}
+          description={reserveAction?.type === 'promote'
+            ? `${reserveAction?.nickname ?? 'Player'} receberá uma solicitação e precisará confirmar antes de entrar na composição.`
+            : `A entrada de ${reserveAction?.nickname ?? 'player'} será marcada como removida, preservando o histórico auditável.`}
+          confirmLabel={reserveAction?.type === 'promote' ? 'Enviar oferta' : 'Remover reserva'}
+          pending={promoteReserve.isPending || removeReserve.isPending}
+          onClose={() => setReserveAction(undefined)}
+          onConfirm={() => {
+            if (!reserveAction || !selectedEventId) return;
+            const mutation = reserveAction.type === 'promote' ? promoteReserve : removeReserve;
+            mutation.mutate({ eventId: selectedEventId, playerId: reserveAction.playerId }, {
+              onSuccess: () => {
+                notifyToast({ title: reserveAction.type === 'promote' ? 'Oferta enviada ao player.' : 'Reserva removida com histórico preservado.', tone: 'success' });
+                setReserveAction(undefined);
+              },
+            });
+          }}
+        />
       </div>
     </AuthGuard>
   );

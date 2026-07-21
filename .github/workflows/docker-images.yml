@@ -12,12 +12,26 @@ permissions:
 
 env:
   NEXT_PUBLIC_API_URL: https://app.guild-g3x.com.br/api/v1
-  DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/guild_platform?schema=public
+  DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/raven2_e2e?schema=public
 
 jobs:
   quality:
     name: Quality gates
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: raven2_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d raven2_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout
@@ -43,6 +57,14 @@ jobs:
 
       - name: Test critical domain rules
         run: npm run test:ci
+
+      - name: Apply migrations to disposable PostgreSQL
+        run: npx prisma migrate deploy --schema packages/database/prisma/schema.prisma
+
+      - name: Test critical transactional flows
+        run: npm run test:e2e
+        env:
+          E2E_DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Audit production dependencies
         run: npm run audit:ci
@@ -147,3 +169,13 @@ jobs:
         env:
           SMOKE_BASE_URL: ${{ env.NEXT_PUBLIC_API_URL }}
           SMOKE_AUTH_TOKEN: ${{ secrets.PRODUCTION_SMOKE_BEARER_TOKEN }}
+          SMOKE_RESULT_PATH: artifacts/authenticated-smoke.json
+
+      - name: Preserve authenticated smoke result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-smoke-${{ github.sha }}
+          path: artifacts/authenticated-smoke.json
+          if-no-files-found: ignore
+          retention-days: 30

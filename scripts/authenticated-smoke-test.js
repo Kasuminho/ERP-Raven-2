@@ -1,6 +1,10 @@
+const { mkdir, writeFile } = require('node:fs/promises');
+const { dirname, resolve } = require('node:path');
+
 const baseUrl = (process.env.SMOKE_BASE_URL ?? process.env.SMOKE_API_URL ?? 'https://app.guild-g3x.com.br/api/v1').replace(/\/$/, '');
 const token = process.env.SMOKE_AUTH_TOKEN ?? process.env.SMOKE_BEARER_TOKEN ?? '';
 const allowEmptyAuctions = process.env.SMOKE_ALLOW_EMPTY_AUCTIONS === 'true';
+const outputPath = resolve(process.env.SMOKE_RESULT_PATH ?? 'artifacts/authenticated-smoke.json');
 
 if (!token) {
   console.error('Authenticated smoke requires SMOKE_AUTH_TOKEN or SMOKE_BEARER_TOKEN.');
@@ -59,6 +63,7 @@ function summarizeFailure(result) {
 }
 
 async function main() {
+  const smokeStartedAt = Date.now();
   const checks = [];
 
   checks.push(assertCheck(await request('/auth/me'), (body) => Boolean(body?.userId || body?.discordId)));
@@ -67,6 +72,15 @@ async function main() {
   checks.push(assertCheck(await request('/diamond-sales/setup'), (body) => Array.isArray(body?.items) && Array.isArray(body?.activePlayers)));
   checks.push(assertCheck(await request('/health/details'), (body) => Array.isArray(body?.checks) && Boolean(body?.status)));
   checks.push(assertCheck(await request('/operations/staff/deploy'), (body) => Boolean(body?.currentApiVersion && body?.publicSmoke)));
+  checks.push(assertCheck(
+    await request('/operations/staff/product-telemetry?days=30'),
+    (body) => body?.privacy?.aggregationOnly === true && body?.privacy?.containsPlayerIdentity === false,
+  ));
+  checks.push(assertCheck(await request('/staff-tasks'), (body) => Array.isArray(body?.tasks) && Array.isArray(body?.suggestions)));
+  checks.push(assertCheck(await request('/staff-coverage'), (body) => Array.isArray(body?.coverage) && body?.permissionsSeparateFromResponsibility === true));
+  checks.push(assertCheck(await request('/staff-automations'), (body) => Array.isArray(body?.rules) && Array.isArray(body?.proposals)));
+  checks.push(assertCheck(await request('/playbooks/staff'), (body) => Array.isArray(body?.playbooks) && body?.playerStaffNotesExposed === false));
+  checks.push(assertCheck(await request('/communications/me'), (body) => Boolean(body?.preference && body?.defaultsAreConservative)));
 
   const optionsResult = await request('/operations/staff/auction-diagnostics/options');
   const optionsCheck = assertCheck(optionsResult, (body) => Array.isArray(body));
@@ -94,10 +108,13 @@ async function main() {
     ok: failed.length === 0,
     baseUrl,
     checkedAt: new Date().toISOString(),
+    durationMs: Date.now() - smokeStartedAt,
     checks,
   };
 
   console.log(JSON.stringify(output, null, 2));
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
 
   if (failed.length > 0) {
     process.exit(1);

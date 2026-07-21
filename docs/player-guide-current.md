@@ -1,6 +1,6 @@
 # Guia atual do Player - Raven2 G3X
 
-Ultima revisao: 2026-07-20
+Ultima revisao: 2026-07-21
 
 Este e o guia operacional atual dos players. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -29,6 +29,22 @@ O dashboard mostra seu plano de acao:
 Ele pode apontar para Codex, progresso, requests, seus bids, interesses, leiloes disponiveis e eventos proximos.
 
 O dashboard nao mostra ranking secreto, concorrentes, bids de outros players ou locks de terceiros.
+
+### 2.1 Plano de onboarding
+
+Em `/dashboard/onboarding`, recruits convertidos recebem um plano real com versao do template, prazo, progresso obrigatorio/total e proximo passo PT-BR/EN. Regras, perfil, timezone, build, wishlist e primeiro evento usam evidencias do ERP; as etapas de entendimento de presenca/DKP e escolha de canais sao confirmadas por voce depois de executar e ler o fluxo. Uma nova versao publicada pela Staff nao altera silenciosamente seu plano em andamento.
+
+### 2.2 Trial transparente
+
+Em `/dashboard/trial`, objetivo, periodo e criterios PT-BR/EN aparecem antes da avaliacao. Check-ins dos dias 7/14/30 registram fatos visiveis; notas internas continuam fora da sua resposta. Uma ausencia declarada pausa o trial e ajusta o fim exibido. Aprovar, estender ou encerrar exige decisao humana com motivo. Trial nao altera regras de loot nem gera punicao automatica.
+
+### 2.3 Mentoria e primeiros marcos
+
+Em `/dashboard/mentorship`, consulte mentor voluntario ou grupo de acolhimento, peca ajuda por conteudo/role sem depender de DM e acompanhe as datas do primeiro evento, boss, request, interesse e War Room. Sao marcos, nunca pontos. Voce tambem pode se voluntariar; mentor nao recebe poder disciplinar nem acesso a notas Staff.
+
+### 2.4 Pulso voluntario e anonimo
+
+Em `/dashboard/pulse`, voce pode responder cinco notas de 1 a 5 e um comentario opcional, ou pular sem consequencia. A resposta nao guarda sua identidade; o recibo de participacao fica separado. Staff so recebe medias/textos quando o grupo minimo e atingido, nunca scores individuais. Texto aberto passa por moderacao e expira no prazo exibido. Pulso nao afeta loot, DKP, acesso ou disciplina.
 
 ### 3. Timeline
 
@@ -166,10 +182,37 @@ Rota: `/dashboard/attendance`.
 
 Presenca e controlada pela Staff.
 
+- Antes do evento, responda RSVP como `vou participar`, `talvez` ou `nao vou`.
+- A nota e privada para a Staff por padrao; marque-a como publica somente se quiser compartilhar com outros players.
+- Voce pode mudar a resposta ate o inicio do evento.
+- Se ficar indisponivel por um periodo, registre inicio, fim e motivo opcional na mesma tela. Eventos dentro da janela deixam de exigir resposta individual.
+- O motivo da ausencia e privado para a Staff por padrao. Outros players veem somente o total indisponivel, salvo quando voce optar por compartilhar o motivo.
+- Se a Staff colocar voce na reserva, a posicao aparece sem revelar o motivo interno. Quando uma vaga abrir, confirme ou recuse a oferta na propria tela.
+- Aceitar uma promocao de reserva confirma o RSVP, mas ainda nao marca presenca nem concede DKP.
+- Em Perfil, escolha se lembretes nao criticos de evento chegam pela Web, Discord, ambos ou nenhum. Nas 24h anteriores, o ERP lembra apenas quem ainda nao respondeu ou confirmou.
+- Se voce confirmou e nao apareceu, a tela permite explicar depois. A justificativa fica com a Staff; uma falta isolada nao gera punicao ou risk flag automatica.
 - Voce nao marca propria presenca.
 - A Staff abre evento, registra presentes e finaliza.
 - Cada boss de lote tem presenca e DKP independentes.
 - Ao finalizar, o DKP daquele boss e distribuido.
+
+RSVP serve para prever composicao. Ele nunca marca presenca nem concede DKP.
+
+Em `/dashboard/playbook`, veja objetivo/brief publico PT-BR/EN e somente a instrucao do seu papel no evento ou War Room. **Li minha funcao** registra leitura separadamente de RSVP ou presenca. Notas internas e instrucoes de outros papeis nao aparecem.
+
+### 10.1 Regras publicadas
+
+Em `/dashboard/rules`, consulte a politica vigente, numero da versao, autoria, data de vigencia e o que mudou. O snapshot publicado nao muda quando a Staff ajusta uma regra operacional: uma nova politica exige outra versao. Proximas versoes aparecem separadas ate a data de vigencia.
+
+Ao abrir uma versão publicada, o ERP registra a abertura. Use **Li e entendi** depois de ler; isso comprova somente ciência daquela informação, não concordância jurídica ampla. Enquanto faltar o recibo, a política aparece no seu plano de ação. Mudanças emergenciais recebem selo e mostram o motivo informado pela Staff.
+
+### 10.2 Casos privados
+
+Em `/dashboard/cases`, abra uma dúvida, denúncia operacional ou recurso sem expor o assunto em canal público. Somente você e a Staff autorizada veem a conversa. Escolha categoria e urgência, descreva fatos/datas e acompanhe as respostas. Se enviar novo contexto depois da resolução, o caso reabre. Contestação de resultado de leilão continua na página do próprio leilão para preservar as regras e o sigilo daquele domínio.
+
+Em `/dashboard/communications`, escolha Web, Discord, ambos ou nenhum por categoria; configure timezone, quiet hours e digest diario/semanal. Alteracoes repetidas do mesmo objeto sao agrupadas, sempre com link direto e sem dados de terceiros. Use o teste de canal antes de confiar no silencio. Alertas criticos explicitamente classificados podem furar quiet hours.
+
+Quando o bot estiver configurado, `/erp-rsvp`, `/erp-ausencia`, `/erp-instrucao` e `/erp-regra` salvam no mesmo estado canonico do site e devolvem a rota para revisao. O site continua funcionando sem Discord.
 
 ### 11. Notificacoes e idiomas
 
@@ -225,6 +268,22 @@ The dashboard shows your action plan:
 It can point to Codex, progress, requests, your own bids, interests, available auctions, and upcoming events.
 
 It does not show secret ranking, competitors, other players' bids, or third-party DKP locks.
+
+### 2.1 Onboarding plan
+
+On `/dashboard/onboarding`, converted recruits receive a real plan with a template version, deadline, required/total progress, and a PT-BR/EN next step. Rules, profile, timezone, build, wishlist, and first-event milestones use ERP evidence; attendance/DKP understanding and channel selection are confirmed by you after completing and reading the flow. A new Staff template version never silently changes your active plan.
+
+### 2.2 Transparent trial
+
+On `/dashboard/trial`, the objective, period, and PT-BR/EN criteria are visible before evaluation. Day 7/14/30 check-ins record player-visible facts while internal notes stay private. A declared absence pauses the trial and adjusts the displayed end. Approval, extension, or closure requires a reasoned human decision. Trial never changes loot rules or applies automatic punishment.
+
+### 2.3 Mentorship and first milestones
+
+On `/dashboard/mentorship`, view a volunteer mentor or welcome group, ask for help by content/role without relying on a DM, and track the dates of your first event, boss, request, interest, and War Room. These are milestones, never points. You may also volunteer; mentors receive no disciplinary power or Staff notes.
+
+### 2.4 Voluntary anonymous pulse
+
+On `/dashboard/pulse`, you may answer five 1-to-5 questions plus an optional comment, or skip without consequences. The response stores no player identity; the participation receipt is separate. Staff only receives averages/text after the minimum group size, never individual scores. Open text is moderated and expires on the displayed schedule. Pulse never affects loot, DKP, access, or discipline.
 
 ### 3. Timeline
 
@@ -362,10 +421,37 @@ Route: `/dashboard/attendance`.
 
 Attendance is controlled by Staff.
 
+- Before the event, answer RSVP with `I will attend`, `maybe`, or `cannot attend`.
+- Notes are private to Staff by default; make one public only when you want to share it with other players.
+- You may change your answer until the event starts.
+- If you will be unavailable for a period, register its start, end, and an optional reason on the same screen. Events in that window no longer require individual answers.
+- Absence reasons are private to Staff by default. Other players see only the unavailable total unless you choose to share your reason.
+- If Staff places you on reserve, your position is shown without exposing the internal reason. When a slot opens, accept or decline the offer on the same screen.
+- Accepting a reserve promotion confirms RSVP, but still does not mark attendance or grant DKP.
+- In Profile, choose whether non-critical event reminders arrive through Web, Discord, both, or neither. During the previous 24 hours, the ERP only reminds unanswered or confirmed players.
+- If you confirmed and missed the event, the screen lets you explain afterward. The explanation stays with Staff; one missed event creates no automatic punishment or risk flag.
 - You do not mark your own attendance.
 - Staff opens the event, records present players, and finalizes it.
 - Each boss in a batch has independent attendance and DKP.
 - When finalized, that boss' DKP is distributed.
+
+RSVP forecasts composition. It never marks attendance or grants DKP.
+
+On `/dashboard/playbook`, view the public PT-BR/EN objective and brief plus only your role instruction for the event or War Room. **I read my role** records reading separately from RSVP or attendance. Internal notes and other roles never appear.
+
+### 10.1 Published rules
+
+On `/dashboard/rules`, review the current policy, version number, author, effective date, and the plain-language changes. A published snapshot does not change when Staff adjusts an operational rule: a new policy requires another version. Upcoming versions stay separate until their effective date.
+
+Opening a published version records that it was opened. Use **I read and understood** after reading; this proves awareness of that information only, not broad legal agreement. Until you acknowledge it, the policy stays in your action plan. Emergency changes carry a badge and show Staff's reason.
+
+### 10.2 Private cases
+
+On `/dashboard/cases`, open a question, operational report, or appeal without exposing it in a public channel. Only you and authorized Staff can see the thread. Choose a category and urgency, describe facts/dates, and follow the replies. New context reopens a resolved case. Auction-result disputes remain on the auction page to preserve that domain's rules and secrecy.
+
+On `/dashboard/communications`, choose Web, Discord, both, or none per category; configure timezone, quiet hours, and a daily/weekly digest. Repeated changes to the same object are grouped with a direct link and no third-party data. Test the channel before trusting the silence. Explicitly classified critical alerts may bypass quiet hours.
+
+When the bot is configured, `/erp-rsvp`, `/erp-ausencia`, `/erp-instrucao`, and `/erp-regra` save to the same canonical website state and return a review route. The website remains functional without Discord.
 
 ### 11. Notifications and languages
 

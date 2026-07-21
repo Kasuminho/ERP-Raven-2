@@ -98,7 +98,7 @@ export default function StaffRecruitmentPage() {
       <ConfirmationDialog
         open={Boolean(convertTarget)}
         title="Converter em player?"
-        description="Informe o userId do usuario Discord ja sincronizado. O sistema cria player, perfil inicial e nota de onboarding."
+        description="Informe o userId do usuário Discord já sincronizado. O sistema cria player, perfil inicial, nota Staff e plano versionado de onboarding com prazo."
         confirmLabel="Converter"
         pending={convert.isPending}
         onClose={() => setConvertTarget(undefined)}

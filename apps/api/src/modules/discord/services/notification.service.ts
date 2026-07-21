@@ -6,7 +6,7 @@ import { AuditService } from '../../audit/services/audit.service';
 import { buildAttendanceStartedEmbed, buildEventFinalizedEmbed } from '../bot/embeds/attendance.embeds';
 import { buildAuctionCreatedEmbed, buildAuctionDeliveryEmbed, buildAuctionWinnerEmbed } from '../bot/embeds/auction.embeds';
 import { buildDkpNotificationEmbed } from '../bot/embeds/dkp.embeds';
-import { buildAnnouncementEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
+import { buildAnnouncementEmbed, buildEventReminderEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildPlayerDailyReminderEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../bot/embeds/staff-review.embeds';
 import { DiscordLocale, localeCopy, resolveDiscordLocale } from '../bot/embeds/discord-locale';
 import { bilingualBlocks, pickBilingualVoice, pickStaffVoice } from '../bot/embeds/webhook-voice';
@@ -112,6 +112,42 @@ export class NotificationService {
     if (data.discordId) {
       await this.sendDirectMessage(data.discordId, payload, 'DISCORD_NOTIFY_AUCTION_DROP_DELIVERED_DM', data.auctionId);
     }
+  }
+
+  async notifyPlayerDailyReminder(data: {
+    playerId: string;
+    playerName: string;
+    discordId: string;
+    reasonsPt: string[];
+    reasonsEn: string[];
+    hasProfileSignals: boolean;
+    hasCodex: boolean;
+  }): Promise<boolean> {
+    return this.sendDirectMessage(data.discordId, {
+      embeds: [buildPlayerDailyReminderEmbed({
+        playerName: data.playerName,
+        reasonsPt: data.reasonsPt,
+        reasonsEn: data.reasonsEn,
+        profileUrl: data.hasProfileSignals ? this.dashboardUrl('/dashboard/profile') : undefined,
+        codexUrl: data.hasCodex ? this.dashboardUrl('/dashboard/codex') : undefined,
+        hasCodex: data.hasCodex,
+      })],
+    }, 'DISCORD_NOTIFY_PLAYER_DAILY_REMINDER_DM', data.playerId);
+  }
+
+  async notifyEventReminder(data: {
+    eventId: string;
+    playerId: string;
+    playerName: string;
+    discordId: string;
+    eventName: string;
+    startsAt: Date;
+    timezone: string;
+    requiresRsvp: boolean;
+  }): Promise<boolean> {
+    return this.sendDirectMessage(data.discordId, {
+      embeds: [buildEventReminderEmbed({ ...data, url: this.dashboardUrl('/dashboard/attendance') })],
+    }, 'DISCORD_NOTIFY_EVENT_REMINDER_DM', `${data.eventId}:${data.playerId}`);
   }
 
   async notifyDiamondSaleCompleted(data: {
@@ -560,12 +596,14 @@ export class NotificationService {
     payload: DiscordNotificationPayload,
     action: string,
     targetId: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await this.bot.sendDirectMessage(discordId, payload);
       await this.audit(action, targetId, { discordId });
+      return true;
     } catch (error) {
       await this.auditFailure(`${action}_FAILED`, targetId, error, { discordId });
+      return false;
     }
   }
 
