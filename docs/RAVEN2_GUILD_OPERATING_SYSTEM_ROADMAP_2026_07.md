@@ -3,10 +3,12 @@
 ## Estado atual da release
 
 O prelude e as Frentes 1/2/3/4/5/6/7/9 abaixo integram a release
-2026-07-21. Os blocos `Estado em 2026-07-21` preservam o retrato do checkout
-antes da autorizacao de publicacao. A Frente 0 continua parcial ate a Staff
-registrar entrevistas reais e quatro semanas consecutivas; a Frente 8 continua
-futura e condicionada a um caso coletivo real validado.
+2026-07-21 e estao em producao. Os blocos detalhados `Estado em 2026-07-21`
+preservam o retrato historico do checkout antes da autorizacao de publicacao;
+a tabela de estado vivo e a auditoria de conclusao abaixo sao as fontes atuais.
+A Frente 0 continua parcial ate a Staff registrar entrevistas reais e quatro
+semanas consecutivas; a Frente 8 continua futura e condicionada a um caso
+coletivo real validado.
 
 Documento vivo de descoberta, planejamento e execucao da nova rodada de produto
 do ERP Raven2. Esta rodada nao reabre os roadmaps anteriores. Ela partiu do
@@ -45,30 +47,59 @@ Atualizado em 2026-07-21, depois de reconciliar codigo, historico e pendencias r
 
 | Bloco | Estado | Evidencia/proximo passo |
 | --- | --- | --- |
-| Prelude solicitado - cobranca direta de pendencias | `implementado` | Cron diario idempotente, notificacao Web e DM bilingue para perfil/STATUS/presenca/Codex; migration, testes e Centrais canonicas atualizadas. Publicacao live depende do protocolo completo. |
+| Prelude solicitado - cobranca direta de pendencias | `implementado em producao` | Cron diario idempotente, notificacao Web e DM bilingue para perfil/STATUS/presenca/Codex; migration, testes e Centrais live atualizadas. |
 | Frente 0 - baseline e validacao G3X | `parcial` | Pesquisa e coleta Staff persistente estao prontas; entrevistas e quatro semanas de metricas reais continuam pendentes. |
-| Fatia 1.1 - RSVP generico | `implementado` | Contrato, API, telas player/Staff, privacidade, auditoria, migration e testes concluidos; publicacao live depende do protocolo completo. |
-| Fatia 1.2 - periodos de ausencia | `implementado` | Cadastro player, privacidade, cobertura automatica de eventos, impacto agregado Staff, migration, telas e testes concluidos; publicacao live depende do protocolo completo. |
-| Fatia 1.3 - recorrencia, reserva e composicao | `implementado` | Series semanais, pausa/excecoes, cron de horizonte, alvos explicaveis, reserva confirmada e conflitos por timezone concluidos; publicacao live depende do protocolo completo. |
-| Fatia 1.4 - lembretes e no-show explicavel | `implementado` | Preferencia Web/Discord/ambos/nenhum, lembrete idempotente em 24h somente para sem resposta/confirmados e justificativa de no-show sem punicao automatica concluidos; publicacao live depende do protocolo completo. |
-| Fatia 2.1 - versoes publicadas de politica | `implementado` | Rascunho separado, snapshot imutavel, autoria, vigencia, versao, diff PT-BR/EN e deteccao de drift concluidos; publicacao live depende do protocolo completo. |
-| Fatia 2.2 - recibo de ciencia | `implementado` | Inbox/action plan, abertura e ciencia idempotentes, cobertura Staff e selo emergencial com motivo concluidos; publicacao live depende do protocolo completo. |
-| Fatia 2.3 - casos e recursos privados | `implementado` | Caixa privada, conversa separada de nota interna, dono/prazo/historico e integracao sem duplicar contestacao de leilao concluidos; publicacao live depende do protocolo completo. |
-| Fatia 3.1 - plano de onboarding | `implementado` | Template Staff versionado, snapshot por player, prazo, proximo passo bilingue e instancia na conversao concluidos; publicacao live depende do protocolo completo. |
-| Fatia 3.2 - trial com criterio visivel | `implementado` | Periodo/objetivo/criterios bilingues publicados, check-ins 7/14/30, pausa por ausencia e decisao manual auditada concluidos; publicacao live depende do protocolo completo. |
-| Fatia 3.3 - mentoria e primeira atividade | `implementado` | Voluntariado explicito, grupo de acolhimento, pedidos de ajuda estruturados e cinco marcos factuais concluidos; publicacao live depende do protocolo completo. |
-| Fatia 4.1 - pulso voluntario | `implementado` | Resposta sem identidade, recibo separado, grupo minimo, moderacao e expurgo diario documentados; publicacao live depende do protocolo completo. |
-| Fatia 4.2 - sinais explicaveis | `implementado` | Cinco sinais com fatos/janelas, comparacao de presenca, historico RSVP e coorte sem score/acao automatica; publicacao live depende do protocolo completo. |
-| Fatia 4.3 - saude da lideranca | `implementado` | Check-in de carga/plantao, cobertura por sete areas e concentracao auditada com recomendacao de delegar/pausar; publicacao live depende do protocolo completo. |
-| Fatia 5.1 - fila Staff atribuivel | `implementado` | Tarefa persistida, sugestoes confirmaveis, dono/substituto/prazo/link e handoff auditado concluidos; publicacao live depende do protocolo completo. |
-| Fatias 5.2-5.3 | `implementado` | Cobertura declarada e automacao Staff segura concluidas; publicacao live depende do protocolo completo. |
-| Frente 6 | `implementado` | Playbook versionado, licoes do after-action e leitura por papel concluidos; publicacao live depende do protocolo completo. |
-| Frente 7 | `implementado` | Preferencias/quiet hours, digest e acoes Discord espelhadas concluidos; publicacao live depende do protocolo completo. |
+| Fatia 1.1 - RSVP generico | `implementado em producao` | Contrato, API, telas player/Staff, privacidade, auditoria, migration e testes concluidos. |
+| Fatia 1.2 - periodos de ausencia | `implementado em producao` | Cadastro player, privacidade, cobertura automatica de eventos, impacto agregado Staff, migration, telas e testes concluidos. |
+| Fatia 1.3 - recorrencia, reserva e composicao | `implementado em producao` | Series semanais, pausa/excecoes, cron de horizonte, alvos explicaveis, reserva confirmada e conflitos por timezone concluidos. |
+| Fatia 1.4 - lembretes e no-show explicavel | `implementado em producao` | Preferencia Web/Discord/ambos/nenhum, lembrete idempotente em 24h somente para sem resposta/confirmados e justificativa de no-show sem punicao automatica concluidos. |
+| Fatia 2.1 - versoes publicadas de politica | `implementado em producao` | Rascunho separado, snapshot imutavel, autoria, vigencia, versao, diff PT-BR/EN e deteccao de drift concluidos. |
+| Fatia 2.2 - recibo de ciencia | `implementado em producao` | Inbox/action plan, abertura e ciencia idempotentes, cobertura Staff e selo emergencial com motivo concluidos. |
+| Fatia 2.3 - casos e recursos privados | `implementado em producao` | Caixa privada, conversa separada de nota interna, dono/prazo/historico e integracao sem duplicar contestacao de leilao concluidos. |
+| Fatia 3.1 - plano de onboarding | `implementado em producao` | Template Staff versionado, snapshot por player, prazo, proximo passo bilingue e instancia na conversao concluidos. |
+| Fatia 3.2 - trial com criterio visivel | `implementado em producao` | Periodo/objetivo/criterios bilingues publicados, check-ins 7/14/30, pausa por ausencia e decisao manual auditada concluidos. |
+| Fatia 3.3 - mentoria e primeira atividade | `implementado em producao` | Voluntariado explicito, grupo de acolhimento, pedidos de ajuda estruturados e cinco marcos factuais concluidos. |
+| Fatia 4.1 - pulso voluntario | `implementado em producao` | Resposta sem identidade, recibo separado, grupo minimo, moderacao e expurgo diario documentados. |
+| Fatia 4.2 - sinais explicaveis | `implementado em producao` | Cinco sinais com fatos/janelas, comparacao de presenca, historico RSVP e coorte sem score/acao automatica. |
+| Fatia 4.3 - saude da lideranca | `implementado em producao` | Check-in de carga/plantao, cobertura por sete areas e concentracao auditada com recomendacao de delegar/pausar. |
+| Fatia 5.1 - fila Staff atribuivel | `implementado em producao` | Tarefa persistida, sugestoes confirmaveis, dono/substituto/prazo/link e handoff auditado concluidos. |
+| Fatias 5.2-5.3 | `implementado em producao` | Cobertura declarada e automacao Staff segura concluidas. |
+| Frente 6 | `implementado em producao` | Playbook versionado, licoes do after-action e leitura por papel concluidos. |
+| Frente 7 | `implementado em producao` | Preferencias/quiet hours, digest e acoes Discord espelhadas concluidos. |
 | Frente 8 | `futuro condicionado` | Nao implementar sem caso real validado de campanha coletiva. |
-| Frente 9 | `implementado` | Validacao forte, telemetria agregada, smoke com artefato, runbooks, retencao e E2E HTTP/Nest sobre PostgreSQL descartavel concluidos; CI aplica todas as migrations antes dos quatro fluxos criticos. |
-E a lacuna mais frequente nas comunidades pesquisadas, possui encaixe direto no
-modelo atual de eventos e War Room e reduz trabalho manual sem tocar nas regras
-mais sensiveis de DKP/leilao.
+| Frente 9 | `implementado em producao` | Validacao forte, telemetria agregada, smoke com artefato, runbooks, retencao e E2E HTTP/Nest sobre PostgreSQL descartavel concluidos; CI aplica todas as migrations antes dos quatro fluxos criticos. |
+
+A Central de Compromissos foi priorizada porque era a lacuna mais frequente
+nas comunidades pesquisadas, possuia encaixe direto no modelo de eventos e War
+Room e reduzia trabalho manual sem tocar nas regras sensiveis de DKP/leilao.
+
+## Auditoria de conclusao tecnica
+
+Auditoria executada em 2026-07-21 contra `master`, producao, banco e Discord:
+
+- o prelude usa `PLAYER_STATUS_MAX_AGE_DAYS=21`, janela de presenca de 15 dias
+  e limite estrito abaixo de 50%; perfil sem build/role/disponibilidade e Codex
+  `SENT` entram no lembrete diario consolidado e idempotente por player/dia;
+- o cron roda diariamente em `America/Sao_Paulo`, entrega notificacao Web e DM
+  PT-BR/EN e possui testes para os cinco sinais, limite exato de 50%, ausencia
+  de evento elegivel, Codex pendente e deduplicacao diaria;
+- as Frentes 1/2/3/4/5/6/7/9, migrations e tutoriais chegaram a producao no
+  commit de release `410c700`; o hardening posterior e o cockpit da Frente 0
+  chegaram pelos commits `2bbc5eb` e `6522633`;
+- o workflow `Build Docker images` da versao `6522633` concluiu quality gates,
+  imagens e smoke com sucesso, e `/health` confirmou a mesma versao em producao;
+- a Central do Player possui 20/20 posts canonicos PT-BR/EN; a Central Staff
+  possui 30/30 posts PT-BR, 12/12 tags, indices e permissoes verificadas;
+- o banco da campanha `G3X-2026-07` ainda registra zero entrevistas e zero
+  semanas congeladas. Isso prova que a Frente 0 continua `parcial`, nao uma
+  pendencia de codigo;
+- nao existe caso coletivo real documentado que autorize a Frente 8. Ela nao e
+  pendencia da release: e uma opcao futura protegida por gate de descoberta.
+
+Condicao restante para encerrar o programa: a Staff deve registrar a amostra
+real de entrevistas e congelar as quatro semanas consecutivas de 27/07 a 24/08.
+O ERP calcula as metricas automaticas; a Staff declara somente presenca esperada
+e minutos de cobranca. Nenhum dado deve ser inferido ou preenchido retroativamente.
 
 ## Metodo e limites da descoberta
 
@@ -304,7 +335,7 @@ estao em producao. O plano de campo organiza roteiro, cobertura pendente e as
 quatro semanas oficiais de 27/07 a 24/08. Entrevistas e baseline G3X continuam
 pendentes porque exigem evidencia real, nao preenchimento ficticio.
 
-Instrumentacao disponivel no codigo local:
+Instrumentacao disponivel em producao:
 
 - `/dashboard/staff/roadmap` mostra todas as frentes, estado e links de evidencia;
 - `GET /product-validation` mostra o gate Staff-only da campanha `G3X-2026-07`;

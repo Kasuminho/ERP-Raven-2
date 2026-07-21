@@ -422,6 +422,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-21 | Roadmap Guild Operating System foi reconciliado com a producao: prelude e Frentes 1-7/9 estao live; Frente 0 depende apenas da coleta real e Frente 8 permanece futura por gate de caso coletivo. | produto/roadmap/auditoria |
 | 2026-07-21 | Frente 0 ganhou plano de campo com proximo perfil, roteiro copiavel e calendario acionavel das quatro semanas oficiais, sem preencher evidencia por inferencia. | produto/validacao/Staff |
 | 2026-07-21 | Publicadores das Centrais passaram a recarregar o forum depois de sincronizar tags, evitando falso `tag not found` quando uma tag canonica e criada no mesmo envio. | Discord/tutoriais/confiabilidade |
 | 2026-07-21 | Lockfile recebeu patches sem quebra de major para dependencias transitivas de Next/Discord e utilitarios; auditoria de producao caiu de 10 para 7 altas sem afrouxar o baseline do CI. | seguranca/dependencias/CI |
