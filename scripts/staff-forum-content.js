@@ -394,16 +394,18 @@ O painel usa o check-in mais recente e 14 dias de acoes auditadas para mostrar a
 Responsabilidade nao concede permissao, alerta nao escala sozinho e nenhum check-in vira avaliacao disciplinar.`,
   },
   {
-    slug: 'staff-fila-handoff-roadmap', title: '24 · Fila, handoff e roadmap visivel', tag: 'routine', route: '/dashboard/staff/tasks',
-    visual: ['Revise frentes e evidencias', 'Registre entrevistas sem identidade', 'Congele 4 semanas reais'],
+    slug: 'staff-fila-handoff-roadmap', title: '24 · Fila, handoff e roadmap visivel', tag: 'routine', route: '/dashboard/staff/roadmap',
+    visual: ['Copie o roteiro de campo', 'Cubra os perfis pendentes', 'Congele 4 semanas reais'],
     body: `## Trabalho visivel sobrevive ao logout do lider
 Em [Fila Staff](${route('/dashboard/staff/tasks')}) registre area, prioridade, dono, substituto, prazo, estado e link direto para o objeto. Sugestoes do briefing, pauta e sinais nao criam nada sozinhas: revise e confirme a conversao.
 
 No handoff, escreva contexto final e proximo passo antes de transferir o dono. A trilha fica auditada e a chave da origem impede duplicar a mesma sugestao.
 
-Use o [Roadmap visivel](${route('/dashboard/staff/roadmap')}) para validar frentes, estado e evidencias. A Frente 0 so libera decisao depois dos tres perfis Staff, pelo menos cinco entrevistas cobrindo veterano/novato/ativo/baixa atividade, quatro semanas consecutivas congeladas e confirmacao de que RSVP reduz cobranca manual real.
+Use o [Roadmap visivel](${route('/dashboard/staff/roadmap')}) para validar frentes, estado e evidencias. O plano de campo mostra o proximo perfil pendente, oferece um roteiro canonico copiavel e organiza a medicao de 27/07 a 24/08 em quatro semanas de segunda a segunda. Quando uma semana encerrar, use o atalho **Usar no formulario** e declare somente presenca esperada, quando conhecida, e minutos de cobranca.
 
-Entrevista nao guarda nome nem conteudo privado de voz/DM: registre apenas perfil, canais acompanhados, visibilidade aceitavel de ausencia e sintese operacional. Na semana encerrada iniciada na segunda-feira, o ERP calcula eventos, presenca, no-shows, recruits com atividade e tarefas sem substituto; informe presenca esperada, quando conhecida, e minutos de cobranca. IMPLEMENTADO significa codigo local validado; producao e Centrais live continuam pendentes ate o protocolo completo.`,
+A Frente 0 so libera decisao depois dos tres perfis Staff, pelo menos cinco entrevistas cobrindo veterano/novato/ativo/baixa atividade, quatro semanas consecutivas congeladas e confirmacao de que RSVP reduz cobranca manual real.
+
+Entrevista nao guarda nome nem conteudo privado de voz/DM: registre apenas perfil, canais acompanhados, visibilidade aceitavel de ausencia e sintese operacional. Na semana encerrada iniciada na segunda-feira, o ERP calcula eventos, presenca, no-shows, recruits com atividade e tarefas sem substituto. Evidencia real, sem fanfic de dashboard.`,
   },
   {
     slug: 'staff-cobertura-areas', title: '25 · Areas, plantao e cobertura', tag: 'routine', route: '/dashboard/staff/coverage',

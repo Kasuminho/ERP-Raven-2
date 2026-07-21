@@ -51,6 +51,24 @@ const absenceOptions: Array<[ProductValidationAbsenceVisibility, string]> = [
 const labelFor = (profile: ProductValidationInterviewProfile) =>
   profiles.find(([value]) => value === profile)?.[1] ?? profile;
 
+const fieldQuestions = [
+  "Hoje, o que mais faz a Staff precisar cobrar você manualmente?",
+  "Quais canais você realmente acompanha para compromissos da guilda?",
+  "Como uma ausência deveria aparecer: pública, somente Staff, anônima ou dependendo do motivo?",
+  "Responder RSVP no ERP evitaria alguma cobrança real? Qual etapa mudaria?",
+  "Qual é a menor mudança que pouparia tempo ou evitaria confusão nesta rotina?",
+];
+
+const fieldWeeks = [
+  { start: "2026-07-27", end: "2026-08-03" },
+  { start: "2026-08-03", end: "2026-08-10" },
+  { start: "2026-08-10", end: "2026-08-17" },
+  { start: "2026-08-17", end: "2026-08-24" },
+];
+
+const dateLabel = (value: string) =>
+  new Date(`${value}T12:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+
 export default function StaffRoadmapPage() {
   const workspace = useProductValidation();
   const createInterview = useCreateProductValidationInterview();
@@ -66,6 +84,46 @@ export default function StaffRoadmapPage() {
   const [staffMinutes, setStaffMinutes] = useState("");
   const [weekNote, setWeekNote] = useState("");
   const gate = workspace.data?.gate;
+  const capturedWeekStarts = new Set(
+    workspace.data?.weeks.map((week) => week.weekStart.slice(0, 10)) ?? [],
+  );
+  const now = Date.now();
+  const missingStaffProfiles = (gate?.requiredStaffProfiles ?? []).filter(
+    (required) => !gate?.staffProfilesCovered.includes(required),
+  );
+  const missingPlayerProfiles = ([
+    "PLAYER_VETERAN",
+    "PLAYER_NEW",
+    "PLAYER_ACTIVE",
+    "PLAYER_LOW_ACTIVITY",
+  ] as ProductValidationInterviewProfile[]).filter(
+    (required) => !gate?.playerProfilesCovered.includes(required),
+  );
+  const nextInterviewProfile = missingStaffProfiles[0]
+    ?? missingPlayerProfiles[0]
+    ?? ((gate?.playerInterviewCount ?? 0) < 5 ? "PLAYER_ACTIVE" : null);
+
+  const copyFieldGuide = async () => {
+    const guide = [
+      "Frente 0 · roteiro de entrevista anonimizada",
+      `Próximo perfil sugerido: ${nextInterviewProfile ? labelFor(nextInterviewProfile) : "cobertura mínima completa"}`,
+      "",
+      ...fieldQuestions.map((question, index) => `${index + 1}. ${question}`),
+      "",
+      "Registro: guarde somente perfil, canais, visibilidade de ausência, impacto do RSVP e uma síntese operacional.",
+      "Não registre nome, nick, trechos de DM ou conteúdo privado de voz.",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(guide);
+      notifyToast({ title: "Roteiro de campo copiado.", tone: "success" });
+    } catch {
+      notifyToast({
+        title: "Nao foi possivel copiar o roteiro.",
+        description: "Revise a permissao da area de transferencia e tente novamente.",
+        tone: "error",
+      });
+    }
+  };
 
   const submitInterview = () => {
     if (!interviewedAt || summary.trim().length < 10 || selectedChannels.length === 0) return;
@@ -147,6 +205,66 @@ export default function StaffRoadmapPage() {
             <p className="text-sm text-muted-foreground">
               RSVP reduz uma cobrança manual real: <strong>{gate?.rsvpValidated ? "confirmado por ao menos uma entrevista" : "ainda não confirmado"}</strong>. O ERP não guarda nome do entrevistado nem conteúdo privado de voz/DM.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Plano de campo · quem ouvir e quando medir</CardTitle></CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_1.9fr]">
+              <div className="space-y-3 rounded border border-white/10 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">Próxima entrevista</p>
+                  <Badge tone={nextInterviewProfile ? "gold" : "green"}>
+                    {nextInterviewProfile ? labelFor(nextInterviewProfile) : "Cobertura mínima completa"}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Faltam {missingStaffProfiles.length} perfis Staff e {missingPlayerProfiles.length} perfis de player.
+                  {nextInterviewProfile ? " Depois de cobrir os quatro perfis de player, complete pelo menos cinco entrevistas." : " O gate ainda depende das semanas e da validação real do RSVP."}
+                </p>
+                <Button onClick={copyFieldGuide}>Copiar roteiro de entrevista</Button>
+              </div>
+
+              <div className="rounded border border-white/10 p-4">
+                <p className="font-semibold">Perguntas canônicas</p>
+                <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  {fieldQuestions.map((question, index) => (
+                    <li key={question}><strong className="text-foreground">{index + 1}.</strong> {question}</li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Faça a conversa onde a pessoa se sentir confortável. No ERP entra somente a síntese sem identidade.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">Janela oficial das quatro semanas</p>
+                <span className="text-xs text-muted-foreground">Segunda a segunda · America/Sao_Paulo</span>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {fieldWeeks.map((week, index) => {
+                  const captured = capturedWeekStarts.has(week.start);
+                  const started = now >= new Date(`${week.start}T00:00:00.000-03:00`).getTime();
+                  const ended = now >= new Date(`${week.end}T00:00:00.000-03:00`).getTime();
+                  const status = captured ? "CONGELADA" : ended ? "PRONTA" : started ? "COLETANDO" : "AGUARDANDO";
+                  return (
+                    <div key={week.start} className="rounded border border-white/10 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold">Semana {index + 1}</span>
+                        <Badge tone={captured ? "green" : ended ? "gold" : "blue"}>{status}</Badge>
+                      </div>
+                      <p className="mt-2 text-sm">{dateLabel(week.start)} → {dateLabel(week.end)}</p>
+                      {ended && !captured ? (
+                        <Button className="mt-3" onClick={() => setWeekStart(week.start)}>Usar no formulário</Button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

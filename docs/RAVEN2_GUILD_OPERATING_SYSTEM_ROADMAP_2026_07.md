@@ -300,8 +300,9 @@ reavaliadas com a Staff e amostra de players antes de implementar.
 Objetivo: evitar construir uma solucao correta para a guilda errada.
 
 Estado em 2026-07-21: `parcial`; pesquisa, material e fluxo Staff de coleta
-implementados no codigo local. Entrevistas e quatro semanas de baseline G3X
-continuam pendentes porque exigem evidencia real, nao preenchimento ficticio.
+estao em producao. O plano de campo organiza roteiro, cobertura pendente e as
+quatro semanas oficiais de 27/07 a 24/08. Entrevistas e baseline G3X continuam
+pendentes porque exigem evidencia real, nao preenchimento ficticio.
 
 Instrumentacao disponivel no codigo local:
 
