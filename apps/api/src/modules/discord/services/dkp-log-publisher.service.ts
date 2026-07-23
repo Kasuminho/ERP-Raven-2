@@ -87,16 +87,16 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
             color: 0x9b51e0,
             description: `${initialBackfill
               ? `${pickStaffVoice([
-                '**Aristolfo puxou 3 dias de extrato.** Confere antes que o saldo vire ARG de contabilidade.',
+                '**Aristolfo puxou 3 dias de extrato.** Confere antes que o saldo vire thread investigativa de boteco.',
                 '**Backfill entregue.** Tres dias em ordem, sem freestyle fiscal no pos-creditos.',
-                '**Historico saiu do arquivo.** O extrato chegou antes do "eu lembro diferente".',
-                '**Retroativo na mesa.** O log trouxe tudo antes que o achismo abrisse react pago.',
+                '**Historico saiu do arquivo.** O extrato chegou antes do "minha memoria e canon".',
+                '**Retroativo na mesa.** O log trouxe tudo antes que o achismo abrisse vaquinha de argumento.',
               ], this.stateId, index, 'backfill')}\n\n`
               : `${pickStaffVoice([
-                '**Movimentacao nova no log.** Chegou antes que a memoria coletiva baixe patch alternativo.',
-                '**DKP mexeu e Aristolfo carimbou.** Timeline salva, fofoca sem permissao de escrita.',
-                '**Extrato atualizado.** O contador atropelou o chutometro sem gastar especial.',
-                '**Saldo mudou.** Registro saiu cedo, antes do voice vender director cut dos fatos.',
+                '**Movimentacao nova no log.** Chegou antes que a memoria coletiva publique patch pirata.',
+                '**DKP mexeu e Aristolfo carimbou.** Timeline salva, fofoca sem permissao de commit.',
+                '**Extrato atualizado.** O contador atropelou o chutometro sem gastar ultimate.',
+                '**Saldo mudou.** Registro saiu cedo, antes do voice vender versao estendida dos fatos.',
               ], this.stateId, index, 'live')}\n\n`}${chunk.lines.join('\n')}`,
             footer: { text: `${chunk.rows.length} movimentacao(oes) | Ordem cronologica` },
             timestamp: new Date().toISOString(),

@@ -11,18 +11,18 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo carimbou o changelog. Se algo chiar, abre ticket; grito em caps lock nao passa no lint.*',
-    '*Aristolfo publicou a ata. Deploy saiu; o caos que traga log, contexto e menos novela de grupo.*',
-    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o print ja esta no inventario.*',
-    '*Aristolfo fechou a nota. Discordar pode; freestyle sem evidencia fica preso no tutorial.*',
-    '*Aristolfo mandou o changelog. A planilha piscou duas vezes e aceitou terapia de coluna.*',
+    '*Aristolfo carimbou o changelog. Se algo chiar, abre ticket; caps lock ainda nao virou argumento tecnico.*',
+    '*Aristolfo publicou a ata. Deploy saiu; o caos que traga log, contexto e menos dublagem dramatica.*',
+    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, o print ja fica de capacete.*',
+    '*Aristolfo fechou a nota. Discordar pode; freestyle sem evidencia fica no lobby do tutorial.*',
+    '*Aristolfo mandou o changelog. A planilha respirou fundo e parou de fazer cosplay de Tetris.*',
   ],
   EN: [
-    '*Aristolfo stamped the changelog. If anything squeaks, open a ticket; caps-lock yelling fails lint.*',
-    '*Aristolfo published the minutes. Deploy shipped; chaos can bring logs, context, and less group-chat drama.*',
-    '*Aristolfo sent the note with a receipt. If reality improvises, the screenshot is already in inventory.*',
-    '*Aristolfo closed the note. Disagree if needed; freestyle without evidence stays stuck in tutorial.*',
-    '*Aristolfo shipped the changelog. The spreadsheet blinked twice and accepted column therapy.*',
+    '*Aristolfo stamped the changelog. If anything squeaks, open a ticket; caps lock is still not a technical argument.*',
+    '*Aristolfo published the minutes. Deploy shipped; chaos can bring logs, context, and less dramatic dubbing.*',
+    '*Aristolfo sent the note with a receipt. If reality improvises, the screenshot already has a helmet.*',
+    '*Aristolfo closed the note. Disagree if needed; freestyle without evidence stays in the tutorial lobby.*',
+    '*Aristolfo shipped the changelog. The spreadsheet took a breath and stopped cosplaying as Tetris.*',
   ],
 };
 

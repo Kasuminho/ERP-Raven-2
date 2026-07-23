@@ -9,7 +9,7 @@ import { buildDkpNotificationEmbed } from '../bot/embeds/dkp.embeds';
 import { buildAnnouncementEmbed, buildEventReminderEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildPlayerDailyReminderEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../bot/embeds/staff-review.embeds';
 import { DiscordLocale, localeCopy, resolveDiscordLocale } from '../bot/embeds/discord-locale';
-import { bilingualBlocks, pickBilingualVoice, pickStaffVoice } from '../bot/embeds/webhook-voice';
+import { bilingualBlocks, pickBilingualVoice, pickStaffVoice, pickVoiceLine } from '../bot/embeds/webhook-voice';
 import { DiscordBotService } from '../bot/services/discord-bot.service';
 import { DiscordWebhookQueueService } from './discord-webhook-queue.service';
 
@@ -44,16 +44,16 @@ export class NotificationService {
         localeCopy(locale, { 'pt-BR': 'Leilao acabando', en: 'Auction ending soon' }),
         pickBilingualVoice({
           'pt-BR': [
-            `**${data.itemName}** entrou nos minutos finais. Bid agora; depois o "foi mal" chega sem legenda.`,
-            `**${data.itemName}** esta no clutch. Piscou, vira print educativo no mural do timing ruim.`,
+            `**${data.itemName}** entrou nos minutos finais. Bid agora; depois o "foi mal" vem sem patch de correcao.`,
+            `**${data.itemName}** esta no clutch. Piscou, vira estudo de caso no museu do timing ruim.`,
             `**${data.itemName}** ja esta fechando a janela. Se quer lance, clica; monologo nao arremata loot.`,
-            `**${data.itemName}** chegou no ultimo round. Vontade sem bid continua zerada no placar.`,
+            `**${data.itemName}** chegou no ultimo round. Vontade sem bid continua zerada no placar e no lore.`,
           ],
           en: [
-            `**${data.itemName}** is in the final minutes. Bid now; "my bad" arrives without subtitles later.`,
-            `**${data.itemName}** is in clutch. Blink and become an educational screenshot about bad timing.`,
+            `**${data.itemName}** is in the final minutes. Bid now; "my bad" ships with no hotfix later.`,
+            `**${data.itemName}** is in clutch. Blink and become a case study in the bad-timing museum.`,
             `**${data.itemName}** is already closing the window. If you want a bid, click; monologues do not win loot.`,
-            `**${data.itemName}** reached the last round. Intent without a bid stays zero on the board.`,
+            `**${data.itemName}** reached the last round. Intent without a bid stays zero on the board and in lore.`,
           ],
         }, data.auctionId, data.itemName),
       )],
@@ -67,16 +67,16 @@ export class NotificationService {
           'Bid superado / Bid outbid',
           pickBilingualVoice({
             'pt-BR': [
-              `Passaram seu bid em **${data.itemName}**. Reage agora ou compra ingresso pro proprio quase.`,
-              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes do placar baixar a porta.`,
-              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba fossilize.`,
-              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD vira tutorial de hesitacao.`,
+              `Passaram seu bid em **${data.itemName}**. Reage agora ou assiste teu quase virar clipe didatico.`,
+              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes do placar fechar a lojinha.`,
+              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba vire arqueologia.`,
+              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD ganha tag "hesitacao".`,
             ],
             en: [
-              `Your bid on **${data.itemName}** got passed. React now or buy tickets to your own almost-win.`,
-              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the board shuts down.`,
-              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab fossilizes.`,
-              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD become a hesitation tutorial.`,
+              `Your bid on **${data.itemName}** got passed. React now or watch your almost-win become a lesson clip.`,
+              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the board closes shop.`,
+              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab becomes archaeology.`,
+              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD get tagged "hesitation".`,
             ],
           }, data.auctionId, data.itemName, data.discordId),
         )],
@@ -162,6 +162,18 @@ export class NotificationService {
     const safeRecipientNames = recipientNames.length > 1400
       ? `${recipientNames.slice(0, 1397)}...`
       : recipientNames;
+    const distributionTailPt = pickVoiceLine([
+      'Partilha fechada com todas as provas. A planilha parou de rosnar e soltou loot.',
+      'Diamantes divididos e prints anexados. O "confere ai" ganhou carteira assinada no log.',
+      'Distribuicao concluida sem malabarismo. Ate a calculadora saiu do modo defensivo.',
+      'Tudo pago e provado. A tesouraria deu headshot no caos de centavos.',
+    ], data.saleId, data.itemName, data.diamondTotal);
+    const distributionTailEn = pickVoiceLine([
+      'Distribution closed with every proof attached. The spreadsheet stopped growling and dropped loot.',
+      'Diamonds split and screenshots attached. "Please check" got a signed job in the log.',
+      'Distribution completed without juggling. Even the calculator left defensive mode.',
+      'Everything paid and proven. Treasury landed a headshot on small-change chaos.',
+    ], data.saleId, data.itemName, data.diamondTotal);
     const summary = {
       title: 'Partilha de diamantes concluida / Diamond distribution completed',
       description: bilingualBlocks({
@@ -172,7 +184,7 @@ export class NotificationService {
           `**Saldo remanescente:** ${data.remainderAmount} diamante(s)`,
           `**Receberam:** ${safeRecipientNames}`,
           '',
-          'Partilha fechada com todas as provas. A planilha finalmente dropou loot.',
+          distributionTailPt,
         ].join('\n'),
         en: [
           `**Item:** ${data.itemName}`,
@@ -181,7 +193,7 @@ export class NotificationService {
           `**Remaining balance:** ${data.remainderAmount} diamond(s)`,
           `**Recipients:** ${safeRecipientNames}`,
           '',
-          'Distribution closed with every proof attached. The spreadsheet finally dropped loot.',
+          distributionTailEn,
         ].join('\n'),
       }),
       color: 0x22d3ee,
@@ -354,16 +366,16 @@ export class NotificationService {
     }[data.stage];
     const actionText = data.stage === 'dropped'
       ? pickStaffVoice([
-        'Rank ajustado no automatico. Agora avisa antes que o player descubra pelo susto em 1080p.',
-        'A fila aplicou o debuff sozinha. Vale alinhar antes que o drama peca palco e iluminacao.',
-        'O cron derrubou uma posicao. Melhor explicar antes que a contestacao venha com trilha sonora.',
-        'A queda ja entrou no log. Falta avisar o player antes que o chat lance fanfic capa dura.',
+        'Rank ajustado no automatico. Agora avisa antes que o player descubra no susto cinematografico.',
+        'A fila aplicou o debuff sozinha. Vale alinhar antes que o drama alugue palco e iluminacao.',
+        'O cron derrubou uma posicao. Melhor explicar antes que a contestacao venha com trilha de trailer.',
+        'A queda ja entrou no log. Falta avisar o player antes que o chat lance fanfic de capa dura.',
       ], data.requestId, data.itemName, data.playerName, data.stage)
       : pickStaffVoice([
-        'Cobrar print novo no site; request parado nao desbloqueia cidadania permanente.',
-        'Puxar o player para atualizar o request antes que a desculpa tente virar modalidade olimpica.',
-        'Lembrar o player de subir prova nova antes que o cron volte com chinelo administrativo.',
-        'Cutucar o player hoje; amanha esse lembrete aparece vendendo season pass.',
+        'Cobrar print novo no site; request parado nao ganha residencia fixa no backlog.',
+        'Puxar o player para atualizar o request antes que a desculpa tente virar esporte oficial.',
+        'Lembrar o player de subir prova nova antes que o cron volte de chinelo administrativo.',
+        'Cutucar o player hoje; amanha esse lembrete aparece vendendo passe de temporada.',
       ], data.requestId, data.itemName, data.playerName, data.stage);
     await this.sendWebhookChannel('staffRequests', {
       content: `<@${data.discordId}>`,

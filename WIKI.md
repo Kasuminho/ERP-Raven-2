@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-07-22
+**Ultima revisao:** 2026-07-23
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -121,7 +121,7 @@ Automacao ativa:
 - ID `webhook-joke-rotation`.
 - Executa a cada 72 horas em worktree.
 - Renova variacoes e piadas, preserva regras de idioma e negocio, valida, publica e envia changelog apos producao.
-- A rotacao atual cobre embeds, DMs, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-20 para evitar reciclar as frases das revisoes anteriores.
+- A rotacao atual cobre embeds, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e punchlines do changelog, com bancos renovados em 2026-07-23 para evitar reciclar as frases das revisoes anteriores.
 
 ## Seguranca, sessao e uploads
 
@@ -422,6 +422,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-23 | Nona rotacao automatica renovou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-22 | Frente 0 entrou em coleta real: lideranca Staff e player de baixa atividade foram entrevistados, RSVP ja foi validado como redutor de cobranca e a proxima amostra e Staff de eventos; baseline semanal inicia em 27/07. | produto/validacao/roadmap |
 | 2026-07-22 | Next recebeu o patch 15.5.21 e o CLI do Nest foi classificado como dependencia apenas de desenvolvimento; a auditoria de producao caiu de 9 para 6 altas sem ampliar o baseline do CI. | seguranca/dependencias/CI |
 | 2026-07-22 | Quorum de review de leilao passou a ser isolado por rodada; rejeicao, troca de candidatos, avanco de camada e relist zeram votos antigos, com reparo dos residuos legados e audit preservado. | leiloes/review/quorum |

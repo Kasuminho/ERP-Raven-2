@@ -76,23 +76,23 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
       ? pickStaffVoice([
-        'Healthcheck voltou pro verde. Aristolfo desarmou o botao de panico e o cafe extra.',
-        'Healthcheck normalizado. O servidor parou de vender susto como DLC.',
-        'Healthcheck no eixo de novo. A stack largou o palco e voltou ao expediente.',
-        'Healthcheck estabilizado. O F5 saiu da esteira por enquanto.',
+        'Healthcheck voltou pro verde. Aristolfo guardou o extintor e o meme de emergencia.',
+        'Healthcheck normalizado. O servidor parou de vender susto como skin limitada.',
+        'Healthcheck no eixo de novo. A stack largou o palco e voltou ao cracha.',
+        'Healthcheck estabilizado. O F5 saiu do cardio por enquanto.',
       ], report.status, report.checkedAt)
       : report.status === 'degraded'
         ? pickStaffVoice([
-          'Healthcheck amarelo, sem coletiva de imprensa para o drama',
-          'Healthcheck rangendo no painel igual call em Wi-Fi de elevador',
-          'Healthcheck pediu cautela, nao campeonato de caps lock',
-          'Healthcheck amarelou e levantou placa de "isso merece olho"',
+          'Healthcheck amarelo; sem coletiva de imprensa para o drama',
+          'Healthcheck rangendo no painel igual call presa no 3G',
+          'Healthcheck pediu cautela, nao campeonato estadual de caps lock',
+          'Healthcheck amarelou e levantou placa de "olha isso aqui"',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
         : pickStaffVoice([
-          'Healthcheck critico. Plantao ganhou boss surpresa sem drop e com enrage.',
-          'Healthcheck vermelho. A paciencia entrou em 1% e o carregador sumiu do mapa.',
-          'Healthcheck em caos premium. Mensalidade alta, beneficio zero, suor incluso.',
-          'Healthcheck abriu chamado com cheiro de deploy fazendo speedrun de problema.',
+          'Healthcheck critico. Plantao ganhou boss surpresa sem loot e com enrage.',
+          'Healthcheck vermelho. A paciencia ficou em 1% e o carregador spawnou longe.',
+          'Healthcheck em caos premium. Custo alto, beneficio zero, suor incluso.',
+          'Healthcheck abriu chamado com cheiro de deploy fazendo speedrun de susto.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
@@ -101,8 +101,8 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
         color,
         description: report.status === 'ok'
           ? pickStaffVoice([
-            '**Servico voltou.** A infra respirou e o plantao pode largar o F5 sem cerimonia.',
-            '**Tudo recuperado.** A stack saiu do survival e lembrou que uptime e parte do cargo.',
+            '**Servico voltou.** A infra respirou e o plantao pode largar o F5 sem discurso.',
+            '**Tudo recuperado.** A stack saiu do survival e lembrou que uptime faz parte do contrato.',
             '**Recuperacao confirmada.** O susto deslogou e a infra ficou em pe sem pedir buff.',
             '**Plataforma normalizada.** O drama perdeu MMR e o servidor assinou o ponto.',
           ], report.status, report.checkedAt)
