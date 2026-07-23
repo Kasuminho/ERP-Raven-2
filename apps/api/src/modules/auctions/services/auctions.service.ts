@@ -712,6 +712,8 @@ export class AuctionsService {
 
         if (validBids.length === 0) {
           const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+          await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+          await this.repository.deleteAuctionBidInvalidationVotes(auctionId, tx);
           const clearedBidState = this.getStateAfterClearedBids(auction);
           const relisted = await this.repository.update(
             auctionId,
@@ -725,6 +727,7 @@ export class AuctionsService {
           };
         }
 
+        await this.repository.deleteAuctionReviewVotes(auctionId, tx);
         const pendingReview = await this.repository.updateStatus(auctionId, AuctionStatus.PENDING_REVIEW, tx);
 
         return {
@@ -786,6 +789,8 @@ export class AuctionsService {
 
         await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
         const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
+        const clearedReviewVotes = await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+        const clearedBidInvalidationVotes = await this.repository.deleteAuctionBidInvalidationVotes(auctionId, tx);
         const clearedBidState = this.getStateAfterClearedBids(existing);
 
         const relisted = await this.repository.update(
@@ -800,6 +805,8 @@ export class AuctionsService {
           targetId: auctionId,
           metadata: {
             invalidatedBidCount: invalidatedBids.count,
+            clearedReviewVotes,
+            clearedBidInvalidationVotes,
             previousMinimumLayer: existing.minimumLayer,
             nextMinimumLayer: relisted.minimumLayer,
             advancedToNextLayer: clearedBidState.advancedToNextLayer,
@@ -855,6 +862,8 @@ export class AuctionsService {
       if (existing.reopensAt && existing.reopensAt > new Date()) {
         throw new InvalidAuctionStateException(`Auction ${auctionId} is not ready to reopen.`);
       }
+
+      await this.repository.deleteAuctionReviewVotes(auctionId, tx);
 
       return this.repository.update(
         auctionId,
@@ -913,6 +922,8 @@ export class AuctionsService {
     }
 
     await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
+    await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+    await this.repository.deleteAuctionBidInvalidationVotes(auctionId, tx);
 
     const clearedBidState = this.getStateAfterClearedBids(auction);
     const relisted = await this.repository.update(
@@ -1291,6 +1302,7 @@ export class AuctionsService {
     }
 
     const nextMinimumLayer = currentMinimumLayer - 1;
+    await this.repository.deleteAuctionReviewVotes(auction.id, tx);
     const expanded = await this.repository.update(
       auction.id,
       {

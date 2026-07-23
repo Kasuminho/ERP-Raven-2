@@ -34,6 +34,8 @@ function makeService(auction: ReturnType<typeof makePendingAuction>) {
     client: { $transaction: mock.fn(async (callback: any) => callback(tx)) },
     findAuction: mock.fn(async () => auction),
     invalidateAuctionBids: mock.fn(async () => ({ count: 2 })),
+    deleteAuctionReviewVotes: mock.fn(async () => 3),
+    deleteAuctionBidInvalidationVotes: mock.fn(async () => 1),
     updateAuction: mock.fn(async (_auctionId: string, data: Record<string, unknown>) => ({
       ...auction,
       ...data,
@@ -69,8 +71,12 @@ describe('StaffReviewService auction rejection', () => {
     assert.equal(result.endsAt.toISOString(), '2026-06-29T05:00:00.000Z');
     assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
     assert.equal(repository.invalidateAuctionBids.mock.calls[0].arguments[0], 'auction-1');
+    assert.equal(repository.deleteAuctionReviewVotes.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionBidInvalidationVotes.mock.callCount(), 1);
     assert.equal(dkpService.releaseAuctionLocksWithinTransaction.mock.callCount(), 1);
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.invalidatedBidCount, 2);
+    assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.clearedReviewVotes, 3);
+    assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.clearedBidInvalidationVotes, 1);
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, true);
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, false);
   });
@@ -84,6 +90,8 @@ describe('StaffReviewService auction rejection', () => {
     assert.equal(result.minimumLayer, 4);
     assert.equal(result.reopensAt?.toISOString(), '2026-07-04T05:00:00.000Z');
     assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionReviewVotes.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionBidInvalidationVotes.mock.callCount(), 1);
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, false);
     assert.equal(auditService.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, true);
   });

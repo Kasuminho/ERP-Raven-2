@@ -67,6 +67,8 @@ function makeRelistService(minimumLayer: number) {
     client: { $transaction: mock.fn(async (callback: any) => callback(tx)) },
     findById: mock.fn(async () => auction),
     invalidateAuctionBids: mock.fn(async () => ({ count: 1 })),
+    deleteAuctionReviewVotes: mock.fn(async () => 2),
+    deleteAuctionBidInvalidationVotes: mock.fn(async () => 1),
     update: mock.fn(async (_auctionId: string, data: Record<string, unknown>) => ({
       ...auction,
       ...data,
@@ -95,7 +97,10 @@ describe('AuctionsService relist rules', () => {
     assert.equal(result.reopensAt, null);
     assert.equal(result.endsAt.toISOString(), '2026-06-29T05:00:00.000Z');
     assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionReviewVotes.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionBidInvalidationVotes.mock.callCount(), 1);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, true);
+    assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.clearedReviewVotes, 2);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, false);
   });
 
@@ -108,8 +113,66 @@ describe('AuctionsService relist rules', () => {
     assert.equal(result.minimumLayer, 4);
     assert.equal(result.reopensAt?.toISOString(), '2026-07-04T05:00:00.000Z');
     assert.equal(repository.invalidateAuctionBids.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionReviewVotes.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionBidInvalidationVotes.mock.callCount(), 1);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.advancedToNextLayer, false);
     assert.equal(audit.logWithinTransaction.mock.calls.at(-1)?.arguments[0].metadata.relistedAfterLayerOne, true);
+  });
+});
+
+describe('AuctionsService review round lifecycle', () => {
+  it('clears votes from an earlier round before opening a fresh pending review', async () => {
+    const auction = {
+      id: 'a1',
+      itemName: 'Fresh review spear',
+      itemTier: ItemTier.T2,
+      itemType: ItemType.WEAPON,
+      minimumBid: 650,
+      auctionMode: AuctionMode.STANDARD,
+      requiresStaffReview: true,
+      status: AuctionStatus.OPEN,
+      minimumLayer: 1,
+      reopensAt: null,
+      endsAt: new Date('2026-07-22T02:00:00.000Z'),
+      createdAt: new Date('2026-07-20T02:00:00.000Z'),
+      updatedAt: new Date('2026-07-22T02:00:00.000Z'),
+      createdById: 'staff-1',
+      itemCatalogId: null,
+    };
+    const tx = {};
+    const repository = {
+      client: { $transaction: mock.fn(async (callback: any) => callback(tx)) },
+      findById: mock.fn(async () => auction),
+      findValidBidsWithPlayers: mock.fn(async () => [{
+        id: 'bid-1',
+        auctionId: 'a1',
+        playerId: 'player-1',
+        bidAmount: 900,
+        isValid: true,
+        createdAt: new Date(),
+        player: { dimensionalLayer: 1 },
+      }]),
+      deleteAuctionReviewVotes: mock.fn(async () => 3),
+      updateStatus: mock.fn(async (_auctionId: string, status: AuctionStatus) => ({ ...auction, status })),
+    };
+    const audit = { log: mock.fn(async () => undefined) };
+    const notifications = { notifyStaffReviewRequired: mock.fn(async () => undefined) };
+    const eligibility = { rankAuctionCandidatesWithinTransaction: mock.fn(async () => [{ playerId: 'player-1' }]) };
+    const service = new AuctionsService(
+      repository as never,
+      {} as never,
+      audit as never,
+      notifications as never,
+      eligibility as never,
+      {} as never,
+    );
+
+    const result = await service.finalizeAuction('a1');
+
+    assert.equal(result.auction.status, AuctionStatus.PENDING_REVIEW);
+    assert.equal(repository.deleteAuctionReviewVotes.mock.callCount(), 1);
+    assert.equal(repository.deleteAuctionReviewVotes.mock.calls[0].arguments[0], 'a1');
+    assert.equal(notifications.notifyStaffReviewRequired.mock.callCount(), 1);
   });
 });
 

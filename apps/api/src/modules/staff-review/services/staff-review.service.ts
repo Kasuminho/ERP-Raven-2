@@ -238,6 +238,7 @@ export class StaffReviewService {
 
         await this.repository.invalidateBid(bidId, tx);
         await this.repository.deleteBidInvalidationVotes(bidId, tx);
+        const clearedReviewVotes = await this.repository.deleteAuctionReviewVotes(auctionId, tx);
 
         const remainingValidBids = await tx.auctionBid.count({
           where: {
@@ -262,6 +263,7 @@ export class StaffReviewService {
           reason,
           invalidationThreshold: this.reviewVoteThreshold,
           releasedLockId: lock?.id,
+          clearedReviewVotes,
         });
 
         return this.getAuctionReviewDetailsWithinTransaction(auctionId, tx);
@@ -281,6 +283,8 @@ export class StaffReviewService {
           throw new InvalidStaffReviewStateException('Finished auctions cannot be reopened without a dispute workflow.');
         }
 
+        const clearedReviewVotes = await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+
         const reopened = await this.repository.updateAuction(
           auctionId,
           {
@@ -296,6 +300,7 @@ export class StaffReviewService {
           reason,
           previousStatus: auction.status,
           endsAt: reopened.endsAt.toISOString(),
+          clearedReviewVotes,
         });
 
         return reopened;
@@ -342,12 +347,15 @@ export class StaffReviewService {
           throw new InvalidStaffReviewStateException(`Only OPEN auctions can be forced into review.`);
         }
 
+        const clearedReviewVotes = await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+
         const pendingReview = await this.repository.updateAuctionStatus(auctionId, AuctionStatus.PENDING_REVIEW, tx);
 
         await this.auditWithinTransaction(tx, reviewerId, 'FORCE_REVIEW', 'Auction', auctionId, {
           auctionId,
           reason,
           previousStatus: auction.status,
+          clearedReviewVotes,
         });
 
         return pendingReview;
@@ -822,6 +830,8 @@ export class StaffReviewService {
     const auction = await this.requireAuction(auctionId, tx);
     const refundedLocks = await this.dkpService.releaseAuctionLocksWithinTransaction(auctionId, tx);
     const invalidatedBids = await this.repository.invalidateAuctionBids(auctionId, tx);
+    const clearedReviewVotes = await this.repository.deleteAuctionReviewVotes(auctionId, tx);
+    const clearedBidInvalidationVotes = await this.repository.deleteAuctionBidInvalidationVotes(auctionId, tx);
     const clearedBidState = this.getStateAfterClearedBids(auction);
     const relisted = await this.repository.updateAuction(
       auctionId,
@@ -835,6 +845,8 @@ export class StaffReviewService {
       rejectionThreshold: this.reviewVoteThreshold,
       refundedLockIds: refundedLocks.map((lock) => lock.id),
       invalidatedBidCount: invalidatedBids.count,
+      clearedReviewVotes,
+      clearedBidInvalidationVotes,
       previousMinimumLayer: auction.minimumLayer,
       nextMinimumLayer: relisted.minimumLayer,
       advancedToNextLayer: clearedBidState.advancedToNextLayer,

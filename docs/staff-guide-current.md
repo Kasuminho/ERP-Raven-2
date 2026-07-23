@@ -1,6 +1,6 @@
 # Guia atual da Staff - Raven2 G3X
 
-Ultima revisao: 2026-07-21
+Ultima revisao: 2026-07-22
 
 Este e o guia operacional atual da Staff. Os guias datados antigos ficam como historico do produto e nao substituem este arquivo.
 
@@ -130,6 +130,7 @@ Diagnostico de leilao:
 - use timeline operacional para bids, locks, cancelamentos, votos, transacoes, entrega e audit logs;
 - use previa de finalizacao read-only antes de agir;
 - copie o dossie Markdown quando precisar discutir na Staff.
+- trate o quorum como exclusivo da rodada atual: rejeicao concluida, mudanca de candidatos, avanco de camada ou relist zeram votos operacionais; o audit continua preservando a decisao anterior.
 
 Entregas de leilao:
 

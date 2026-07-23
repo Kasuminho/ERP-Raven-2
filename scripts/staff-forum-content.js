@@ -131,7 +131,7 @@ Dados de ranking, bids, locks e participantes permanecem Staff-only até o resul
   },
   {
     slug: 'staff-reviews-cancelamentos', title: '06 · Reviews, alertas e cancelamentos de bid', tag: 'loot', route: '/dashboard/staff/reviews',
-    visual: ['Leia os alertas assistidos', 'Vote com fundamento', 'Exija motivo em exceções'],
+    visual: ['Leia os alertas assistidos', 'Vote apenas na rodada atual', 'Exija motivo em exceções'],
     body: `## 🛡️ Governança de resultado
 Em [Reviews](${route('/dashboard/staff/reviews')}) analise candidato, elegibilidade, score, presença, divergência entre bid/lock e votos existentes. Alertas assistidos não decidem; eles mostram riscos antes da decisão humana.
 
@@ -141,6 +141,8 @@ Em [Reviews](${route('/dashboard/staff/reviews')}) analise candidato, elegibilid
 - Invalidar/remover bid: use somente com fundamento verificável.
 - Ignorar alerta: exige motivo e não aprova o vencedor sozinho.
 - Reabrir/cancelar: confira impacto em locks, status e relist.
+
+Votos pertencem somente à rodada atual. Quando um resultado é rejeitado, um bid invalidado muda os candidatos, a camada avança ou o leilão é relistado, o quorum anterior é encerrado e a próxima revisão começa zerada. O audit preserva quem decidiu e por quê; voto velho não pega carona em candidato novo.
 
 Em [Cancelamentos de bid](${route('/dashboard/staff/bid-cancellations')}) revise solicitações dentro do fluxo controlado. Não resolva por DM e depois tente reconstruir o motivo de cabeça. Primeiro evidência, depois botão, depois meme.`,
   },

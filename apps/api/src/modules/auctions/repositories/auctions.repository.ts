@@ -179,6 +179,20 @@ export class AuctionsRepository {
     });
   }
 
+  async deleteAuctionReviewVotes(auctionId: string, client: AuctionClient = this.prisma): Promise<number> {
+    const deleted = await client.auctionReviewVote.deleteMany({
+      where: { auctionId },
+    });
+    return deleted.count;
+  }
+
+  async deleteAuctionBidInvalidationVotes(auctionId: string, client: AuctionClient = this.prisma): Promise<number> {
+    const deleted = await client.auctionBidInvalidationVote.deleteMany({
+      where: { auctionId },
+    });
+    return deleted.count;
+  }
+
   async updateStatus(
     auctionId: string,
     status: AuctionStatus,

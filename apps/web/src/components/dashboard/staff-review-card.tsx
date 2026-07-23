@@ -244,6 +244,9 @@ export function StaffReviewCard({
           <p className="mt-2 text-muted-foreground">
             Rejeitaram: {rejectionVotes.length ? rejectionVotes.map(voteName).join(', ') : 'ninguem ainda'}
           </p>
+          <p className="mt-2 text-muted-foreground">
+            Os votos valem somente para esta rodada e zeram se o resultado mudar, a camada avancar ou o leilao for relistado.
+          </p>
           {approvalsByPlayer.size > 1 && (
             <div className="mt-2 space-y-1 text-muted-foreground">
               {[...approvalsByPlayer.entries()].map(([playerId, playerVotes]) => {

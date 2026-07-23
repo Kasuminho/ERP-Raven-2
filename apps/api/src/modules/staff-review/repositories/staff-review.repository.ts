@@ -156,6 +156,20 @@ export class StaffReviewRepository {
     });
   }
 
+  async deleteAuctionReviewVotes(auctionId: string, client: StaffReviewClient = this.prisma): Promise<number> {
+    const deleted = await client.auctionReviewVote.deleteMany({
+      where: { auctionId },
+    });
+    return deleted.count;
+  }
+
+  async deleteAuctionBidInvalidationVotes(auctionId: string, client: StaffReviewClient = this.prisma): Promise<number> {
+    const deleted = await client.auctionBidInvalidationVote.deleteMany({
+      where: { auctionId },
+    });
+    return deleted.count;
+  }
+
   async findActiveLock(
     auctionId: string,
     playerId: string,
