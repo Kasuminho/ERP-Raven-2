@@ -1,6 +1,6 @@
 # Audit de conclusao - Guild Operating System 2026-07
 
-Revisao: 2026-07-21.
+Revisao: 2026-07-22.
 
 Este documento verifica o objetivo original contra a release 2026-07-21.
 Entrevistas e metricas reais nao podem ser substituidas por fixtures ou
@@ -12,7 +12,7 @@ inferencia de codigo.
 | --- | --- | --- | --- |
 | Cobrancas diretas | Incluido na release | `PlayerReminderService`, politica compartilhada de sinais, cron, migration e testes | Acompanhamento operacional |
 | Codex enviado | Incluido na release | cobranca imediata Web/DM, recorrencia diaria em `SENT`, confirmacao/retry e bloqueio de reenvio duplicado | Acompanhamento operacional |
-| Frente 0 | Parcial | coleta persistente Staff-only, gate e baseline semanal auditado | entrevistas reais e quatro semanas consecutivas G3X |
+| Frente 0 | Parcial em coleta | coleta persistente Staff-only, duas entrevistas reais auditadas, gate e baseline semanal | completar amostra e quatro semanas consecutivas G3X |
 | Frentes 1-7 | Incluido na release | dominios, migrations, telas, testes e tutoriais canonicos listados no roadmap | Coleta e validacao real pela Staff |
 | Frente 8 | Futuro condicionado | estado documental explicito | campanha coletiva real e politica aprovada |
 | Frente 9 | Incluido na release | validacao forte, sessao como autoria, telemetria agregada, runbooks, CI PostgreSQL e E2E HTTP | Acompanhamento operacional |
@@ -60,6 +60,19 @@ no-shows, recruits convertidos/com atividade e tarefas com dono sem substituto;
 presenca esperada e minutos de cobranca ficam marcados como declaracao Staff.
 
 Evidencia automatizada: `apps/api/test/product-validation.service.test.ts`.
+
+Estado operacional verificado em producao em 2026-07-22:
+
+- 1/3 perfis Staff cobertos: lideranca; eventos e loot continuam pendentes;
+- 1/5 entrevistas de players registrada, cobrindo baixa atividade; veterano,
+  novato e ativo continuam pendentes;
+- ambas as entrevistas registradas confirmam que RSVP reduz cobranca manual;
+- 0/4 semanas congeladas, porque a janela oficial comeca em 27/07;
+- proxima entrevista sugerida pelo proprio cockpit: Staff de eventos.
+
+As contagens foram conferidas no banco da campanha `G3X-2026-07`; os dois
+registros possuem trilha de auditoria e nenhuma identidade de participante foi
+armazenada.
 
 ## Frentes implementadas
 

@@ -422,6 +422,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-07-22 | Frente 0 entrou em coleta real: lideranca Staff e player de baixa atividade foram entrevistados, RSVP ja foi validado como redutor de cobranca e a proxima amostra e Staff de eventos; baseline semanal inicia em 27/07. | produto/validacao/roadmap |
 | 2026-07-22 | Next recebeu o patch 15.5.21 e o CLI do Nest foi classificado como dependencia apenas de desenvolvimento; a auditoria de producao caiu de 9 para 6 altas sem ampliar o baseline do CI. | seguranca/dependencias/CI |
 | 2026-07-22 | Quorum de review de leilao passou a ser isolado por rodada; rejeicao, troca de candidatos, avanco de camada e relist zeram votos antigos, com reparo dos residuos legados e audit preservado. | leiloes/review/quorum |
 | 2026-07-21 | Roadmap Guild Operating System foi reconciliado com a producao: prelude e Frentes 1-7/9 estao live; Frente 0 depende apenas da coleta real e Frente 8 permanece futura por gate de caso coletivo. | produto/roadmap/auditoria |

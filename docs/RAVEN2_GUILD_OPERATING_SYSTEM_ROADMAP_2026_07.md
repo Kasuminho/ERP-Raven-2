@@ -43,12 +43,12 @@ Primeira entrega recomendada: **Central de Compromissos, RSVP e Ausencias**.
 
 ## Estado vivo de execucao
 
-Atualizado em 2026-07-21, depois de reconciliar codigo, historico e pendencias reais:
+Atualizado em 2026-07-22, depois de reconciliar codigo, producao, banco e pendencias reais:
 
 | Bloco | Estado | Evidencia/proximo passo |
 | --- | --- | --- |
 | Prelude solicitado - cobranca direta de pendencias | `implementado em producao` | Cron diario idempotente, notificacao Web e DM bilingue para perfil/STATUS/presenca/Codex; migration, testes e Centrais live atualizadas. |
-| Frente 0 - baseline e validacao G3X | `parcial` | Pesquisa e coleta Staff persistente estao prontas; entrevistas e quatro semanas de metricas reais continuam pendentes. |
+| Frente 0 - baseline e validacao G3X | `parcial em coleta` | Duas entrevistas reais foram registradas: lideranca Staff e player de baixa atividade. RSVP ja foi validado como redutor de cobranca; faltam Staff de eventos/loot, quatro entrevistas de players com os tres perfis ainda ausentes e quatro semanas consecutivas. |
 | Fatia 1.1 - RSVP generico | `implementado em producao` | Contrato, API, telas player/Staff, privacidade, auditoria, migration e testes concluidos. |
 | Fatia 1.2 - periodos de ausencia | `implementado em producao` | Cadastro player, privacidade, cobertura automatica de eventos, impacto agregado Staff, migration, telas e testes concluidos. |
 | Fatia 1.3 - recorrencia, reserva e composicao | `implementado em producao` | Series semanais, pausa/excecoes, cron de horizonte, alvos explicaveis, reserva confirmada e conflitos por timezone concluidos. |
@@ -75,7 +75,8 @@ Room e reduzia trabalho manual sem tocar nas regras sensiveis de DKP/leilao.
 
 ## Auditoria de conclusao tecnica
 
-Auditoria executada em 2026-07-21 contra `master`, producao, banco e Discord:
+Auditoria tecnica executada em 2026-07-21 contra `master`, producao e Discord,
+com estado da coleta no banco atualizado em 2026-07-22:
 
 - o prelude usa `PLAYER_STATUS_MAX_AGE_DAYS=21`, janela de presenca de 15 dias
   e limite estrito abaixo de 50%; perfil sem build/role/disponibilidade e Codex
@@ -90,16 +91,22 @@ Auditoria executada em 2026-07-21 contra `master`, producao, banco e Discord:
   imagens e smoke com sucesso, e `/health` confirmou a mesma versao em producao;
 - a Central do Player possui 20/20 posts canonicos PT-BR/EN; a Central Staff
   possui 30/30 posts PT-BR, 12/12 tags, indices e permissoes verificadas;
-- o banco da campanha `G3X-2026-07` ainda registra zero entrevistas e zero
-  semanas congeladas. Isso prova que a Frente 0 continua `parcial`, nao uma
-  pendencia de codigo;
+- o banco da campanha `G3X-2026-07` registra duas entrevistas reais e auditadas:
+  lideranca Staff e player de baixa atividade. Ambas confirmam reducao de
+  cobranca manual por RSVP; o gate esta em 1/3 perfis Staff, 1/5 entrevistas de
+  players, 1/4 perfis de player e zero semanas congeladas;
 - nao existe caso coletivo real documentado que autorize a Frente 8. Ela nao e
   pendencia da release: e uma opcao futura protegida por gate de descoberta.
 
-Condicao restante para encerrar o programa: a Staff deve registrar a amostra
+Condicao restante para encerrar o programa: a Staff deve completar a amostra
 real de entrevistas e congelar as quatro semanas consecutivas de 27/07 a 24/08.
 O ERP calcula as metricas automaticas; a Staff declara somente presenca esperada
 e minutos de cobranca. Nenhum dado deve ser inferido ou preenchido retroativamente.
+
+Proxima acao operacional comprovada em 2026-07-22: entrevistar o perfil
+`STAFF_EVENTS`; depois, `STAFF_LOOT` e os perfis de player veterano, novato e
+ativo, completando ao menos cinco entrevistas de players. A primeira semana de
+baseline inicia em 27/07 e so pode ser congelada depois de encerrada em 03/08.
 
 ## Metodo e limites da descoberta
 
