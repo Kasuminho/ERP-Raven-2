@@ -83,8 +83,8 @@ test('profile update accepts unicode nicknames', async () => {
 });
 
 test('combat roster matrix reports composition gaps and stale status', async () => {
-  const now = new Date('2026-07-11T12:00:00.000Z');
-  const stale = new Date('2026-06-01T12:00:00.000Z');
+  const now = new Date();
+  const stale = new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000);
   const client = {
     player: {
       findMany: async () => [
