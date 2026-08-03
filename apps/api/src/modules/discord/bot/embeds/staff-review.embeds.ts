@@ -5,10 +5,11 @@ export function buildStaffReviewRequiredEmbed(itemName: string, auctionId: strin
   return new EmbedBuilder()
     .setTitle('Revisao da Staff pendente')
     .setDescription(pickStaffVoice([
-      `**${itemName}** caiu na review. Vota com criterio; achismo sem log aqui fica sem invite.`,
+      `**${itemName}** caiu na review. Vota com criterio; achismo sem log fica barrado na portaria.`,
       `**${itemName}** chegou na mesa da Staff. Decide limpo antes que o voice vire podcast de limbo.`,
       `**${itemName}** pediu aval. Impulso agora compra retrabalho com juros de raid atrasada.`,
-      `**${itemName}** esta em revisao formal. Consenso hoje; novela amanha nao ganha renovacao.`,
+      `**${itemName}** esta em revisao formal. Consenso hoje; novela amanha nao ganha segunda temporada.`,
+      `**${itemName}** precisa de voto. Log primeiro, feeling depois; aqui tarot nao substitui auditoria.`,
     ], itemName, auctionId))
     .addFields({ name: 'ID do leilao', value: auctionId, inline: false })
     .setColor(0xeb5757)

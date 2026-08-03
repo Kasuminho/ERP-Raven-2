@@ -104,12 +104,14 @@ export class WeeklySummaryService {
           'Resumo semanal carimbado. Numero bateu antes do chat montar VAR de sofa.',
           'Aristolfo nao passou pano; passou raio-x. O saldo saiu sem filtro de publi.',
           'Semana quitada no registro. Duvida nova pega senha e para de fazer parkour no dashboard.',
+          'Semana empacotada. O placar ficou publico e o achismo voltou pro modo espectador.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
           'Aristolfo closed the week on the ledger. If the spreadsheet squeaks, it gets pedagogical mute.',
           'Weekly summary stamped. The numbers matched before chat built couch VAR.',
           'Aristolfo did not gloss over it; he ran an x-ray. The balance left without ad filters.',
           'Week settled in the record. Any new doubt gets a number and stops doing dashboard parkour.',
+          'Week packaged. The scoreboard is public and guesswork went back to spectator mode.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

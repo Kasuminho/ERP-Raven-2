@@ -91,12 +91,14 @@ export class DkpLogPublisherService implements OnModuleInit, OnModuleDestroy {
                 '**Backfill entregue.** Tres dias em ordem, sem freestyle fiscal no pos-creditos.',
                 '**Historico saiu do arquivo.** O extrato chegou antes do "minha memoria e canon".',
                 '**Retroativo na mesa.** O log trouxe tudo antes que o achismo abrisse vaquinha de argumento.',
+                '**Extrato retroativo no ar.** Tres dias empilhados sem deixar o chutometro narrar a partida.',
               ], this.stateId, index, 'backfill')}\n\n`
               : `${pickStaffVoice([
                 '**Movimentacao nova no log.** Chegou antes que a memoria coletiva publique patch pirata.',
                 '**DKP mexeu e Aristolfo carimbou.** Timeline salva, fofoca sem permissao de commit.',
                 '**Extrato atualizado.** O contador atropelou o chutometro sem gastar ultimate.',
                 '**Saldo mudou.** Registro saiu cedo, antes do voice vender versao estendida dos fatos.',
+                '**Linha nova no extrato.** O DKP piscou e o log ja chegou cobrando contexto.',
               ], this.stateId, index, 'live')}\n\n`}${chunk.lines.join('\n')}`,
             footer: { text: `${chunk.rows.length} movimentacao(oes) | Ordem cronologica` },
             timestamp: new Date().toISOString(),

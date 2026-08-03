@@ -80,6 +80,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
         'Healthcheck normalizado. O servidor parou de vender susto como skin limitada.',
         'Healthcheck no eixo de novo. A stack largou o palco e voltou ao cracha.',
         'Healthcheck estabilizado. O F5 saiu do cardio por enquanto.',
+        'Healthcheck recuperado. A infra parou de tocar alarme como se fosse remix ruim.',
       ], report.status, report.checkedAt)
       : report.status === 'degraded'
         ? pickStaffVoice([
@@ -87,12 +88,14 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
           'Healthcheck rangendo no painel igual call presa no 3G',
           'Healthcheck pediu cautela, nao campeonato estadual de caps lock',
           'Healthcheck amarelou e levantou placa de "olha isso aqui"',
+          'Healthcheck em amarelo. Da pra agir sem transformar o canal em reality show.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
         : pickStaffVoice([
           'Healthcheck critico. Plantao ganhou boss surpresa sem loot e com enrage.',
           'Healthcheck vermelho. A paciencia ficou em 1% e o carregador spawnou longe.',
           'Healthcheck em caos premium. Custo alto, beneficio zero, suor incluso.',
           'Healthcheck abriu chamado com cheiro de deploy fazendo speedrun de susto.',
+          'Healthcheck vermelho. A stack pisou no rake e agora quer adulto na sala.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
@@ -105,6 +108,7 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
             '**Tudo recuperado.** A stack saiu do survival e lembrou que uptime faz parte do contrato.',
             '**Recuperacao confirmada.** O susto deslogou e a infra ficou em pe sem pedir buff.',
             '**Plataforma normalizada.** O drama perdeu MMR e o servidor assinou o ponto.',
+            '**Verde de novo.** O sistema parou de pedir atencao como notificação carente.',
           ], report.status, report.checkedAt)
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [
