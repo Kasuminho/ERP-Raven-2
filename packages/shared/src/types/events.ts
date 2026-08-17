@@ -15,7 +15,8 @@ export type EventType =
   | 'ABYSS_1_2'
   | 'FLOUD'
   | 'KRATERIUS'
-  | 'T3_ROTATION';
+  | 'T3_ROTATION'
+  | 'CUSTOM';
 
 export type EventStatus = 'OPEN' | 'ATTENDANCE_REGISTRATION' | 'FINALIZED' | 'CANCELLED';
 

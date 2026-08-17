@@ -42,6 +42,20 @@ function attendanceEligibilityDraft(value: string): { bidMinimumPercent: number;
   }
 }
 
+function eventRewardsDraft(value: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    const res: Record<string, number> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      const num = Number(v);
+      if (Number.isFinite(num)) res[k] = num;
+    }
+    return res;
+  } catch {
+    return {};
+  }
+}
+
 export default function StaffBusinessRulesPage() {
   const locale = useLocaleStore((state) => state.locale);
   const rules = useBusinessRules();
@@ -67,6 +81,16 @@ export default function StaffBusinessRulesPage() {
     const next = {
       ...current,
       [key]: Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : current[key],
+    };
+    setDrafts((draft) => ({ ...draft, [rule.key]: prettyJson(next) }));
+  }
+
+  function updateEventRewardDraft(rule: BusinessRule, eventType: string, rawValue: string) {
+    const current = eventRewardsDraft(draftFor(rule));
+    const parsed = Number(rawValue);
+    const next = {
+      ...current,
+      [eventType]: Number.isFinite(parsed) ? Math.max(0, Math.min(10000, parsed)) : 0,
     };
     setDrafts((draft) => ({ ...draft, [rule.key]: prettyJson(next) }));
   }
@@ -255,6 +279,26 @@ export default function StaffBusinessRulesPage() {
                             onChange={(event) => updateAttendanceDraft(rule, 'participationMinimumPercent', event.target.value)}
                           />
                         </label>
+                      </div>
+                    ) : null}
+                    {rule.key === 'eventRewards' ? (
+                      <div className="space-y-2 rounded-md border bg-background/35 p-3">
+                        <p className="text-xs font-semibold uppercase text-primary">Pontuação DKP Padrão por Evento</p>
+                        <div className="grid gap-2 sm:grid-cols-2 max-h-64 overflow-y-auto pr-1">
+                          {Object.entries(eventRewardsDraft(draftFor(rule))).map(([type, points]) => (
+                            <label key={type} className="flex items-center justify-between gap-2 rounded border bg-background/50 p-2 text-xs">
+                              <span className="font-semibold">{type}</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={10000}
+                                className="h-7 w-20 text-right text-xs"
+                                value={points}
+                                onChange={(event) => updateEventRewardDraft(rule, type, event.target.value)}
+                              />
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
                     <label className="text-sm font-semibold" htmlFor={`rule-${rule.key}`}>

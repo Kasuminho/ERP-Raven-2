@@ -34,7 +34,29 @@ const eventTypes: EventType[] = [
   'FLOUD',
   'KRATERIUS',
   'T3_ROTATION',
+  'CUSTOM',
 ];
+
+const defaultRewardByType: Record<EventType, number> = {
+  LUNOS: 20,
+  RIGRETO: 20,
+  GARDRON: 20,
+  MELKAR: 100,
+  VARGAS: 20,
+  BELLAMONICA: 20,
+  SION: 20,
+  ISTERIA: 20,
+  NIDROK: 20,
+  MORGON: 20,
+  GUILD_DUNGEON: 30,
+  SATURDAY_EVENT: 40,
+  ABYSS_1: 10,
+  ABYSS_1_2: 35,
+  FLOUD: 40,
+  KRATERIUS: 40,
+  T3_ROTATION: 20,
+  CUSTOM: 20,
+};
 
 const operationalCategories: EventOperationalCategory[] = ['BOSS', 'ABYSS', 'GUILD_RAID', 'FARM', 'TRAINING', 'CLASH', 'CUSTOM'];
 const priorities: EventOperationalPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
@@ -63,6 +85,7 @@ export default function AdminEventsPage() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [eventType, setEventType] = useState<EventType>('LUNOS');
+  const [dkpReward, setDkpReward] = useState<number>(20);
   const [operationalCategory, setOperationalCategory] = useState<EventOperationalCategory>('BOSS');
   const [priority, setPriority] = useState<EventOperationalPriority>('MEDIUM');
   const [operationalNotes, setOperationalNotes] = useState('');
@@ -72,6 +95,7 @@ export default function AdminEventsPage() {
   const [seriesInterval, setSeriesInterval] = useState(1);
   const [seriesTimezone, setSeriesTimezone] = useState('America/Sao_Paulo');
   const [seriesExceptions, setSeriesExceptions] = useState<Record<string, string>>({});
+  const [seriesDkpReward, setSeriesDkpReward] = useState<number>(20);
   const [targetRole, setTargetRole] = useState('');
   const [targetClass, setTargetClass] = useState('');
   const [targetMinimum, setTargetMinimum] = useState(1);
@@ -105,6 +129,12 @@ export default function AdminEventsPage() {
   const absentCount = Math.max(0, activePlayers.length - presentPlayerIds.size);
   const totalDkp = (selectedEvent?.dkpReward ?? 0) * presentPlayerIds.size;
 
+  function handleEventTypeChange(newType: EventType) {
+    setEventType(newType);
+    setDkpReward(defaultRewardByType[newType] ?? 20);
+    setSeriesDkpReward(defaultRewardByType[newType] ?? 20);
+  }
+
   function create() {
     if (!name.trim() || !startsAt) return;
     createEvent.mutate(
@@ -115,6 +145,7 @@ export default function AdminEventsPage() {
         endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
         operationalCategory,
         priority,
+        dkpReward: Number.isFinite(dkpReward) ? dkpReward : undefined,
         operationalNotes: operationalNotes.trim() || undefined,
       },
       {
@@ -141,6 +172,7 @@ export default function AdminEventsPage() {
       timezone: seriesTimezone,
       operationalCategory,
       priority,
+      dkpReward: Number.isFinite(seriesDkpReward) ? seriesDkpReward : undefined,
     }, {
       onSuccess: () => {
         setSeriesName('');
@@ -237,11 +269,19 @@ export default function AdminEventsPage() {
 
         <Card>
           <CardHeader><CardTitle>{t(locale, 'createEvent')}</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_180px_180px_180px_180px_auto]">
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_160px_130px_160px_160px_160px_auto]">
             <Input placeholder={t(locale, 'eventName')} value={name} onChange={(event) => setName(event.target.value)} />
-            <Select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)}>
+            <Select value={eventType} onChange={(event) => handleEventTypeChange(event.target.value as EventType)}>
               {eventTypes.map((value) => <option key={value}>{value}</option>)}
             </Select>
+            <Input
+              type="number"
+              min={0}
+              placeholder="DKP"
+              value={dkpReward}
+              onChange={(event) => setDkpReward(Math.max(0, Number(event.target.value)))}
+              title="Recompensa de DKP do evento"
+            />
             <Select value={operationalCategory} onChange={(event) => setOperationalCategory(event.target.value as EventOperationalCategory)}>
               {operationalCategories.map((value) => <option key={value}>{value}</option>)}
             </Select>
@@ -251,18 +291,26 @@ export default function AdminEventsPage() {
             <Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
             <Button onClick={create} disabled={!name.trim() || !startsAt || createEvent.isPending}>{t(locale, 'create')}</Button>
             <Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
-            <Input className="xl:col-span-4" placeholder="Notas operacionais" value={operationalNotes} onChange={(event) => setOperationalNotes(event.target.value)} />
+            <Input className="xl:col-span-5" placeholder="Notas operacionais" value={operationalNotes} onChange={(event) => setOperationalNotes(event.target.value)} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Séries recorrentes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_180px_180px_140px_140px_200px_auto]">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_160px_130px_180px_140px_140px_180px_auto]">
               <Input placeholder="Nome da série" value={seriesName} onChange={(event) => setSeriesName(event.target.value)} />
-              <Select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)}>
+              <Select value={eventType} onChange={(event) => handleEventTypeChange(event.target.value as EventType)}>
                 {eventTypes.map((value) => <option key={value}>{value}</option>)}
               </Select>
+              <Input
+                type="number"
+                min={0}
+                placeholder="DKP"
+                value={seriesDkpReward}
+                onChange={(event) => setSeriesDkpReward(Math.max(0, Number(event.target.value)))}
+                title="Recompensa de DKP da série"
+              />
               <Input type="datetime-local" value={seriesStartsAt} onChange={(event) => setSeriesStartsAt(event.target.value)} />
               <Input type="number" min={15} max={1440} value={seriesDuration} onChange={(event) => setSeriesDuration(Number(event.target.value))} title="Duração em minutos" />
               <Input type="number" min={1} max={12} value={seriesInterval} onChange={(event) => setSeriesInterval(Number(event.target.value))} title="Intervalo em semanas" />

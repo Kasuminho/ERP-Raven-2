@@ -25,6 +25,23 @@ describe('Events DTO validation', () => {
     assert.equal(result.batchOrder, 2);
   });
 
+  it('accepts event creation payload with custom type and explicit dkpReward', async () => {
+    const result = await strictPipe.transform(
+      {
+        name: 'Guerra de Guilda Especial',
+        type: EventType.CUSTOM,
+        startsAt: '2026-07-09T23:00:00.000Z',
+        dkpReward: '75',
+      },
+      { type: 'body', metatype: CreateEventDto },
+    );
+
+    assert.ok(result instanceof CreateEventDto);
+    assert.equal(result.name, 'Guerra de Guilda Especial');
+    assert.equal(result.type, EventType.CUSTOM);
+    assert.equal(result.dkpReward, 75);
+  });
+
   it('rejects unknown event creation fields under the local strict pipe', async () => {
     await assert.rejects(
       () => strictPipe.transform(

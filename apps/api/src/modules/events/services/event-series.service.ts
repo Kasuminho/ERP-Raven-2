@@ -30,7 +30,9 @@ export class EventSeriesService {
     const firstStartsAt = new Date(dto.firstStartsAt);
     const targets = this.normalizeTargets(dto.compositionTargets ?? []);
     const exceptionDates = this.normalizeExceptionDates(dto.exceptionDates ?? []);
-    const dkpReward = await this.businessRules.getEventReward(dto.type);
+    const dkpReward = typeof dto.dkpReward === 'number'
+      ? dto.dkpReward
+      : await this.businessRules.getEventReward(dto.type);
     const series = await this.prisma.eventSeries.create({
       data: {
         name: dto.name.trim(),

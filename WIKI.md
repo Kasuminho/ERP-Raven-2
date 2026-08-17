@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-08-03
+**Ultima revisao:** 2026-08-17
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -255,6 +255,9 @@ O percentual operacional de presenca de `Player.attendancePercentage` e calculad
 Criacao simples:
 
 - Um tipo selecionado cria um evento com o titulo base.
+- Suporta tipo `CUSTOM` e pontuação DKP customizada opcional em `CreateEventDto` e `CreateEventSeriesDto` (quando omitida, busca o valor padrão da regra `eventRewards`).
+- A tela de regras da Staff (`/dashboard/staff/rules`) possui editor visual interativo para a regra `eventRewards`, permitindo ajustar os pontos padrão de cada boss sem editar JSON manualmente.
+- Migration: `20260817150000_add_custom_event_type`.
 
 Criacao em lote:
 
@@ -422,6 +425,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-08-17 | Criacao de eventos e series passou a aceitar pontuacao DKP customizada e tipo CUSTOM; Staff ganhou editor visual de eventRewards nas regras de negocio. | eventos/DKP/configurabilidade |
 | 2026-08-03 | Decima rotacao automatica renovou e ampliou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-23 | Nona rotacao automatica renovou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-22 | Frente 0 entrou em coleta real: lideranca Staff e player de baixa atividade foram entrevistados, RSVP ja foi validado como redutor de cobranca e a proxima amostra e Staff de eventos; baseline semanal inicia em 27/07. | produto/validacao/roadmap |

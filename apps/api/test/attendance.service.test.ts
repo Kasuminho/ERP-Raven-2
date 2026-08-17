@@ -98,4 +98,35 @@ describe('AttendanceService event batches', () => {
     assert.equal(repository.updateEvent.mock.calls[0].arguments[1].checklist[0].note, 'caller confirmou');
     assert.equal(audit.log.mock.calls[0].arguments[0].action, 'EVENT_CHECKLIST_ITEM_UPDATED');
   });
+
+  it('uses explicit dkpReward when provided and falls back to business rules when omitted', async () => {
+    let savedEventData: any = null;
+    const repository = {
+      create: mock.fn(async (data: any) => {
+        savedEventData = data;
+        return { id: 'e-custom', ...data };
+      }),
+    };
+    const rules = { getEventReward: mock.fn(async () => 20) };
+    const service = new AttendanceService(repository as never, {} as never, { log: mock.fn() } as never, { notifyAttendanceStarted: mock.fn() } as never, rules as never);
+
+    await service.createEvent({
+      name: 'Guerra de Guilda Extra',
+      type: EventType.CUSTOM,
+      startsAt: new Date().toISOString(),
+      createdById: 'staff',
+      dkpReward: 75,
+    });
+    assert.equal(savedEventData.dkpReward, 75);
+    assert.equal(rules.getEventReward.mock.callCount(), 0);
+
+    await service.createEvent({
+      name: 'Lunos Normal',
+      type: EventType.LUNOS,
+      startsAt: new Date().toISOString(),
+      createdById: 'staff',
+    });
+    assert.equal(savedEventData.dkpReward, 20);
+    assert.equal(rules.getEventReward.mock.callCount(), 1);
+  });
 });

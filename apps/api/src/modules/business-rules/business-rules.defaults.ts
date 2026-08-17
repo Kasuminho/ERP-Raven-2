@@ -74,6 +74,7 @@ export const defaultEventRewardRules: EventRewardRules = {
   [EventType.FLOUD]: 40,
   [EventType.KRATERIUS]: 40,
   [EventType.T3_ROTATION]: 20,
+  [EventType.CUSTOM]: 0,
 };
 
 export const defaultAuctionTierRules: AuctionTierRules = {

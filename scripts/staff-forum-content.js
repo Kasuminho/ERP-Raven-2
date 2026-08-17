@@ -73,7 +73,7 @@ Use [Comparar players](${route('/dashboard/staff/compare')}) e [Fairness](${rout
     slug: 'staff-eventos-presenca', title: '03 · Eventos, presença, bosses em lote e prontidão', tag: 'events', route: '/dashboard/admin/events',
     visual: ['Revise RSVP, gaps e reserva', 'Controle séries e exceções', 'Finalize cada boss separado'],
     body: `## ⚔️ Operação de eventos
-Na tela de [Eventos](${route('/dashboard/admin/events')}) crie eventos, registre presença e finalize a distribuição de DKP.
+Na tela de [Eventos](${route('/dashboard/admin/events')}) crie eventos avulsos (com tipo de boss ou \`CUSTOM\` e pontuação DKP configurável), registre presença e finalize a distribuição de DKP.
 
 No evento selecionado, o painel de RSVP mostra **confirmados, talvez, recusas e sem resposta**, além da composição confirmada por classe, role e camada. A Staff vê as notas; para outros players, só aparece nota marcada pelo autor como pública.
 

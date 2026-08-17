@@ -74,4 +74,10 @@ export class CreateEventDto {
   @IsInt()
   @Min(0)
   batchOrder?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  dkpReward?: number;
 }

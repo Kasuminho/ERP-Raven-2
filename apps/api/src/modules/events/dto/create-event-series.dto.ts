@@ -59,6 +59,12 @@ export class CreateEventSeriesDto {
   @ValidateNested({ each: true })
   @Type(() => EventCompositionTargetDto)
   compositionTargets?: EventCompositionTargetDto[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  dkpReward?: number;
 }
 
 export class UpdateEventSeriesExceptionsDto {

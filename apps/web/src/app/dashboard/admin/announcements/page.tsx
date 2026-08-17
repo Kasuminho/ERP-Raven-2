@@ -41,6 +41,7 @@ const eventTypes: EventType[] = [
   'FLOUD',
   'KRATERIUS',
   'T3_ROTATION',
+  'CUSTOM',
 ];
 
 function formatAnnouncementPreview(form: {

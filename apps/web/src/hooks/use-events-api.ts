@@ -59,6 +59,7 @@ export function useCreateEvent() {
       priority?: EventOperationalPriority;
       responsibleUserId?: string;
       operationalNotes?: string;
+      dkpReward?: number;
     }) => (await api.post<EventRecord>('/events', data)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
@@ -86,6 +87,7 @@ export function useCreateEventSeries() {
       priority?: EventOperationalPriority;
       exceptionDates?: string[];
       compositionTargets?: EventCompositionTarget[];
+      dkpReward?: number;
     }) => (await api.post<EventSeriesRecord>('/events/series', data)).data,
     onSuccess: async () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ['event-series'] }),

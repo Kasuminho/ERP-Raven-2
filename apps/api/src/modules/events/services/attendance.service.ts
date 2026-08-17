@@ -72,7 +72,9 @@ export class AttendanceService {
       throw new BadRequestException('Authenticated user is required to create an event.');
     }
 
-    const reward = await this.businessRules.getEventReward(data.type);
+    const reward = typeof data.dkpReward === 'number'
+      ? data.dkpReward
+      : await this.businessRules.getEventReward(data.type);
     const operationalCategory = data.operationalCategory ?? this.inferOperationalCategory(data.type);
     const checklist = this.normalizeChecklist(data.checklist?.length ? data.checklist : this.defaultChecklist(operationalCategory, data.type));
     const event = await this.repository.create({

@@ -38,6 +38,7 @@ enum EventType {
   FLOUD
   KRATERIUS
   T3_ROTATION
+  CUSTOM
 }
 
 enum EventStatus {
