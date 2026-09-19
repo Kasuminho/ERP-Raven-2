@@ -29,6 +29,7 @@
     "discord:staff-forum": "node scripts/publish-staff-forum.js",
     "guild:dry-run": "node scripts/check-guild-stack-dry-run.js",
     "images:migrate-drive": "node scripts/migrate-drive-images-to-local.js",
+    "news:raven-zero": "node scripts/raven-zero-news.js",
     "prisma:generate": "npm run -w @guild/database prisma:generate",
     "prisma:migrate:dev": "npm run -w @guild/database prisma:migrate:dev"
   },

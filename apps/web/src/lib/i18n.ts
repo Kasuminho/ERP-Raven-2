@@ -2,6 +2,13 @@ import type { Locale } from "@/store/locale-store";
 
 const dictionary = {
   pt: {
+    hubToday: "Hoje",
+    hubWar: "Guerra & Bosses",
+    hubLoot: "Loot & Cofre",
+    hubGuild: "Guilda & Membros",
+    hubCore: "Operação",
+    hubTools: "Outros",
+    staffMode: "Modo Staff",
     command: "Comando",
     notices: "Avisos",
     rules: "Regras",
@@ -595,6 +602,13 @@ const dictionary = {
     eventStatusFinalized: "Finalizado",
   },
   en: {
+    hubToday: "Today",
+    hubWar: "War & Bosses",
+    hubLoot: "Loot & Vault",
+    hubGuild: "Guild & Members",
+    hubCore: "Operations",
+    hubTools: "Utilities",
+    staffMode: "Staff Mode",
     command: "Command",
     notices: "Notices",
     rules: "Rules",
@@ -1185,6 +1199,13 @@ const dictionary = {
     eventStatusFinalized: "Finalized",
   },
   es: {
+    hubToday: "Hoy",
+    hubWar: "Guerra & Jefes",
+    hubLoot: "Botín & Cofre",
+    hubGuild: "Gremio & Miembros",
+    hubCore: "Operación",
+    hubTools: "Utilidades",
+    staffMode: "Modo Staff",
     command: "Comando",
     notices: "Avisos",
     rules: "Reglas",

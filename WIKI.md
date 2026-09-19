@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-09-18
+**Ultima revisao:** 2026-09-19
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -425,6 +425,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-09-19 | Script e comando npm 'news:raven-zero' criados para compilar e enviar atualizações oficiais dos fóruns do Raven 2 (boards 27, 28 e 29) e do servidor ZERO via webhook do Aristolfo com controle de deduplicação e estado persistido. | automacao/webhooks |
 | 2026-09-18 | Migration de reset da guilda aplicada para limpeza de historico operacional, usuarios e logs, preservando o catalogo de itens (ItemCatalog). | operacao/reset-guild |
 | 2026-08-17 | Criacao de eventos e series passou a aceitar pontuacao DKP customizada e tipo CUSTOM; Staff ganhou editor visual de eventRewards nas regras de negocio. | eventos/DKP/configurabilidade |
 | 2026-08-03 | Decima rotacao automatica renovou e ampliou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
@@ -556,6 +557,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumo Staff principal de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando filas, thresholds e contadores. | arquitetura/API |
 | 2026-07-02 | Quinta rotacao automatica renovou o humor dos webhooks, DMs, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-02 | Resumo do dia Staff de `operations` saiu da delegacao e passou a ser calculado em `StaffSummaryService`, preservando contadores diarios e tarefas urgentes. | arquitetura/API |
+| 2026-09-19 | Reformulação completa do sistema em 4 macro hubs (Hoje, Guerra & Bosses, Loot & Cofre, Guilda & Membros) com Dark Fantasy UI, unificação do fluxo de loot, descontinuação de telas de RH corporativo e suporte aos novos canais de fórum Discord. | UX/arquitetura/navegação |
 | 2026-07-02 | Resumo matinal Staff de `operations` saiu da delegacao e passou a ser montado em `OperationalBriefingService`, preservando secoes, contadores e Markdown. | arquitetura/API |
 | 2026-07-02 | Modo reuniao Staff de `operations` saiu da delegacao e passou a ser montado em `MeetingService`, preservando a pauta de dia, reviews, interesses e eventos. | arquitetura/API |
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |

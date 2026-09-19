@@ -13,8 +13,6 @@ const {
 const { posts, tags } = require('./player-forum-content');
 
 const root = path.resolve(__dirname, '..');
-const categoryId = process.env.PLAYER_FORUM_CATEGORY_ID || '1431340101052530829';
-const forumName = process.env.PLAYER_FORUM_NAME || '📚・central-do-player';
 const dryRun = process.argv.includes('--dry-run');
 
 function loadEnvFile(filePath) {
@@ -102,6 +100,9 @@ async function main() {
   validateContent();
   const token = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
+  const categoryId = process.env.PLAYER_FORUM_CATEGORY_ID || '1550678402535522425';
+  const forumChannelId = process.env.PLAYER_FORUM_CHANNEL_ID;
+  const forumName = process.env.PLAYER_FORUM_NAME || 'forum-uso-site';
   if (!token || !guildId) throw new Error('DISCORD_BOT_TOKEN and DISCORD_GUILD_ID are required.');
 
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -109,8 +110,13 @@ async function main() {
 
   try {
     const guild = await client.guilds.fetch(guildId);
-    const category = await guild.channels.fetch(categoryId);
-    if (!category || category.type !== ChannelType.GuildCategory) throw new Error(`Category ${categoryId} is invalid.`);
+    let forum = null;
+    if (forumChannelId) {
+      forum = await guild.channels.fetch(forumChannelId).catch(() => null);
+    }
+    const resolvedCategoryId = forum?.parentId || categoryId;
+    const category = resolvedCategoryId ? await guild.channels.fetch(resolvedCategoryId).catch(() => null) : null;
+    if (!category || category.type !== ChannelType.GuildCategory) throw new Error(`Category ${resolvedCategoryId} is invalid.`);
 
     const everyone = guild.roles.everyone.permissions;
     const replyPermissions = [
@@ -121,8 +127,10 @@ async function main() {
     ];
     if (!everyone.has(replyPermissions)) throw new Error('@everyone cannot view and reply under the current guild permissions.');
 
-    const channels = await guild.channels.fetch();
-    let forum = channels.find((channel) => channel?.type === ChannelType.GuildForum && channel.name === forumName && channel.parentId === categoryId);
+    if (!forum) {
+      const channels = await guild.channels.fetch();
+      forum = channels.find((channel) => channel?.type === ChannelType.GuildForum && channel.name === forumName && channel.parentId === resolvedCategoryId);
+    }
     if (dryRun) {
       console.log(JSON.stringify({ dryRun: true, guild: guild.name, category: category.name, forum: forum?.name ?? forumName, action: forum ? 'update' : 'create', posts: posts.length, playersCanReply: true }, null, 2));
       return;

@@ -13,8 +13,6 @@ const {
 const { posts, tags } = require('./staff-forum-content');
 
 const root = path.resolve(__dirname, '..');
-const categoryId = process.env.STAFF_FORUM_CATEGORY_ID || '1528829674166423552';
-const forumName = process.env.STAFF_FORUM_NAME || '🛡️・central-da-staff';
 const dryRun = process.argv.includes('--dry-run');
 
 function loadEnvFile(filePath) {
@@ -104,19 +102,32 @@ async function main() {
   validateContent();
   const token = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
-  const staffRoleId = process.env.DISCORD_STAFF_ROLE_ID || '1431337988423549000';
+  const categoryId = process.env.STAFF_FORUM_CATEGORY_ID || '1550678402535522425';
+  const forumChannelId = process.env.STAFF_FORUM_CHANNEL_ID;
+  const forumName = process.env.STAFF_FORUM_NAME || 'forum-uso-site-staff';
+  const staffRoleId = process.env.DISCORD_STAFF_ROLE_ID || '1448398041148293201';
   if (!token || !guildId) throw new Error('DISCORD_BOT_TOKEN and DISCORD_GUILD_ID are required.');
 
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
   await client.login(token);
   try {
     const guild = await client.guilds.fetch(guildId);
-    const [category, staffRole] = await Promise.all([guild.channels.fetch(categoryId), guild.roles.fetch(staffRoleId)]);
-    if (!category || category.type !== ChannelType.GuildCategory) throw new Error(`Category ${categoryId} is invalid.`);
+    let forum = null;
+    if (forumChannelId) {
+      forum = await guild.channels.fetch(forumChannelId).catch(() => null);
+    }
+    const resolvedCategoryId = forum?.parentId || categoryId;
+    const [category, staffRole] = await Promise.all([
+      resolvedCategoryId ? guild.channels.fetch(resolvedCategoryId).catch(() => null) : null,
+      guild.roles.fetch(staffRoleId).catch(() => null),
+    ]);
+    if (!category || category.type !== ChannelType.GuildCategory) throw new Error(`Category ${resolvedCategoryId} is invalid.`);
     if (!staffRole) throw new Error(`Staff role ${staffRoleId} was not found.`);
 
-    const channels = await guild.channels.fetch();
-    let forum = channels.find((channel) => channel?.type === ChannelType.GuildForum && channel.name === forumName && channel.parentId === categoryId);
+    if (!forum) {
+      const channels = await guild.channels.fetch();
+      forum = channels.find((channel) => channel?.type === ChannelType.GuildForum && channel.name === forumName && channel.parentId === resolvedCategoryId);
+    }
     if (dryRun) {
       console.log(JSON.stringify({ dryRun: true, guild: guild.name, category: category.name, staffRole: staffRole.name, forum: forum?.name ?? forumName, action: forum ? 'update' : 'create', posts: posts.length, language: 'pt-BR', staffOnly: true }, null, 2));
       return;

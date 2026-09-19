@@ -5,124 +5,43 @@ import Link from 'next/link';
 import { AuctionCard } from '@/components/dashboard/auction-card';
 import { AttendanceCard } from '@/components/dashboard/attendance-card';
 import { DKPCard } from '@/components/dashboard/dkp-card';
-import { OperationTaskList } from '@/components/dashboard/operation-task-list';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { notifyToast } from '@/components/ui/toaster';
-import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
-import { useAttendanceStats, useMyNotifications, usePlayerActionPlan, usePlayerId, usePlayerOperations } from '@/hooks/use-profile-api';
+import { ArrowRight, CheckCircle2, Sparkles, Swords, Gem, UsersRound, Calendar, ShieldAlert } from 'lucide-react';
+import { useAttendanceStats, useMyNotifications, usePlayerId } from '@/hooks/use-profile-api';
 import { useAuctions } from '@/hooks/use-auctions-api';
 import { useDkpLeaderboard, useDkpSummary } from '@/hooks/use-dkp-api';
 import { useEvents } from '@/hooks/use-events-api';
-import { useItemRequests } from '@/hooks/use-requests-api';
+import { usePlayers } from '@/hooks/use-profile-api';
 import { t } from '@/lib/i18n';
+import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
-import type { PlayerActionPlan } from '@/types/api';
-
-function isBossRequest(request: { itemCatalog?: { category?: string | null } | null }): boolean {
-  return request.itemCatalog?.category === 'creature';
-}
-
-const actionTone = {
-  high: 'red',
-  medium: 'gold',
-  low: 'blue',
-} as const;
-
-function ActionPlanPanel({ plan }: { plan?: PlayerActionPlan }) {
-  if (!plan) {
-    return <Skeleton className="h-44" />;
-  }
-
-  return (
-    <Card className="border-primary/25 bg-card/70">
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <CardTitle>{plan.headline}</CardTitle>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{plan.summary}</p>
-          </div>
-          <p className="text-xs text-muted-foreground">{new Date(plan.generatedAt).toLocaleString()}</p>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {plan.cards.length ? (
-          <div className="grid gap-3 xl:grid-cols-2">
-            {plan.cards.map((card) => (
-              <div key={`${card.type}-${card.id}`} className="rounded-lg border border-white/10 bg-background/45 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">{card.title}</p>
-                      <Badge tone={actionTone[card.priority]}>{card.priority}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{card.description}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">Motivo: {card.reason}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Impacto: {card.impact}</p>
-                    {card.dueAt ? <p className="mt-1 text-xs text-muted-foreground">Prazo: {new Date(card.dueAt).toLocaleString()}</p> : null}
-                  </div>
-                  <Link href={card.href} className="shrink-0">
-                    <Button variant="secondary" className="gap-2">
-                      {card.actionLabel}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-emerald-200" />
-            Sem acao urgente agora. Da ate para respirar antes do proximo boss.
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function DashboardPage() {
   const locale = useLocaleStore((state) => state.locale);
   const playerId = usePlayerId();
+  const hasRole = useAuthStore((state) => state.hasRole);
+  const isStaff = hasRole(['STAFF', 'ADMIN']);
+
   const dkp = useDkpSummary(playerId);
   const auctions = useAuctions();
   const attendance = useAttendanceStats(playerId);
   const events = useEvents();
   const leaderboard = useDkpLeaderboard();
-  const itemRequests = useItemRequests();
-  const operations = usePlayerOperations();
-  const actionPlan = usePlayerActionPlan();
+  const players = usePlayers();
   const notifications = useMyNotifications();
-  const requestsNeedingUpdate = (itemRequests.data ?? []).filter((request) => !isBossRequest(request) && request.rankPosition === 1 && (request.warned3d || request.warned4d));
+
+  const activeAuctions = (auctions.data ?? []).filter((a) => a.status === 'OPEN');
+
   const upcomingEvents = (events.data ?? [])
     .filter((event) => ['OPEN', 'ATTENDANCE_REGISTRATION'].includes(event.status) && new Date(event.startsAt).getTime() >= Date.now())
-    .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime())
-    .slice(0, 3);
+    .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime());
 
-  useEffect(() => {
-    if (requestsNeedingUpdate.length === 0) {
-      return;
-    }
-
-    const key = `request-update-toast-${requestsNeedingUpdate.map((request) => request.id).sort().join('-')}`;
-    if (sessionStorage.getItem(key)) {
-      return;
-    }
-
-    sessionStorage.setItem(key, '1');
-    notifyToast({
-      title: t(locale, 'requestUpdateToastTitle'),
-      description: t(locale, 'requestUpdateToastDescription'),
-      tone: 'info',
-    });
-  }, [locale, requestsNeedingUpdate]);
+  const nextEvent = upcomingEvents[0] ?? null;
 
   useEffect(() => {
     const unread = (notifications.data ?? []).filter((notification) => !notification.readAt);
@@ -141,73 +60,193 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-primary/15 bg-card/55 p-4 shadow-rune backdrop-blur-xl sm:p-6">
-        <p className="page-kicker">{t(locale, 'guildCommand')}</p>
-        <h1 className="page-title mt-2">{t(locale, 'todaysOperations')}</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          {t(locale, 'guildOperationsDeck')}
-        </p>
+      {/* Hero Welcome Banner */}
+      <section className="rounded-xl border border-primary/25 bg-card/60 p-5 shadow-rune backdrop-blur-xl sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="page-kicker">G3X &bull; ERP Raven 2</p>
+            <h1 className="page-title mt-1 text-2xl sm:text-3xl font-bold">Comando & Operação do Dia</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Tudo o que você precisa saber para a jornada de hoje: próximos bosses, leilões ativos e status de presença.
+            </p>
+          </div>
+          {isStaff && (
+            <Link href="/dashboard/staff">
+              <Button variant="secondary" className="gap-2 border border-primary/40 bg-primary/10 text-primary">
+                <ShieldAlert className="h-4 w-4" />
+                Painel Staff
+              </Button>
+            </Link>
+          )}
+        </div>
+
+        {/* 4 Macro Hubs Quick Access */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* Hub 1: Guerra */}
+          <Link
+            href="/dashboard/events"
+            className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Guerra & Bosses</span>
+              <Swords className="h-4 w-4 text-primary" />
+            </div>
+            <div className="mt-3">
+              <p className="truncate text-base font-bold text-foreground group-hover:text-primary">
+                {nextEvent ? nextEvent.name : 'Sem boss hoje'}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {nextEvent ? new Date(nextEvent.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ver cronograma'}
+              </p>
+            </div>
+          </Link>
+
+          {/* Hub 2: Loot */}
+          <Link
+            href="/dashboard/loot"
+            className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Loot & Cofre</span>
+              <Gem className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="mt-3">
+              <p className="font-tabular text-xl font-bold text-foreground group-hover:text-primary">
+                {activeAuctions.length} <span className="text-xs font-normal text-muted-foreground">leilões</span>
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Lances silenciosos</p>
+            </div>
+          </Link>
+
+          {/* Hub 3: Guilda */}
+          <Link
+            href="/dashboard/members"
+            className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Guilda & Roster</span>
+              <UsersRound className="h-4 w-4 text-blue-400" />
+            </div>
+            <div className="mt-3">
+              <p className="font-tabular text-xl font-bold text-foreground group-hover:text-primary">
+                {players.data?.length ?? 0} <span className="text-xs font-normal text-muted-foreground">membros</span>
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Ver classes e CP</p>
+            </div>
+          </Link>
+
+          {/* Hub 4: DKP */}
+          <div className="flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground">Meu Saldo</span>
+              <Sparkles className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="mt-3">
+              <p className="font-tabular text-xl font-bold text-emerald-400">
+                {dkp.data?.total ?? 0} <span className="text-xs font-normal text-muted-foreground">DKP</span>
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Pontuação de presença</p>
+            </div>
+          </div>
+        </div>
       </section>
+
+      {/* DKP & Attendance Cards */}
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         {dkp.isLoading ? <Skeleton className="h-32" /> : <DKPCard {...dkp.data} />}
-        {attendance.isLoading ? <Skeleton className="h-32" /> : (
-          <AttendanceCard percentage={attendance.data?.attendancePercentage} participated={attendance.data?.participatedEvents} eligible={attendance.data?.eligibleEvents} />
+        {attendance.isLoading ? (
+          <Skeleton className="h-32" />
+        ) : (
+          <AttendanceCard
+            percentage={attendance.data?.attendancePercentage}
+            participated={attendance.data?.participatedEvents}
+            eligible={attendance.data?.eligibleEvents}
+          />
         )}
       </div>
-      <ActionPlanPanel plan={actionPlan.data} />
-      {requestsNeedingUpdate.length > 0 && (
-        <Card className="border-primary/45 bg-primary/10">
-          <CardHeader><CardTitle>{t(locale, 'requestUpdateToastTitle')}</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm text-primary">
-            <p>{t(locale, 'requestUpdateToastDescription')}</p>
-            {requestsNeedingUpdate.map((request) => (
-              <p key={request.id} className="font-semibold">{request.itemName} - {request.warned4d ? t(locale, 'requestLastWarning') : t(locale, 'requestUpdateNeeded')}</p>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-      <OperationTaskList
-        title={t(locale, 'myPendingTasks')}
-        tasks={operations.data?.tasks ?? []}
-        emptyText={t(locale, 'myPendingTasksEmpty')}
-        ownerLabel={locale === 'pt' ? 'Voce' : 'You'}
-      />
+
+      {/* Active Auctions Section */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="page-kicker">{t(locale, 'auctions')}</p>
-            <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{t(locale, 'activeAuctions')}</h2>
+            <p className="page-kicker">Loot de Guilda</p>
+            <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">Leilões Ativos</h2>
           </div>
+          <Link href="/dashboard/loot" className="text-xs text-primary hover:underline">
+            Ver central de loot completa &rarr;
+          </Link>
         </div>
-        {auctions.data?.length ? (
+
+        {activeAuctions.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {auctions.data.slice(0, 6).map((auction) => <AuctionCard key={auction.id} auction={auction} />)}
+            {activeAuctions.slice(0, 6).map((auction) => (
+              <AuctionCard key={auction.id} auction={auction} />
+            ))}
           </div>
-        ) : <EmptyState title={t(locale, 'noActiveAuctions')}>{t(locale, 'noActiveAuctionsHelp')}</EmptyState>}
+        ) : (
+          <EmptyState title="Nenhum leilão em andamento">
+            Itens dropados de bosses de campo e masmorras aparecerão aqui para lances da guilda.
+          </EmptyState>
+        )}
       </section>
+
+      {/* Bottom Grid: DKP Leaderboard & Upcoming Events */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>{t(locale, 'dkpRank')}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {(leaderboard.data ?? []).map((row, index) => (
-              <div key={row.playerId} className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-background/38 p-3 text-sm">
-                <span className="min-w-0 truncate font-semibold">#{index + 1} {row.nickname}</span>
-                <span className="shrink-0 text-primary">{row.total} DKP</span>
+        <Card className="border-white/10 bg-card/70">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base font-bold">Top DKP da Guilda</CardTitle>
+            <Link href="/dashboard/members" className="text-xs text-muted-foreground hover:text-primary">
+              Ver todos &rarr;
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {(leaderboard.data ?? []).slice(0, 5).map((row, index) => (
+              <div
+                key={row.playerId}
+                className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-background/40 p-3 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-tabular text-xs font-bold text-primary">#{index + 1}</span>
+                  <span className="font-semibold text-foreground">{row.nickname}</span>
+                </div>
+                <span className="font-tabular font-bold text-primary">{row.total} DKP</span>
               </div>
             ))}
-            {!leaderboard.isLoading && (leaderboard.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t(locale, 'noDkpYet')}</p>}
+            {!leaderboard.isLoading && (leaderboard.data ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum registro de DKP encontrado.</p>
+            )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader><CardTitle>{t(locale, 'upcomingEvents')}</CardTitle></CardHeader>
+
+        <Card className="border-white/10 bg-card/70">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base font-bold">Próximos Eventos</CardTitle>
+            <Link href="/dashboard/events" className="text-xs text-muted-foreground hover:text-primary">
+              Ver agenda &rarr;
+            </Link>
+          </CardHeader>
           <CardContent className="space-y-2">
-            {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
-              <div key={event.id} className="rounded-md border border-white/10 bg-background/38 p-3 text-sm">
-                <p className="font-semibold">{event.name}</p>
-                <p className="text-xs text-muted-foreground">{event.type} - {new Date(event.startsAt).toLocaleString()}</p>
-              </div>
-            )) : (
-              <p className="text-sm text-muted-foreground">{t(locale, 'noUpcomingEvents')}</p>
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.slice(0, 5).map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-background/40 p-3 text-sm"
+                >
+                  <div>
+                    <p className="font-semibold text-foreground">{event.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {event.type} &bull; {new Date(event.startsAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <Link href="/dashboard/events">
+                    <Button variant="ghost" className="h-7 text-xs">
+                      RSVP
+                    </Button>
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhum evento agendado no momento.</p>
             )}
           </CardContent>
         </Card>

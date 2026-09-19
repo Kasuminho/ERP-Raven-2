@@ -131,6 +131,31 @@ img:not([data-image-preview="false"]) {
   min-height: 44px;
 }
 
+.card-obsidian {
+  background: hsl(228 30% 9% / 0.85);
+  border: 1px solid hsl(var(--border) / 0.6);
+  backdrop-filter: blur(16px);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-obsidian:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  box-shadow: 0 12px 35px -8px rgba(0, 0, 0, 0.6), 0 0 15px -3px hsl(var(--primary) / 0.1);
+}
+
+.num-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.badge-gold {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary) / 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

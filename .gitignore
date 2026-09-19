@@ -13,3 +13,5 @@ artifacts
 .local-secrets
 uploads
 apps/api/uploads
+*.tsbuildinfo
+data/

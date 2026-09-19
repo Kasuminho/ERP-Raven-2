@@ -22,28 +22,28 @@ const posts = [
     title: '00 · Comece aqui — mapa completo do ERP',
     tag: 'start',
     route: '/dashboard/onboarding',
-    visualPt: ['Entre com Discord', 'Complete seu perfil', 'Siga o plano de ação'],
-    visualEn: ['Log in with Discord', 'Complete your profile', 'Follow your action plan'],
+    visualPt: ['Navegue pelos 4 Hubs', 'Hoje, Guerra, Loot e Roster', 'Direto e sem labirinto'],
+    visualEn: ['Navigate the 4 Hubs', 'Today, War, Loot and Roster', 'Direct and zero clutter'],
     pt: `## 🧭 Bem-vindo à Central do Player
-Aqui está o manual oficial do ERP Raven 2. Cada post explica uma jornada completa, com rota direta, cuidados e o que acontece depois de cada ação.
+Aqui está o manual oficial do ERP Raven 2, organizado nos 4 grandes Hubs:
 
-**Ordem recomendada**
-1. Faça login e confira sua conta.
-2. Complete o checklist inicial, perfil, STATUS e Fenda.
-3. Entenda DKP, presença e regras antes de entrar no loot.
-4. Consulte os tutoriais específicos quando surgir uma ação no dashboard.
+**Estrutura dos 4 Hubs**
+1. [Hoje](${route('/dashboard')}): Comando central diário, próximo boss e DKP.
+2. [Guerra & Bosses](${route('/dashboard/events')}): Cronograma de Bosses e presença.
+3. [Loot & Cofre](${route('/dashboard/loot')}): Leilões por DKP, Diamantes e Wishlist.
+4. [Guilda & Membros](${route('/dashboard/members')}): Roster, classes do Raven 2 e CP.
 
 Abra o [Checklist do jogador](${route('/dashboard/onboarding')}) para começar. Os tutoriais não substituem uma decisão da Staff nem exibem ranking, bids, locks ou dados privados de terceiros.
 
 💬 **Pode responder neste post.** Para receber ajuda mais rápido, diga a tela, a ação tentada e o erro — sem enviar cookie, token ou conteúdo de .env. O Aristolfo é velho, não telepata.`,
     en: `## 🧭 Welcome to the Player Hub
-This is the official Raven 2 ERP manual. Each post covers one complete journey with a direct route, safety notes, and what happens after each action.
+This is the official Raven 2 ERP manual, organized into 4 core Hubs:
 
-**Recommended order**
-1. Log in and check your account.
-2. Complete onboarding, profile, STATUS, and Dimensional Rift.
-3. Understand DKP, attendance, and rules before entering loot flows.
-4. Open the specific tutorial whenever your dashboard shows a new action.
+**The 4 Core Hubs**
+1. [Today](${route('/dashboard')}): Daily command deck, next boss, and DKP.
+2. [War & Bosses](${route('/dashboard/events')}): Boss schedules and attendance.
+3. [Loot & Vault](${route('/dashboard/loot')}): DKP auctions, Diamonds and Wishlist.
+4. [Guild & Members](${route('/dashboard/members')}): Full roster, classes and CP.
 
 Start with the [Player checklist](${route('/dashboard/onboarding')}). Tutorials never replace a Staff decision and never reveal rankings, other players' bids, DKP locks, or private data.
 

@@ -5,24 +5,14 @@ import { usePathname } from "next/navigation";
 import { useState, type ComponentType } from "react";
 import {
   BellRing,
-  BookOpenCheck,
-  CalendarCheck,
-  ClipboardList,
-  Clock3,
-  Compass,
   Gem,
-  Gavel,
-  HandCoins,
-  HandHeart,
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquareLock,
-  ScrollText,
   ShieldAlert,
-  ShieldCheck,
   Swords,
   UserRound,
+  UsersRound,
   X,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/dashboard/global-search";
@@ -38,88 +28,63 @@ import { useLocaleStore } from "@/store/locale-store";
 
 type NavLabel = Parameters<typeof t>[1];
 
-const nav: Array<{
+interface HubNavItem {
   href: string;
   label: NavLabel;
   icon: ComponentType<{ className?: string }>;
-}> = [
-  { href: "/dashboard", label: "command", icon: LayoutDashboard },
-  { href: "/dashboard/notices", label: "notices", icon: BellRing },
+  descriptionKey?: string;
+  match: (pathname: string) => boolean;
+}
+
+const coreHubs: HubNavItem[] = [
   {
-    href: "/dashboard/communications",
-    label: "communications",
-    icon: BellRing,
+    href: "/dashboard",
+    label: "hubToday",
+    icon: LayoutDashboard,
+    match: (p) => p === "/dashboard",
   },
-  { href: "/dashboard/my-war-room", label: "myWarRoom", icon: Swords },
-  { href: "/dashboard/playbook", label: "playbook", icon: BookOpenCheck },
-  { href: "/dashboard/rules", label: "rules", icon: ScrollText },
-  { href: "/dashboard/cases", label: "cases", icon: MessageSquareLock },
-  { href: "/dashboard/onboarding", label: "onboarding", icon: Compass },
-  { href: "/dashboard/trial", label: "trial", icon: ShieldCheck },
-  { href: "/dashboard/mentorship", label: "mentorship", icon: Compass },
-  { href: "/dashboard/pulse", label: "guildPulse", icon: HandHeart },
-  { href: "/dashboard/auctions", label: "auctions", icon: Gavel },
-  { href: "/dashboard/interests", label: "interests", icon: HandHeart },
-  { href: "/dashboard/wishlist", label: "wishlist", icon: Gem },
-  { href: "/dashboard/item-requests", label: "requests", icon: ClipboardList },
-  { href: "/dashboard/codex", label: "codex", icon: BookOpenCheck },
-  { href: "/dashboard/daoshi", label: "daoshi", icon: HandCoins },
-  { href: "/dashboard/timeline", label: "timeline", icon: Clock3 },
   {
-    href: "/dashboard/weekly-summary",
-    label: "weeklySummary",
-    icon: ScrollText,
+    href: "/dashboard/events",
+    label: "hubWar",
+    icon: Swords,
+    match: (p) =>
+      p.startsWith("/dashboard/events") ||
+      p.startsWith("/dashboard/attendance") ||
+      p.startsWith("/dashboard/my-war-room"),
   },
-  { href: "/dashboard/drops", label: "drops", icon: Gem },
-  { href: "/dashboard/attendance", label: "attendance", icon: CalendarCheck },
-  { href: "/dashboard/profile", label: "profile", icon: UserRound },
+  {
+    href: "/dashboard/loot",
+    label: "hubLoot",
+    icon: Gem,
+    match: (p) =>
+      p.startsWith("/dashboard/loot") ||
+      p.startsWith("/dashboard/auctions") ||
+      p.startsWith("/dashboard/wishlist") ||
+      p.startsWith("/dashboard/drops") ||
+      p.startsWith("/dashboard/interests") ||
+      p.startsWith("/dashboard/item-requests") ||
+      p.startsWith("/dashboard/codex"),
+  },
+  {
+    href: "/dashboard/members",
+    label: "hubGuild",
+    icon: UsersRound,
+    match: (p) =>
+      p.startsWith("/dashboard/members") ||
+      p.startsWith("/dashboard/daoshi") ||
+      p.startsWith("/dashboard/rules") ||
+      p.startsWith("/dashboard/timeline"),
+  },
 ];
 
-const mobilePrimaryHrefs = new Set([
-  "/dashboard",
-  "/dashboard/auctions",
-  "/dashboard/interests",
-  "/dashboard/item-requests",
-]);
-
-const navGroups: Array<{ label: string; hrefs: string[] }> = [
-  {
-    label: "Agora",
-    hrefs: [
-      "/dashboard",
-      "/dashboard/notices",
-      "/dashboard/communications",
-      "/dashboard/my-war-room",
-      "/dashboard/playbook",
-      "/dashboard/onboarding",
-      "/dashboard/trial",
-      "/dashboard/mentorship",
-      "/dashboard/pulse",
-      "/dashboard/cases",
-    ],
-  },
-  {
-    label: "Loot",
-    hrefs: [
-      "/dashboard/auctions",
-      "/dashboard/interests",
-      "/dashboard/wishlist",
-      "/dashboard/item-requests",
-      "/dashboard/codex",
-      "/dashboard/drops",
-    ],
-  },
-  {
-    label: "Progresso",
-    hrefs: [
-      "/dashboard/daoshi",
-      "/dashboard/timeline",
-      "/dashboard/weekly-summary",
-      "/dashboard/attendance",
-      "/dashboard/rules",
-    ],
-  },
-  { label: "Conta", hrefs: ["/dashboard/profile"] },
+const secondaryNav: Array<{
+  href: string;
+  label: NavLabel;
+  icon: ComponentType<{ className?: string }>;
+  badge?: boolean;
+}> = [
+  { href: "/dashboard/notices", label: "notices", icon: BellRing, badge: true },
+  { href: "/dashboard/profile", label: "profile", icon: UserRound },
 ];
 
 export default function DashboardLayout({
@@ -136,7 +101,6 @@ export default function DashboardLayout({
   const maintenance = useMaintenanceMode();
   const unreadCount = unreadNotifications.data?.count ?? 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const primaryNav = nav.filter((item) => mobilePrimaryHrefs.has(item.href));
 
   return (
     <AuthGuard>
@@ -145,93 +109,147 @@ export default function DashboardLayout({
         <a href="#main-content" className="skip-link">
           Pular para o conteudo
         </a>
-        <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-white/10 bg-background/88 p-4 shadow-[18px_0_60px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:block">
+
+        {/* Desktop Sidebar */}
+        <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-white/10 bg-background/90 p-4 shadow-[18px_0_60px_rgba(0,0,0,0.4)] backdrop-blur-xl lg:block">
           <Link
             href="/dashboard"
-            className="mb-6 block rounded-lg border border-primary/20 bg-card/80 p-4 shadow-rune transition hover:border-primary/45"
+            className="mb-6 block rounded-lg border border-primary/25 bg-card/80 p-3.5 shadow-rune transition hover:border-primary/50 hover:shadow-lg"
           >
-            <p className="font-[var(--font-cinzel)] text-2xl font-bold text-primary">
+            <p className="font-[var(--font-cinzel)] text-xl font-bold tracking-wide text-primary">
               Raven Command
             </p>
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {t(locale, "guildOperationsDeck")}
             </p>
           </Link>
+
           <nav
-            className="max-h-[calc(100vh-9rem)] space-y-4 overflow-y-auto pr-1 scrollbar-thin"
+            className="flex h-[calc(100vh-12rem)] flex-col justify-between overflow-y-auto pr-1 scrollbar-thin"
             aria-label="Navegacao principal"
           >
-            {navGroups.map((group) => (
-              <div key={group.label}>
-                <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/75">
-                  {group.label}
+            <div className="space-y-6">
+              {/* 4 Core Hubs */}
+              <div>
+                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-primary/80">
+                  {t(locale, "hubCore")}
+                </p>
+                <div className="space-y-1.5">
+                  {coreHubs.map((hub) => {
+                    const isActive = hub.match(pathname);
+                    return (
+                      <Link
+                        key={hub.href}
+                        href={hub.href}
+                        className={cn(
+                          "group flex items-center gap-3 rounded-lg px-3.5 py-3 text-sm font-medium transition-all",
+                          isActive
+                            ? "border border-primary/40 bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            : "text-muted-foreground hover:border-white/10 hover:bg-muted/70 hover:text-foreground",
+                        )}
+                      >
+                        <hub.icon
+                          className={cn(
+                            "h-5 w-5 transition-colors",
+                            isActive ? "text-primary" : "group-hover:text-primary",
+                          )}
+                        />
+                        <span className="truncate">{t(locale, hub.label)}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Secondary Utilities */}
+              <div>
+                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/60">
+                  {t(locale, "hubTools")}
                 </p>
                 <div className="space-y-1">
-                  {nav
-                    .filter((item) => group.hrefs.includes(item.href))
-                    .map((item) => (
+                  {secondaryNav.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
                       <Link
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted/75 hover:text-foreground",
-                          pathname === item.href &&
-                            "border border-primary/20 bg-muted/90 text-foreground shadow-inner",
+                          "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                         )}
                       >
                         <item.icon
                           className={cn(
-                            "h-4 w-4 transition group-hover:text-primary",
-                            pathname === item.href && "text-primary",
+                            "h-4 w-4 transition-colors",
+                            isActive ? "text-primary" : "group-hover:text-primary",
                           )}
                         />
                         <span className="min-w-0 flex-1 truncate">
                           {t(locale, item.label)}
                         </span>
-                        {item.href === "/dashboard/notices" &&
-                          unreadCount > 0 && (
-                            <span className="rounded-full border border-primary/35 bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                              {unreadCount}
-                            </span>
-                          )}
+                        {item.badge && unreadCount > 0 && (
+                          <span className="rounded-full border border-primary/35 bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                            {unreadCount}
+                          </span>
+                        )}
                       </Link>
-                    ))}
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-            {isStaff && (
-              <Link
-                href="/dashboard/staff"
-                className={cn(
-                  "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted/75 hover:text-foreground",
-                  pathname.startsWith("/dashboard/staff") ||
-                    pathname.startsWith("/dashboard/admin")
-                    ? "border border-primary/20 bg-muted/90 text-foreground"
-                    : "",
-                )}
-              >
-                <ShieldAlert className="h-4 w-4 text-primary" />{" "}
-                {t(locale, "staff")}
-              </Link>
-            )}
+
+              {/* Staff Area Link */}
+              {isStaff && (
+                <div className="pt-2">
+                  <div className="mb-2 border-t border-white/10 pt-3">
+                    <Link
+                      href="/dashboard/staff"
+                      className={cn(
+                        "group flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm font-semibold text-primary transition hover:border-primary/40 hover:bg-primary/10",
+                        pathname.startsWith("/dashboard/staff") ||
+                          pathname.startsWith("/dashboard/admin")
+                          ? "border-primary/50 bg-primary/15 shadow-sm"
+                          : "",
+                      )}
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                      <span className="flex-1 truncate">
+                        {t(locale, "staffMode")}
+                      </span>
+                      <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+                        Staff
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              className="mt-4 justify-start gap-3 text-muted-foreground hover:text-foreground"
+              onClick={logout}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>{t(locale, "signOut")}</span>
+            </Button>
           </nav>
-          <Button
-            variant="ghost"
-            className="absolute bottom-4 left-4 right-4"
-            onClick={logout}
-          >
-            <LogOut className="h-4 w-4" /> {t(locale, "signOut")}
-          </Button>
         </aside>
-        <div className="lg:pl-72">
-          <header className="sticky top-0 z-10 border-b border-white/10 bg-background/78 px-4 py-3 backdrop-blur lg:hidden">
+
+        {/* Main Content Area */}
+        <div className="lg:pl-64">
+          <header className="sticky top-0 z-10 border-b border-white/10 bg-background/85 px-4 py-3 backdrop-blur-lg lg:hidden">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-[var(--font-cinzel)] text-lg font-bold text-primary">
-                Raven Command
-              </p>
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <p className="font-[var(--font-cinzel)] text-lg font-bold text-primary">
+                  Raven Command
+                </p>
+              </Link>
               <div className="flex items-center gap-2">
                 {isStaff && (
-                  <span className="rounded-md border border-primary/30 px-2 py-1 text-[10px] font-bold uppercase text-primary">
+                  <span className="rounded border border-primary/35 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
                     Staff
                   </span>
                 )}
@@ -246,11 +264,13 @@ export default function DashboardLayout({
               </div>
             </div>
           </header>
-          <div className="sticky top-0 z-10 hidden border-b border-white/10 bg-background/72 px-8 py-3 backdrop-blur lg:block">
+
+          <div className="sticky top-0 z-10 hidden border-b border-white/10 bg-background/80 px-8 py-3 backdrop-blur-md lg:block">
             <div className="ml-auto max-w-sm">
               <GlobalSearch />
             </div>
           </div>
+
           <main
             id="main-content"
             tabIndex={-1}
@@ -272,49 +292,54 @@ export default function DashboardLayout({
             {children}
           </main>
         </div>
-        <nav className="fixed bottom-0 left-0 right-0 z-30 flex snap-x gap-1 overflow-x-auto border-t border-white/10 bg-background/94 px-2 py-2 shadow-[0_-18px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden">
-          {primaryNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex min-w-16 snap-start flex-col items-center gap-1 rounded-md border border-transparent px-2 py-1.5 text-[10px] text-muted-foreground transition",
-                (pathname === item.href ||
-                  (item.href === "/dashboard/staff" &&
-                    (pathname.startsWith("/dashboard/staff") ||
-                      pathname.startsWith("/dashboard/admin")))) &&
-                  "border-primary/25 bg-muted/90 text-primary",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="relative max-w-full truncate">
-                {t(locale, item.label)}
-                {item.href === "/dashboard/notices" && unreadCount > 0 && (
-                  <span className="absolute -right-2 -top-2 h-2 w-2 rounded-full bg-primary" />
+
+        {/* Mobile Bottom Hub Bar */}
+        <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 bg-background/95 px-2 py-2 shadow-[0_-18px_55px_rgba(0,0,0,0.4)] backdrop-blur-xl lg:hidden">
+          {coreHubs.map((hub) => {
+            const isActive = hub.match(pathname);
+            return (
+              <Link
+                key={hub.href}
+                href={hub.href}
+                className={cn(
+                  "flex flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-[11px] transition-colors",
+                  isActive
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
-              </span>
-            </Link>
-          ))}
+              >
+                <hub.icon
+                  className={cn(
+                    "h-5 w-5",
+                    isActive ? "text-primary" : "text-muted-foreground",
+                  )}
+                />
+                <span className="truncate">{t(locale, hub.label)}</span>
+              </Link>
+            );
+          })}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="flex min-w-16 snap-start flex-col items-center gap-1 rounded-md border border-transparent px-2 py-1.5 text-[10px] text-muted-foreground transition hover:bg-muted"
-            aria-label="Mais destinos"
+            className="flex flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Mais opcoes"
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
             <span>Mais</span>
           </button>
         </nav>
+
+        {/* Mobile Full Drawer */}
         {mobileMenuOpen && (
           <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm lg:hidden"
             role="presentation"
             onMouseDown={(event) =>
               event.target === event.currentTarget && setMobileMenuOpen(false)
             }
           >
             <section
-              className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-primary/25 bg-card p-4 shadow-2xl"
+              className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-primary/30 bg-card p-4 shadow-2xl"
               role="dialog"
               aria-modal="true"
               aria-labelledby="mobile-menu-title"
@@ -323,12 +348,12 @@ export default function DashboardLayout({
                 <div>
                   <h2
                     id="mobile-menu-title"
-                    className="font-[var(--font-cinzel)] text-xl font-bold"
+                    className="font-[var(--font-cinzel)] text-xl font-bold text-primary"
                   >
                     Raven Command
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Tudo no lugar, sem maratona de icones.
+                    Menu Rápido de Navegação
                   </p>
                 </div>
                 <Button
@@ -340,43 +365,77 @@ export default function DashboardLayout({
                   <X className="h-5 w-5" />
                 </Button>
               </div>
+
               <GlobalSearch />
-              <div className="mt-5 space-y-5">
-                {navGroups.map((group) => (
-                  <div key={group.label}>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                      {group.label}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {nav
-                        .filter((item) => group.hrefs.includes(item.href))
-                        .map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="flex min-h-12 items-center gap-2 rounded-lg border border-white/10 bg-background/45 p-3 text-sm hover:border-primary/35"
-                          >
-                            <item.icon className="h-4 w-4 shrink-0 text-primary" />
-                            <span className="truncate">
-                              {t(locale, item.label)}
-                            </span>
-                          </Link>
-                        ))}
-                    </div>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                    {t(locale, "hubCore")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {coreHubs.map((hub) => (
+                      <Link
+                        key={hub.href}
+                        href={hub.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={cn(
+                          "flex min-h-12 items-center gap-2.5 rounded-lg border p-3 text-sm font-medium transition",
+                          hub.match(pathname)
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-white/10 bg-background/50 hover:border-primary/30",
+                        )}
+                      >
+                        <hub.icon className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate">{t(locale, hub.label)}</span>
+                      </Link>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground/80">
+                    {t(locale, "hubTools")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {secondaryNav.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex min-h-12 items-center gap-2.5 rounded-lg border border-white/10 bg-background/50 p-3 text-sm hover:border-primary/30"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate">{t(locale, item.label)}</span>
+                        {item.badge && unreadCount > 0 && (
+                          <span className="ml-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
                 {isStaff && (
                   <Link
                     href="/dashboard/staff"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex min-h-12 items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 p-3 font-semibold text-primary"
+                    className="flex min-h-12 items-center justify-between rounded-lg border border-primary/40 bg-primary/15 p-3 text-sm font-semibold text-primary"
                   >
-                    <ShieldAlert className="h-4 w-4" />
-                    {t(locale, "staff")}
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span>{t(locale, "staffMode")}</span>
+                    </div>
+                    <span className="text-xs uppercase">Acessar &rarr;</span>
                   </Link>
                 )}
-                <Button variant="ghost" className="w-full" onClick={logout}>
+
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center gap-2 border border-white/10 text-muted-foreground hover:text-foreground"
+                  onClick={logout}
+                >
                   <LogOut className="h-4 w-4" />
                   {t(locale, "signOut")}
                 </Button>
