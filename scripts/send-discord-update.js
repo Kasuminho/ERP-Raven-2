@@ -11,20 +11,20 @@ const webhookUsername = 'Aristolfo, 570 anos de webhook';
 const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
-    '*Aristolfo carimbou o changelog. Reclamar sem log ainda e speedrun de perder prioridade.*',
-    '*Aristolfo publicou a ata. Deploy saiu; o caos que traga print, contexto e menos novela das oito.*',
-    '*Aristolfo soltou o recado com recibo. Se a realidade improvisar, a auditoria ja esta de chinelo na porta.*',
-    '*Aristolfo fechou a nota. Discordar pode; freestyle sem evidencia fica farmando loading eterno.*',
-    '*Aristolfo mandou o changelog. A planilha respirou fundo e parou de fingir que era boss secreto.*',
-    '*Aristolfo registrou a mudanca. Quem vier de "ouvi dizer" vai tankar pergunta ate dropar contexto.*',
+    '*Aristolfo carimbou o changelog. O deploy subiu; se o seu boneco continuar errando rota no auto-hunt, a culpa e da build, nao do servidor.*',
+    '*Aristolfo publicou a ata. Codigo novo no ar; se a realidade divergir do patch note, a culpa e da fisica quantica coreana.*',
+    '*Aristolfo largou a caneta. Tudo commitado e buildado; quem vier de "antes era melhor" vai tomar wipe no primeiro trash mob.*',
+    '*Aristolfo fechou o changelog. O servidor ta no eixo; reclamar sem print agora da debuff de 10% de sorte no drop.*',
+    '*Aristolfo soltou o resumo com recibo. Menos novela no Discord, mais martelada no Lunos. O log nao mente.*',
+    '*Aristolfo assinou a entrega. Deploy sem quebra; quem tentar improvisar gambiarra vai spawnar pelado em Tartarus.*',
   ],
   EN: [
-    '*Aristolfo stamped the changelog. Complaining without logs is still a speedrun to lower priority.*',
-    '*Aristolfo published the minutes. Deploy shipped; chaos can bring screenshots, context, and less soap opera.*',
-    '*Aristolfo sent the note with a receipt. If reality improvises, audit is already at the door in sandals.*',
-    '*Aristolfo closed the note. Disagree if needed; freestyle without evidence stays farming eternal loading.*',
-    '*Aristolfo shipped the changelog. The spreadsheet took a breath and stopped pretending to be a secret boss.*',
-    '*Aristolfo recorded the change. Anyone bringing "I heard" gets questioned until context drops.*',
+    '*Aristolfo stamped the changelog. Deploy is live; if your character still misses auto-hunt pathing, blame your build, not the server.*',
+    '*Aristolfo published the minutes. Fresh code shipped; if reality defies patch notes, blame Korean quantum physics.*',
+    '*Aristolfo dropped the pen. Everything built and committed; anyone claiming "it was better before" wipes on the first trash mob.*',
+    '*Aristolfo closed the changelog. The server is steady; complaining without screenshots grants a -10% drop luck debuff.*',
+    '*Aristolfo sent the summary with receipt. Less Discord drama, more hammer hits on Lunos. Logs do not lie.*',
+    '*Aristolfo signed the release. Clean deploy; anyone improvising jank respawns naked in Tartarus.*',
   ],
 };
 

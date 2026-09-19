@@ -1788,6 +1788,7 @@ export type PlayerHistory = {
       discordId: string;
       discordUsername: string;
       preferredLocale?: string;
+      discordNickname?: string;
     };
   };
   drops: DropHistory[];

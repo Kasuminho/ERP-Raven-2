@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { GlobalSearch } from "@/components/dashboard/global-search";
 import { ProfileLocaleSync } from "@/components/dashboard/profile-locale-sync";
+import { CharacterSetupGate } from "@/components/dashboard/character-setup-gate";
 import { AuthGuard } from "@/components/guards/auth-guard";
 import { Button } from "@/components/ui/button";
 import { useMaintenanceMode } from "@/hooks/use-staff-operations-api";
@@ -104,8 +105,9 @@ export default function DashboardLayout({
 
   return (
     <AuthGuard>
-      <ProfileLocaleSync />
-      <div className="min-h-screen">
+      <CharacterSetupGate>
+        <ProfileLocaleSync />
+        <div className="min-h-screen">
         <a href="#main-content" className="skip-link">
           Pular para o conteudo
         </a>
@@ -444,6 +446,7 @@ export default function DashboardLayout({
           </div>
         )}
       </div>
+      </CharacterSetupGate>
     </AuthGuard>
   );
 }

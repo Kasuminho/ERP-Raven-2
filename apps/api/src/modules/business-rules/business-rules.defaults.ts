@@ -56,6 +56,20 @@ export type AttendanceEligibilityRules = {
   participationMinimumPercent: number;
 };
 
+export type StaffPanelVisibilityRules = {
+  hiddenTools: string[];
+  hideMorningBriefing?: boolean;
+  hideHealthPanel?: boolean;
+  hideAuditTimeline?: boolean;
+};
+
+export const defaultStaffPanelVisibilityRules: StaffPanelVisibilityRules = {
+  hiddenTools: [],
+  hideMorningBriefing: false,
+  hideHealthPanel: false,
+  hideAuditTimeline: false,
+};
+
 export const defaultEventRewardRules: EventRewardRules = {
   [EventType.LUNOS]: 20,
   [EventType.RIGRETO]: 20,
@@ -207,5 +221,12 @@ export const businessRuleDefaults = [
     label: 'Cortes de presenca D-30',
     description: 'Controla a presenca minima dos ultimos 30 dias para bid, interesses e requests.',
     value: defaultAttendanceEligibilityRules,
+  },
+  {
+    key: 'staffPanelVisibility',
+    category: 'operations',
+    label: 'Visibilidade do painel da Staff',
+    description: 'Controla ferramentas e seções visíveis no painel da Staff para início de guilda e simplificação.',
+    value: defaultStaffPanelVisibilityRules,
   },
 ] as const;

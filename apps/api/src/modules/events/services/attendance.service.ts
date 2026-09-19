@@ -763,7 +763,20 @@ export class AttendanceService {
   }
 
   async getEvents(options: { page?: number; limit?: number; hideFinalized?: boolean } = {}): Promise<Event[]> {
-    return this.repository.findMany(options);
+    const events = await this.repository.findMany(options);
+    const isClosed = (status: EventStatus) => status === EventStatus.FINALIZED || status === EventStatus.CANCELLED;
+
+    return [...events].sort((a, b) => {
+      const aClosed = isClosed(a.status);
+      const bClosed = isClosed(b.status);
+      if (aClosed !== bClosed) {
+        return aClosed ? 1 : -1;
+      }
+      if (!aClosed) {
+        return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+      }
+      return new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime();
+    });
   }
 
   async getEvent(eventId: string): Promise<EventDetails> {

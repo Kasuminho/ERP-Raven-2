@@ -69,18 +69,18 @@ export class NotificationService {
           'Bid superado / Bid outbid',
           pickBilingualVoice({
             'pt-BR': [
-              `Passaram seu bid em **${data.itemName}**. Reage agora ou assiste teu quase virar clipe didatico.`,
-              `Tomaram a frente em **${data.itemName}**. Se ainda quer jogo, responde antes do placar fechar a lojinha.`,
-              `Seu bid em **${data.itemName}** caiu pra segundo. Decide rapido antes que a aba vire arqueologia.`,
-              `Superaram voce em **${data.itemName}**. Ou clica agora, ou o VOD ganha tag "hesitacao".`,
-              `Alguem te passou em **${data.itemName}**. A bola voltou; nao deixa o ping emocional jogar por voce.`,
+              `Passaram teu lance em **${data.itemName}**. Clica no ERP pra cobrir ou aceita que o drop foi pro vizinho.`,
+              `Cobriram sua aposta em **${data.itemName}**. Se ainda tem DKP no bolso, a hora de reagir e agora.`,
+              `Perdeu a lideranca em **${data.itemName}**. Vai deixar levar de graca ou vai mostrar quem manda no cofre?`,
+              `Outbid detectado em **${data.itemName}**. O leilao nao acabou; mexe esses pauzinhos antes do timer zerar.`,
+              `Bateram seu valor em **${data.itemName}**. Arruma a carteira e cobre o lance ou vai farmar mais evento.`,
             ],
             en: [
-              `Your bid on **${data.itemName}** got passed. React now or watch your almost-win become a lesson clip.`,
-              `Someone took the lead on **${data.itemName}**. If you still want in, answer before the board closes shop.`,
-              `Your bid on **${data.itemName}** dropped to second. Decide fast before the tab becomes archaeology.`,
-              `Someone moved ahead on **${data.itemName}**. Either click now or let the VOD get tagged "hesitation".`,
-              `Someone passed you on **${data.itemName}**. The ball is back; do not let emotional ping play for you.`,
+              `Your bid was passed on **${data.itemName}**. Click the ERP to counter or accept your neighbor got the drop.`,
+              `Someone topped your bet on **${data.itemName}**. If you still have DKP, the time to react is right now.`,
+              `Lost your lead on **${data.itemName}**. Are you letting them walk away with it or showing who rules the vault?`,
+              `Outbid alert on **${data.itemName}**. Auction is not over; make your move before the clock hits zero.`,
+              `Someone topped your bid on **${data.itemName}**. Check your wallet and counter or go farm more events.`,
             ],
           }, data.auctionId, data.itemName, data.discordId),
         )],
@@ -167,18 +167,18 @@ export class NotificationService {
       ? `${recipientNames.slice(0, 1397)}...`
       : recipientNames;
     const distributionTailPt = pickVoiceLine([
-      'Partilha fechada com todas as provas. A planilha parou de rosnar e soltou loot.',
-      'Diamantes divididos e prints anexados. O "confere ai" ganhou cracha no log.',
-      'Distribuicao concluida sem malabarismo. Ate a calculadora saiu do modo defensivo.',
-      'Tudo pago e provado. A tesouraria deu headshot no caos de centavos.',
-      'Split encerrado. Cada print no lugar e o caixa sem fazer cosplay de enigma.',
+      'Partilha de diamantes liquidada com sucesso. Cada membro recebeu seu quinhao e o saldo bateu redondinho.',
+      'Diamantes na conta e comprovantes anexados. O cofre ta limpo, auditado e sem centavo perdido.',
+      'Split 1/N concluido sem drama. A taxa da guilda ta no cofre e o resto ta no bolso de quem lutou.',
+      'Venda faturada e distribuida. Menos desconfianca, mais diamantes pra todo mundo upar o boneco.',
+      'Partilha encerrada com recibo. Cada jogador recebeu sua parte justa e a tesouraria agradece.',
     ], data.saleId, data.itemName, data.diamondTotal);
     const distributionTailEn = pickVoiceLine([
-      'Distribution closed with every proof attached. The spreadsheet stopped growling and dropped loot.',
-      'Diamonds split and screenshots attached. "Please check" got a badge in the log.',
-      'Distribution completed without juggling. Even the calculator left defensive mode.',
-      'Everything paid and proven. Treasury landed a headshot on small-change chaos.',
-      'Split closed. Every screenshot in place and the cashier stopped cosplaying as a riddle.',
+      'Diamond split settled successfully. Every member received their fair share and the math matched to the penny.',
+      'Diamonds in pocket, screenshots attached. The vault is clean, audited, and missing zero pennies.',
+      '1/N split completed drama-free. Guild tax secured in vault, remainder safely in the fighters\' pockets.',
+      'Sale processed and distributed. Zero mistrust, more diamonds for everyone to upgrade their gear.',
+      'Split closed with receipts. Every player got their rightful cut and treasury thanks you.',
     ], data.saleId, data.itemName, data.diamondTotal);
     const summary = {
       title: 'Partilha de diamantes concluida / Diamond distribution completed',

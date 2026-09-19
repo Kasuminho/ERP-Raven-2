@@ -21,6 +21,8 @@ import {
   defaultPriorityScoreRules,
   defaultStaffPendingThresholdRules,
   MaintenanceModeRules,
+  StaffPanelVisibilityRules,
+  defaultStaffPanelVisibilityRules,
 } from './business-rules.defaults';
 
 @Injectable()
@@ -176,6 +178,10 @@ export class BusinessRulesService {
     return this.mergeAttendanceEligibilityRules(await this.getRuleValue('attendanceEligibilityRules'), defaultAttendanceEligibilityRules);
   }
 
+  async getStaffPanelVisibility(): Promise<StaffPanelVisibilityRules> {
+    return this.mergeStaffPanelVisibility(await this.getRuleValue('staffPanelVisibility'), defaultStaffPanelVisibilityRules);
+  }
+
   private async ensureDefaults(): Promise<void> {
     const count = await this.prisma.businessRule.count();
 
@@ -215,6 +221,8 @@ export class BusinessRulesService {
         return this.mergeAuctionDisputeRules(value, defaultAuctionDisputeRules) as unknown as Prisma.InputJsonValue;
       case 'attendanceEligibilityRules':
         return this.mergeAttendanceEligibilityRules(value, defaultAttendanceEligibilityRules) as unknown as Prisma.InputJsonValue;
+      case 'staffPanelVisibility':
+        return this.mergeStaffPanelVisibility(value, defaultStaffPanelVisibilityRules) as unknown as Prisma.InputJsonValue;
       default:
         throw new BadRequestException(`Unknown business rule: ${key}`);
     }
@@ -380,5 +388,19 @@ export class BusinessRulesService {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private mergeStaffPanelVisibility(value: unknown, fallback: StaffPanelVisibilityRules): StaffPanelVisibilityRules {
+    const input = this.asRecord(value);
+    const hiddenTools = Array.isArray(input.hiddenTools)
+      ? input.hiddenTools.filter((t) => typeof t === 'string' && t.startsWith('/dashboard/staff')).map(String)
+      : fallback.hiddenTools;
+
+    return {
+      hiddenTools,
+      hideMorningBriefing: typeof input.hideMorningBriefing === 'boolean' ? input.hideMorningBriefing : fallback.hideMorningBriefing,
+      hideHealthPanel: typeof input.hideHealthPanel === 'boolean' ? input.hideHealthPanel : fallback.hideHealthPanel,
+      hideAuditTimeline: typeof input.hideAuditTimeline === 'boolean' ? input.hideAuditTimeline : fallback.hideAuditTimeline,
+    };
   }
 }

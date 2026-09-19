@@ -27,18 +27,18 @@ export function buildAuctionCreatedEmbed(data: AuctionEmbedData, locale: Discord
     .setColor(0x2f80ed)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Leilao aberto.** Confere DKP antes do clique; all-in no impulso e boleto emocional com juros de raid.',
-        '**Drop entrou no pregao.** Lance com cerebro ligado; arrependimento depois nao ganha reembolso nem skin.',
-        '**Janela de bid no ar.** Mira no item e segura o ego; mouse tremendo nao vira argumento na auditoria.',
-        '**Item na mesa.** Calcula frio; economia de raid nao e live de coach vendendo planilha magica.',
-        '**Pregao liberado.** Se for clicar no susto, pelo menos avisa o bom senso pra ele sair da frente.',
+        '**Leilao aberto no ERP.** Da o lance com estrategia; all-in de emocao e pedir pra farmar mob comum a semana toda.',
+        '**Item no pregao.** Lances no sigilo; quem tentar adivinhar a carteira do coleguinha vai tomar outbid seco.',
+        '**Disputa iniciada.** Analisa a build antes de gastar DKP; ostentar item sem status e cosmetico caro.',
+        '**Item no martelo.** Calcula o saldo; aqui o leilao e Blind Bid e choradeira nao altera o banco de dados.',
+        '**Drop liberado.** Lance no site com calma; dedo nervoso em all-in ja arruinou muito veterano de 570 anos.',
       ],
       en: [
-        '**Auction opened.** Check DKP before clicking; impulse all-in is emotional debt with raid interest.',
-        '**Drop entered the market.** Bid with brain online; regret later gets no refund and no skin.',
-        '**Bid window is live.** Aim at the item and hold the ego; shaky mouse is not an audit argument.',
-        '**Item is on the table.** Calculate cold; raid economy is not a coach stream selling magic spreadsheets.',
-        '**Bidding is unlocked.** If you click in panic, at least warn common sense to step aside.',
+        '**Auction live on the ERP.** Bid with strategy; emotional all-in is an invitation to farm trash mobs all week.',
+        '**Gear on the block.** Secret bids; trying to mind-read your teammate\'s wallet only gets you dry outbid.',
+        '**Bidding started.** Check your build before burning DKP; flexing gear without stats is just expensive fashion.',
+        '**Under the hammer.** Calculate your balance; this is Blind Bid and whining does not alter PostgreSQL.',
+        '**Drop unlocked.** Bid with a cool head; twitchy all-in fingers have ruined many 570-year veterans.',
       ],
     }, data.itemName, data.itemTier, data.minimumBid, data.endsAt))
     .addFields(
@@ -59,18 +59,18 @@ export function buildAuctionWinnerEmbed(itemName: string, playerName: string, pr
     .setTitle(localeCopy(locale, { 'pt-BR': `Vencedor definido: ${itemName}`, en: `Winner locked: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `**${playerName} ficou com o drop.** DKP debitado; o "mas e se" foi kickado da call por falta de prova.`,
-        `**${playerName} fechou o leilao.** Resultado definido e o textao perdeu prioridade ate no Windows Update.`,
-        `**${playerName} levou no martelo.** Lock cobrado, registro salvo e drama sem passe de batalha.`,
-        `**${playerName} cravou o resultado.** Item com dono; o tribunal do sofa pode mutar o microfone.`,
-        `**${playerName} ganhou.** O placar assinou embaixo; teoria alternativa fica no servidor de testes.`,
+        `**${playerName} levou o leilao.** DKP descontado com sucesso. O choro e livre, mas o drop ja tem dono.`,
+        `**${playerName} venceu na disputa.** Lance validado e registrado. Conspiracao de Discord perdeu no saldo.`,
+        `**${playerName} cravou a vitoria.** O cofre da guilda agradece e a matematica nao aceita recurso emocional.`,
+        `**${playerName} bateu o martelo.** Menos teoria de bastidores, mais DKP no cofre. Parabens pelo upgrade.`,
+        `**${playerName} ganhou o drop.** O log assinou. Quem perdeu pode ir farmar os proximos bosses.`,
       ],
       en: [
-        `**${playerName} got the drop.** DKP debited; the "but what if" got kicked from voice for no proof.`,
-        `**${playerName} closed the auction.** Result decided and the essay lost priority even to Windows Update.`,
-        `**${playerName} won at the hammer.** Lock charged, record saved, and drama gets no battle pass.`,
-        `**${playerName} locked the result.** Item has an owner; couch court may mute the mic.`,
-        `**${playerName} won.** The scoreboard signed it; alternative theory stays on the test server.`,
+        `**${playerName} won the auction.** DKP debited cleanly. Tears are free, but the drop has an owner.`,
+        `**${playerName} took the bid.** Validated and logged. Discord conspiracy theories lost to raw balance.`,
+        `**${playerName} locked the win.** Guild treasury thanks you and math does not accept emotional appeals.`,
+        `**${playerName} slammed the hammer.** Less backstage drama, more DKP in vault. Congrats on the upgrade.`,
+        `**${playerName} won the gear.** The log signed it. Whoever lost can go grind the next boss spawn.`,
       ],
     }, itemName, playerName))
     .setColor(0x27ae60)
@@ -88,18 +88,18 @@ export function buildAuctionDeliveryEmbed(itemName: string, playerName: string, 
     .setTitle(localeCopy(locale, { 'pt-BR': `Drop entregue: ${itemName}`, en: `Drop delivered: ${itemName}` }))
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        `Entrega confirmada para **${playerName}**. Print anexado; "confia" foi removido do grupo por spam.`,
-        `**${playerName}** recebeu e o log assinou. Auditoria sem prova aqui nem passa da tela de login.`,
-        `Drop entregue para **${playerName}**. Comprovante no lugar antes que o chat escreva fanfic em 4 atos.`,
-        `Tudo certo com **${playerName}**. Registro feito; o drama ficou sem mana para o proximo episodio.`,
-        `**${playerName}** recebeu. Prova salva, log em paz e achismo sem vaga no squad.`,
+        `Item entregue para **${playerName}**. Print salva e comprovada; o "sera que ele recebeu?" foi mutado.`,
+        `Entrega concluida para **${playerName}**. Recibo no cofre e inventario atualizado sem fofoca de corredor.`,
+        `Transparencia total: **${playerName}** ta com o item na mao e a auditoria ta de folga tomando cafe.`,
+        `Drop na bolsa de **${playerName}**. Se o dano nao subir agora, o problema e na pecinha atras do teclado.`,
+        `Entrega assinada: **${playerName}** recebeu. Registro feito; drama sem recibo aqui nao cria raiz.`,
       ],
       en: [
-        `Delivery confirmed for **${playerName}**. Screenshot attached; "trust me" was removed from the group for spam.`,
-        `**${playerName}** received it and the log signed. Audit without proof does not pass the login screen here.`,
-        `Drop delivered to **${playerName}**. Proof in place before chat writes fanfic in four acts.`,
-        `All set with **${playerName}**. Record made; drama ran out of mana for the next episode.`,
-        `**${playerName}** received it. Proof saved, log at peace, and guesswork has no squad slot.`,
+        `Item delivered to **${playerName}**. Screenshot saved and verified; "did he really get it?" got muted.`,
+        `Delivery complete for **${playerName}**. Receipt in the vault and inventory updated without hallway gossip.`,
+        `Total transparency: **${playerName}** holds the item and audit is off duty sipping coffee.`,
+        `Drop in **${playerName}**'s bag. If your DPS does not spike now, the bug is behind the keyboard.`,
+        `Signed off: **${playerName}** received it. Logged; receiptless drama finds no fertile ground here.`,
       ],
     }, itemName, playerName))
     .setColor(0xf2c94c)

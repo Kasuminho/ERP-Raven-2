@@ -55,7 +55,7 @@ export class EventsRepository {
 
     return client.event.findMany({
       where: options.hideFinalized ? { status: { notIn: [EventStatus.FINALIZED, EventStatus.CANCELLED] } } : undefined,
-      orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ startsAt: 'asc' }, { createdAt: 'asc' }],
       skip: (page - 1) * limit,
       take: limit,
     });

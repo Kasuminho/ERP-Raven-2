@@ -114,10 +114,20 @@ export default function AdminEventsPage() {
   const selectedEvent = attendance.data ?? events.data?.find((event) => event.id === selectedEventId);
   const selectedBatchId = selectedEvent?.attendanceBatchId ?? '';
   const batchPanel = useEventBatchPanel(selectedBatchId);
-  const visibleEvents = useMemo(
-    () => (events.data ?? []).filter((event) => !hideFinalized || !['FINALIZED', 'CANCELLED'].includes(event.status)),
-    [events.data, hideFinalized],
-  );
+  const visibleEvents = useMemo(() => {
+    const list = (events.data ?? []).filter((event) => !hideFinalized || !['FINALIZED', 'CANCELLED'].includes(event.status));
+    return [...list].sort((a, b) => {
+      const aClosed = ['FINALIZED', 'CANCELLED'].includes(a.status);
+      const bClosed = ['FINALIZED', 'CANCELLED'].includes(b.status);
+      if (aClosed !== bClosed) {
+        return aClosed ? 1 : -1;
+      }
+      if (!aClosed) {
+        return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+      }
+      return new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime();
+    });
+  }, [events.data, hideFinalized]);
   const presentPlayerIds = useMemo(
     () => new Set((attendance.data?.attendances ?? []).filter((row) => row.attended).map((row) => row.playerId)),
     [attendance.data?.attendances],

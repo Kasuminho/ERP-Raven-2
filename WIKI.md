@@ -567,6 +567,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
+| 2026-09-19 | Listagem de eventos ajustada para ordem cronologica (proximos primeiro); Painel Staff ganhou customizacao de visibilidade com preset Server Zero; Onboarding obrigatorio bloqueia players com nick padrao do Discord ate informarem nick real do Raven 2, classe e idioma; Piadas do Aristolfo rotacionadas. | UX/Staff/Onboarding |
 | 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |
 | 2026-07-01 | Staff ganhou fila persistente de webhooks com status, payload seguro, erro resumido e retry manual controlado. | Discord/Staff |
 | 2026-07-01 | Staff ganhou preview real sanitizado de webhooks com payload/embed PT-BR/EN quando player-facing, sem expor URL de webhook. | Discord/Staff |

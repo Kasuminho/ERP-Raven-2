@@ -76,26 +76,26 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
     const color = report.status === 'ok' ? 0x2ecc71 : report.status === 'degraded' ? 0xf1c40f : 0xe74c3c;
     const title = report.status === 'ok'
       ? pickStaffVoice([
-        'Healthcheck voltou pro verde. Aristolfo guardou o extintor e o meme de emergencia.',
-        'Healthcheck normalizado. O servidor parou de vender susto como skin limitada.',
-        'Healthcheck no eixo de novo. A stack largou o palco e voltou ao cracha.',
-        'Healthcheck estabilizado. O F5 saiu do cardio por enquanto.',
-        'Healthcheck recuperado. A infra parou de tocar alarme como se fosse remix ruim.',
+        'Healthcheck verde. O banco ta voando e o Aristolfo guardou o extintor de incendio.',
+        'Servidores 100% online. A stack parou de dar susto e voltou pro grind sossegado.',
+        'Tudo operacional. Menos drama na VPS, mais uptime pra guilda.',
+        'Painel no verde. A infra respirou aliviada e o terminal ta calmo.',
+        'Healthcheck normalizado. Nenhuma anomalia no radar; pode focar nos bosses.',
       ], report.status, report.checkedAt)
       : report.status === 'degraded'
         ? pickStaffVoice([
-          'Healthcheck amarelo; sem coletiva de imprensa para o drama',
-          'Healthcheck rangendo no painel igual call presa no 3G',
-          'Healthcheck pediu cautela, nao campeonato estadual de caps lock',
-          'Healthcheck amarelou e levantou placa de "olha isso aqui"',
-          'Healthcheck em amarelo. Da pra agir sem transformar o canal em reality show.',
+          'Healthcheck em alerta amarelo. O sistema pediu atencao antes de virar ocorrencia.',
+          'Latencia ou check chiando no painel. Vale checar a VPS sem panico.',
+          'Alerta amarelo: algum servico ta tossindo no cantinho. Olho no log.',
+          'Aviso de degradacao leve. Da pra resolver no sapatinho sem crise.',
+          'Sinal amarelo no ERP. A infra pediu carinho antes do horario de pico.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'))
         : pickStaffVoice([
-          'Healthcheck critico. Plantao ganhou boss surpresa sem loot e com enrage.',
-          'Healthcheck vermelho. A paciencia ficou em 1% e o carregador spawnou longe.',
-          'Healthcheck em caos premium. Custo alto, beneficio zero, suor incluso.',
-          'Healthcheck abriu chamado com cheiro de deploy fazendo speedrun de susto.',
-          'Healthcheck vermelho. A stack pisou no rake e agora quer adulto na sala.',
+          'Healthcheck CRITICO. Algum container crashou e ta precisando de ressurreicao.',
+          'Alerta vermelho no servidor. Acorda quem tiver com a chave ssh na mao.',
+          'Healthcheck vermelho. O banco ou a API foram de base; hora do restart tatico.',
+          'Emergencia na infra: servico fora do ar. Corre pro terminal.',
+          'Alerta critico: stack caiu de joelhos pedindo um reboot com urgencia.',
         ], report.status, report.checkedAt, failedChecks.map((check) => check.name).join('|'));
 
     await this.webhookQueue.send(webhookUrl, {
@@ -104,11 +104,11 @@ export class HealthMonitorService implements OnModuleInit, OnModuleDestroy {
         color,
         description: report.status === 'ok'
           ? pickStaffVoice([
-            '**Servico voltou.** A infra respirou e o plantao pode largar o F5 sem discurso.',
-            '**Tudo recuperado.** A stack saiu do survival e lembrou que uptime faz parte do contrato.',
-            '**Recuperacao confirmada.** O susto deslogou e a infra ficou em pe sem pedir buff.',
-            '**Plataforma normalizada.** O drama perdeu MMR e o servidor assinou o ponto.',
-            '**Verde de novo.** O sistema parou de pedir atencao como notificação carente.',
+            '**Servico 100% restabelecido.** A infra voltou a respirar e a lideranca pode guardar os calmantes.',
+            '**Tudo recuperado.** Memoria limpa, conexoes estaveis e banco respondendo nos trincos.',
+            '**Operacao normalizada.** O susto passou e o uptime voltou a pontuar bonito.',
+            '**Plataforma viva e saudavel.** O sistema parou de reclamar e voltou ao dever civico de registrar DKP.',
+            '**Verde total.** Uptime firme e forte; podem continuar o farm sem preocupacao.',
           ], report.status, report.checkedAt)
           : failedChecks.map((check) => `**${check.name}**: ${check.message ?? check.status}`).join('\n'),
         fields: [

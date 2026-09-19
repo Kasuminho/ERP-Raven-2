@@ -100,18 +100,18 @@ export class WeeklySummaryService {
       '',
       bilingualBlocks({
         'pt-BR': pickVoiceLine([
-          'Aristolfo fechou a semana no extrato. Se a planilha chiar, ganha mute pedagogico.',
-          'Resumo semanal carimbado. Numero bateu antes do chat montar VAR de sofa.',
-          'Aristolfo nao passou pano; passou raio-x. O saldo saiu sem filtro de publi.',
-          'Semana quitada no registro. Duvida nova pega senha e para de fazer parkour no dashboard.',
-          'Semana empacotada. O placar ficou publico e o achismo voltou pro modo espectador.',
+          'Aristolfo fechou o extrato da semana. A matematica ta em dia e quem nao gostou pode farmar o dobro semana que vem.',
+          'Semana auditada no capricho. O saldo ta publico no ERP; conspiracao de Discord perdeu no primeiro round.',
+          'Resumo semanal no cofre. Quem compareceu ta rico de DKP; quem ficou AFK pode admirar o topo do ranking.',
+          'Fechamento semanal assinado. Menos drama de comadre, mais presenca em boss; o grind nao perdoa preguica.',
+          'Aristolfo carimbou a semana. A guilda ta crescendo no Server Zero e os numeros provam quem realmente joga.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
         en: pickVoiceLine([
-          'Aristolfo closed the week on the ledger. If the spreadsheet squeaks, it gets pedagogical mute.',
-          'Weekly summary stamped. The numbers matched before chat built couch VAR.',
-          'Aristolfo did not gloss over it; he ran an x-ray. The balance left without ad filters.',
-          'Week settled in the record. Any new doubt gets a number and stops doing dashboard parkour.',
-          'Week packaged. The scoreboard is public and guesswork went back to spectator mode.',
+          'Aristolfo closed the weekly ledger. The math is spotless; whoever dislikes it can farm twice as much next week.',
+          'Week audited thoroughly. Balance is public on the ERP; Discord conspiracy theories lost in round one.',
+          'Weekly wrap-up in vault. Attendees are DKP-rich; AFKers can admire the top of the leaderboard.',
+          'Weekly closure signed. Less parlor drama, more boss attendance; the grind forgives zero laziness.',
+          'Aristolfo stamped the week. The guild is rising on Server Zero and numbers prove who actually plays.',
         ], summary.weekStart, summary.weekEnd, summary.dkpEarned, summary.dropsDelivered),
       }),
     ].join('\n');

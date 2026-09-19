@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -45,10 +45,34 @@ import {
   useStaffHealth,
   useStaffMorningBriefing,
   useStaffOperations,
+  useBusinessRules,
+  useUpdateBusinessRule,
 } from "@/hooks/use-staff-operations-api";
 import { t } from "@/lib/i18n";
 import { useLocaleStore } from "@/store/locale-store";
 import type { StaffMorningBriefing } from "@/types/api";
+
+type StaffPanelVisibility = {
+  hiddenTools: string[];
+  hideMorningBriefing?: boolean;
+  hideHealthPanel?: boolean;
+  hideAuditTimeline?: boolean;
+};
+
+const SERVER_ZERO_HIDDEN_TOOLS = [
+  "/dashboard/staff/auction-simulator",
+  "/dashboard/staff/auction-diagnostics",
+  "/dashboard/staff/fairness",
+  "/dashboard/staff/legacy-audit",
+  "/dashboard/staff/pulse",
+  "/dashboard/staff/guild-health",
+  "/dashboard/staff/leadership-health",
+  "/dashboard/staff/coverage",
+  "/dashboard/staff/playbooks",
+  "/dashboard/staff/deploy",
+  "/dashboard/staff/roadmap",
+  "/dashboard/staff/bid-cancellations",
+];
 
 type StaffTool = {
   href: string;
@@ -589,11 +613,105 @@ export default function StaffHubPage() {
   const briefing = useStaffMorningBriefing();
   const health = useStaffHealth();
   const audit = useRecentAudit(12);
+  const rules = useBusinessRules();
+  const updateRule = useUpdateBusinessRule();
+
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+
+  const visibilityRule = rules.data?.find((r) => r.key === "staffPanelVisibility");
+  const visibilityConfig: StaffPanelVisibility = useMemo(() => {
+    if (visibilityRule?.value && typeof visibilityRule.value === "object") {
+      const v = visibilityRule.value as Partial<StaffPanelVisibility>;
+      return {
+        hiddenTools: Array.isArray(v.hiddenTools) ? v.hiddenTools : [],
+        hideMorningBriefing: Boolean(v.hideMorningBriefing),
+        hideHealthPanel: Boolean(v.hideHealthPanel),
+        hideAuditTimeline: Boolean(v.hideAuditTimeline),
+      };
+    }
+    return {
+      hiddenTools: [],
+      hideMorningBriefing: false,
+      hideHealthPanel: false,
+      hideAuditTimeline: false,
+    };
+  }, [visibilityRule]);
+
+  const [selectedHiddenTools, setSelectedHiddenTools] = useState<string[]>([]);
+  const [hideMorning, setHideMorning] = useState(false);
+  const [hideHealth, setHideHealth] = useState(false);
+  const [hideAudit, setHideAudit] = useState(false);
+
+  useEffect(() => {
+    if (configModalOpen) {
+      setSelectedHiddenTools(visibilityConfig.hiddenTools);
+      setHideMorning(Boolean(visibilityConfig.hideMorningBriefing));
+      setHideHealth(Boolean(visibilityConfig.hideHealthPanel));
+      setHideAudit(Boolean(visibilityConfig.hideAuditTimeline));
+    }
+  }, [configModalOpen, visibilityConfig]);
+
   const counts = operations.data?.counts;
   const [activeGroupKey, setActiveGroupKey] =
     useState<StaffWorkGroupKey>("resolve");
+
+  const visibleTools = useMemo(() => {
+    return tools.filter((tool) => !visibilityConfig.hiddenTools.includes(tool.href));
+  }, [visibilityConfig.hiddenTools]);
+
+  const visibleGroups = useMemo(() => {
+    return toolGroups
+      .map((group) => ({
+        ...group,
+        hrefs: group.hrefs.filter((href) => !visibilityConfig.hiddenTools.includes(href)),
+      }))
+      .filter((group) => group.hrefs.length > 0);
+  }, [visibilityConfig.hiddenTools]);
+
   const activeGroup =
-    toolGroups.find((group) => group.key === activeGroupKey) ?? toolGroups[0];
+    visibleGroups.find((group) => group.key === activeGroupKey) ?? visibleGroups[0] ?? toolGroups[0];
+
+  const isServerZeroPreset =
+    visibilityConfig.hiddenTools.length > 0 &&
+    SERVER_ZERO_HIDDEN_TOOLS.every((h) => visibilityConfig.hiddenTools.includes(h));
+
+  function handleSaveConfig() {
+    updateRule.mutate(
+      {
+        key: "staffPanelVisibility",
+        value: {
+          hiddenTools: selectedHiddenTools,
+          hideMorningBriefing: hideMorning,
+          hideHealthPanel: hideHealth,
+          hideAuditTimeline: hideAudit,
+        },
+      },
+      {
+        onSuccess: () => {
+          setConfigModalOpen(false);
+          notifyToast({
+            title: "Configuração do painel salva com sucesso!",
+            tone: "success",
+          });
+        },
+      },
+    );
+  }
+
+  function applyPreset(preset: "server-zero" | "full") {
+    if (preset === "server-zero") {
+      setSelectedHiddenTools(SERVER_ZERO_HIDDEN_TOOLS);
+    } else {
+      setSelectedHiddenTools([]);
+    }
+  }
+
+  function toggleToolHidden(href: string) {
+    setSelectedHiddenTools((current) =>
+      current.includes(href) ? current.filter((h) => h !== href) : [...current, href],
+    );
+  }
+
   const groupStats: Record<StaffWorkGroupKey, number> = {
     resolve:
       (counts?.reviews ?? 0) +
@@ -609,6 +727,7 @@ export default function StaffHubPage() {
     communicate: counts?.announcements ?? 0,
     deploy: briefing.data?.counts.healthAlerts ?? 0,
   };
+
   const actionItems = useMemo(() => {
     const briefingTasks = (briefing.data?.sections ?? []).flatMap(
       (section) => section.tasks,
@@ -630,15 +749,34 @@ export default function StaffHubPage() {
 
   return (
     <div className="space-y-8 pt-3 sm:pt-4 lg:pt-6">
-      <div>
-        <p className="text-sm uppercase text-primary">
-          {t(locale, "governanceDeck")}
-        </p>
-        <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">
-          {t(locale, "staffTools")}
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm uppercase text-primary">
+              {t(locale, "governanceDeck")}
+            </p>
+            <Badge tone={isServerZeroPreset ? "gold" : "blue"}>
+              {isServerZeroPreset ? "⚡ Início de Guilda (Server Zero)" : "👑 Modo Completo"}
+            </Badge>
+          </div>
+          <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">
+            {t(locale, "staffTools")}
+          </h1>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setConfigModalOpen(true)}
+          className="gap-2 border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Personalizar Painel
+        </Button>
       </div>
-      <MorningBriefingPanel briefing={briefing.data} />
+
+      {!visibilityConfig.hideMorningBriefing && (
+        <MorningBriefingPanel briefing={briefing.data} />
+      )}
       <section className="space-y-4">
         <div>
           <p className="page-kicker">Ferramentas por jornada</p>
@@ -647,7 +785,7 @@ export default function StaffHubPage() {
           </h2>
         </div>
         <div className="flex flex-wrap gap-2">
-          {toolGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <Button
               key={group.key}
               type="button"
@@ -674,7 +812,7 @@ export default function StaffHubPage() {
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {tools
+              {visibleTools
                 .filter((tool) => activeGroup.hrefs.includes(tool.href))
                 .map((tool) => (
                   <Link
@@ -761,9 +899,143 @@ export default function StaffHubPage() {
           emptyText="Fila limpa. Nada exigindo acao da Staff agora."
           ownerLabel="Staff"
         />
-        <StaffHealthPanel health={health.data} />
+        {!visibilityConfig.hideHealthPanel && (
+          <StaffHealthPanel health={health.data} />
+        )}
       </div>
-      <AuditTimeline logs={audit.data ?? []} />
+      {!visibilityConfig.hideAuditTimeline && (
+        <AuditTimeline logs={audit.data ?? []} />
+      )}
+
+      {/* Modal de Personalização do Painel da Staff */}
+      {configModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-primary/30 bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5 text-primary" />
+                <h3 className="font-[var(--font-cinzel)] text-xl font-bold">Personalizar Painel da Staff</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfigModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-lg px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-6">
+              {/* Presets */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Presets Rápidos</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("server-zero")}
+                    className="flex flex-col items-start gap-1 rounded-lg border border-primary/30 bg-primary/10 p-3 text-left transition hover:bg-primary/20"
+                  >
+                    <span className="font-semibold text-foreground">⚡ Guilda Inicial / Servidor Zero</span>
+                    <p className="text-xs text-muted-foreground">
+                      Oculta simulações de leilão, fairness, auditoria legada, pulso e playbooks. Deixa o painel limpo e direto.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("full")}
+                    className="flex flex-col items-start gap-1 rounded-lg border border-white/10 bg-background/40 p-3 text-left transition hover:border-primary/40"
+                  >
+                    <span className="font-semibold text-foreground">👑 Modo Completo (Endgame)</span>
+                    <p className="text-xs text-muted-foreground">
+                      Exibe todos os módulos de auditoria, simuladores, métricas e governança avançada.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Seções Macro */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Seções em Destaque</p>
+                <div className="space-y-2 rounded-lg border border-white/10 bg-background/40 p-3 text-sm">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideMorning}
+                      onChange={(e) => setHideMorning(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span>Ocultar Morning Briefing (Pauta Matinal)</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideHealth}
+                      onChange={(e) => setHideHealth(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span>Ocultar Painel de Saúde Operacional</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideAudit}
+                      onChange={(e) => setHideAudit(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span>Ocultar Linha do Tempo de Auditoria</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Ferramentas Individuais */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Ferramentas Individuais ({tools.length - selectedHiddenTools.length} de {tools.length} ativas)
+                  </p>
+                  <span className="text-xs text-muted-foreground">Marque para ocultar do menu</span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 max-h-60 overflow-y-auto rounded-lg border border-white/10 bg-background/40 p-3 text-xs">
+                  {tools.map((tool) => {
+                    const isHidden = selectedHiddenTools.includes(tool.href);
+                    return (
+                      <label key={tool.href} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-white/5">
+                        <input
+                          type="checkbox"
+                          checked={isHidden}
+                          onChange={() => toggleToolHidden(tool.href)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <span className={isHidden ? "text-muted-foreground line-through" : "text-foreground font-medium"}>
+                          {t(locale, tool.titleKey)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setConfigModalOpen(false)}
+                disabled={updateRule.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveConfig}
+                disabled={updateRule.isPending}
+                className="gap-2"
+              >
+                {updateRule.isPending ? "Salvando..." : "Salvar Configurações"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
