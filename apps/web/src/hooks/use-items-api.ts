@@ -41,6 +41,59 @@ export function useCreateItem() {
   });
 }
 
+export function useValidateItemsBatch() {
+  return useMutation({
+    mutationFn: async (data: { names: string[] }) => {
+      const response = await api.post<{
+        existing: Array<{
+          id: string;
+          namePt: string;
+          nameEn: string;
+          category: string;
+          itemTier?: ItemTier | null;
+          itemType?: ItemType | null;
+          kind: string;
+          isActive: boolean;
+        }>;
+        existingNames: string[];
+      }>('/items/validate-batch', data);
+      return response.data;
+    },
+  });
+}
+
+export function useCreateBulkItems() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      items: Array<{
+        kind?: string;
+        category?: string;
+        itemTier?: ItemTier | null;
+        itemType?: ItemType | null;
+        namePt: string;
+        nameEn?: string;
+        nameEs?: string;
+        typePt?: string;
+        typeEn?: string;
+        preferredClasses?: PlayerClass[];
+        diamondSaleEnabled?: boolean;
+      }>;
+    }) => {
+      const response = await api.post<{
+        created: ItemCatalog[];
+        skipped: Array<{ name: string; reason: string }>;
+        createdCount: number;
+        skippedCount: number;
+      }>('/items/bulk', data);
+      return response.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+}
+
 export function useUpdateItem() {
   const queryClient = useQueryClient();
   return useMutation({

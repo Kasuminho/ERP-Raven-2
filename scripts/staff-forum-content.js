@@ -224,9 +224,14 @@ Players veem somente a própria chamada e instruções públicas. Notas privadas
   },
   {
     slug: 'staff-itens-wishlist-auditoria', title: '12 · Catálogo, wishlist, drops e auditoria de item', tag: 'audit', route: '/dashboard/admin/items',
-    visual: ['Mantenha catálogo consistente', 'Leia demanda da wishlist', 'Audite origem e entrega'],
+    visual: ['Mantenha catálogo consistente', 'Importe por print ou lote', 'Audite origem e entrega'],
     body: `## 🗃️ Governança de itens
 Em [Catálogo](${route('/dashboard/admin/items')}) crie e mantenha nomes, tier, tipo, imagens, flags e disponibilidade. Alteração de catálogo afeta leilões, interesses, requests e wishlist; revise antes de salvar.
+
+**Importação em lote e por print (OCR):**
+- Use o botão **📷 Importar por Print / Lote** para colar diretamente um print do inventário ou craft do Raven 2 (\`Ctrl+V\`) ou colar uma lista de nomes em texto.
+- O leitor óptico extrai os itens da imagem e valida em tempo real se já existem no catálogo, prevenindo duplicatas acidentais.
+- Permite cadastrar múltiplos itens com suporte a graus **Branco (Comum)** e **Verde (Incomum)** sem tier obrigatório, ideal para o início do Servidor Zero e requisições básicas de DKP.
 
 Em [Wishlist Staff](${route('/dashboard/staff/wishlist')}) veja demanda agregada por item, prioridade, classe, camada e sinais operacionais. Marcar como atendida atualiza a wishlist com auditoria, mas não cria bid, interesse ou drop.
 

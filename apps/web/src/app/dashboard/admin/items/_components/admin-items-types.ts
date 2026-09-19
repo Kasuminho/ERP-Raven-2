@@ -15,7 +15,7 @@ export const playerClasses: PlayerClass[] = [
   'WARLORD',
 ];
 export const kinds = ['equipment', 'skill', 'material', 'request'];
-export const categories = ['rare', 'heroic', 'legendary', 'relic', 'blueprint', 'creature'];
+export const categories = ['common', 'uncommon', 'rare', 'heroic', 'legendary', 'relic', 'blueprint', 'creature'];
 
 export const tierCategory: Record<ItemTier, string> = {
   T2: 'rare',

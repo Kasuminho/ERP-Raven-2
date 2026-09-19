@@ -3,7 +3,7 @@ import { Auction, ItemCatalog } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CreateItemAuctionsDto, CreateItemDto, UpdateItemDto } from '../dto';
+import { CreateItemAuctionsDto, CreateItemDto, BulkCreateItemsDto, UpdateItemDto, ValidateItemsBatchDto } from '../dto';
 import { ItemsService } from '../services/items.service';
 
 type AuthRequest = { user?: { userId?: string } };
@@ -16,6 +16,20 @@ export class ItemsController {
   @Get('health')
   health(): { module: string; ready: boolean } {
     return this.service.health();
+  }
+
+  @Post('validate-batch')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async validateBatch(@Body() dto: ValidateItemsBatchDto) {
+    return this.service.validateItemsBatch(dto);
+  }
+
+  @Post('bulk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async createBulk(@Body() dto: BulkCreateItemsDto, @Req() req: AuthRequest) {
+    return this.service.createBulkItems(dto, req.user?.userId);
   }
 
   @Post()

@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Auction, ItemCatalog } from '@prisma/client';
+import { Auction, ItemCatalog, ItemType, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
-import { CreateItemAuctionsDto, CreateItemDto, UpdateItemDto } from '../dto';
+import { BulkCreateItemsDto, CreateItemAuctionsDto, CreateItemDto, UpdateItemDto, ValidateItemsBatchDto } from '../dto';
 import { ItemsRepository } from '../repositories/items.repository';
 import { getRequestableCatalogKey, requestableItems } from '../requestable-items';
 
@@ -57,6 +57,143 @@ export class ItemsService {
     });
 
     return item;
+  }
+
+  async validateItemsBatch(dto: ValidateItemsBatchDto): Promise<{
+    existing: Array<{
+      id: string;
+      namePt: string;
+      nameEn: string;
+      category: string;
+      itemTier: string | null;
+      itemType: string | null;
+      kind: string;
+      isActive: boolean;
+    }>;
+    existingNames: string[];
+  }> {
+    const existing = await this.repository.findByNames(dto.names);
+    const existingNames = Array.from(
+      new Set(
+        existing.flatMap((item) => [
+          item.namePt.trim().toLowerCase(),
+          item.nameEn.trim().toLowerCase(),
+          ...(item.nameEs ? [item.nameEs.trim().toLowerCase()] : []),
+        ]),
+      ),
+    );
+
+    return {
+      existing: existing.map((item) => ({
+        id: item.id,
+        namePt: item.namePt,
+        nameEn: item.nameEn,
+        category: item.category,
+        itemTier: item.itemTier,
+        itemType: item.itemType,
+        kind: item.kind,
+        isActive: item.isActive,
+      })),
+      existingNames,
+    };
+  }
+
+  async createBulkItems(
+    dto: BulkCreateItemsDto,
+    actorId?: string,
+  ): Promise<{
+    created: ItemCatalog[];
+    skipped: Array<{ name: string; reason: string }>;
+    createdCount: number;
+    skippedCount: number;
+  }> {
+    if (!dto.items || dto.items.length === 0) {
+      return { created: [], skipped: [], createdCount: 0, skippedCount: 0 };
+    }
+
+    const allNames = dto.items.map((i) => i.namePt.trim()).filter(Boolean);
+    const existingInDb = await this.repository.findByNames(allNames);
+    const dbNames = new Set(
+      existingInDb.flatMap((i) => [
+        i.namePt.trim().toLowerCase(),
+        i.nameEn.trim().toLowerCase(),
+        ...(i.nameEs ? [i.nameEs.trim().toLowerCase()] : []),
+      ]),
+    );
+
+    const toCreate: Prisma.ItemCatalogCreateInput[] = [];
+    const skipped: Array<{ name: string; reason: string }> = [];
+    const batchSeenNames = new Set<string>();
+
+    for (const item of dto.items) {
+      const namePt = item.namePt?.trim();
+      if (!namePt) {
+        skipped.push({ name: '(Vazio)', reason: 'Nome do item ausente' });
+        continue;
+      }
+
+      const lowerName = namePt.toLowerCase();
+      if (dbNames.has(lowerName)) {
+        skipped.push({ name: namePt, reason: 'Já existe no catálogo' });
+        continue;
+      }
+
+      if (batchSeenNames.has(lowerName)) {
+        skipped.push({ name: namePt, reason: 'Duplicado no mesmo lote' });
+        continue;
+      }
+
+      batchSeenNames.add(lowerName);
+
+      const kind = item.kind?.trim() || (item.category?.trim().toLowerCase() === 'material' ? 'material' : 'equipment');
+      const category = item.category?.trim().toLowerCase() || 'common';
+      const nameEn = item.nameEn?.trim() || namePt;
+      const typePt = item.typePt?.trim() || this.defaultTypePt(item.itemType, kind);
+      const typeEn = item.typeEn?.trim() || this.defaultTypeEn(item.itemType, kind);
+
+      toCreate.push({
+        kind,
+        category,
+        itemTier: item.itemTier ?? null,
+        itemType: item.itemType ?? null,
+        namePt,
+        nameEn,
+        nameEs: item.nameEs?.trim() || undefined,
+        typePt,
+        typeEn,
+        typeEs: item.typeEs?.trim() || undefined,
+        preferredClasses: item.preferredClasses ?? [],
+        image1Url: this.normalizeOptionalUrl(item.image1Url),
+        image2Url: this.normalizeOptionalUrl(item.image2Url),
+        isActive: true,
+        diamondSaleEnabled: item.diamondSaleEnabled ?? false,
+      });
+    }
+
+    const created = await this.repository.createInTransaction(toCreate);
+
+    if (created.length > 0) {
+      await this.auditService.log({
+        actorId,
+        action: 'ITEM_CATALOG_BULK_CREATED',
+        targetType: 'ItemCatalog',
+        targetId: 'bulk',
+        metadata: {
+          totalReceived: dto.items.length,
+          createdCount: created.length,
+          skippedCount: skipped.length,
+          createdNames: created.map((i) => i.namePt),
+          skippedNames: skipped.map((s) => s.name),
+        },
+      });
+    }
+
+    return {
+      created,
+      skipped,
+      createdCount: created.length,
+      skippedCount: skipped.length,
+    };
   }
 
   async getItems(options: { activeOnly?: boolean; page?: number; limit?: number; search?: string } = {}): Promise<ItemCatalog[]> {
@@ -208,8 +345,16 @@ export class ItemsService {
   private validateItemPayload(data: CreateItemDto): void {
     const requiredFields: Array<keyof CreateItemDto> = ['kind', 'category', 'namePt', 'nameEn', 'typePt', 'typeEn'];
 
-    if (data.kind !== 'request') {
-      requiredFields.push('itemTier', 'itemType');
+    const category = data.category?.trim().toLowerCase();
+    const kind = data.kind?.trim().toLowerCase();
+    const isNonTierCategory = category === 'common' || category === 'uncommon';
+    const isMaterialOrRequest = kind === 'request' || kind === 'material';
+
+    if (!isMaterialOrRequest && !isNonTierCategory) {
+      requiredFields.push('itemTier');
+    }
+    if (kind !== 'request' && kind !== 'material') {
+      requiredFields.push('itemType');
     }
 
     const missing = requiredFields.filter((field) => !String(data[field] ?? '').trim());
@@ -277,5 +422,23 @@ export class ItemsService {
 
       await this.repository.create(data);
     }
+  }
+
+  private defaultTypePt(type?: ItemType | null, kind?: string): string {
+    if (kind === 'material') return 'Material';
+    if (type === 'WEAPON') return 'Arma';
+    if (type === 'ARMOR') return 'Armadura';
+    if (type === 'ACCESSORY') return 'Acessório';
+    if (type === 'CELESTIAL_STONE') return 'Pedra Celestial';
+    return 'Geral';
+  }
+
+  private defaultTypeEn(type?: ItemType | null, kind?: string): string {
+    if (kind === 'material') return 'Material';
+    if (type === 'WEAPON') return 'Weapon';
+    if (type === 'ARMOR') return 'Armor';
+    if (type === 'ACCESSORY') return 'Accessory';
+    if (type === 'CELESTIAL_STONE') return 'Celestial Stone';
+    return 'General';
   }
 }

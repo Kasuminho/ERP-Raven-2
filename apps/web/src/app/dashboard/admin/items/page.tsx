@@ -12,6 +12,8 @@ import { categories, tierCategory, type BulkEditForm, type InterestOperationForm
 import { ItemCatalogCard } from './_components/item-catalog-card';
 import { ItemCatalogControlsCard } from './_components/item-catalog-controls-card';
 import { ItemCreateFormCard } from './_components/item-create-form-card';
+import { ItemBulkImportModal } from './_components/item-bulk-import-modal';
+import { Camera } from 'lucide-react';
 
 export default function AdminItemsPage() {
   const locale = useLocaleStore((state) => state.locale);
@@ -60,6 +62,7 @@ export default function AdminItemsPage() {
     mode: 'PvE',
     closesAt: '',
   });
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const catalog = useMemo(() => items.data ?? [], [items.data]);
   const dynamicCategories = useMemo(
     () => Array.from(new Set([...categories, ...catalog.map((item) => item.category).filter((category): category is string => Boolean(category))])).sort(),
@@ -302,9 +305,19 @@ export default function AdminItemsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm uppercase text-primary">Armory</p>
-        <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'itemCatalogTitle')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase text-primary">Armory</p>
+          <h1 className="font-[var(--font-cinzel)] text-3xl font-bold">{t(locale, 'itemCatalogTitle')}</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsBulkImportOpen(true)}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-600/20 px-4 py-2.5 text-sm font-bold text-amber-300 border border-amber-500/40 hover:from-amber-500/30 hover:to-amber-600/30 transition-all shadow-lg shadow-amber-500/10 cursor-pointer"
+        >
+          <Camera className="h-4 w-4 text-amber-400" />
+          📷 Importar por Print / Lote (OCR)
+        </button>
       </div>
 
       <ItemCreateFormCard
@@ -373,6 +386,11 @@ export default function AdminItemsPage() {
       {!items.isLoading && filteredCatalog.length === 0 && (
         <EmptyState title="No catalog items yet">Register the first item before opening auctions.</EmptyState>
       )}
+
+      <ItemBulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+      />
     </div>
   );
 }

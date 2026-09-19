@@ -18,11 +18,18 @@ export class CreateItemDto {
   @MaxLength(80)
   category!: string;
 
-  @ValidateIf((dto: CreateItemDto) => dto.kind !== 'request')
+  @ValidateIf((dto: CreateItemDto) => {
+    const kind = dto.kind?.trim().toLowerCase();
+    const category = dto.category?.trim().toLowerCase();
+    return kind !== 'request' && kind !== 'material' && category !== 'common' && category !== 'uncommon';
+  })
   @IsEnum(ItemTier)
   itemTier?: ItemTier;
 
-  @ValidateIf((dto: CreateItemDto) => dto.kind !== 'request')
+  @ValidateIf((dto: CreateItemDto) => {
+    const kind = dto.kind?.trim().toLowerCase();
+    return kind !== 'request' && kind !== 'material';
+  })
   @IsEnum(ItemType)
   itemType?: ItemType;
 

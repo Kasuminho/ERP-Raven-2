@@ -87,4 +87,33 @@ export class ItemsRepository {
       where: { id },
     });
   }
+
+  async findByNames(names: string[], client: ItemClient = this.prisma): Promise<ItemCatalog[]> {
+    const cleaned = Array.from(new Set(names.map((n) => n.trim()).filter(Boolean)));
+    if (cleaned.length === 0) return [];
+
+    return client.itemCatalog.findMany({
+      where: {
+        OR: cleaned.map((name) => ({
+          OR: [
+            { namePt: { equals: name, mode: 'insensitive' } },
+            { nameEn: { equals: name, mode: 'insensitive' } },
+            { nameEs: { equals: name, mode: 'insensitive' } },
+          ],
+        })),
+      },
+      orderBy: { namePt: 'asc' },
+    });
+  }
+
+  async createInTransaction(items: Prisma.ItemCatalogCreateInput[]): Promise<ItemCatalog[]> {
+    if (items.length === 0) return [];
+    return this.prisma.$transaction(async (tx) => {
+      const created: ItemCatalog[] = [];
+      for (const item of items) {
+        created.push(await tx.itemCatalog.create({ data: item }));
+      }
+      return created;
+    });
+  }
 }
