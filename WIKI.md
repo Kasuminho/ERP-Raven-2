@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-08-17
+**Ultima revisao:** 2026-09-18
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -425,6 +425,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-09-18 | Migration de reset da guilda aplicada para limpeza de historico operacional, usuarios e logs, preservando o catalogo de itens (ItemCatalog). | operacao/reset-guild |
 | 2026-08-17 | Criacao de eventos e series passou a aceitar pontuacao DKP customizada e tipo CUSTOM; Staff ganhou editor visual de eventRewards nas regras de negocio. | eventos/DKP/configurabilidade |
 | 2026-08-03 | Decima rotacao automatica renovou e ampliou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
 | 2026-07-23 | Nona rotacao automatica renovou o humor dos webhooks, DMs, partilha de diamantes, healthcheck, DKP-LOG, resumo semanal e changelog sem mudar payloads, identidade, idiomas ou regras. | webhook-joke-rotation |
