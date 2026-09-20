@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseFilters, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { AuthService, DiscordOAuthUser } from '../services/auth.service';
+import { DiscordAuthFilter } from '../filters/discord-auth.filter';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -21,10 +22,13 @@ export class AuthController {
   discordLogin(): void {}
 
   @Get('discord/callback')
+  @UseFilters(DiscordAuthFilter)
   @UseGuards(AuthGuard('discord'))
   async discordCallback(@Req() req: { user: DiscordOAuthUser }, @Res() res: Response): Promise<void> {
     const session = await this.authService.createDiscordSession(req.user);
     this.setSessionCookie(res, session.accessToken);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
     res.redirect(this.webCallbackUrl());
   }
 

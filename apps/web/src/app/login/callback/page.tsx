@@ -12,7 +12,13 @@ export default function LoginCallbackPage() {
   useEffect(() => {
     void initialize(true).then((authenticated) => {
       const membershipStatus = useAuthStore.getState().membershipStatus;
-      router.replace(authenticated ? (membershipStatus === 'ACTIVE' ? '/dashboard' : '/access-review') : '/login');
+      router.replace(
+        authenticated
+          ? membershipStatus === 'ACTIVE'
+            ? '/dashboard'
+            : '/access-review'
+          : '/login?error=session_failed',
+      );
     });
   }, [initialize, router]);
 
