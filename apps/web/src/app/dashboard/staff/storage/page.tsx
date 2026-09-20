@@ -92,6 +92,7 @@ export default function GuildStoragePage() {
   const [selectedImages, setSelectedImages] = useState<Array<{ name: string; data: string; mimeType: string }>>([]);
   const [scannedResults, setScannedResults] = useState<ScannedStorageItemResult[]>([]);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [scanProgress, setScanProgress] = useState<{ current: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Stats
@@ -159,13 +160,38 @@ export default function GuildStoragePage() {
       return;
     }
 
-    try {
-      const response = await scanMutation.mutateAsync({
-        images: selectedImages.map((img) => ({ data: img.data, mimeType: img.mimeType })),
-        apiKey: apiKeyInput.trim() || undefined,
-      });
+    setScanProgress({ current: 0, total: selectedImages.length });
+    const aggregatedMap = new Map<string, ScannedStorageItemResult>();
 
-      const items = response.scannedItems || (response as any).items || [];
+    try {
+      // Processar 1 print por vez para evitar payloads gigantes (413 Payload Too Large) e dar feedback de progresso
+      for (let i = 0; i < selectedImages.length; i++) {
+        setScanProgress({ current: i + 1, total: selectedImages.length });
+        const img = selectedImages[i];
+        const response = await scanMutation.mutateAsync({
+          images: [{ data: img.data, mimeType: img.mimeType }],
+          apiKey: apiKeyInput.trim() || undefined,
+        });
+
+        const items = response.scannedItems || (response as any).items || [];
+        for (const item of items) {
+          const key = item.itemName.trim().toLowerCase();
+          const existing = aggregatedMap.get(key);
+          if (existing) {
+            existing.quantity += item.quantity;
+            if (!existing.acquisitionInfo && item.acquisitionInfo) {
+              existing.acquisitionInfo = item.acquisitionInfo;
+            }
+            if (!existing.acquisitionDate && item.acquisitionDate) {
+              existing.acquisitionDate = item.acquisitionDate;
+            }
+          } else {
+            aggregatedMap.set(key, { ...item });
+          }
+        }
+      }
+
+      const items = Array.from(aggregatedMap.values());
       if (!items || items.length === 0) {
         notifyToast({
           title: 'Nenhum item detectado no(s) print(s)',
@@ -178,7 +204,7 @@ export default function GuildStoragePage() {
       setScannedResults(items);
       notifyToast({
         title: `Leitura concluída com sucesso!`,
-        description: `${items.length} tipos de itens identificados pelo Gemini.`,
+        description: `${items.length} tipos de itens identificados em ${selectedImages.length} print(s).`,
         tone: 'success',
       });
     } catch (err: any) {
@@ -187,6 +213,8 @@ export default function GuildStoragePage() {
         description: err?.response?.data?.message || err.message || 'Erro ao conectar ao Gemini.',
         tone: 'error',
       });
+    } finally {
+      setScanProgress(null);
     }
   }
 
@@ -900,10 +928,15 @@ export default function GuildStoragePage() {
                   </Button>
                   <Button
                     onClick={handleScanSubmit}
-                    disabled={selectedImages.length === 0 || scanMutation.isPending}
+                    disabled={selectedImages.length === 0 || scanMutation.isPending || Boolean(scanProgress)}
                     className="gap-2 bg-primary text-primary-foreground font-semibold"
                   >
-                    {scanMutation.isPending ? (
+                    {scanProgress ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Lendo print {scanProgress.current} de {scanProgress.total}...
+                      </>
+                    ) : scanMutation.isPending ? (
                       <>
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Lendo prints com Gemini...

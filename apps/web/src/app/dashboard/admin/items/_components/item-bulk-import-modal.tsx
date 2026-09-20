@@ -118,11 +118,16 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
         });
       };
 
-      const base64Images = await Promise.all(fileArray.map((f) => readAsBase64(f)));
-      const response = await scanCatalogOcr.mutateAsync({ images: base64Images });
-      const detectedItems = response.scannedItems || (response as any).items || [];
+      const allDetected: Array<any> = [];
+      for (let i = 0; i < fileArray.length; i++) {
+        setOcrStatusText(`Lendo print ${i + 1} de ${fileArray.length} com a visão multimodal do Gemini...`);
+        const b64 = await readAsBase64(fileArray[i]);
+        const response = await scanCatalogOcr.mutateAsync({ images: [b64] });
+        const batch = response.scannedItems || (response as any).items || [];
+        allDetected.push(...batch);
+      }
 
-      if (!detectedItems || detectedItems.length === 0) {
+      if (allDetected.length === 0) {
         notifyToast({
           title: 'Nenhum item detectado no(s) print(s)',
           description: 'Tente outro print mais nítido ou use a aba de texto.',
@@ -131,16 +136,16 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
         return;
       }
 
-      const duplicateCount = detectedItems.filter((i) => i.alreadyExists).length;
-      const newItemsCount = detectedItems.length - duplicateCount;
+      const duplicateCount = allDetected.filter((i) => i.alreadyExists).length;
+      const newItemsCount = allDetected.length - duplicateCount;
 
       notifyToast({
-        title: `${detectedItems.length} itens detectados em ${fileArray.length} print(s)!`,
+        title: `${allDetected.length} itens detectados em ${fileArray.length} print(s)!`,
         description: `${newItemsCount} novos encontrados e ${duplicateCount} já existentes identificados.`,
         tone: 'success',
       });
 
-      const newDraftItems: BulkDraftItem[] = detectedItems.map((item, index) => {
+      const newDraftItems: BulkDraftItem[] = allDetected.map((item, index) => {
         return {
           tempId: `draft-${Date.now()}-${index}`,
           namePt: item.itemName,
