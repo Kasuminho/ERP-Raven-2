@@ -133,7 +133,13 @@ Retorne APENAS um array JSON puro válido, sem markdown envolvente:
   }
 ]`;
 
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    const models = [
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+    ];
     let lastError: Error | null = null;
 
     for (const model of models) {
