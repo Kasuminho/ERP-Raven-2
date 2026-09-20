@@ -31,7 +31,14 @@ export class DiscordApiService {
       return null;
     }
 
-    return this.get<DiscordGuildMember>(`/users/@me/guilds/${guildId}/member`, accessToken);
+    try {
+      return await this.get<DiscordGuildMember>(`/users/@me/guilds/${guildId}/member`, accessToken);
+    } catch (err: any) {
+      if (err?.message?.includes('404')) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   async getGuildMember(discordId: string): Promise<DiscordGuildMember | null> {
@@ -42,7 +49,14 @@ export class DiscordApiService {
       return null;
     }
 
-    return this.get<DiscordGuildMember>(`/guilds/${guildId}/members/${discordId}`, botToken, 'Bot');
+    try {
+      return await this.get<DiscordGuildMember>(`/guilds/${guildId}/members/${discordId}`, botToken, 'Bot');
+    } catch (err: any) {
+      if (err?.message?.includes('404')) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   async getGuildRoles(): Promise<Array<{ id: string; name: string }>> {
@@ -53,7 +67,14 @@ export class DiscordApiService {
       return [];
     }
 
-    return this.get<Array<{ id: string; name: string }>>(`/guilds/${guildId}/roles`, botToken, 'Bot');
+    try {
+      return await this.get<Array<{ id: string; name: string }>>(`/guilds/${guildId}/roles`, botToken, 'Bot');
+    } catch (err: any) {
+      if (err?.message?.includes('404')) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   private async get<T>(path: string, token: string, scheme = 'Bearer'): Promise<T> {

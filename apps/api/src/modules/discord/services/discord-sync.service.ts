@@ -149,9 +149,15 @@ export class DiscordSyncService {
 
   private async getOAuthGuildMember(discordId: string, accessToken: string): Promise<DiscordGuildMember | null> {
     try {
-      return await this.api.getCurrentUserGuildMember(accessToken);
+      const member = await this.api.getCurrentUserGuildMember(accessToken);
+      if (member) return member;
     } catch {
-      return this.api.getGuildMember(discordId);
+      // ignore
+    }
+    try {
+      return await this.api.getGuildMember(discordId);
+    } catch {
+      return null;
     }
   }
 

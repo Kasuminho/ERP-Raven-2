@@ -1595,6 +1595,10 @@ export class PlayersService {
       throw new BadRequestException('Nickname must be between 2 and 32 characters.');
     }
 
+    if (/^\d{16,22}$/.test(nickname)) {
+      throw new BadRequestException('Nickname cannot be a Discord numeric ID.');
+    }
+
     return nickname;
   }
 

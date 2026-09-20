@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useId, useMemo } from 'react';
+import { useState, useId, useMemo, useEffect } from 'react';
 import { ShieldAlert, Sparkles, CheckCircle2, Globe, Swords, UserCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,8 @@ const I18N = {
     langPrompt: 'Selecione o seu idioma de preferência:',
     nickLabel: 'Nick do Personagem no Raven 2',
     nickPlaceholder: 'Ex: RavenStriker (exatamente como no jogo)',
-    nickHint: 'Não use seu nome do Discord. Digite exatamente o nome do seu boneco no Raven 2.',
-    nickDiscordError: 'O nick não pode ser idêntico ao seu nome de usuário do Discord.',
+    nickHint: 'Digite o nome do seu personagem no Raven 2 (pode ser igual ao seu nick do Discord).',
+    nickDiscordError: 'O nick não pode ser o seu ID numérico do Discord.',
     nickLengthError: 'O nick deve ter entre 2 e 32 caracteres.',
     classLabel: 'Selecione a sua Classe no Raven 2',
     classHint: 'Escolha a classe principal que você joga na guilda.',
@@ -54,8 +54,8 @@ const I18N = {
     langPrompt: 'Select your preferred language:',
     nickLabel: 'Raven 2 Character Name (In-Game)',
     nickPlaceholder: 'e.g. RavenStriker (exact in-game name)',
-    nickHint: 'Do not use your Discord username. Enter your exact in-game character name.',
-    nickDiscordError: 'Character name cannot be identical to your Discord username.',
+    nickHint: 'Enter your in-game character name in Raven 2 (it can match your Discord nickname).',
+    nickDiscordError: 'Character name cannot be your Discord numeric ID.',
     nickLengthError: 'Character name must be between 2 and 32 characters.',
     classLabel: 'Select your Raven 2 Class',
     classHint: 'Choose the main class you play in the guild.',
@@ -75,8 +75,8 @@ const I18N = {
     langPrompt: 'Selecciona tu idioma de preferencia:',
     nickLabel: 'Nombre del Personaje en Raven 2',
     nickPlaceholder: 'Ej: RavenStriker (exacto en el juego)',
-    nickHint: 'No uses tu nombre de Discord. Escribe el nombre exacto de tu personaje en Raven 2.',
-    nickDiscordError: 'El nombre del personaje no puede ser idéntico a tu usuario de Discord.',
+    nickHint: 'Escribe el nombre de tu personaje en Raven 2 (puede ser igual a tu apodo en Discord).',
+    nickDiscordError: 'El nombre del personaje no puede ser tu ID numérico de Discord.',
     nickLengthError: 'El nombre debe tener entre 2 y 32 caracteres.',
     classLabel: 'Selecciona tu Clase de Raven 2',
     classHint: 'Elige la clase principal con la que juegas en la hermandad.',
@@ -101,16 +101,16 @@ export function CharacterSetupGate({ children }: { children: React.ReactNode }) 
   const player = history.data?.player;
   const user = player?.user;
 
-  // Verification if the user still has default Discord username/nickname
-  const isDefaultDiscordNick = useMemo(() => {
+  // Verification if the user still has default Discord numeric ID or no class
+  const needsInitialSetup = useMemo(() => {
     if (!player) return false;
-    const playerNick = player.nickname?.trim()?.toLowerCase() ?? '';
-    const discordUser = user?.discordUsername?.trim()?.toLowerCase() ?? '';
-    const discordNick = user?.discordNickname?.trim()?.toLowerCase() ?? '';
+    const playerNick = player.nickname?.trim() ?? '';
+    const discordId = user?.discordId?.trim() ?? '';
 
     if (!playerNick) return true;
-    if (discordUser && playerNick === discordUser) return true;
-    if (discordNick && playerNick === discordNick) return true;
+    if (discordId && playerNick === discordId) return true;
+    if (/^\d{16,22}$/.test(playerNick)) return true;
+    if (!player.class) return true;
 
     return false;
   }, [player, user]);
@@ -120,21 +120,38 @@ export function CharacterSetupGate({ children }: { children: React.ReactNode }) 
   const [layer, setLayer] = useState<number>(1);
   const [hasInteracted, setHasInteracted] = useState(false);
 
+  // Sync initial state if available
+  useEffect(() => {
+    if (player) {
+      if (player.class) setSelectedClass(player.class);
+      if (player.dimensionalLayer) setLayer(player.dimensionalLayer);
+
+      const pNick = player.nickname?.trim() ?? '';
+      const dId = user?.discordId?.trim() ?? '';
+      if (pNick && pNick !== dId && !/^\d{16,22}$/.test(pNick)) {
+        setInGameNick(pNick);
+      } else if (user?.discordNickname && !/^\d{16,22}$/.test(user.discordNickname)) {
+        setInGameNick(user.discordNickname);
+      } else if (user?.discordUsername && !/^\d{16,22}$/.test(user.discordUsername)) {
+        setInGameNick(user.discordUsername);
+      }
+    }
+  }, [player, user]);
+
   const texts = I18N[locale] ?? I18N.pt;
 
-  // Validation
+  // Validation: block if length is invalid or if it's the raw Discord numeric ID
   const trimmedNick = inGameNick.trim();
   const isTooShort = trimmedNick.length < 2;
   const isTooLong = trimmedNick.length > 32;
-  const isSameAsDiscord = useMemo(() => {
+  const isDiscordId = useMemo(() => {
     if (!trimmedNick) return false;
-    const lower = trimmedNick.toLowerCase();
-    const discordUser = user?.discordUsername?.trim()?.toLowerCase();
-    const discordNick = user?.discordNickname?.trim()?.toLowerCase();
-    return lower === discordUser || (Boolean(discordNick) && lower === discordNick);
+    const discordId = user?.discordId?.trim();
+    if (discordId && trimmedNick === discordId) return true;
+    return /^\d{16,22}$/.test(trimmedNick);
   }, [trimmedNick, user]);
 
-  const isValid = !isTooShort && !isTooLong && !isSameAsDiscord;
+  const isValid = !isTooShort && !isTooLong && !isDiscordId;
 
   function handleLanguageChange(nextLocale: Locale) {
     setLocale(nextLocale);
@@ -166,7 +183,7 @@ export function CharacterSetupGate({ children }: { children: React.ReactNode }) 
   }
 
   // If still loading or player is not active or nick is already valid, render children normally
-  if (history.isLoading || !player || !isDefaultDiscordNick) {
+  if (history.isLoading || !player || !needsInitialSetup) {
     return <>{children}</>;
   }
 
@@ -267,13 +284,13 @@ export function CharacterSetupGate({ children }: { children: React.ReactNode }) 
                 autoFocus
               />
 
-              {hasInteracted && isSameAsDiscord && (
+              {hasInteracted && isDiscordId && (
                 <p className="mt-1.5 text-xs font-medium text-red-400">
                   ⚠️ {texts.nickDiscordError}
                 </p>
               )}
 
-              {hasInteracted && !isSameAsDiscord && (isTooShort || isTooLong) && (
+              {hasInteracted && !isDiscordId && (isTooShort || isTooLong) && (
                 <p className="mt-1.5 text-xs text-amber-400">
                   ℹ️ {texts.nickLengthError}
                 </p>

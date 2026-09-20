@@ -436,7 +436,7 @@ npm.cmd run discord:configure-webhooks
 
 ## Historico recente
 
-| Data | Mudanca | Referencia |
+| 2026-09-19 | Tratamento gracioso de 404 na API do Discord no login OAuth de novatos ainda fora do servidor; ajuste no gate de onboarding e perfil para permitir nomes iguais ao apelido do Discord e bloquear apenas IDs numéricos brutos do Discord. | auth/discord/onboarding |
 | 2026-09-19 | Migrado OCR do catálogo de itens para Gemini Vision (eliminando tesseract.js e erro CSP de worker blob); ajustadas CSPs de Web e API; otimizado workflow do GitHub Actions para polling a cada 30s sem sleep inicial desnecessário. | ocr/csp/ci-cd |
 | 2026-09-19 | Criado módulo 'Baú da Guilda' (StorageModule), tabela GuildStorageItem, leitura e OCR de múltiplos prints via Google Gemini Vision API, painel Web Staff e distribuição manual priorizada por assiduidade para pedidos do Codex. | bau/gemini-ocr/staff |
 | 2026-09-19 | Catálogo de itens ganhou importador em lote via print OCR e texto com checagem de duplicatas em tempo real e suporte a itens comuns (brancos) e incomuns (verdes) para o Servidor Zero. | itens/OCR/Staff |
