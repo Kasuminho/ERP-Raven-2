@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { notifyToast } from '@/components/ui/toaster';
 import { useCreateBulkItems, useValidateItemsBatch } from '@/hooks/use-items-api';
+import { useScanStorageOcr } from '@/hooks/use-storage-api';
 import type { ItemTier, ItemType } from '@/types/api';
 
 type BulkDraftItem = {
@@ -66,6 +67,7 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
 
   const validateBatch = useValidateItemsBatch();
   const createBulk = useCreateBulkItems();
+  const scanOcr = useScanStorageOcr();
 
   const [existingDbNames, setExistingDbNames] = useState<Set<string>>(new Set());
 
@@ -92,51 +94,74 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
 
-  const handleImageFile = async (file: File) => {
+  const handleImageFile = (file: File) => {
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
     setIsOcrProcessing(true);
-    setOcrStatusText('Inicializando leitor OCR...');
+    setOcrStatusText('Enviando imagem para a visão multimodal do Gemini...');
 
-    try {
-      setOcrStatusText('Reconhecendo textos no print do Raven 2...');
-      const { createWorker } = await import('tesseract.js');
-      const worker = await createWorker(['por', 'eng']);
-
-      setOcrStatusText('Processando imagem do jogo...');
-      const ret = await worker.recognize(file);
-      await worker.terminate();
-
-      const extractedLines = ret.data.text
-        .split('\n')
-        .map((line) => cleanOcrLine(line))
-        .filter((line) => line.length >= 2 && !/^[0-9\W]+$/.test(line) && !isNoiseLine(line));
-
-      if (extractedLines.length === 0) {
-        notifyToast({
-          title: 'Nenhum texto legível detectado',
-          description: 'Tente aproximar o print do inventário ou use a aba de texto.',
-          tone: 'info',
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result as string;
+        const response = await scanOcr.mutateAsync({
+          images: [{ data: base64, mimeType: file.type || 'image/png' }],
         });
-      } else {
+
+        if (!response.scannedItems || response.scannedItems.length === 0) {
+          notifyToast({
+            title: 'Nenhum item detectado no print',
+            description: 'Tente outro print ou use a aba de texto.',
+            tone: 'info',
+          });
+          return;
+        }
+
         notifyToast({
-          title: `${extractedLines.length} itens detectados no print!`,
+          title: `${response.scannedItems.length} itens detectados pelo Gemini!`,
           description: 'Conferindo duplicatas com o catálogo existente...',
           tone: 'info',
         });
-        parseAndPopulateItems(extractedLines);
+
+        // Pre-check against backend for duplicates
+        const itemNames = response.scannedItems.map((i) => i.itemName);
+        let dbFound = new Set<string>();
+        try {
+          const result = await validateBatch.mutateAsync({ names: itemNames });
+          dbFound = new Set(result.existingNames.map((n) => n.toLowerCase()));
+          setExistingDbNames(dbFound);
+        } catch (e) {
+          console.error('Falha ao checar duplicatas:', e);
+        }
+
+        const newDraftItems: BulkDraftItem[] = response.scannedItems.map((item, index) => {
+          const isDuplicate = dbFound.has(item.itemName.toLowerCase());
+          return {
+            tempId: `draft-${Date.now()}-${index}`,
+            namePt: item.itemName,
+            nameEn: item.itemName,
+            category: item.category || globalCategory,
+            itemType: (item.itemType as ItemType) || globalType,
+            itemTier: '',
+            kind: item.kind || (item.category === 'material' ? 'material' : 'equipment'),
+            selected: !isDuplicate,
+          };
+        });
+
+        setItemsList(newDraftItems);
+      } catch (err: any) {
+        console.error('Erro OCR Gemini:', err);
+        notifyToast({
+          title: 'Erro no reconhecimento OCR via Gemini',
+          description: err?.response?.data?.message || err.message || 'Verifique se a API Key do Gemini está configurada.',
+          tone: 'error',
+        });
+      } finally {
+        setIsOcrProcessing(false);
+        setOcrStatusText('');
       }
-    } catch (err) {
-      console.error('Erro OCR:', err);
-      notifyToast({
-        title: 'Erro no reconhecimento OCR',
-        description: 'Você pode colar os nomes diretamente na aba "Colar Lista de Nomes".',
-        tone: 'error',
-      });
-    } finally {
-      setIsOcrProcessing(false);
-      setOcrStatusText('');
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const cleanOcrLine = (line: string): string => {

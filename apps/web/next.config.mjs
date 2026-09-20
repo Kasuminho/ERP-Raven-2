@@ -10,7 +10,7 @@ const nextConfig = {
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       {
         key: 'Content-Security-Policy',
-        value: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://discord.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://images.unsplash.com https://drive.google.com https://*.googleusercontent.com https://cdn.discordapp.com; font-src 'self' data:; connect-src 'self' https://app.guild-g3x.com.br https://api.guild-g3x.com.br ws: wss:; object-src 'none'; upgrade-insecure-requests",
+        value: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://discord.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://images.unsplash.com https://drive.google.com https://*.googleusercontent.com https://cdn.discordapp.com; font-src 'self' data:; connect-src 'self' https://app.guild-g3x.com.br https://api.guild-g3x.com.br https://*.googleapis.com ws: wss:; object-src 'none'; upgrade-insecure-requests",
       },
     ];
     const noStoreHeaders = [

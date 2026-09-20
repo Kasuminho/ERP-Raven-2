@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'none'");
     if (config.get<string>('app.nodeEnv') === 'production') {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }

@@ -102,6 +102,7 @@ async function main() {
   console.log(JSON.stringify({ baseUrl, attempts, delayMs, fetchTimeoutMs, dnsOrder, dnsFamily, userAgent, expectedVersion, allowEdgeChallenge, paths }, null, 2));
 
   let lastResult;
+  let consecutiveEdgeChallenges = 0;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await check(attempt);
     lastResult = result;
@@ -116,6 +117,20 @@ async function main() {
       console.log(JSON.stringify({ ok: true, baseUrl, attempt, checks: result.results }, null, 2));
       return;
     }
+
+    const requiredResults = result.results.filter((r) => requiredPaths.includes(r.path));
+    if (requiredResults.length > 0 && requiredResults.every(isEdgeChallenge)) {
+      consecutiveEdgeChallenges += 1;
+      if (allowEdgeChallenge && consecutiveEdgeChallenges >= 3) {
+        const failure = JSON.stringify({ baseUrl, expectedVersion, checks: result.results });
+        console.warn(`::warning title=Public smoke blocked by edge challenge::${escapeGithubAnnotation(failure)}`);
+        console.warn('Public smoke could not verify APP_VERSION because the edge returned an HTML challenge to the GitHub runner 3 times in a row. Proceeding.');
+        return;
+      }
+    } else {
+      consecutiveEdgeChallenges = 0;
+    }
+
     console.error(`Public smoke attempt ${attempt}/${attempts} failed: ${JSON.stringify(result.results)}`);
     if (attempt < attempts) await sleep(delayMs);
   }

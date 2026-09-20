@@ -437,7 +437,7 @@ npm.cmd run discord:configure-webhooks
 ## Historico recente
 
 | Data | Mudanca | Referencia |
-| --- | --- | --- |
+| 2026-09-19 | Migrado OCR do catálogo de itens para Gemini Vision (eliminando tesseract.js e erro CSP de worker blob); ajustadas CSPs de Web e API; otimizado workflow do GitHub Actions para polling a cada 30s sem sleep inicial desnecessário. | ocr/csp/ci-cd |
 | 2026-09-19 | Criado módulo 'Baú da Guilda' (StorageModule), tabela GuildStorageItem, leitura e OCR de múltiplos prints via Google Gemini Vision API, painel Web Staff e distribuição manual priorizada por assiduidade para pedidos do Codex. | bau/gemini-ocr/staff |
 | 2026-09-19 | Catálogo de itens ganhou importador em lote via print OCR e texto com checagem de duplicatas em tempo real e suporte a itens comuns (brancos) e incomuns (verdes) para o Servidor Zero. | itens/OCR/Staff |
 | 2026-09-19 | Script e comando npm 'news:raven-zero' criados para compilar e enviar atualizações oficiais dos fóruns do Raven 2 (boards 27, 28 e 29) e do servidor ZERO via webhook do Aristolfo com controle de deduplicação e estado persistido. | automacao/webhooks |
