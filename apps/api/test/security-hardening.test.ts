@@ -22,6 +22,7 @@ test('OAuth callback stores the JWT only in an HttpOnly cookie', async () => {
   const response = {
     cookie: (name: string, value: string, options: Record<string, unknown>) => { cookie = { name, value, options }; },
     redirect: (url: string) => { redirectUrl = url; },
+    setHeader: () => {},
   };
 
   await controller.discordCallback(

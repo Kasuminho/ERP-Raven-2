@@ -18,8 +18,8 @@ export class DiscordAuthFilter implements ExceptionFilter {
     const loginUrl = new URL('/login', publicUrl);
     loginUrl.searchParams.set('error', 'session_expired');
 
-    response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    response.setHeader('Pragma', 'no-cache');
+    response.setHeader?.('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    response.setHeader?.('Pragma', 'no-cache');
     response.redirect(loginUrl.toString());
   }
 }

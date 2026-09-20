@@ -27,8 +27,8 @@ export class AuthController {
   async discordCallback(@Req() req: { user: DiscordOAuthUser }, @Res() res: Response): Promise<void> {
     const session = await this.authService.createDiscordSession(req.user);
     this.setSessionCookie(res, session.accessToken);
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
+    res.setHeader?.('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader?.('Pragma', 'no-cache');
     res.redirect(this.webCallbackUrl());
   }
 
