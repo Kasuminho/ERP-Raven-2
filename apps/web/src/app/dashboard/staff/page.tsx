@@ -19,6 +19,7 @@ import {
   HandHeart,
   HeartHandshake,
   MessageSquareText,
+  Package,
   PackageCheck,
   PackagePlus,
   Rocket,
@@ -344,6 +345,12 @@ const tools: StaffTool[] = [
     icon: Gem,
   },
   {
+    href: "/dashboard/staff/storage",
+    titleKey: "guildStorage",
+    descriptionKey: "guildStorageDescription",
+    icon: Package,
+  },
+  {
     href: "/dashboard/staff/codex",
     titleKey: "codex",
     descriptionKey: "staffCodexDescription",
@@ -405,6 +412,7 @@ const toolGroups: Array<{
       "/dashboard/staff/interests",
       "/dashboard/staff/wishlist",
       "/dashboard/staff/recruitment",
+      "/dashboard/staff/storage",
       "/dashboard/staff/codex",
       "/dashboard/staff/progress",
     ],

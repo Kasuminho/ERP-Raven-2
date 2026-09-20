@@ -46,7 +46,7 @@ Modulos principais da API:
 - `announcements`, `events`, `dkp`, `auctions`, `drops`, `diamond-sales`;
 - `players`, `eligibility`, `item-interests`, `item-requests`, `items`;
 - `discord`, `notifications`, `automation`, `audit`, `operations`, `war-room`, `wishlist`, `recruitment`;
-- `business-rules`, `staff-review`, `daoshi`, `codex`, `health`, `uploads`, `player-trials`, `mentorship`, `guild-pulse`, `guild-health`, `leadership-health`, `staff-tasks`, `staff-coverage`, `staff-automation`, `playbooks`, `communications`, `product-validation`.
+- `business-rules`, `staff-review`, `daoshi`, `codex`, `health`, `uploads`, `player-trials`, `mentorship`, `guild-pulse`, `guild-health`, `leadership-health`, `staff-tasks`, `staff-coverage`, `staff-automation`, `playbooks`, `communications`, `product-validation`, `storage`.
 
 No modulo `operations`, o controller encaminha rotas Staff e player para servicos
 de dominio em `apps/api/src/modules/operations/services`; o provider legado
@@ -314,6 +314,18 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
 - A rota Web `/dashboard/item-requests` usa componentes locais em `_components`: `page.tsx` fica como guard/entrada, `item-request-panels.tsx` concentra os paineis player/Staff e `item-request-common.tsx` guarda paineis reutilizados de forecast, sugestoes e prioridade.
 
+## Baú da Guilda e OCR com Gemini
+
+- Inventário consolidado do cofre da guilda (`GuildStorageItem`) para rastreamento de saldo disponível de itens e materiais acumulados de drops e masmorras, sem sobrecarga de quem depositou o quê.
+- Módulo backend `StorageModule` em `apps/api/src/modules/storage`:
+  - `POST /storage/scan-ocr`: processamento em lote (até 20 prints) utilizando a API Multimodal Vision do Google Gemini (`gemini-2.0-flash` com fallback para `gemini-1.5-flash`), extraindo com precisão tipografia, nome do item, quantidade, raridade (baseada nas cores das fontes: ciano/azul para raro, roxo para heroico, verde para incomum, branco para comum), tipo de equipamento e fonte de aquisição.
+  - `POST /storage/import`: importa e consolida itens no estoque do cofre, agregando quantidades caso o item já exista e vinculando ao catálogo `ItemCatalog` quando encontrado.
+  - `GET /storage`: listagem do inventário em estoque com agregação em tempo real da fila ativa de pedidos do Codex (`ItemRequest`), calculando a taxa de assiduidade de 15 dias de cada jogador na fila e ordenando por assiduidade descendente (prioridade) e posição de ranking.
+  - `POST /storage/dispatch`: despacho manual e controlado pela liderança da Staff para um jogador aguardando na fila do Codex. A baixa no estoque do baú é atômica e a entrega é executada via `ItemRequestsService.deliver`, gerando auditoria `GUILD_STORAGE_DISPATCHED`.
+  - `PATCH /storage/:id` e `DELETE /storage/:id`: ajustes manuais de estoque e limpeza de registros.
+  - `GET /storage/config` e `POST /storage/config`: verificação e persistência da chave de API do Gemini em `BusinessRule` (`geminiApiKey`) ou variável de ambiente `GEMINI_API_KEY`.
+- Rota Web Staff: `/dashboard/staff/storage`, acessível pelo painel Staff e atalho no topo da Central de Loot (`/dashboard/loot`), com suporte a drag & drop, seleção de múltiplos arquivos e colar imagens direto da área de transferência (Ctrl+V).
+
 ## Deploy e producao
 
 Fonte detalhada: `docs/ICP_DOCKER_IMAGES.md`.
@@ -426,6 +438,7 @@ npm.cmd run discord:configure-webhooks
 
 | Data | Mudanca | Referencia |
 | --- | --- | --- |
+| 2026-09-19 | Criado módulo 'Baú da Guilda' (StorageModule), tabela GuildStorageItem, leitura e OCR de múltiplos prints via Google Gemini Vision API, painel Web Staff e distribuição manual priorizada por assiduidade para pedidos do Codex. | bau/gemini-ocr/staff |
 | 2026-09-19 | Catálogo de itens ganhou importador em lote via print OCR e texto com checagem de duplicatas em tempo real e suporte a itens comuns (brancos) e incomuns (verdes) para o Servidor Zero. | itens/OCR/Staff |
 | 2026-09-19 | Script e comando npm 'news:raven-zero' criados para compilar e enviar atualizações oficiais dos fóruns do Raven 2 (boards 27, 28 e 29) e do servidor ZERO via webhook do Aristolfo com controle de deduplicação e estado persistido. | automacao/webhooks |
 | 2026-09-18 | Migration de reset da guilda aplicada para limpeza de historico operacional, usuarios e logs, preservando o catalogo de itens (ItemCatalog). | operacao/reset-guild |

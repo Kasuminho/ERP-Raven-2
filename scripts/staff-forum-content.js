@@ -454,6 +454,24 @@ O digest diario/semanal agrupa notificacoes do proprio player por tipo e link ca
 
 Os comandos /erp-rsvp, /erp-ausencia, /erp-instrucao e /erp-regra resolvem a conta Discord vinculada e chamam os mesmos servicos de dominio da Web. A resposta confirma o estado salvo e devolve a rota de revisao. Discord e controle remoto; o site continua sendo o console e a fonte de verdade.`,
   },
+  {
+    slug: 'staff-bau-gemini-ocr', title: '29 · Baú da Guilda, OCR Gemini e fila do Codex', tag: 'loot', route: '/dashboard/staff/storage',
+    visual: ['Cole prints em lote (Ctrl+V)', 'Revise itens lidos pelo Gemini', 'Distribua por assiduidade'],
+    body: `## 📦 Baú da Guilda e leitura de prints
+Na tela do [Baú da Guilda](${route('/dashboard/staff/storage')}) a Staff controla o inventário consolidado do cofre, sem burocracia de quem guardou o quê: apenas o saldo real de peças e materiais acumulados.
+
+**1. Leitura de prints em lote via Gemini Multimodal Vision**
+- Clique em **Escanear Prints** ou cole imagens diretamente com **Ctrl + V** (suporta até 20 prints por lote).
+- O Google Gemini analisa tipografia, nomes estilizados, cores de raridade (azul = raro, roxo = heroico, verde = incomum, branco = comum) e quantidades.
+- Revise os itens detectados na tabela de prévia, ajuste quantidades ou nomes se necessário e confirme a importação com um clique.
+
+**2. Atendimento de fila do Codex priorizado por assiduidade**
+- Quando um item em estoque coincide com pedidos ativos do Codex, o sistema aciona um alerta dourado com a contagem de jogadores aguardando.
+- No botão **Distribuir**, a lista de espera exibe cada jogador com seu destaque de **assiduidade (%)**, classe e posição na fila.
+- A decisão de envio é manual da liderança: ao confirmar o envio, o ERP dá baixa imediata no estoque do baú e registra a entrega auditada para o jogador.
+
+**Configuração:** a chave da API do Gemini pode ser definida na variável \`GEMINI_API_KEY\` ou diretamente pelo modal de configuração da tela do baú.`,
+  },
 ];
 
 module.exports = { APP_URL, tags, posts };

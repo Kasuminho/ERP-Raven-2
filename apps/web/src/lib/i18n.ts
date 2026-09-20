@@ -61,7 +61,9 @@ const dictionary = {
     players: "Players",
     dkp: "DKP",
     staff: "Staff",
-    staffInterests: "Interesses Staff",
+    guildStorage: "Baú da Guilda",
+    guildStorageDescription:
+      "Inventário do cofre, importação por OCR Gemini em lote e distribuição direta para a fila do Codex por assiduidade.",
     staffDay: "Operacao do dia",
     staffDayDescription:
       "Painel unico com prioridades, eventos, entregas e votos.",
@@ -662,7 +664,9 @@ const dictionary = {
     players: "Players",
     dkp: "DKP",
     staff: "Staff",
-    staffInterests: "Staff Interests",
+    guildStorage: "Guild Vault",
+    guildStorageDescription:
+      "Guild vault inventory, Gemini batch OCR scanning, and direct dispatch to Codex requests by attendance.",
     staffDay: "Day operations",
     staffDayDescription:
       "Single panel with priorities, events, deliveries, and votes.",
@@ -1259,7 +1263,9 @@ const dictionary = {
     players: "Jugadores",
     dkp: "DKP",
     staff: "Staff",
-    staffInterests: "Intereses Staff",
+    guildStorage: "Baúl del Gremio",
+    guildStorageDescription:
+      "Inventario del cofre, escaneo OCR por lote con Gemini y despacho directo a pedidos según asistencia.",
     staffDay: "Operacion del dia",
     staffDayDescription:
       "Panel unico con prioridades, eventos, entregas y votos.",

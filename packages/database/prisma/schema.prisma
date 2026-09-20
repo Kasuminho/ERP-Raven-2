@@ -2008,6 +2008,7 @@ model ItemCatalog {
   interestPosts      ItemInterestPost[]
   wishlistItems      PlayerWishlistItem[]
   diamondSales       DiamondSale[]
+  storageItems       GuildStorageItem[]
 
   @@index([nameEn, typeEn])
   @@index([nameEs, typeEs])
@@ -2087,6 +2088,28 @@ model DropHistory {
   @@index([itemName])
   @@index([threadId])
   @@index([deliveredAt])
+}
+
+model GuildStorageItem {
+  id            String       @id @default(uuid())
+  itemCatalogId String?
+  itemName      String
+  category      String       @default("common")
+  itemTier      ItemTier?
+  itemType      ItemType?
+  kind          String       @default("equipment")
+  quantity      Int          @default(1)
+  source        String?
+  lastImportAt  DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  itemCatalog   ItemCatalog? @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+
+  @@index([itemName])
+  @@index([itemCatalogId])
+  @@index([category])
+  @@index([itemTier])
+  @@index([itemType])
 }
 
 model ItemInterestPost {

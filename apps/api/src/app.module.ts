@@ -47,6 +47,7 @@ import { StaffAutomationModule } from "./modules/staff-automation/staff-automati
 import { PlaybooksModule } from "./modules/playbooks/playbooks.module";
 import { CommunicationsModule } from "./modules/communications/communications.module";
 import { ProductValidationModule } from "./modules/product-validation/product-validation.module";
+import { StorageModule } from "./modules/storage/storage.module";
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { ProductValidationModule } from "./modules/product-validation/product-va
     PlaybooksModule,
     CommunicationsModule,
     ProductValidationModule,
+    StorageModule,
   ],
   providers: [
     {

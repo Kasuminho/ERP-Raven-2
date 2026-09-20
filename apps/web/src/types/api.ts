@@ -2342,3 +2342,64 @@ export type ProductValidationWorkspace = {
     capturedBy: AuditIdentity;
   }>;
 };
+
+export interface StorageQueueWaiter {
+  requestId: string;
+  playerId?: string;
+  playerName: string;
+  playerNickname?: string;
+  playerClass?: string;
+  attendancePercentage: number;
+  rankPosition: number;
+  remainingQuantity: number;
+  totalQuantity: number;
+  createdAt: string;
+}
+
+export interface GuildStorageItem {
+  id: string;
+  itemName: string;
+  quantity: number;
+  category: string;
+  itemTier?: string | null;
+  itemType?: string | null;
+  kind?: string | null;
+  source?: string | null;
+  itemCatalogId?: string | null;
+  lastImportAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorageItemWithQueue extends GuildStorageItem {
+  queueCount: number;
+  queueWaiters: StorageQueueWaiter[];
+  itemCatalog?: ItemCatalog | null;
+}
+
+export interface ScannedStorageItemResult {
+  itemName: string;
+  quantity: number;
+  category: string;
+  itemType?: 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CELESTIAL_STONE' | null;
+  kind?: string;
+  acquisitionInfo?: string;
+  acquisitionDate?: string;
+  confidenceNotes?: string;
+  catalogId?: string;
+  catalogMatched: boolean;
+  queueAlertCount: number;
+}
+
+export interface ScanStorageOcrResponse {
+  scannedItems: ScannedStorageItemResult[];
+  totalScannedUnits: number;
+  totalPrintsProcessed: number;
+}
+
+export interface StorageListResponse {
+  items: StorageItemWithQueue[];
+  totalUnits: number;
+  totalUniqueItems: number;
+  totalQueueAlerts: number;
+}

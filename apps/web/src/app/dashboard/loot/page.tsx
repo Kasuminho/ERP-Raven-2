@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Gem, Gavel, Coins, HeartHandshake, Plus, ArrowRight, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Gem, Gavel, Coins, HeartHandshake, Plus, ArrowRight, ShieldAlert, Sparkles, CheckCircle2, Package } from 'lucide-react';
 import { AuctionCard } from '@/components/dashboard/auction-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,12 @@ export default function LootHubPage() {
           </div>
           {isStaff && (
             <div className="flex flex-wrap gap-2">
+              <Link href="/dashboard/staff/storage">
+                <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
+                  <Package className="h-4 w-4" />
+                  Baú da Guilda
+                </Button>
+              </Link>
               <Link href="/dashboard/staff/diamond-sales">
                 <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
                   <Coins className="h-4 w-4" />
