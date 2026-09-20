@@ -615,6 +615,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumo matinal Staff de `operations` saiu da delegacao e passou a ser montado em `OperationalBriefingService`, preservando secoes, contadores e Markdown. | arquitetura/API |
 | 2026-07-02 | Modo reuniao Staff de `operations` saiu da delegacao e passou a ser montado em `MeetingService`, preservando a pauta de dia, reviews, interesses e eventos. | arquitetura/API |
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
+| 2026-09-20 | OCR do Gemini ganhou parser robusto para respostas envelopadas ({ items: [] }), suporte nativo a prints em PT-BR do Raven 2 e compatibilidade de chaves items/scannedItems entre API e Web. | OCR/Gemini/Storage |
 | 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao; integridade/legacy audit ja sairam para `IntegrityService`. | arquitetura/API |
 | 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |

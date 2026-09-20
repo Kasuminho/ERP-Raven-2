@@ -128,6 +128,13 @@ export class StorageService {
         queueAlertCount: number;
       }
     >;
+    items: Array<
+      ScannedItemResult & {
+        catalogId?: string;
+        catalogMatched: boolean;
+        queueAlertCount: number;
+      }
+    >;
     totalScannedUnits: number;
     totalPrintsProcessed: number;
   }> {
@@ -190,6 +197,7 @@ export class StorageService {
 
     return {
       scannedItems: finalScanned,
+      items: finalScanned,
       totalScannedUnits: totalUnits,
       totalPrintsProcessed: dto.images.length,
     };

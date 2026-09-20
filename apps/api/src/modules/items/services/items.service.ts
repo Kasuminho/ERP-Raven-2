@@ -108,6 +108,12 @@ export class ItemsService {
         catalogItem?: any;
       }
     >;
+    scannedItems: Array<
+      any & {
+        alreadyExists: boolean;
+        catalogItem?: any;
+      }
+    >;
     totalScanned: number;
     newItemsCount: number;
     existingItemsCount: number;
@@ -144,6 +150,7 @@ export class ItemsService {
 
     return {
       items: results,
+      scannedItems: results,
       totalScanned: results.length,
       newItemsCount: results.filter((r) => !r.alreadyExists).length,
       existingItemsCount: results.filter((r) => r.alreadyExists).length,

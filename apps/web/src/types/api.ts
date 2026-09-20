@@ -2393,6 +2393,7 @@ export interface ScannedStorageItemResult {
 
 export interface ScanStorageOcrResponse {
   scannedItems: ScannedStorageItemResult[];
+  items?: ScannedStorageItemResult[];
   totalScannedUnits: number;
   totalPrintsProcessed: number;
 }

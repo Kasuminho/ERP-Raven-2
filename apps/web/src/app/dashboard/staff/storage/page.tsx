@@ -165,10 +165,20 @@ export default function GuildStoragePage() {
         apiKey: apiKeyInput.trim() || undefined,
       });
 
-      setScannedResults(response.scannedItems);
+      const items = response.scannedItems || (response as any).items || [];
+      if (!items || items.length === 0) {
+        notifyToast({
+          title: 'Nenhum item detectado no(s) print(s)',
+          description: 'Tente outro print mais nítido ou confira se a tela do jogo está visível.',
+          tone: 'info',
+        });
+        return;
+      }
+
+      setScannedResults(items);
       notifyToast({
         title: `Leitura concluída com sucesso!`,
-        description: `${response.scannedItems.length} tipos de itens identificados pelo Gemini.`,
+        description: `${items.length} tipos de itens identificados pelo Gemini.`,
         tone: 'success',
       });
     } catch (err: any) {

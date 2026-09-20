@@ -120,8 +120,9 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
 
       const base64Images = await Promise.all(fileArray.map((f) => readAsBase64(f)));
       const response = await scanCatalogOcr.mutateAsync({ images: base64Images });
+      const detectedItems = response.scannedItems || (response as any).items || [];
 
-      if (!response.scannedItems || response.scannedItems.length === 0) {
+      if (!detectedItems || detectedItems.length === 0) {
         notifyToast({
           title: 'Nenhum item detectado no(s) print(s)',
           description: 'Tente outro print mais nítido ou use a aba de texto.',
@@ -130,16 +131,16 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
         return;
       }
 
-      const duplicateCount = response.scannedItems.filter((i) => i.alreadyExists).length;
-      const newItemsCount = response.scannedItems.length - duplicateCount;
+      const duplicateCount = detectedItems.filter((i) => i.alreadyExists).length;
+      const newItemsCount = detectedItems.length - duplicateCount;
 
       notifyToast({
-        title: `${response.scannedItems.length} itens detectados em ${fileArray.length} print(s)!`,
+        title: `${detectedItems.length} itens detectados em ${fileArray.length} print(s)!`,
         description: `${newItemsCount} novos encontrados e ${duplicateCount} já existentes identificados.`,
         tone: 'success',
       });
 
-      const newDraftItems: BulkDraftItem[] = response.scannedItems.map((item, index) => {
+      const newDraftItems: BulkDraftItem[] = detectedItems.map((item, index) => {
         return {
           tempId: `draft-${Date.now()}-${index}`,
           namePt: item.itemName,

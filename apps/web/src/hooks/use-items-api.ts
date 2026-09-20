@@ -69,7 +69,7 @@ export function useScanCatalogOcr() {
       apiKey?: string;
     }) => {
       const response = await api.post<{
-        scannedItems: Array<{
+        items?: Array<{
           itemName: string;
           quantity: number;
           category: string;
@@ -78,12 +78,31 @@ export function useScanCatalogOcr() {
           acquisitionInfo?: string;
           acquisitionDate?: string;
           alreadyExists: boolean;
-          existingItemId?: string;
+          catalogItem?: any;
+        }>;
+        scannedItems?: Array<{
+          itemName: string;
+          quantity: number;
+          category: string;
+          itemType?: ItemType | null;
+          kind?: string;
+          acquisitionInfo?: string;
+          acquisitionDate?: string;
+          alreadyExists: boolean;
+          catalogItem?: any;
         }>;
         totalScanned: number;
-        totalPrintsProcessed: number;
+        newItemsCount?: number;
+        existingItemsCount?: number;
+        totalPrintsProcessed?: number;
       }>('/items/scan-ocr', data);
-      return response.data;
+
+      const itemsList = response.data.scannedItems || response.data.items || [];
+      return {
+        ...response.data,
+        scannedItems: itemsList,
+        items: itemsList,
+      };
     },
   });
 }
