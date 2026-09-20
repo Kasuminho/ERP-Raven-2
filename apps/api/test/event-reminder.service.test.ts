@@ -54,3 +54,60 @@ test('event reminder targets only unanswered or confirmed players and respects c
   assert.equal(discordNotifications.length, 1);
   assert.equal((discordNotifications[0] as { requiresRsvp: boolean }).requiresRsvp, false);
 });
+
+test('announceUpcomingPublicEvents announces upcoming events and marks announcedToDiscordAt', async () => {
+  const scheduledNotifications: any[] = [];
+  const eventsInDb = [
+    {
+      id: 'event-daily-1',
+      name: 'Abyss 1 Run',
+      type: 'ABYSS_1',
+      startsAt: new Date('2099-01-01T12:30:00.000Z'),
+      dkpReward: 10,
+      operationalCategory: 'ABYSS',
+      notifyDaily: true,
+      announcedToDiscordAt: null as Date | null,
+    },
+  ];
+
+  const prisma = {
+    event: {
+      findMany: async (args: any) => {
+        return eventsInDb.filter((e) => {
+          if (args.where.notifyDaily && !e.notifyDaily) return false;
+          if (args.where.announcedToDiscordAt === null && e.announcedToDiscordAt !== null) return false;
+          if (args.where.startsAt?.gt && e.startsAt <= args.where.startsAt.gt) return false;
+          if (args.where.startsAt?.lte && e.startsAt > args.where.startsAt.lte) return false;
+          return true;
+        });
+      },
+      update: async ({ where, data }: any) => {
+        const found = eventsInDb.find((e) => e.id === where.id);
+        if (found) Object.assign(found, data);
+        return found;
+      },
+    },
+  };
+
+  const service = new EventReminderService(
+    prisma as never,
+    {} as never,
+    {
+      notifyEventScheduled: async (data: any) => {
+        scheduledNotifications.push(data);
+      },
+    } as never,
+  );
+
+  const now = new Date('2099-01-01T12:00:00.000Z');
+  const res1 = await service.announceUpcomingPublicEvents(now);
+  assert.equal(res1.announced, 1);
+  assert.equal(scheduledNotifications.length, 1);
+  assert.equal(scheduledNotifications[0].eventId, 'event-daily-1');
+  assert.ok(eventsInDb[0].announcedToDiscordAt instanceof Date);
+
+  // Subsequent call within the same window should not re-announce
+  const res2 = await service.announceUpcomingPublicEvents(now);
+  assert.equal(res2.announced, 0);
+  assert.equal(scheduledNotifications.length, 1);
+});

@@ -40,6 +40,11 @@ export class AutomationCronService {
     await this.runOnce('sendUpcomingEventReminders', () => this.eventReminderService.sendUpcomingEventReminders());
   }
 
+  @Cron('*/15 * * * *', { timeZone: AUTOMATION_TIMEZONE })
+  async announceUpcomingPublicEvents(): Promise<void> {
+    await this.runOnce('announceUpcomingPublicEvents', () => this.eventReminderService.announceUpcomingPublicEvents());
+  }
+
   @Cron(CronExpression.EVERY_5_MINUTES, { timeZone: AUTOMATION_TIMEZONE })
   async finalizeExpiredAuctions(): Promise<void> {
     await this.runOnce('finalizeExpiredAuctions', () => this.auctionAutomationService.finalizeExpiredAuctions());

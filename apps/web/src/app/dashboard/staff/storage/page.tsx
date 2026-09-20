@@ -41,8 +41,12 @@ import {
   useStorageItems,
   useDeleteStorageItem,
   useUpdateStorageItem,
+  useStaffStorageRequests,
+  useDispatchStorageRequestStaff,
+  useRejectStorageRequestStaff,
 } from '@/hooks/use-storage-api';
 import type {
+  GuildStorageRequest,
   ScannedStorageItemResult,
   StorageItemWithQueue,
   StorageQueueWaiter,
@@ -78,6 +82,11 @@ export default function GuildStoragePage() {
   const updateMutation = useUpdateStorageItem();
   const deleteMutation = useDeleteStorageItem();
   const scanMutation = useScanStorageOcr();
+
+  const [activeMainTab, setActiveMainTab] = useState<'inventory' | 'requests'>('inventory');
+  const staffRequestsQuery = useStaffStorageRequests();
+  const dispatchStaffRequest = useDispatchStorageRequestStaff();
+  const rejectStaffRequest = useRejectStorageRequestStaff();
 
   // OCR Upload State
   const [selectedImages, setSelectedImages] = useState<Array<{ name: string; data: string; mimeType: string }>>([]);
@@ -183,12 +192,18 @@ export default function GuildStoragePage() {
           itemType: item.itemType,
           kind: item.kind,
           source: item.acquisitionInfo || 'Importação OCR Gemini',
+          acquisitionDate: item.acquisitionDate,
+          acquisitionInfo: item.acquisitionInfo,
         })),
       });
 
+      const skippedMsg = (result as any).skippedDuplicatesCount > 0
+        ? `, ${(result as any).skippedDuplicatesCount} coletas repetidas ignoradas`
+        : '';
+
       notifyToast({
         title: 'Estoque atualizado no Baú!',
-        description: `${result.importedCount} itens processados (${result.createdCount} novos, ${result.updatedCount} acumulados).`,
+        description: `${result.importedCount} itens processados (${result.createdCount} novos, ${result.updatedCount} acumulados${skippedMsg}).`,
         tone: 'success',
       });
 
@@ -288,6 +303,43 @@ export default function GuildStoragePage() {
     }
   }
 
+  async function handleDispatchStaffRequest(req: GuildStorageRequest) {
+    if (!confirm(`Confirmar envio de ${req.quantity}x "${req.storageItem?.itemName}" para ${req.player?.nickname}? O estoque do baú será baixado e o aviso publicado no Discord.`)) return;
+    try {
+      await dispatchStaffRequest.mutateAsync({ requestId: req.id });
+      notifyToast({
+        title: 'Item despachado com sucesso!',
+        description: `${req.quantity}x ${req.storageItem?.itemName} enviado para ${req.player?.nickname}. Vaga liberada para o jogador.`,
+        tone: 'success',
+      });
+    } catch (err: any) {
+      notifyToast({
+        title: 'Falha ao despachar item',
+        description: err?.response?.data?.message || err.message,
+        tone: 'error',
+      });
+    }
+  }
+
+  async function handleRejectStaffRequest(req: GuildStorageRequest) {
+    const reason = prompt(`Motivo da rejeição para ${req.player?.nickname} (opcional):`);
+    if (reason === null) return;
+    try {
+      await rejectStaffRequest.mutateAsync({ requestId: req.id, staffNote: reason.trim() || undefined });
+      notifyToast({
+        title: 'Solicitação rejeitada',
+        description: `A solicitação foi recusada e a vaga de ${req.player?.nickname} foi liberada.`,
+        tone: 'info',
+      });
+    } catch (err: any) {
+      notifyToast({
+        title: 'Falha ao rejeitar solicitação',
+        description: err?.response?.data?.message || err.message,
+        tone: 'error',
+      });
+    }
+  }
+
   function getRarityBadge(category: string) {
     const cat = category.toLowerCase();
     if (cat.includes('heroic') || cat.includes('heroico')) {
@@ -380,6 +432,40 @@ export default function GuildStoragePage() {
         </div>
       </section>
 
+      {/* Abas Principais: Estoque do Baú vs Solicitações dos Membros */}
+      <div className="flex border-b border-white/10 gap-2">
+        <button
+          onClick={() => setActiveMainTab('inventory')}
+          className={`pb-3 px-4 text-sm font-semibold transition-colors flex items-center gap-2 border-b-2 ${
+            activeMainTab === 'inventory'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Package className="h-4 w-4" />
+          Estoque do Baú ({totalUnique})
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab('requests')}
+          className={`pb-3 px-4 text-sm font-semibold transition-colors flex items-center gap-2 border-b-2 ${
+            activeMainTab === 'requests'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          Solicitações dos Membros
+          {(staffRequestsQuery.data?.length ?? 0) > 0 && (
+            <span className="rounded-full bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 font-bold border border-amber-500/30 animate-pulse">
+              {staffRequestsQuery.data?.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeMainTab === 'inventory' && (
+        <>
       {/* Queue Alert Banner */}
       {totalAlerts > 0 && (
         <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 to-card/60 p-4 backdrop-blur-md">
@@ -554,6 +640,127 @@ export default function GuildStoragePage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ABA 2: SOLICITAÇÕES DOS MEMBROS (ATÉ 5 ITENS POR JOGADOR) */}
+      {/* ========================================================================= */}
+      {activeMainTab === 'requests' && (
+        <Card className="border-white/10 bg-card/60 backdrop-blur-md">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Solicitações de Itens do Baú da Guilda
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Membros podem solicitar até 5 itens ativos do Baú. Ao despachar, o estoque é baixado, o jogador é notificado e a vaga é liberada.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => staffRequestsQuery.refetch()}
+                className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Atualizar Fila
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {staffRequestsQuery.isLoading ? (
+              <div className="flex justify-center p-8">
+                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : !staffRequestsQuery.data || staffRequestsQuery.data.length === 0 ? (
+              <EmptyState title="Nenhuma solicitação pendente">
+                Todos os pedidos de itens do Baú da Guilda foram atendidos ou recusados.
+              </EmptyState>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-white/10 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="p-3">Item Solicitado</th>
+                      <th className="p-3">Qtd</th>
+                      <th className="p-3">Jogador</th>
+                      <th className="p-3">Assiduidade (30d)</th>
+                      <th className="p-3">Data do Pedido</th>
+                      <th className="p-3">Nota</th>
+                      <th className="p-3 text-right">Ações da Staff</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {staffRequestsQuery.data.map((req) => (
+                      <tr key={req.id} className="hover:bg-white/[0.02]">
+                        <td className="p-3">
+                          <p className="font-semibold text-foreground">{req.storageItem?.itemName}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {req.storageItem?.category && getRarityBadge(req.storageItem.category)}
+                            <span className="text-xs text-muted-foreground">
+                              (Estoque: {req.storageItem?.quantity ?? 0})
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 font-semibold text-primary">
+                          {req.quantity}x
+                        </td>
+                        <td className="p-3">
+                          <p className="font-medium text-foreground">{req.player?.nickname}</p>
+                          <p className="text-xs text-muted-foreground">{req.player?.class}</p>
+                        </td>
+                        <td className="p-3">
+                          <Badge tone={req.player && req.player.attendancePercentage >= 60 ? 'green' : 'gold'}>
+                            {req.player?.attendancePercentage ?? 0}%
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground">
+                          {new Date(req.createdAt).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground max-w-xs truncate">
+                          {req.playerNote || '-'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleDispatchStaffRequest(req)}
+                              disabled={dispatchStaffRequest.isPending || (req.storageItem?.quantity ?? 0) < req.quantity}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 gap-1 font-semibold"
+                              title={
+                                (req.storageItem?.quantity ?? 0) < req.quantity
+                                  ? 'Estoque insuficiente no baú'
+                                  : 'Despachar item e dar baixa no estoque'
+                              }
+                            >
+                              <Send className="h-3 w-3" />
+                              Enviar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRejectStaffRequest(req)}
+                              disabled={rejectStaffRequest.isPending}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-8"
+                              title="Rejeitar pedido e liberar vaga do jogador"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Rejeitar
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL 1: BATCH SCAN OCR GEMINI */}

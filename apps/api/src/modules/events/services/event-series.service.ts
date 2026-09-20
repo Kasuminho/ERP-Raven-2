@@ -4,6 +4,7 @@ import { PrismaService } from '@database/prisma.service';
 import type { EventCompositionTarget } from '@shared/types/events';
 import { AuditService } from '../../audit/services/audit.service';
 import { BusinessRulesService } from '../../business-rules/business-rules.service';
+import { NotificationService } from '../../discord/services/notification.service';
 import { CreateEventSeriesDto, EventCompositionTargetDto } from '../dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -15,6 +16,7 @@ export class EventSeriesService {
     private readonly prisma: PrismaService,
     private readonly businessRules: BusinessRulesService,
     private readonly auditService: AuditService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async listSeries() {
@@ -43,6 +45,9 @@ export class EventSeriesService {
         timezone,
         firstStartsAt,
         durationMinutes: dto.durationMinutes,
+        recurrenceType: dto.recurrenceType ?? 'WEEKLY',
+        intervalDays: dto.intervalDays ?? 1,
+        notifyDaily: dto.notifyDaily ?? true,
         intervalWeeks: dto.intervalWeeks ?? 1,
         horizonDays: dto.horizonDays ?? 56,
         exceptionDates,
@@ -56,7 +61,15 @@ export class EventSeriesService {
       action: 'EVENT_SERIES_CREATED',
       targetType: 'EventSeries',
       targetId: series.id,
-      metadata: { type: series.type, timezone, firstStartsAt: firstStartsAt.toISOString(), intervalWeeks: series.intervalWeeks, materialized },
+      metadata: { type: series.type, timezone, firstStartsAt: firstStartsAt.toISOString(), intervalWeeks: series.intervalWeeks, recurrenceType: series.recurrenceType, intervalDays: series.intervalDays, notifyDaily: series.notifyDaily, materialized },
+    });
+    await this.notificationService.notifyEventScheduled({
+      eventId: series.id,
+      eventName: series.name,
+      type: series.type,
+      startsAt: series.firstStartsAt,
+      dkpReward: series.dkpReward,
+      operationalCategory: series.operationalCategory ?? undefined,
     });
     return this.prisma.eventSeries.findUnique({ where: { id: series.id }, include: { _count: { select: { events: true } } } });
   }
@@ -139,7 +152,9 @@ export class EventSeriesService {
   async materializeSeries(seriesId: string, now = new Date()): Promise<number> {
     const series = await this.requireSeries(seriesId);
     if (series.pausedAt) return 0;
-    const intervalMs = series.intervalWeeks * WEEK_MS;
+    const intervalMs = series.recurrenceType === 'DAILY'
+      ? (series.intervalDays || 1) * DAY_MS
+      : series.intervalWeeks * WEEK_MS;
     const through = new Date(now.getTime() + series.horizonDays * DAY_MS);
     const exceptions = new Set(this.readStringArray(series.exceptionDates));
     const earliestOccurrence = Math.max(0, Math.floor((now.getTime() - series.firstStartsAt.getTime()) / intervalMs) - 1);
@@ -181,6 +196,7 @@ export class EventSeriesService {
             eventSeriesId: series.id,
             seriesOccurrence: occurrence,
             compositionTargets: series.compositionTargets as Prisma.InputJsonValue,
+            notifyDaily: series.notifyDaily,
           },
         });
         createdOrRestored += 1;

@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { notifyToast } from '@/components/ui/toaster';
-import { useCreateBulkItems, useValidateItemsBatch } from '@/hooks/use-items-api';
+import { useCreateBulkItems, useScanCatalogOcr, useValidateItemsBatch } from '@/hooks/use-items-api';
 import { useScanStorageOcr } from '@/hooks/use-storage-api';
 import type { ItemTier, ItemType } from '@/types/api';
 
@@ -67,7 +67,7 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
 
   const validateBatch = useValidateItemsBatch();
   const createBulk = useCreateBulkItems();
-  const scanOcr = useScanStorageOcr();
+  const scanCatalogOcr = useScanCatalogOcr();
 
   const [existingDbNames, setExistingDbNames] = useState<Set<string>>(new Set());
 
@@ -79,14 +79,15 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
       const items = e.clipboardData?.items;
       if (!items) return;
 
+      const pastedFiles: File[] = [];
       for (let i = 0; i < items.length; i += 1) {
         if (items[i].type.startsWith('image/')) {
           const file = items[i].getAsFile();
-          if (file) {
-            handleImageFile(file);
-            break;
-          }
+          if (file) pastedFiles.push(file);
         }
+      }
+      if (pastedFiles.length > 0) {
+        handleImageFiles(pastedFiles);
       }
     };
 
@@ -94,74 +95,75 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
 
-  const handleImageFile = (file: File) => {
-    const objectUrl = URL.createObjectURL(file);
-    setImagePreview(objectUrl);
+  const handleImageFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (fileArray.length === 0) return;
+
+    if (fileArray.length === 1) {
+      setImagePreview(URL.createObjectURL(fileArray[0]));
+    } else {
+      setImagePreview(null);
+    }
+
     setIsOcrProcessing(true);
-    setOcrStatusText('Enviando imagem para a visão multimodal do Gemini...');
+    setOcrStatusText(`Lendo ${fileArray.length} print(s) com a visão multimodal do Gemini...`);
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const base64 = reader.result as string;
-        const response = await scanOcr.mutateAsync({
-          images: [{ data: base64, mimeType: file.type || 'image/png' }],
+    try {
+      const readAsBase64 = (file: File): Promise<{ data: string; mimeType: string }> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ data: reader.result as string, mimeType: file.type || 'image/png' });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+      };
 
-        if (!response.scannedItems || response.scannedItems.length === 0) {
-          notifyToast({
-            title: 'Nenhum item detectado no print',
-            description: 'Tente outro print ou use a aba de texto.',
-            tone: 'info',
-          });
-          return;
-        }
+      const base64Images = await Promise.all(fileArray.map((f) => readAsBase64(f)));
+      const response = await scanCatalogOcr.mutateAsync({ images: base64Images });
 
+      if (!response.scannedItems || response.scannedItems.length === 0) {
         notifyToast({
-          title: `${response.scannedItems.length} itens detectados pelo Gemini!`,
-          description: 'Conferindo duplicatas com o catálogo existente...',
+          title: 'Nenhum item detectado no(s) print(s)',
+          description: 'Tente outro print mais nítido ou use a aba de texto.',
           tone: 'info',
         });
-
-        // Pre-check against backend for duplicates
-        const itemNames = response.scannedItems.map((i) => i.itemName);
-        let dbFound = new Set<string>();
-        try {
-          const result = await validateBatch.mutateAsync({ names: itemNames });
-          dbFound = new Set(result.existingNames.map((n) => n.toLowerCase()));
-          setExistingDbNames(dbFound);
-        } catch (e) {
-          console.error('Falha ao checar duplicatas:', e);
-        }
-
-        const newDraftItems: BulkDraftItem[] = response.scannedItems.map((item, index) => {
-          const isDuplicate = dbFound.has(item.itemName.toLowerCase());
-          return {
-            tempId: `draft-${Date.now()}-${index}`,
-            namePt: item.itemName,
-            nameEn: item.itemName,
-            category: item.category || globalCategory,
-            itemType: (item.itemType as ItemType) || globalType,
-            itemTier: '',
-            kind: item.kind || (item.category === 'material' ? 'material' : 'equipment'),
-            selected: !isDuplicate,
-          };
-        });
-
-        setItemsList(newDraftItems);
-      } catch (err: any) {
-        console.error('Erro OCR Gemini:', err);
-        notifyToast({
-          title: 'Erro no reconhecimento OCR via Gemini',
-          description: err?.response?.data?.message || err.message || 'Verifique se a API Key do Gemini está configurada.',
-          tone: 'error',
-        });
-      } finally {
-        setIsOcrProcessing(false);
-        setOcrStatusText('');
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      const duplicateCount = response.scannedItems.filter((i) => i.alreadyExists).length;
+      const newItemsCount = response.scannedItems.length - duplicateCount;
+
+      notifyToast({
+        title: `${response.scannedItems.length} itens detectados em ${fileArray.length} print(s)!`,
+        description: `${newItemsCount} novos encontrados e ${duplicateCount} já existentes identificados.`,
+        tone: 'success',
+      });
+
+      const newDraftItems: BulkDraftItem[] = response.scannedItems.map((item, index) => {
+        return {
+          tempId: `draft-${Date.now()}-${index}`,
+          namePt: item.itemName,
+          nameEn: item.itemName,
+          category: item.category || globalCategory,
+          itemType: (item.itemType as ItemType) || globalType,
+          itemTier: '',
+          kind: item.kind || (item.category === 'material' ? 'material' : 'equipment'),
+          selected: !item.alreadyExists,
+        };
+      });
+
+      setItemsList((prev) => [...prev, ...newDraftItems]);
+    } catch (err: any) {
+      console.error('Erro OCR Gemini:', err);
+      notifyToast({
+        title: 'Erro no reconhecimento OCR via Gemini',
+        description: err?.response?.data?.message || err.message || 'Verifique se a API Key do Gemini está configurada.',
+        tone: 'error',
+      });
+    } finally {
+      setIsOcrProcessing(false);
+      setOcrStatusText('');
+    }
   };
 
   const cleanOcrLine = (line: string): string => {
@@ -445,9 +447,8 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file && file.type.startsWith('image/')) {
-                    handleImageFile(file);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleImageFiles(e.dataTransfer.files);
                   }
                 }}
                 className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-white/[0.02] p-8 text-center hover:border-amber-400/50 hover:bg-amber-500/[0.02] transition-colors relative cursor-pointer group"
@@ -455,9 +456,11 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageFile(file);
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleImageFiles(e.target.files);
+                    }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
@@ -466,9 +469,9 @@ export function ItemBulkImportModal({ isOpen, onClose, onSuccess }: ItemBulkImpo
                   {isOcrProcessing ? <RefreshCw className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
                 </div>
 
-                <h3 className="text-sm font-semibold text-white">Arraste um print ou clique para selecionar</h3>
+                <h3 className="text-sm font-semibold text-white">Arraste um ou mais prints ou clique para selecionar</h3>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Ou dê <kbd className="rounded bg-black/60 px-1.5 py-0.5 border border-white/20 text-amber-400 font-mono">Ctrl+V</kbd> a qualquer momento
+                  Envie vários prints de uma só vez ou dê <kbd className="rounded bg-black/60 px-1.5 py-0.5 border border-white/20 text-amber-400 font-mono">Ctrl+V</kbd> a qualquer momento
                 </p>
 
                 {isOcrProcessing && (

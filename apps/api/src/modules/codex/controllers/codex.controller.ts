@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { CodexRequest, CodexRequestStatus } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -20,8 +20,10 @@ export class CodexController {
   }
 
   @Post('me')
-  async createMine(@Body() dto: CreateCodexRequestDto, @Req() req: AuthRequest): Promise<CodexRequest> {
-    return this.service.createForCurrentUser(req.user.userId, dto);
+  async createMine(@Body() _dto: CreateCodexRequestDto, @Req() _req: AuthRequest): Promise<CodexRequest> {
+    throw new BadRequestException(
+      'O sistema de requisições de Codex está temporariamente inativo nesta fase do servidor. As solicitações agora são feitas diretamente pelo Baú da Guilda.',
+    );
   }
 
   @Get()

@@ -176,15 +176,22 @@ Use esses dados como suporte à regra do post; não invente critério depois de 
 Ao concluir, selecione o candidato permitido, anexe o comprovante e registre a entrega. A imagem prova a entrega; não prova retroativamente uma decisão mal fundamentada.`,
   },
   {
-    slug: 'staff-requests-codex-progresso', title: '09 · Requests, Codex e progresso', tag: 'routine', route: '/dashboard/staff/codex',
-    visual: ['Trate filas no prazo', 'Marque Codex uma única vez', 'Finalize no fluxo de origem'],
-    body: `## 📚 Filas que pedem revisão
+    slug: 'staff-requests-codex-progresso', title: '09 · Baú da Guilda, Requests e progresso', tag: 'routine', route: '/dashboard/staff/storage',
+    visual: ['Despache itens do Baú', 'Importe com OCR seguro', 'Codex pausado temporariamente'],
+    body: `## 📦 Baú da Guilda (Novo Fluxo de Atendimento)
+Em [Baú da Guilda Staff](${route('/dashboard/staff/storage')}) a liderança gerencia o estoque e as solicitações de itens:
+- **Importação com OCR em Lote:** importe prints do histórico do jogo; a deduplicação automática por Data de Coleta (\`acquisitionDate\` e \`acquisitionInfo\`) impede somar o mesmo drop duas vezes se o print for reenviado.
+- **Aba Solicitações do Baú:** veja pedidos pendentes de cada player (com classe, presença recente e nota).
+- **Ação Enviar (Baixar Estoque):** deduz o saldo do item no baú, marca como entregue, gera registro de drop, dispara anúncio no Discord (\`#drops-entregues\`) e libera imediatamente a vaga do jogador na cota de 5 pedidos.
+- **Ação Rejeitar:** recusa o pedido com justificativa opcional, notifica o jogador no ERP e também libera o slot da cota.
+
+## 📋 Requests de Catálogo
 Requests aparecem nas tarefas operacionais e no perfil do player. Revise criação/atualização, posição, unidades restantes, prazo do print e prioridade de material. Craft T3 pode bloquear entrega de Quintessência do mesmo material; o bloqueio é regra auditada, não preferência improvisada.
 
-Em [Codex Staff](${route('/dashboard/staff/codex')}) confira pedido e print, marque o envio com comprovante e aguarde o player confirmar sucesso ou falha. Um Codex já marcado como enviado não aceita novo envio: o player precisa confirmar ou pedir retry antes de outra tentativa. Cancelamento e retry usam o próprio fluxo.
+## 📖 Codex (Pausado Temporariamente)
+O sistema de Codex está temporariamente inativo nesta fase do servidor. Novos envios foram suspensos e substituídos pelo Baú da Guilda. Registros e históricos antigos podem ser consultados em [Codex Staff](${route('/dashboard/staff/codex')}).
 
-Ao marcar como enviado, o ERP chama o player imediatamente em DM. Enquanto o pedido permanecer em **SENT**, a pendência entra também na cobrança diária até confirmação ou retry.
-
+## 📈 Progresso
 Em [Progresso](${route('/dashboard/staff/progress')}) revise prints:
 - STATUS aprovado atualiza CP/level operacional;
 - Fenda aprovada atualiza camada/andar;

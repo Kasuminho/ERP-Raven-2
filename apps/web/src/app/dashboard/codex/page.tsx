@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { RotateCcw, Send, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Package, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FileUploadButton } from '@/components/ui/file-upload-button';
-import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
-import { useConfirmCodexRequest, useCreateCodexRequest, useMyCodexRequests, useRetryCodexRequest } from '@/hooks/use-codex-api';
-import { useUploadImage } from '@/hooks/use-profile-api';
+import { useConfirmCodexRequest, useMyCodexRequests, useRetryCodexRequest } from '@/hooks/use-codex-api';
 import { displayImageUrl } from '@/lib/images';
 import { t } from '@/lib/i18n';
 import { useLocaleStore } from '@/store/locale-store';
@@ -26,11 +23,8 @@ const statusTone = {
 export default function CodexPage() {
   const locale = useLocaleStore((state) => state.locale);
   const requests = useMyCodexRequests();
-  const createRequest = useCreateCodexRequest();
   const confirmRequest = useConfirmCodexRequest();
   const retryRequest = useRetryCodexRequest();
-  const uploadImage = useUploadImage();
-  const [form, setForm] = useState({ imageUrl: '', note: '' });
 
   return (
     <div className="space-y-6">
@@ -40,37 +34,27 @@ export default function CodexPage() {
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t(locale, 'codexHelp')}</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t(locale, 'newRequest')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <FileUploadButton
-            label={t(locale, 'attachImage')}
-            onFileSelect={(files) => {
-              const file = files?.[0];
-              if (file) {
-                uploadImage.mutate(file, {
-                  onSuccess: (data) => setForm((current) => ({ ...current, imageUrl: data.url })),
-                });
-              }
-            }}
-          />
-          {form.imageUrl && <p className="text-center text-xs text-primary">{t(locale, 'printAttached')}</p>}
-          <Input placeholder={t(locale, 'optionalNote')} value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} />
-          <Button
-            disabled={!form.imageUrl || createRequest.isPending}
-            onClick={() => createRequest.mutate(form, {
-              onSuccess: () => {
-                setForm({ imageUrl: '', note: '' });
-                notifyToast({ title: t(locale, 'codexRequestSent'), tone: 'success' });
-              },
-            })}
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur-md">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge tone="gold">Inativo Temporariamente</Badge>
+              <h3 className="text-base font-semibold text-amber-200">Envio de Prints de Codex Suspenso</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              O sistema de requisições de Codex está temporariamente inativo nesta fase do servidor.
+              Agora você pode solicitar até <strong>5 itens diretamente do Baú da Guilda</strong>, liberando novas vagas conforme os itens forem despachados ou rejeitados pela Staff.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/storage"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
           >
-            <Send className="h-4 w-4" /> {t(locale, 'sendRequest')}
-          </Button>
-        </CardContent>
-      </Card>
+            <Package className="h-4 w-4" />
+            Acessar Baú da Guilda
+          </Link>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {(requests.data ?? []).map((request) => (
@@ -111,7 +95,9 @@ export default function CodexPage() {
         ))}
       </div>
       {!requests.isLoading && (requests.data ?? []).length === 0 && (
-        <EmptyState title={t(locale, 'noCodexRequests')}>{t(locale, 'noCodexRequestsHelp')}</EmptyState>
+        <EmptyState title="Nenhum registro histórico de codex">
+          O sistema de codex está inativo no momento. Utilize o Baú da Guilda para solicitar itens disponíveis.
+        </EmptyState>
       )}
     </div>
   );

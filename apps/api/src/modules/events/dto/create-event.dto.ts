@@ -80,4 +80,19 @@ export class CreateEventDto {
   @IsInt()
   @Min(0)
   dkpReward?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  recurrenceType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  intervalDays?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyDaily?: boolean;
 }

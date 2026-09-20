@@ -112,6 +112,45 @@ export class EventReminderService {
     return { eligible, web, discord, discordFailed };
   }
 
+  async announceUpcomingPublicEvents(now = new Date()): Promise<{ announced: number }> {
+    const windowEnd = new Date(now.getTime() + 45 * 60 * 1000);
+    const events = await this.prisma.event.findMany({
+      where: {
+        status: { in: [EventStatus.OPEN, EventStatus.ATTENDANCE_REGISTRATION] },
+        startsAt: { gt: now, lte: windowEnd },
+        notifyDaily: true,
+        announcedToDiscordAt: null,
+      },
+      orderBy: { startsAt: 'asc' },
+    });
+
+    let announced = 0;
+    for (const event of events) {
+      try {
+        await this.discordNotifications.notifyEventScheduled({
+          eventId: event.id,
+          eventName: event.name,
+          type: event.type,
+          startsAt: event.startsAt,
+          dkpReward: event.dkpReward,
+          operationalCategory: event.operationalCategory ?? undefined,
+        });
+        await this.prisma.event.update({
+          where: { id: event.id },
+          data: { announcedToDiscordAt: new Date() },
+        });
+        announced += 1;
+      } catch (error) {
+        this.logger.error(`Failed to announce upcoming event ${event.id} to Discord: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    if (announced > 0) {
+      this.logger.log(`upcoming_public_events_announced count=${announced}`);
+    }
+    return { announced };
+  }
+
   private safeTimezone(timezone?: string | null) {
     const value = timezone?.trim() || 'America/Sao_Paulo';
     try {

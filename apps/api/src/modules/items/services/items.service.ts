@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Auction, ItemCatalog, ItemType, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuctionsService } from '../../auctions/services/auctions.service';
+import { GeminiOcrService } from '../../storage/services/gemini-ocr.service';
 import { BulkCreateItemsDto, CreateItemAuctionsDto, CreateItemDto, UpdateItemDto, ValidateItemsBatchDto } from '../dto';
 import { ItemsRepository } from '../repositories/items.repository';
 import { getRequestableCatalogKey, requestableItems } from '../requestable-items';
@@ -12,6 +13,8 @@ export class ItemsService {
     private readonly repository: ItemsRepository,
     private readonly auctionsService: AuctionsService,
     private readonly auditService: AuditService,
+    @Inject(forwardRef(() => GeminiOcrService))
+    private readonly geminiOcrService: GeminiOcrService,
   ) {}
 
   health(): { module: string; ready: boolean } {
@@ -95,6 +98,55 @@ export class ItemsService {
         isActive: item.isActive,
       })),
       existingNames,
+    };
+  }
+
+  async scanCatalogOcr(dto: { images: Array<{ data: string; mimeType?: string }> }): Promise<{
+    items: Array<
+      any & {
+        alreadyExists: boolean;
+        catalogItem?: any;
+      }
+    >;
+    totalScanned: number;
+    newItemsCount: number;
+    existingItemsCount: number;
+  }> {
+    const scanned = await this.geminiOcrService.scanBatch(dto.images);
+    const allNames = scanned.map((i) => i.itemName.trim()).filter(Boolean);
+    const existingInDb = await this.repository.findByNames(allNames);
+
+    const existingMap = new Map<string, ItemCatalog>();
+    for (const item of existingInDb) {
+      existingMap.set(item.namePt.trim().toLowerCase(), item);
+      existingMap.set(item.nameEn.trim().toLowerCase(), item);
+    }
+
+    const results = scanned.map((item) => {
+      const lower = item.itemName.trim().toLowerCase();
+      const match = existingMap.get(lower);
+      return {
+        ...item,
+        alreadyExists: Boolean(match),
+        catalogItem: match
+          ? {
+              id: match.id,
+              namePt: match.namePt,
+              nameEn: match.nameEn,
+              category: match.category,
+              itemTier: match.itemTier,
+              itemType: match.itemType,
+              kind: match.kind,
+            }
+          : null,
+      };
+    });
+
+    return {
+      items: results,
+      totalScanned: results.length,
+      newItemsCount: results.filter((r) => !r.alreadyExists).length,
+      existingItemsCount: results.filter((r) => r.alreadyExists).length,
     };
   }
 

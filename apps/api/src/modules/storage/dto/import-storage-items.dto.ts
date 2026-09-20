@@ -49,6 +49,16 @@ export class StorageItemEntryDto {
   @Transform(trim)
   @IsString()
   source?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  acquisitionDate?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  acquisitionInfo?: string;
 }
 
 export class ImportStorageItemsDto {

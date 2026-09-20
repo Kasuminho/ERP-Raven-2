@@ -320,3 +320,147 @@ export function buildItemInterestSkillBatchEmbed(data: ItemInterestSkillBatchEmb
     )
     .setTimestamp(new Date());
 }
+
+export type EventScheduledEmbedData = {
+  eventId: string;
+  eventName: string;
+  type: string;
+  startsAt: Date;
+  dkpReward: number;
+  operationalCategory?: string;
+  url: string;
+};
+
+export function buildEventScheduledEmbed(data: EventScheduledEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
+  const fields = [
+    { name: localeCopy(locale, { 'pt-BR': 'Tipo', en: 'Type' }), value: data.type, inline: true },
+    { name: localeCopy(locale, { 'pt-BR': 'Recompensa', en: 'Reward' }), value: `${data.dkpReward} DKP`, inline: true },
+  ];
+
+  if (data.operationalCategory) {
+    fields.push({
+      name: localeCopy(locale, { 'pt-BR': 'Categoria', en: 'Category' }),
+      value: data.operationalCategory,
+      inline: true,
+    });
+  }
+
+  fields.push(
+    {
+      name: localeCopy(locale, { 'pt-BR': 'Horario de inicio', en: 'Start time' }),
+      value: `${discordTimestamp(data.startsAt, 'F')}\n${discordTimestamp(data.startsAt, 'R')}`,
+      inline: false,
+    },
+    {
+      name: localeCopy(locale, { 'pt-BR': 'Painel do Evento', en: 'Event Dashboard' }),
+      value: `[${localeCopy(locale, { 'pt-BR': 'Acessar no ERP', en: 'Open in ERP' })}](${data.url})`,
+      inline: false,
+    },
+  );
+
+  return new EmbedBuilder()
+    .setTitle(localeCopy(locale, { 'pt-BR': `Evento agendado: ${data.eventName}`, en: `Event scheduled: ${data.eventName}` }))
+    .setColor(0x3b82f6)
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        '**Novo evento no radar.** Prepara a build e ajusta o alarme; quem chega atrasado fica sem vaga e sem DKP.',
+        '**Evento agendado na agenda da guilda.** Confere o horario no ERP e avisa a party; hora de farmar.',
+        '**Convocacao da guilda.** Ajusta os consumiveis e o inventario. Pontualidade e a primeira regra do boss.',
+        '**Mais um boss na mira.** Fica atento ao cronometro; evento marcado no ERP e presenca obrigatoria.',
+        '**Operacao marcada.** Alinha a presenca no site; quem se planeja dropa melhor.',
+      ],
+      en: [
+        '**New event on the radar.** Ready your build and set an alarm; late arrivals lose their spot and DKP.',
+        '**Event scheduled on guild calendar.** Check the time on ERP and alert your party; time to farm.',
+        '**Guild rally.** Check your consumables and inventory. Punctuality is rule number one for boss fights.',
+        '**Another boss targeted.** Watch the countdown; scheduled events on ERP require attendance.',
+        '**Operation scheduled.** Confirm your presence on the site; proper planning brings better loot.',
+      ],
+    }, data.eventId, data.eventName, data.startsAt, data.dkpReward))
+    .addFields(fields)
+    .setTimestamp(new Date());
+}
+
+export type StorageItemRequestedEmbedData = {
+  requestId: string;
+  itemName: string;
+  quantity: number;
+  playerName: string;
+  discordId?: string;
+  currentStock: number;
+  playerClass?: string;
+  attendancePercentage?: number;
+  url: string;
+};
+
+export function buildStorageItemRequestedEmbed(data: StorageItemRequestedEmbedData): EmbedBuilder {
+  const playerMention = data.discordId ? `<@${data.discordId}> (${data.playerName})` : data.playerName;
+  const attendanceStr = typeof data.attendancePercentage === 'number' ? `${Math.round(data.attendancePercentage)}%` : 'N/A';
+
+  return new EmbedBuilder()
+    .setTitle(`Novo pedido no Bau da Guilda: ${data.itemName}`)
+    .setColor(0xf59e0b)
+    .setDescription(pickStaffVoice([
+      '**Pedido na mesa da Staff.** Um membro solicitou item do Bau da Guilda. Analise o estoque e a presenca antes de despachar.',
+      '**Novo request de estoque.** Confere a elegibilidade do jogador no ERP antes de soltar o item do cofre.',
+      '**Requisicao de bau pendente.** Avalie a participacao do player e decida pelo painel da Staff.',
+      '**Item do bau solicitado.** O cofre registrou um novo pedido; veja se o jogador fez por merecer.',
+      '**Solicitacao aguardando despacho.** Confira o saldo do bau e aprove ou recuse no painel.',
+    ], data.requestId, data.itemName, data.playerName, data.quantity))
+    .addFields(
+      { name: 'Item', value: data.itemName, inline: true },
+      { name: 'Quantidade solicitada', value: `${data.quantity} un.`, inline: true },
+      { name: 'Estoque atual', value: `${data.currentStock} un.`, inline: true },
+      { name: 'Player', value: playerMention, inline: true },
+      { name: 'Classe', value: data.playerClass ?? 'Nao informada', inline: true },
+      { name: 'Presenca', value: attendanceStr, inline: true },
+      { name: 'Painel da Staff', value: `[Abrir Bau da Guilda](${data.url})`, inline: false },
+    )
+    .setTimestamp(new Date());
+}
+
+export type StorageItemDispatchedEmbedData = {
+  itemName: string;
+  quantity: number;
+  playerName: string;
+  discordId?: string;
+  staffName?: string;
+};
+
+export function buildStorageItemDispatchedEmbed(data: StorageItemDispatchedEmbedData, locale: DiscordLocale = 'pt-BR'): EmbedBuilder {
+  const recipient = data.discordId ? `<@${data.discordId}> (${data.playerName})` : data.playerName;
+  const fields = [
+    { name: 'Item', value: data.itemName, inline: true },
+    { name: localeCopy(locale, { 'pt-BR': 'Quantidade', en: 'Quantity' }), value: `${data.quantity} un.`, inline: true },
+    { name: localeCopy(locale, { 'pt-BR': 'Beneficiario', en: 'Recipient' }), value: recipient, inline: true },
+  ];
+
+  if (data.staffName) {
+    fields.push({
+      name: localeCopy(locale, { 'pt-BR': 'Despachado por', en: 'Dispatched by' }),
+      value: data.staffName,
+      inline: true,
+    });
+  }
+
+  return new EmbedBuilder()
+    .setTitle(localeCopy(locale, { 'pt-BR': 'Item do Bau da Guilda entregue', en: 'Guild Storage item dispatched' }))
+    .setColor(0x10b981)
+    .setDescription(pickBilingualVoice({
+      'pt-BR': [
+        `**Item despachado do Bau da Guilda.** **${data.playerName}** recebeu **${data.quantity}x ${data.itemName}**. Agora bota esse recurso pra rodar e honra a camisa da guilda!`,
+        `**Bau da Guilda movimentado.** **${data.quantity}x ${data.itemName}** entregue para **${data.playerName}**. Menos recurso acumulando poeira, mais poder de fogo pro time.`,
+        `**Despacho concluido.** **${data.playerName}** retirou **${data.quantity}x ${data.itemName}** com aval da Staff. Sem sumico, sem drama, 100% no livro caixa.`,
+        `**Loot do cofre liberado.** **${data.quantity}x ${data.itemName}** na bag de **${data.playerName}**. Faz valer cada unidade gasta nos proximos confrontos!`,
+        `**Recurso em boas maos.** **${data.playerName}** recebeu **${data.quantity}x ${data.itemName}**. O Aristolfo assinou a guia e o estoque ja foi atualizado.`,
+      ],
+      en: [
+        `**Item dispatched from Guild Storage.** **${data.playerName}** received **${data.quantity}x ${data.itemName}**. Put this gear to work and honor the guild!`,
+        `**Guild Storage in motion.** **${data.quantity}x ${data.itemName}** delivered to **${data.playerName}**. Less dust on supplies, more firepower for the squad.`,
+        `**Dispatch completed.** **${data.playerName}** received **${data.quantity}x ${data.itemName}** approved by Staff. Zero mysteries, zero drama, 100% audited.`,
+        `**Vault gear released.** **${data.quantity}x ${data.itemName}** in **${data.playerName}**'s bag. Make every single unit count in upcoming battles!`,
+        `**Supplies in good hands.** **${data.playerName}** received **${data.quantity}x ${data.itemName}**. Aristolfo stamped the manifest and storage is updated.`,
+      ],
+    }, data.itemName, data.quantity, data.playerName))
+    .addFields(fields)
+}

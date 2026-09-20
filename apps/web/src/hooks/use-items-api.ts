@@ -62,6 +62,32 @@ export function useValidateItemsBatch() {
   });
 }
 
+export function useScanCatalogOcr() {
+  return useMutation({
+    mutationFn: async (data: {
+      images: Array<{ data: string; mimeType?: string }>;
+      apiKey?: string;
+    }) => {
+      const response = await api.post<{
+        scannedItems: Array<{
+          itemName: string;
+          quantity: number;
+          category: string;
+          itemType?: ItemType | null;
+          kind?: string;
+          acquisitionInfo?: string;
+          acquisitionDate?: string;
+          alreadyExists: boolean;
+          existingItemId?: string;
+        }>;
+        totalScanned: number;
+        totalPrintsProcessed: number;
+      }>('/items/scan-ocr', data);
+      return response.data;
+    },
+  });
+}
+
 export function useCreateBulkItems() {
   const queryClient = useQueryClient();
   return useMutation({

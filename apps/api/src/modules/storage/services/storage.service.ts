@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { GuildStorageItem } from '@prisma/client';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { GuildStorageItem, StorageRequestStatus } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
+import { NotificationService } from '../../discord/services/notification.service';
 import { ItemRequestsService } from '../../item-requests/services/item-requests.service';
 import { ItemsService } from '../../items/services/items.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { DispatchStorageItemDto, ImportStorageItemsDto, ScanOcrDto, UpdateStorageItemDto } from '../dto';
 import { StorageRepository } from '../repositories/storage.repository';
 import { GeminiOcrService, ScannedItemResult } from './gemini-ocr.service';
@@ -33,9 +35,12 @@ export class StorageService {
     private readonly repository: StorageRepository,
     private readonly geminiOcrService: GeminiOcrService,
     private readonly itemRequestsService: ItemRequestsService,
+    @Inject(forwardRef(() => ItemsService))
     private readonly itemsService: ItemsService,
     private readonly auditService: AuditService,
     private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getStorageItems(options?: { search?: string; category?: string; kind?: string }): Promise<{
@@ -197,6 +202,7 @@ export class StorageService {
     importedCount: number;
     updatedCount: number;
     createdCount: number;
+    skippedDuplicatesCount: number;
   }> {
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('Nenhum item informado para importação.');
@@ -204,6 +210,7 @@ export class StorageService {
 
     let createdCount = 0;
     let updatedCount = 0;
+    let skippedDuplicatesCount = 0;
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of dto.items) {
@@ -211,6 +218,30 @@ export class StorageService {
         const existing = await tx.guildStorageItem.findFirst({
           where: { itemName: { equals: trimmedName, mode: 'insensitive' } },
         });
+
+        let parsedAcquisitionDate: Date | null = null;
+        if (item.acquisitionDate) {
+          const d = new Date(item.acquisitionDate);
+          if (!isNaN(d.getTime())) {
+            parsedAcquisitionDate = d;
+          }
+        }
+
+        // Deduplicação: se tem acquisitionDate e acquisitionInfo
+        if (existing && item.acquisitionDate && item.acquisitionInfo) {
+          const existingEntry = await tx.guildStorageEntry.findFirst({
+            where: {
+              storageItemId: existing.id,
+              acquisitionDate: parsedAcquisitionDate,
+              acquisitionInfo: item.acquisitionInfo,
+            },
+          });
+
+          if (existingEntry) {
+            skippedDuplicatesCount += 1;
+            continue;
+          }
+        }
 
         if (existing) {
           await tx.guildStorageItem.update({
@@ -224,6 +255,20 @@ export class StorageService {
               lastImportAt: new Date(),
             },
           });
+
+          if (item.acquisitionDate || item.acquisitionInfo) {
+            await tx.guildStorageEntry.create({
+              data: {
+                storageItemId: existing.id,
+                itemName: existing.itemName,
+                quantity: item.quantity,
+                acquisitionDate: parsedAcquisitionDate,
+                acquisitionInfo: item.acquisitionInfo,
+                source: item.source || existing.source,
+              },
+            });
+          }
+
           updatedCount += 1;
         } else {
           // Find matching catalog item if any
@@ -236,7 +281,7 @@ export class StorageService {
             },
           });
 
-          await tx.guildStorageItem.create({
+          const created = await tx.guildStorageItem.create({
             data: {
               itemName: trimmedName,
               quantity: item.quantity,
@@ -249,6 +294,20 @@ export class StorageService {
               lastImportAt: new Date(),
             },
           });
+
+          if (item.acquisitionDate || item.acquisitionInfo) {
+            await tx.guildStorageEntry.create({
+              data: {
+                storageItemId: created.id,
+                itemName: created.itemName,
+                quantity: item.quantity,
+                acquisitionDate: parsedAcquisitionDate,
+                acquisitionInfo: item.acquisitionInfo,
+                source: item.source,
+              },
+            });
+          }
+
           createdCount += 1;
         }
       }
@@ -262,6 +321,7 @@ export class StorageService {
           itemsCount: dto.items.length,
           createdCount,
           updatedCount,
+          skippedDuplicatesCount,
           items: dto.items.map((i) => ({ name: i.itemName, qty: i.quantity })),
         },
       });
@@ -271,6 +331,7 @@ export class StorageService {
       importedCount: dto.items.length,
       createdCount,
       updatedCount,
+      skippedDuplicatesCount,
     };
   }
 
@@ -396,5 +457,341 @@ export class StorageService {
   async setGeminiConfig(apiKey: string, actorId?: string): Promise<{ success: boolean }> {
     await this.geminiOcrService.setApiKey(apiKey, actorId);
     return { success: true };
+  }
+
+  async createStorageRequest(
+    userId: string,
+    data: { storageItemId: string; quantity: number; playerNote?: string },
+  ) {
+    const player = await this.prisma.player.findFirst({
+      where: { userId, isActive: true },
+      select: {
+        id: true,
+        nickname: true,
+        class: true,
+        attendancePercentage: true,
+        user: { select: { discordId: true } },
+      },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      throw new NotFoundException('Player ativo não encontrado para este usuário.');
+    }
+
+    const pendingCount = await this.prisma.guildStorageRequest.count({
+      where: {
+        playerId: player.id,
+        status: StorageRequestStatus.PENDING,
+      },
+    });
+
+    if (pendingCount >= 5) {
+      throw new BadRequestException(
+        'Você já possui 5 solicitações ativas no Baú da Guilda. Aguarde a Staff enviar ou rejeitar para solicitar novos itens.',
+      );
+    }
+
+    const storageItem = await this.prisma.guildStorageItem.findUnique({
+      where: { id: data.storageItemId },
+    });
+
+    if (!storageItem) {
+      throw new NotFoundException('Item do baú não encontrado.');
+    }
+
+    if (storageItem.quantity <= 0) {
+      throw new BadRequestException('Item sem estoque disponível no Baú da Guilda.');
+    }
+
+    if (!data.quantity || data.quantity <= 0) {
+      throw new BadRequestException('A quantidade solicitada deve ser maior que zero.');
+    }
+
+    const request = await this.prisma.guildStorageRequest.create({
+      data: {
+        storageItemId: storageItem.id,
+        playerId: player.id,
+        quantity: data.quantity,
+        playerNote: data.playerNote?.trim() || null,
+        status: StorageRequestStatus.PENDING,
+      },
+      include: {
+        storageItem: true,
+        player: true,
+      },
+    });
+
+    await this.notificationService.notifyStorageItemRequested({
+      requestId: request.id,
+      itemName: storageItem.itemName,
+      quantity: data.quantity,
+      playerName: player.nickname,
+      discordId: player.user?.discordId ?? undefined,
+      currentStock: storageItem.quantity,
+      playerClass: player.class,
+      attendancePercentage: player.attendancePercentage ?? 0,
+      playerNote: data.playerNote,
+    });
+
+    return request;
+  }
+
+  async getMyRequests(userId: string) {
+    const player = await this.prisma.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      return {
+        requests: [],
+        summary: {
+          activeCount: 0,
+          maxAllowed: 5,
+          canRequestMore: false,
+        },
+      };
+    }
+
+    const requests = await this.prisma.guildStorageRequest.findMany({
+      where: { playerId: player.id },
+      include: {
+        storageItem: true,
+        deliveredBy: { select: { id: true, discordUsername: true } },
+        rejectedBy: { select: { id: true, discordUsername: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const activeCount = requests.filter((r) => r.status === StorageRequestStatus.PENDING).length;
+
+    return {
+      requests,
+      summary: {
+        activeCount,
+        maxAllowed: 5,
+        canRequestMore: activeCount < 5,
+      },
+    };
+  }
+
+  async cancelMyRequest(userId: string, requestId: string) {
+    const player = await this.prisma.player.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (!player) {
+      throw new NotFoundException('Player ativo não encontrado para este usuário.');
+    }
+
+    const request = await this.prisma.guildStorageRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.playerId !== player.id) {
+      throw new NotFoundException('Solicitação não encontrada.');
+    }
+
+    if (request.status !== StorageRequestStatus.PENDING) {
+      throw new BadRequestException('Apenas solicitações pendentes podem ser canceladas.');
+    }
+
+    return this.prisma.guildStorageRequest.update({
+      where: { id: requestId },
+      data: { status: StorageRequestStatus.CANCELLED },
+      include: {
+        storageItem: true,
+      },
+    });
+  }
+
+  async getStaffRequests() {
+    return this.prisma.guildStorageRequest.findMany({
+      where: { status: StorageRequestStatus.PENDING },
+      include: {
+        player: {
+          select: {
+            id: true,
+            nickname: true,
+            class: true,
+            attendancePercentage: true,
+          },
+        },
+        storageItem: {
+          select: {
+            id: true,
+            itemName: true,
+            category: true,
+            quantity: true,
+            itemTier: true,
+            itemType: true,
+            kind: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async dispatchStorageRequest(actorId: string, requestId: string, staffNote?: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.guildStorageRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          storageItem: true,
+          player: {
+            select: {
+              id: true,
+              userId: true,
+              nickname: true,
+              user: { select: { discordId: true } },
+            },
+          },
+        },
+      });
+
+      if (!request) {
+        throw new NotFoundException('Solicitação não encontrada.');
+      }
+
+      if (request.status !== StorageRequestStatus.PENDING) {
+        throw new BadRequestException('Apenas solicitações pendentes podem ser despachadas.');
+      }
+
+      if (request.storageItem.quantity < request.quantity) {
+        throw new BadRequestException(
+          `Estoque insuficiente no baú. Disponível: ${request.storageItem.quantity}, solicitado: ${request.quantity}.`,
+        );
+      }
+
+      const updatedStock = request.storageItem.quantity - request.quantity;
+      await tx.guildStorageItem.update({
+        where: { id: request.storageItemId },
+        data: { quantity: updatedStock },
+      });
+
+      const updatedRequest = await tx.guildStorageRequest.update({
+        where: { id: requestId },
+        data: {
+          status: StorageRequestStatus.DELIVERED,
+          deliveredAt: new Date(),
+          deliveredById: actorId,
+          staffNote: staffNote?.trim() || null,
+        },
+        include: {
+          storageItem: true,
+          player: true,
+        },
+      });
+
+      await this.auditService.log({
+        actorId,
+        action: 'GUILD_STORAGE_REQUEST_DELIVERED',
+        targetType: 'GuildStorageRequest',
+        targetId: requestId,
+        metadata: {
+          requestId,
+          playerId: request.playerId,
+          playerName: request.player.nickname,
+          itemName: request.storageItem.itemName,
+          quantity: request.quantity,
+          staffNote,
+        },
+      });
+
+      return { updatedRequest, request };
+    });
+
+    const { updatedRequest, request } = result;
+
+    await this.notificationService.notifyStorageItemDispatched({
+      requestId: request.id,
+      itemName: request.storageItem.itemName,
+      quantity: request.quantity,
+      playerName: request.player.nickname,
+      discordId: request.player.user?.discordId ?? undefined,
+      staffName: staffNote,
+    });
+
+    await this.notificationsService.createForPlayer({
+      playerId: request.playerId,
+      type: 'STORAGE_REQUEST_DELIVERED',
+      title: 'Item do Baú Entregue!',
+      body: `Seu pedido de ${request.quantity}x ${request.storageItem.itemName} foi enviado pela Staff.${staffNote ? ` Nota: ${staffNote}` : ''}`,
+      href: '/dashboard/storage',
+      metadata: {
+        requestId: request.id,
+        itemName: request.storageItem.itemName,
+        quantity: request.quantity,
+      },
+    });
+
+    return updatedRequest;
+  }
+
+  async rejectStorageRequest(actorId: string, requestId: string, staffNote?: string) {
+    const request = await this.prisma.guildStorageRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        storageItem: true,
+        player: true,
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Solicitação não encontrada.');
+    }
+
+    if (request.status !== StorageRequestStatus.PENDING) {
+      throw new BadRequestException('Apenas solicitações pendentes podem ser rejeitadas.');
+    }
+
+    const updatedRequest = await this.prisma.guildStorageRequest.update({
+      where: { id: requestId },
+      data: {
+        status: StorageRequestStatus.REJECTED,
+        rejectedAt: new Date(),
+        rejectedById: actorId,
+        staffNote: staffNote?.trim() || null,
+      },
+      include: {
+        storageItem: true,
+        player: true,
+      },
+    });
+
+    await this.auditService.log({
+      actorId,
+      action: 'GUILD_STORAGE_REQUEST_REJECTED',
+      targetType: 'GuildStorageRequest',
+      targetId: requestId,
+      metadata: {
+        requestId,
+        playerId: request.playerId,
+        playerName: request.player.nickname,
+        itemName: request.storageItem.itemName,
+        quantity: request.quantity,
+        staffNote,
+      },
+    });
+
+    await this.notificationsService.createForPlayer({
+      playerId: request.playerId,
+      type: 'STORAGE_REQUEST_REJECTED',
+      title: 'Item do Baú Recusado',
+      body: `Seu pedido de ${request.quantity}x ${request.storageItem.itemName} foi recusado pela Staff.${staffNote ? ` Motivo: ${staffNote}` : ''}`,
+      href: '/dashboard/storage',
+      metadata: {
+        requestId: request.id,
+        itemName: request.storageItem.itemName,
+        quantity: request.quantity,
+      },
+    });
+
+    return updatedRequest;
   }
 }

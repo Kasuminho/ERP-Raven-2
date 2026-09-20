@@ -16,6 +16,7 @@ export default registerAs('discord', () => ({
     auctions: process.env.DISCORD_AUCTIONS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
     drops: process.env.DISCORD_DROPS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
     attendance: process.env.DISCORD_ATTENDANCE_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
+    events: process.env.DISCORD_EVENTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
     interests: process.env.DISCORD_INTERESTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
     itemRequests: process.env.DISCORD_ITEM_REQUESTS_LOCALE ?? process.env.DISCORD_DEFAULT_LOCALE ?? 'pt-BR',
     staffReview: 'pt-BR',
@@ -24,6 +25,7 @@ export default registerAs('discord', () => ({
   },
   staffRoleId: process.env.DISCORD_STAFF_ROLE_ID ?? '1431337988423549000',
   channels: {
+    events: process.env.DISCORD_EVENTS_CHANNEL_ID ?? process.env.DISCORD_ATTENDANCE_CHANNEL_ID ?? '',
     auctions: process.env.DISCORD_AUCTIONS_CHANNEL_ID ?? '',
     attendance: process.env.DISCORD_ATTENDANCE_CHANNEL_ID ?? '',
     staffReview: process.env.DISCORD_STAFF_REVIEW_CHANNEL_ID ?? '',

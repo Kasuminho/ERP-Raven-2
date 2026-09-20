@@ -3,7 +3,7 @@ import { Auction, ItemCatalog } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { CreateItemAuctionsDto, CreateItemDto, BulkCreateItemsDto, UpdateItemDto, ValidateItemsBatchDto } from '../dto';
+import { CreateItemAuctionsDto, CreateItemDto, BulkCreateItemsDto, ScanCatalogOcrDto, UpdateItemDto, ValidateItemsBatchDto } from '../dto';
 import { ItemsService } from '../services/items.service';
 
 type AuthRequest = { user?: { userId?: string } };
@@ -16,6 +16,13 @@ export class ItemsController {
   @Get('health')
   health(): { module: string; ready: boolean } {
     return this.service.health();
+  }
+
+  @Post('scan-ocr')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async scanOcr(@Body() dto: ScanCatalogOcrDto) {
+    return this.service.scanCatalogOcr(dto);
   }
 
   @Post('validate-batch')

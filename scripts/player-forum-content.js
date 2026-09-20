@@ -267,41 +267,33 @@ Wishlist shows demand to Staff. **It does not create a bid, submit an interest, 
   },
   {
     slug: 'requests-codex',
-    title: '07 · Item Requests e Codex',
+    title: '07 · Item Requests, Baú da Guilda e Codex',
     tag: 'loot',
     route: '/dashboard/item-requests',
-    visualPt: ['Entre na fila correta', 'Atualize o print pedido', 'Confirme o Codex recebido'],
-    visualEn: ['Join the right queue', 'Update requested proof', 'Confirm received Codex'],
-    pt: `## 📋 Item Requests
-Use [Item Requests](${route('/dashboard/item-requests')}) para entrar na fila de itens requestáveis. Escolha o item, envie a prova exigida e acompanhe posição estimada, unidades à frente, idade do update, última entrega e alternativas com fila menor.
+    visualPt: ['Até 5 itens no Baú', 'Entre na fila correta', 'Codex pausado temporariamente'],
+    visualEn: ['Up to 5 vault items', 'Join the right queue', 'Codex paused temporarily'],
+    pt: `## 📦 Baú da Guilda (Novo)
+Em [Baú da Guilda](${route('/dashboard/storage')}) você pode consultar todos os itens disponíveis no tesouro da guilda e solicitar os equipamentos ou materiais que precisa:
+- **Cota ativa:** cada jogador pode manter até **5 solicitações pendentes simultâneas**;
+- **Envio pela Staff:** ao despachar o item no jogo, a Staff dá baixa no estoque e sua vaga na cota é liberada imediatamente;
+- **Rejeição ou cancelamento:** se a Staff rejeitar ou se você cancelar uma solicitação pendente, a vaga também é liberada na hora.
 
-Quando o sistema pedir atualização, envie um print novo dentro do prazo e aguarde a análise da Staff. Sugestões não trocam seu pedido automaticamente. Materiais de craft T3 podem ter prioridade sobre Quintessência do mesmo material; o pedido continua válido, mas pode esperar. Criar request também depende da presença D-30 vigente.
+## 📋 Item Requests
+Use [Item Requests](${route('/dashboard/item-requests')}) para entrar na fila de itens requestáveis do catálogo. Escolha o item, envie a prova exigida e acompanhe posição estimada, unidades à frente, idade do update e alternativas com fila menor. Materiais de craft T3 podem ter prioridade sobre Quintessência do mesmo material.
 
-## 📖 Codex
-Em [Codex](${route('/dashboard/codex')}) envie o print do pedido. Depois que a Staff marcar como enviado:
-1. teste no jogo;
-2. confirme **Funcionou** se recebeu corretamente;
-3. use **Falhou/Tentar novamente** se não funcionou;
-4. acompanhe o comprovante e o status.
+## 📖 Codex (Pausado Temporariamente)
+O envio de novas requisições de Codex está temporariamente suspenso nesta fase do servidor para priorizar a distribuição direta pelo Baú da Guilda. Registros históricos anteriores permanecem visíveis em [Codex](${route('/dashboard/codex')}).`,
+    en: `## 📦 Guild Storage (New)
+In [Guild Storage](${route('/dashboard/storage')}) you can view all items available in the guild vault and request what you need for progression:
+- **Active quota:** each member can hold up to **5 concurrent pending requests**;
+- **Staff dispatch:** when Staff sends the item in game, vault stock is deducted and your quota slot is freed immediately;
+- **Rejection or cancellation:** if Staff rejects or if you cancel a pending request, the quota slot is freed right away.
 
-Ao marcar o envio, o ERP chama você diretamente; enquanto o Codex continuar aguardando resposta, ele também aparece na cobrança diária. A cobrança termina quando você confirma ou pede retry.
+## 📋 Item Requests
+Use [Item Requests](${route('/dashboard/item-requests')}) to join a queue for catalog items. Choose the item, provide required proof, and track estimated position, units ahead, update age, and shorter-queue alternatives. T3 craft materials may take priority over Quintessence of the same material.
 
-Não confirme sucesso antes de verificar. Botão verde por impulso é uma build estranha.`,
-    en: `## 📋 Item Requests
-Use [Item Requests](${route('/dashboard/item-requests')}) to join a queue for requestable items. Choose the item, provide required proof, and track estimated position, units ahead, update age, last delivery, and shorter-queue alternatives.
-
-When an update is requested, upload fresh proof within the deadline and wait for Staff review. Suggestions never swap your request automatically. T3 craft materials may have priority over Quintessence using the same material; your request remains valid but may wait. Creating a request also depends on the current D-30 attendance rule.
-
-## 📖 Codex
-In [Codex](${route('/dashboard/codex')}) upload the request screenshot. After Staff marks it as sent:
-1. test it in game;
-2. choose **Worked** if received correctly;
-3. choose **Failed/Retry** if it did not work;
-4. track proof and status.
-
-When Staff marks it as sent, the ERP messages you directly. While the Codex is still waiting for your response, it also appears in the daily reminder. Reminders stop when you confirm or request a retry.
-
-Do not confirm success before checking. Clicking green by instinct is a strange build.`,
+## 📖 Codex (Temporarily Paused)
+Submitting new Codex requests is temporarily paused for this server phase to prioritize direct distribution from the Guild Storage. Past historical records remain accessible at [Codex](${route('/dashboard/codex')}).`,
   },
   {
     slug: 'drops-resultados',

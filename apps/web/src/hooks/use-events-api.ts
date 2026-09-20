@@ -60,6 +60,7 @@ export function useCreateEvent() {
       responsibleUserId?: string;
       operationalNotes?: string;
       dkpReward?: number;
+      notifyDaily?: boolean;
     }) => (await api.post<EventRecord>('/events', data)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
@@ -81,6 +82,9 @@ export function useCreateEventSeries() {
       firstStartsAt: string;
       durationMinutes: number;
       intervalWeeks?: number;
+      recurrenceType?: 'DAILY' | 'WEEKLY' | string;
+      intervalDays?: number;
+      notifyDaily?: boolean;
       horizonDays?: number;
       timezone?: string;
       operationalCategory?: EventOperationalCategory;

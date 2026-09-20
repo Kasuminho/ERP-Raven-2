@@ -64,6 +64,7 @@ const coreHubs: HubNavItem[] = [
       p.startsWith("/dashboard/drops") ||
       p.startsWith("/dashboard/interests") ||
       p.startsWith("/dashboard/item-requests") ||
+      p.startsWith("/dashboard/storage") ||
       p.startsWith("/dashboard/codex"),
   },
   {

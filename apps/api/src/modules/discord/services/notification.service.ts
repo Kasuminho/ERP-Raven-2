@@ -1,12 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { EventType, Prisma } from '@prisma/client';
 import type { MessageCreateOptions } from 'discord.js';
 import { AuditService } from '../../audit/services/audit.service';
 import { buildAttendanceStartedEmbed, buildEventFinalizedEmbed } from '../bot/embeds/attendance.embeds';
 import { buildAuctionCreatedEmbed, buildAuctionDeliveryEmbed, buildAuctionWinnerEmbed } from '../bot/embeds/auction.embeds';
 import { buildDkpNotificationEmbed } from '../bot/embeds/dkp.embeds';
-import { buildAnnouncementEmbed, buildEventReminderEmbed, buildItemInterestCreatedEmbed, buildItemInterestDeliveredEmbed, buildItemInterestSkillBatchEmbed, buildPlayerDailyReminderEmbed, buildRequestReminderEmbed } from '../bot/embeds/notification.embeds';
+import {
+  buildAnnouncementEmbed,
+  buildEventReminderEmbed,
+  buildEventScheduledEmbed,
+  buildItemInterestCreatedEmbed,
+  buildItemInterestDeliveredEmbed,
+  buildItemInterestSkillBatchEmbed,
+  buildPlayerDailyReminderEmbed,
+  buildRequestReminderEmbed,
+  buildStorageItemDispatchedEmbed,
+  buildStorageItemRequestedEmbed,
+} from '../bot/embeds/notification.embeds';
 import { buildStaffReviewRequiredEmbed } from '../bot/embeds/staff-review.embeds';
 import { DiscordLocale, localeCopy, resolveDiscordLocale } from '../bot/embeds/discord-locale';
 import { bilingualBlocks, pickBilingualVoice, pickStaffVoice, pickVoiceLine } from '../bot/embeds/webhook-voice';
@@ -226,6 +237,23 @@ export class NotificationService {
     }, 'DISCORD_NOTIFY_ATTENDANCE_STARTED', data.eventId);
   }
 
+  async notifyEventScheduled(data: {
+    eventId: string;
+    eventName: string;
+    type: EventType;
+    startsAt: Date;
+    dkpReward: number;
+    operationalCategory?: string;
+  }): Promise<void> {
+    const locale = this.localeFor('events', data.eventName, data.type);
+    const url = this.dashboardUrl('/dashboard/attendance');
+    const embed = buildEventScheduledEmbed({
+      ...data,
+      url,
+    }, locale);
+    await this.sendChannel('events', { embeds: [embed] }, 'DISCORD_NOTIFY_EVENT_SCHEDULED', data.eventId);
+  }
+
   async notifyEventFinalized(data: {
     eventId: string;
     eventName: string;
@@ -402,6 +430,49 @@ export class NotificationService {
     });
   }
 
+  async notifyStorageItemRequested(data: {
+    requestId: string;
+    itemName: string;
+    quantity: number;
+    playerName: string;
+    discordId?: string;
+    currentStock: number;
+    playerClass?: string;
+    attendancePercentage?: number;
+    playerNote?: string;
+  }): Promise<void> {
+    const url = this.dashboardUrl('/dashboard/staff/storage');
+    await this.sendWebhookChannel('staffRequests', {
+      embeds: [buildStorageItemRequestedEmbed({ ...data, url })],
+    }, 'DISCORD_NOTIFY_STORAGE_ITEM_REQUESTED', data.requestId, {
+      requestId: data.requestId,
+      itemName: data.itemName,
+      quantity: data.quantity,
+      playerName: data.playerName,
+      discordId: data.discordId,
+    });
+  }
+
+  async notifyStorageItemDispatched(data: {
+    requestId?: string;
+    itemName: string;
+    quantity: number;
+    playerName: string;
+    discordId?: string;
+    staffName?: string;
+  }): Promise<void> {
+    const locale = this.localeFor('drops', data.itemName);
+    const payload = {
+      embeds: [buildStorageItemDispatchedEmbed(data, locale)],
+    };
+    const targetId = data.requestId ?? `${data.itemName}:${data.playerName}`;
+    await this.sendChannel('drops', payload, 'DISCORD_NOTIFY_STORAGE_ITEM_DISPATCHED', targetId);
+
+    if (data.discordId) {
+      await this.sendDirectMessage(data.discordId, payload, 'DISCORD_NOTIFY_STORAGE_ITEM_DISPATCHED_DM', targetId);
+    }
+  }
+
   async sendAnnouncementNotification(
     channelId: string,
     data: {
@@ -480,7 +551,7 @@ export class NotificationService {
   }
 
   private async sendChannel(
-    channelKey: 'auctions' | 'drops' | 'attendance' | 'staffReview' | 'dkp',
+    channelKey: 'events' | 'auctions' | 'drops' | 'attendance' | 'staffReview' | 'dkp',
     payload: DiscordNotificationPayload,
     action: string,
     targetId: string,
@@ -511,7 +582,7 @@ export class NotificationService {
   }
 
   private async sendChannelStrict(
-    channelKey: 'auctions' | 'drops' | 'attendance' | 'staffReview' | 'dkp',
+    channelKey: 'events' | 'auctions' | 'drops' | 'attendance' | 'staffReview' | 'dkp',
     payload: DiscordNotificationPayload,
     action: string,
     targetId: string,
@@ -534,7 +605,7 @@ export class NotificationService {
   }
 
   private async sendWebhookChannel(
-    webhookKey: 'interests' | 'itemRequests' | 'staffRequests',
+    webhookKey: 'interests' | 'itemRequests' | 'staffRequests' | 'events',
     payload: DiscordNotificationPayload,
     action: string,
     targetId: string,
@@ -590,6 +661,7 @@ export class NotificationService {
 
   private webhookChannelLabel(webhookKey: string): string {
     return {
+      events: 'Eventos',
       announcements: 'Anuncios',
       auctions: 'Leiloes',
       drops: 'Drops entregues',

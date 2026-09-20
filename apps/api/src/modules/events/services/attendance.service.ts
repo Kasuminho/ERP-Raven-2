@@ -92,6 +92,7 @@ export class AttendanceService {
       batchOrder: data.batchOrder,
       checklist: checklist as unknown as Prisma.InputJsonValue,
       operationalNotes: data.operationalNotes?.trim() || undefined,
+      notifyDaily: data.notifyDaily ?? true,
     });
 
     await this.audit('EVENT_CREATED', 'Event', event.id, data.createdById, {
@@ -104,6 +105,14 @@ export class AttendanceService {
       endsAt: event.endsAt?.toISOString(),
       responsibleUserId: event.responsibleUserId,
       checklistKeys: checklist.map((item) => item.key),
+    });
+    await this.notificationService.notifyEventScheduled({
+      eventId: event.id,
+      eventName: event.name,
+      type: event.type,
+      startsAt: event.startsAt,
+      dkpReward: event.dkpReward,
+      operationalCategory: event.operationalCategory ?? undefined,
     });
     await this.notificationService.notifyAttendanceStarted({
       eventId: event.id,

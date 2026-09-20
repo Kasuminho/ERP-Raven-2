@@ -93,6 +93,9 @@ export default function AdminEventsPage() {
   const [seriesStartsAt, setSeriesStartsAt] = useState('');
   const [seriesDuration, setSeriesDuration] = useState(120);
   const [seriesInterval, setSeriesInterval] = useState(1);
+  const [seriesRecurrence, setSeriesRecurrence] = useState<'DAILY' | 'WEEKLY'>('DAILY');
+  const [seriesIntervalDays, setSeriesIntervalDays] = useState(1);
+  const [seriesNotifyDaily, setSeriesNotifyDaily] = useState(true);
   const [seriesTimezone, setSeriesTimezone] = useState('America/Sao_Paulo');
   const [seriesExceptions, setSeriesExceptions] = useState<Record<string, string>>({});
   const [seriesDkpReward, setSeriesDkpReward] = useState<number>(20);
@@ -178,7 +181,10 @@ export default function AdminEventsPage() {
       type: eventType,
       firstStartsAt: new Date(seriesStartsAt).toISOString(),
       durationMinutes: seriesDuration,
-      intervalWeeks: seriesInterval,
+      recurrenceType: seriesRecurrence,
+      intervalDays: seriesRecurrence === 'DAILY' ? seriesIntervalDays : undefined,
+      intervalWeeks: seriesRecurrence === 'WEEKLY' ? seriesInterval : undefined,
+      notifyDaily: seriesNotifyDaily,
       timezone: seriesTimezone,
       operationalCategory,
       priority,
@@ -308,11 +314,36 @@ export default function AdminEventsPage() {
         <Card>
           <CardHeader><CardTitle>Séries recorrentes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_160px_130px_180px_140px_140px_180px_auto]">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_150px_120px_110px_130px_170px_110px_140px_auto]">
               <Input placeholder="Nome da série" value={seriesName} onChange={(event) => setSeriesName(event.target.value)} />
               <Select value={eventType} onChange={(event) => handleEventTypeChange(event.target.value as EventType)}>
                 {eventTypes.map((value) => <option key={value}>{value}</option>)}
               </Select>
+              <Select value={seriesRecurrence} onChange={(event) => setSeriesRecurrence(event.target.value as 'DAILY' | 'WEEKLY')}>
+                <option value="DAILY">Diária</option>
+                <option value="WEEKLY">Semanal</option>
+              </Select>
+              {seriesRecurrence === 'DAILY' ? (
+                <Input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={seriesIntervalDays}
+                  onChange={(event) => setSeriesIntervalDays(Math.max(1, Number(event.target.value)))}
+                  title="Intervalo em dias (ex: 1 para todo dia)"
+                  placeholder="Dias"
+                />
+              ) : (
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={seriesInterval}
+                  onChange={(event) => setSeriesInterval(Math.max(1, Number(event.target.value)))}
+                  title="Intervalo em semanas"
+                  placeholder="Semanas"
+                />
+              )}
               <Input
                 type="number"
                 min={0}
@@ -323,20 +354,38 @@ export default function AdminEventsPage() {
               />
               <Input type="datetime-local" value={seriesStartsAt} onChange={(event) => setSeriesStartsAt(event.target.value)} />
               <Input type="number" min={15} max={1440} value={seriesDuration} onChange={(event) => setSeriesDuration(Number(event.target.value))} title="Duração em minutos" />
-              <Input type="number" min={1} max={12} value={seriesInterval} onChange={(event) => setSeriesInterval(Number(event.target.value))} title="Intervalo em semanas" />
               <Input value={seriesTimezone} onChange={(event) => setSeriesTimezone(event.target.value)} placeholder="Timezone IANA" />
               <Button onClick={createSeries} disabled={!seriesName.trim() || !seriesStartsAt || createEventSeries.isPending}>Criar série</Button>
             </div>
-            <p className="text-xs text-muted-foreground">Duração em minutos, intervalo em semanas e timezone IANA. O cron mantém o horizonte futuro materializado; pausa impede novas instâncias.</p>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={seriesNotifyDaily}
+                  onChange={(event) => setSeriesNotifyDaily(event.target.checked)}
+                  className="h-4 w-4 accent-primary"
+                />
+                <span>Avisar no canal de eventos do Discord (<code className="text-primary">#canal-evento</code>)</span>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">Periodicidade diária ou semanal, duração em minutos e timezone IANA. O cron mantém o horizonte futuro materializado sem duplicar eventos.</p>
             <div className="grid gap-3 xl:grid-cols-2">
               {(eventSeries.data ?? []).map((series) => {
                 const exceptions = seriesExceptions[series.id] ?? (series.exceptionDates ?? []).join(', ');
+                const isDaily = series.recurrenceType === 'DAILY';
+                const recurrenceLabel = isDaily ? `a cada ${series.intervalDays || 1} dia(s)` : `a cada ${series.intervalWeeks} semana(s)`;
                 return (
                   <div key={series.id} className="space-y-3 rounded-md border bg-background/35 p-3 text-sm">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold">{series.name}</p>
-                        <p className="text-xs text-muted-foreground">{series.type} · a cada {series.intervalWeeks} semana(s) · {series.timezone} · {series._count?.events ?? 0} instância(s)</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{series.name}</p>
+                          <Badge tone={isDaily ? 'blue' : 'muted'}>{isDaily ? 'Diária' : 'Semanal'}</Badge>
+                          <Badge tone={series.notifyDaily !== false ? 'green' : 'muted'}>
+                            {series.notifyDaily !== false ? 'Avisa Discord' : 'Silencioso'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{series.type} · {recurrenceLabel} · {series.timezone} · {series._count?.events ?? 0} instância(s)</p>
                         <p className="text-xs text-muted-foreground">Materializado até {series.materializedThrough ? new Date(series.materializedThrough).toLocaleString() : '-'}</p>
                       </div>
                       <Button

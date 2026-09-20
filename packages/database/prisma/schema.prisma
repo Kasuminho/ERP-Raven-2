@@ -109,6 +109,13 @@ enum ItemInterestStatus {
   CANCELLED
 }
 
+enum StorageRequestStatus {
+  PENDING
+  DELIVERED
+  REJECTED
+  CANCELLED
+}
+
 enum CodexRequestStatus {
   PENDING
   SENT
@@ -577,6 +584,8 @@ model User {
   createdPlaybookLessons              GuildPlaybookLesson[]              @relation("GuildPlaybookLessonCreatedBy")
   recordedProductValidationInterviews ProductValidationInterview[]       @relation("ProductValidationInterviewRecordedBy")
   capturedProductValidationWeeks      ProductValidationWeek[]            @relation("ProductValidationWeekCapturedBy")
+  deliveredStorageRequests            GuildStorageRequest[]              @relation("StorageRequestDeliveredBy")
+  rejectedStorageRequests             GuildStorageRequest[]              @relation("StorageRequestRejectedBy")
 
   @@index([discordUsername])
   @@index([discordGuildId])
@@ -643,6 +652,7 @@ model Player {
   convertedRecruitmentApplication RecruitmentApplication?            @relation("RecruitmentApplicationConvertedPlayer")
   purchasedDiamondSales           DiamondSale[]                      @relation("DiamondSaleBuyerPlayer")
   diamondSaleRecipients           DiamondSaleRecipient[]
+  storageRequests                 GuildStorageRequest[]
 
   @@index([userId])
   @@index([class])
@@ -1480,6 +1490,8 @@ model Event {
   seriesOccurrence       Int?
   compositionTargets     Json                     @default("[]")
   seriesExceptionSkipped Boolean                  @default(false)
+  notifyDaily            Boolean                  @default(true)
+  announcedToDiscordAt   DateTime?
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
   createdBy              User                     @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -1516,6 +1528,9 @@ model EventSeries {
   firstStartsAt       DateTime
   durationMinutes     Int
   intervalWeeks       Int                      @default(1)
+  recurrenceType      String                   @default("WEEKLY")
+  intervalDays        Int?                     @default(1)
+  notifyDaily         Boolean                  @default(true)
   horizonDays         Int                      @default(56)
   exceptionDates      Json                     @default("[]")
   compositionTargets  Json                     @default("[]")
@@ -2104,12 +2119,56 @@ model GuildStorageItem {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   itemCatalog   ItemCatalog? @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  entries       GuildStorageEntry[]
+  requests      GuildStorageRequest[]
 
   @@index([itemName])
   @@index([itemCatalogId])
   @@index([category])
   @@index([itemTier])
   @@index([itemType])
+}
+
+model GuildStorageEntry {
+  id              String           @id @default(uuid())
+  storageItemId   String
+  itemName        String
+  quantity        Int              @default(1)
+  acquisitionDate DateTime?
+  acquisitionInfo String?
+  source          String?
+  createdAt       DateTime         @default(now())
+  storageItem     GuildStorageItem @relation(fields: [storageItemId], references: [id], onDelete: Cascade)
+
+  @@unique([storageItemId, acquisitionDate, acquisitionInfo])
+  @@index([storageItemId])
+  @@index([acquisitionDate])
+}
+
+model GuildStorageRequest {
+  id            String               @id @default(uuid())
+  storageItemId String
+  playerId      String
+  quantity      Int                  @default(1)
+  status        StorageRequestStatus @default(PENDING)
+  playerNote    String?
+  staffNote     String?
+  deliveredAt   DateTime?
+  deliveredById String?
+  rejectedAt    DateTime?
+  rejectedById  String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  storageItem   GuildStorageItem     @relation(fields: [storageItemId], references: [id], onDelete: Cascade)
+  player        Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  deliveredBy   User?                @relation("StorageRequestDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
+  rejectedBy    User?                @relation("StorageRequestRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+
+  @@index([storageItemId])
+  @@index([playerId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ItemInterestPost {

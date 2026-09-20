@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-09-19
+**Ultima revisao:** 2026-09-20
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -314,17 +314,54 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
 - A rota Web `/dashboard/item-requests` usa componentes locais em `_components`: `page.tsx` fica como guard/entrada, `item-request-panels.tsx` concentra os paineis player/Staff e `item-request-common.tsx` guarda paineis reutilizados de forecast, sugestoes e prioridade.
 
-## Baú da Guilda e OCR com Gemini
+## Baú da Guilda, Deduplicação por Data de Coleta e Solicitações de Itens
 
-- Inventário consolidado do cofre da guilda (`GuildStorageItem`) para rastreamento de saldo disponível de itens e materiais acumulados de drops e masmorras, sem sobrecarga de quem depositou o quê.
-- Módulo backend `StorageModule` em `apps/api/src/modules/storage`:
-  - `POST /storage/scan-ocr`: processamento em lote (até 20 prints) utilizando a API Multimodal Vision do Google Gemini (`gemini-2.0-flash` com fallback para `gemini-1.5-flash`), extraindo com precisão tipografia, nome do item, quantidade, raridade (baseada nas cores das fontes: ciano/azul para raro, roxo para heroico, verde para incomum, branco para comum), tipo de equipamento e fonte de aquisição.
-  - `POST /storage/import`: importa e consolida itens no estoque do cofre, agregando quantidades caso o item já exista e vinculando ao catálogo `ItemCatalog` quando encontrado.
-  - `GET /storage`: listagem do inventário em estoque com agregação em tempo real da fila ativa de pedidos do Codex (`ItemRequest`), calculando a taxa de assiduidade de 15 dias de cada jogador na fila e ordenando por assiduidade descendente (prioridade) e posição de ranking.
-  - `POST /storage/dispatch`: despacho manual e controlado pela liderança da Staff para um jogador aguardando na fila do Codex. A baixa no estoque do baú é atômica e a entrega é executada via `ItemRequestsService.deliver`, gerando auditoria `GUILD_STORAGE_DISPATCHED`.
-  - `PATCH /storage/:id` e `DELETE /storage/:id`: ajustes manuais de estoque e limpeza de registros.
-  - `GET /storage/config` e `POST /storage/config`: verificação e persistência da chave de API do Gemini em `BusinessRule` (`geminiApiKey`) ou variável de ambiente `GEMINI_API_KEY`.
-- Rota Web Staff: `/dashboard/staff/storage`, acessível pelo painel Staff e atalho no topo da Central de Loot (`/dashboard/loot`), com suporte a drag & drop, seleção de múltiplos arquivos e colar imagens direto da área de transferência (Ctrl+V).
+- **Inventário e Coletas Idempotentes**:
+  - Inventário consolidado em `GuildStorageItem`.
+  - Coletas rastreadas via `GuildStorageEntry` com `@@unique([storageItemId, acquisitionDate, acquisitionInfo])`. Quando prints com as mesmas datas/horas de coleta e informações de drop são reenviados no OCR em lote, o sistema ignora as duplicatas sem inflar o estoque (`skippedDuplicatesCount`).
+- **Módulo Backend (`StorageModule`)**:
+  - `POST /storage/scan-ocr`: processamento multimodal Vision via Gemini (`gemini-2.0-flash` com fallback), extraindo tipografia, nome, quantidade, raridade, `acquisitionDate` e `acquisitionInfo`.
+  - `POST /storage/import`: adiciona novos registros ou incrementa estoque apenas para entradas não duplicadas.
+  - `GET /storage`: inventário consolidado com paginação, filtros e busca.
+  - `POST /storage/requests`: jogadores solicitam itens diretamente do baú. Validação bloqueia se o jogador já possuir 5 solicitações com status `PENDING`. Alerta imediato disparado para a liderança em `staffRequests` (`DISCORD_STAFF_REQUESTS_WEBHOOK_URL`).
+  - `GET /storage/requests/me`: lista solicitações do jogador logado com resumo de cota `{ activeCount, maxAllowed: 5, canRequestMore }`.
+  - `DELETE /storage/requests/:id`: cancelamento de pedido pendente pelo jogador, liberando a vaga na cota de 5 pedidos imediatamente.
+  - `GET /storage/requests/staff`: fila de pedidos pendentes para análise da Staff, com dados do item, player, presença e notas.
+  - `POST /storage/requests/:id/dispatch`: Staff despacha o item. O estoque é reduzido atômica e imediatamente, o pedido passa a `DELIVERED`, gera histórico de drops, dispara notificação de entrega no Discord `drops` (`DISCORD_DROPS_WEBHOOK_URL`) com voz do Aristolfo, envia notificação in-app ao player e libera sua vaga na cota.
+  - `POST /storage/requests/:id/reject`: Staff rejeita o pedido com nota explicativa. O pedido passa a `REJECTED`, notifica o player e libera sua vaga na cota sem alterar estoque.
+- **Desativação Temporária do Codex**:
+  - `POST /codex/me` bloqueado amigavelmente via `BadRequestException`.
+  - Frontend `/dashboard/codex` exibe banner informativo direcionando os membros para o Baú da Guilda (`/dashboard/storage`).
+- **Telas Web**:
+  - `/dashboard/storage`: tela do jogador com indicador de cota (X / 5), catálogo de itens disponíveis com botão "Solicitar", modal de quantidade/nota e aba "Minhas Solicitações" com botão "Cancelar Pedido" para itens pendentes.
+  - `/dashboard/staff/storage`: tela da Staff com abas "Estoque do Baú" e "Solicitações do Baú (X pendentes)", ações rápidas "Enviar (Baixar Estoque)" e "Rejeitar", além de importação em lote por OCR com suporte a Ctrl+V.
+  - `/dashboard/admin/items`: modal de importação em lote de itens no catálogo com OCR (`POST /items/scan-ocr`) com destaque para itens que já existem no banco (`alreadyExists`).
+
+## Recorrência Diária de Eventos e Controle de Anúncios (`notifyDaily`)
+
+- No model `EventSeries`: `recurrenceType` (`DAILY` ou `WEEKLY`), `intervalDays` (padrão 1 para diário) e `notifyDaily` (booleano para controle de avisos no Discord).
+- No model `Event`: `notifyDaily` e `announcedToDiscordAt`.
+- Materialização (`event-series.service.ts`): séries diárias calculam intervalo por `(intervalDays || 1) * 86_400_000` ms, materializando bosses diários recorrentes (ex: 23:30) sem necessidade de cadastrar 7 séries semanais separadas.
+- Agendamento e alertas (`automation-cron.service.ts` e `event-reminder.service.ts`): eventos futuros com `notifyDaily === true` e `announcedToDiscordAt === null` são anunciados automaticamente no `#canal-evento` (`DISCORD_EVENTS_WEBHOOK_URL`) 30 minutos antes do início.
+
+## Conexão Integral dos 12 Webhooks do Sistema
+
+Todos os 12 webhooks cadastrados em `apps/api/src/config/discord.config.ts` possuem rotas e disparadores reais no código:
+
+1. **`events`** (`DISCORD_EVENTS_WEBHOOK_URL` -> `#canal-evento`): anúncio público de criação/materialização de eventos e alerta 30 min antes do início (quando `notifyDaily` ativo).
+2. **`attendance`** (`DISCORD_ATTENDANCE_WEBHOOK_URL` -> `#canal-presenca`): abertura de chamada de presença e encerramento de evento com distribuição de DKP.
+3. **`auctions`** (`DISCORD_AUCTIONS_WEBHOOK_URL` -> `#leilao-g3x`): abertura de leilões, aviso de encerramento iminente (últimos 15 min) e arremate.
+4. **`drops`** (`DISCORD_DROPS_WEBHOOK_URL` -> `#drops-entregues`): entregas de leilão, vendas em diamantes e **despacho de itens do Baú da Guilda**.
+5. **`dkp`** (`DISCORD_DKP_WEBHOOK_URL` -> `#dkp-log`): log contínuo de transações de DKP (+presença, -lances, reembolsos, ajustes).
+6. **`interests`** (`DISCORD_INTERESTS_WEBHOOK_URL` -> `#interesses-loot`): abertura de manifestações de interesse de loot e livros.
+7. **`itemRequests`** (`DISCORD_ITEM_REQUESTS_WEBHOOK_URL` -> `#pedidos-de-item`): notificações de pedidos de catálogo.
+8. **`staffRequests`** (`DISCORD_STAFF_REQUESTS_WEBHOOK_URL` -> `#requests-staff`): alerta restrito à liderança a cada novo pedido de item do Baú da Guilda feito por um jogador.
+9. **`staffReview`** (`DISCORD_STAFF_REVIEW_WEBHOOK_URL` -> `#review-staff`): casos que exigem deliberação humana (ALL_IN, empates, disputas).
+10. **`announcements`** (`DISCORD_ANNOUNCEMENTS_WEBHOOK_URL` -> `#avisos`): comunicados oficiais da Staff aos membros.
+11. **`updates`** (`DISCORD_UPDATES_WEBHOOK_URL` -> `#atualizacoes`): novidades e atualizações gerais da plataforma.
+12. **`staffUpdates`** (`DISCORD_STAFF_UPDATES_WEBHOOK_URL` -> `#atualizacoes-staff`): changelogs técnicos e operacionais de deploy da Staff via CLI.
+- Todos os webhooks utilizam a identidade oficial **Aristolfo, 570 anos de webhook** com avatar `/aristolfo-webhooks.png`.
+- Nenhum script de envio de mensagens de teste roda automaticamente em pipelines ou crons.
 
 ## Deploy e producao
 
@@ -436,6 +473,7 @@ npm.cmd run discord:configure-webhooks
 
 ## Historico recente
 
+| 2026-09-20 | Baú da Guilda ganhou solicitações diretas dos membros (limite de 5 pendentes), despacho Staff com baixa atômica de estoque, histórico de drop, alerta em #drops-entregues e cota liberada na hora; OCR com Gemini deduplica por acquisitionDate+acquisitionInfo em GuildStorageEntry; catálogo suporta multi-prints com destaque de já cadastrados; eventos ganharam periodicidade DAILY e notifyDaily; Codex temporariamente suspenso; 12 webhooks conectados integralmente a fluxos reais. | bau/storage/ocr/webhooks/eventos |
 | 2026-09-19 | Implementado DiscordAuthFilter para captura de exceções de OAuth (invalid_grant/code expirado/recarregamento) redirecionando graciosamente para /login com aviso explicativo e prevencao de duplo clique; headers no-store no callback. | auth/oauth/resilience |
 | 2026-09-19 | Tratamento gracioso de 404 na API do Discord no login OAuth de novatos ainda fora do servidor; ajuste no gate de onboarding e perfil para permitir nomes iguais ao apelido do Discord e bloquear apenas IDs numéricos brutos do Discord. | auth/discord/onboarding |
 | 2026-09-19 | Migrado OCR do catálogo de itens para Gemini Vision (eliminando tesseract.js e erro CSP de worker blob); ajustadas CSPs de Web e API; otimizado workflow do GitHub Actions para polling a cada 30s sem sleep inicial desnecessário. | ocr/csp/ci-cd |

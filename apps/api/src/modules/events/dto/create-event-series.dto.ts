@@ -1,6 +1,6 @@
 import { EventOperationalCategory, EventType, WarRoomOperationPriority } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsEnum, IsInt, IsISO8601, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsInt, IsISO8601, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 import { EventCompositionTargetDto } from './event-composition-target.dto';
 
 export class CreateEventSeriesDto {
@@ -20,6 +20,22 @@ export class CreateEventSeriesDto {
   @Min(15)
   @Max(1440)
   durationMinutes!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  recurrenceType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  intervalDays?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyDaily?: boolean;
 
   @IsOptional()
   @Type(() => Number)

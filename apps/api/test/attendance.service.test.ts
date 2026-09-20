@@ -7,7 +7,7 @@ describe('AttendanceService event batches', () => {
   it('preserves batch identity and order when creating an event', async () => {
     const repository = { create: mock.fn(async (data: any) => ({ id: 'e1', ...data })) };
     const rules = { getEventReward: mock.fn(async () => 50) };
-    const service = new AttendanceService(repository as never, {} as never, { log: mock.fn() } as never, { notifyAttendanceStarted: mock.fn() } as never, rules as never);
+    const service = new AttendanceService(repository as never, {} as never, { log: mock.fn() } as never, { notifyAttendanceStarted: mock.fn(), notifyEventScheduled: mock.fn() } as never, rules as never);
     const created = await service.createEvent({
       name: 'BOSSES T4 - LUNOS', type: EventType.LUNOS, startsAt: new Date().toISOString(),
       createdById: 'staff', attendanceBatchId: 'announcement-1', batchOrder: 2,
@@ -108,7 +108,7 @@ describe('AttendanceService event batches', () => {
       }),
     };
     const rules = { getEventReward: mock.fn(async () => 20) };
-    const service = new AttendanceService(repository as never, {} as never, { log: mock.fn() } as never, { notifyAttendanceStarted: mock.fn() } as never, rules as never);
+    const service = new AttendanceService(repository as never, {} as never, { log: mock.fn() } as never, { notifyAttendanceStarted: mock.fn(), notifyEventScheduled: mock.fn() } as never, rules as never);
 
     await service.createEvent({
       name: 'Guerra de Guilda Extra',

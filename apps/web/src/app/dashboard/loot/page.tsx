@@ -95,22 +95,30 @@ export default function LootHubPage() {
               Leilões de drops por DKP, partilha de vendas em Diamantes e lista de desejos prioritários.
             </p>
           </div>
-          {isStaff && (
-            <div className="flex flex-wrap gap-2">
-              <Link href="/dashboard/staff/storage">
-                <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
-                  <Package className="h-4 w-4" />
-                  Baú da Guilda
-                </Button>
-              </Link>
-              <Link href="/dashboard/staff/diamond-sales">
-                <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
-                  <Coins className="h-4 w-4" />
-                  Gerenciar Vendas
-                </Button>
-              </Link>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/storage">
+              <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
+                <Package className="h-4 w-4" />
+                Baú da Guilda
+              </Button>
+            </Link>
+            {isStaff && (
+              <>
+                <Link href="/dashboard/staff/storage">
+                  <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
+                    <Package className="h-4 w-4" />
+                    Gerenciar Baú (Staff)
+                  </Button>
+                </Link>
+                <Link href="/dashboard/staff/diamond-sales">
+                  <Button variant="secondary" className="gap-2 border border-primary/30 text-primary">
+                    <Coins className="h-4 w-4" />
+                    Gerenciar Vendas
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Quick Balance Cards */}

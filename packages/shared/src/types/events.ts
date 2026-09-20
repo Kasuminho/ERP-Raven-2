@@ -48,6 +48,9 @@ export type EventSeriesRecord<TDate = string | Date> = {
   durationMinutes: number;
   intervalWeeks: number;
   horizonDays: number;
+  recurrenceType?: 'DAILY' | 'WEEKLY' | string;
+  intervalDays?: number | null;
+  notifyDaily?: boolean;
   exceptionDates: string[];
   compositionTargets: EventCompositionTarget[];
   pausedAt?: TDate | null;
@@ -195,6 +198,8 @@ export type EventRecord<TDate = string | Date> = {
   seriesOccurrence?: number | null;
   compositionTargets?: EventCompositionTarget[];
   seriesExceptionSkipped?: boolean;
+  notifyDaily?: boolean;
+  announcedToDiscordAt?: TDate | null;
 };
 
 export type FinalizeEventResult<TEvent = EventRecord, TDate = string | Date> = {

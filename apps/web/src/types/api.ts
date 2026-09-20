@@ -2403,3 +2403,53 @@ export interface StorageListResponse {
   totalUniqueItems: number;
   totalQueueAlerts: number;
 }
+
+export type StorageRequestStatus = 'PENDING' | 'DELIVERED' | 'REJECTED' | 'CANCELLED';
+
+export interface GuildStorageRequest {
+  id: string;
+  storageItemId: string;
+  playerId: string;
+  quantity: number;
+  status: StorageRequestStatus;
+  playerNote?: string | null;
+  staffNote?: string | null;
+  deliveredAt?: string | null;
+  deliveredById?: string | null;
+  rejectedAt?: string | null;
+  rejectedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  storageItem?: {
+    id: string;
+    itemName: string;
+    category: string;
+    quantity: number;
+    kind: string;
+    itemType?: string | null;
+    itemTier?: string | null;
+  };
+  player?: {
+    id: string;
+    nickname: string;
+    class: string;
+    attendancePercentage: number;
+    user?: { discordId?: string };
+  };
+  deliveredBy?: { id: string; name?: string };
+  rejectedBy?: { id: string; name?: string };
+}
+
+export interface MyStorageRequestsSummary {
+  requests: GuildStorageRequest[];
+  activeCount: number;
+  maxAllowed: number;
+  canRequestMore: boolean;
+}
+
+export interface ImportStorageResponse {
+  importedCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedDuplicatesCount: number;
+}
