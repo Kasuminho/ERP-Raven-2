@@ -35,6 +35,7 @@ export type ItemInterestDeliveredEmbedData = {
   itemName: string;
   playerNames: string[];
   proofImageUrl?: string;
+  selectionReason?: string;
 };
 
 export type ItemInterestSkillBatchEmbedData = {
@@ -278,8 +279,17 @@ export function buildItemInterestDeliveredEmbed(data: ItemInterestDeliveredEmbed
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
       { name: localeCopy(locale, { 'pt-BR': 'Recebedor(es)', en: 'Recipient(s)' }), value: data.playerNames.join('\n') || 'Player', inline: false },
-    )
-    .setTimestamp(new Date());
+    );
+
+  if (data.selectionReason) {
+    embed.addFields({
+      name: localeCopy(locale, { 'pt-BR': '⚖️ Critério da Liderança', en: '⚖️ Leadership Criteria' }),
+      value: data.selectionReason,
+      inline: false,
+    });
+  }
+
+  embed.setTimestamp(new Date());
 
   if (isDiscordImageUrl(data.proofImageUrl)) {
     embed.setImage(data.proofImageUrl);

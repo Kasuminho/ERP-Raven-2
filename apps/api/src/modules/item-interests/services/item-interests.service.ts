@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemType, Prisma } from '@prisma/client';
+import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemTier, ItemType, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import type {
   ItemInterestEntryRelations as SharedItemInterestEntryRelations,
@@ -24,6 +24,7 @@ type ItemInterestCatalogDetails = {
   typeEn: string;
   typeEs: string | null;
   itemType: ItemType | null;
+  itemTier: ItemTier | null;
   image1Url: string | null;
   image2Url: string | null;
 };
@@ -477,7 +478,7 @@ export class ItemInterestsService {
     return this.getPost(postId);
   }
 
-  async decideWinner(postId: string, entryId: string, actorId: string): Promise<ItemInterestDetails> {
+  async decideWinner(postId: string, entryId: string, actorId: string, reason?: string): Promise<ItemInterestDetails> {
     await this.prisma.$transaction(async (tx) => {
       const post = await tx.itemInterestPost.findUnique({
         where: { id: postId },
@@ -504,6 +505,7 @@ export class ItemInterestsService {
           status: ItemInterestStatus.READY_FOR_DELIVERY,
           closedAt: post.closedAt ?? now,
           selectedEntryId: entry.id,
+          selectionReason: reason ? reason.trim() : null,
           deliveryEnabledAt: now,
         },
       });
@@ -512,6 +514,7 @@ export class ItemInterestsService {
         previousStatus: post.status,
         selectedEntryId: entry.id,
         selectedPlayerId: entry.playerId,
+        selectionReason: reason ? reason.trim() : undefined,
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -719,6 +722,7 @@ export class ItemInterestsService {
           typeEn: true,
           typeEs: true,
           itemType: true,
+          itemTier: true,
           image1Url: true,
           image2Url: true,
         },
@@ -735,6 +739,8 @@ export class ItemInterestsService {
             select: {
               id: true,
               nickname: true,
+              class: true,
+              combatPower: true,
               dimensionalLayer: true,
               attendancePercentage: true,
             },
@@ -859,12 +865,13 @@ export class ItemInterestsService {
       return posts;
     }
 
-    const [players, dkpTotals, activeLocks, activeRequests, staffNotes] = await Promise.all([
+    const [players, dkpTotals, activeLocks, activeRequests, staffNotes, dropHistories] = await Promise.all([
       this.prisma.player.findMany({
         where: { id: { in: playerIds } },
         select: {
           id: true,
           class: true,
+          combatPower: true,
           dimensionalLayer: true,
           attendancePercentage: true,
         },
@@ -905,6 +912,20 @@ export class ItemInterestsService {
         orderBy: [{ playerId: 'asc' }, { createdAt: 'desc' }],
         take: 500,
       }),
+      this.prisma.dropHistory.findMany({
+        where: { playerId: { in: playerIds } },
+        include: {
+          itemCatalog: {
+            select: {
+              namePt: true,
+              category: true,
+              itemTier: true,
+              itemType: true,
+            },
+          },
+        },
+        orderBy: { deliveredAt: 'desc' },
+      }),
     ]);
 
     const playersById = new Map(players.map((player) => [player.id, player]));
@@ -912,6 +933,15 @@ export class ItemInterestsService {
     const lockedDkpByPlayer = new Map(activeLocks.map((row) => [row.playerId, row._sum.amount ?? 0]));
     const requestsByPlayer = new Map<string, typeof activeRequests>();
     const latestNoteByPlayer = new Map<string, (typeof staffNotes)[number]>();
+    const dropsByPlayer = new Map<string, typeof dropHistories>();
+
+    for (const drop of dropHistories) {
+      if (drop.playerId) {
+        const list = dropsByPlayer.get(drop.playerId) ?? [];
+        list.push(drop);
+        dropsByPlayer.set(drop.playerId, list);
+      }
+    }
 
     for (const request of activeRequests) {
       const requests = requestsByPlayer.get(request.playerId ?? '') ?? [];
@@ -935,6 +965,36 @@ export class ItemInterestsService {
         const lockedDkp = lockedDkpByPlayer.get(entry.playerId) ?? 0;
         const activePlayerRequests = requestsByPlayer.get(entry.playerId) ?? [];
         const latestNote = latestNoteByPlayer.get(entry.playerId);
+        const playerDrops = dropsByPlayer.get(entry.playerId) ?? [];
+        const postCategory = post.itemCatalog?.category;
+        const postTier = post.itemCatalog?.itemTier;
+
+        const tierWeightMap: Record<string, number> = {
+          T1: 1,
+          T2: 2,
+          T3: 3,
+          T4: 4,
+          LEGENDARY: 5,
+        };
+        const postTierWeight = postTier ? (tierWeightMap[postTier] ?? 0) : 0;
+
+        let hasSuperiorOrSameTier = false;
+        let tierWarning: string | null = null;
+
+        if (postCategory && postTierWeight > 0) {
+          const matchingDrop = playerDrops.find((drop) => {
+            if (!drop.itemCatalog) return false;
+            if (drop.itemCatalog.category.trim().toLowerCase() !== postCategory.trim().toLowerCase()) return false;
+            const dropTierWeight = drop.itemCatalog.itemTier ? (tierWeightMap[drop.itemCatalog.itemTier] ?? 0) : 0;
+            return dropTierWeight >= postTierWeight;
+          });
+
+          if (matchingDrop && matchingDrop.itemCatalog) {
+            hasSuperiorOrSameTier = true;
+            tierWarning = `Já recebeu ${matchingDrop.itemCatalog.namePt} (${matchingDrop.itemCatalog.itemTier}) neste mesmo slot (${postCategory})!`;
+          }
+        }
+
         const recentLoot = {
           queueDays: entry.lootStats?.queueDays ?? 0,
           totalDrops: entry.lootStats?.totalDrops ?? 0,
@@ -943,15 +1003,30 @@ export class ItemInterestsService {
           lastDropAt: entry.lootStats?.lastDropAt ?? null,
         };
 
+        const decisionSignals = this.interestDecisionSignalsPt({
+          attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
+          availableDkp: totalDkp - lockedDkp,
+          activeRequestsCount: activePlayerRequests.length,
+          latestNoteSeverity: latestNote?.severity,
+          recentLoot,
+        });
+
+        if (tierWarning) {
+          decisionSignals.unshift(tierWarning);
+        }
+
         return {
           ...entry,
           staffComparison: {
             playerClass: player?.class ?? 'UNKNOWN',
+            combatPower: player?.combatPower ?? 0,
             dimensionalLayer: player?.dimensionalLayer ?? entry.player.dimensionalLayer,
             attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
             totalDkp,
             lockedDkp,
             availableDkp: totalDkp - lockedDkp,
+            hasSuperiorOrSameTier,
+            tierWarning,
             activeRequests: activePlayerRequests.map((request) => ({
               id: request.id,
               itemName: request.itemName,
@@ -971,13 +1046,7 @@ export class ItemInterestsService {
                 }
               : null,
             recentLoot,
-            decisionSignalsPt: this.interestDecisionSignalsPt({
-              attendancePercentage: player?.attendancePercentage ?? entry.player.attendancePercentage,
-              availableDkp: totalDkp - lockedDkp,
-              activeRequestsCount: activePlayerRequests.length,
-              latestNoteSeverity: latestNote?.severity,
-              recentLoot,
-            }),
+            decisionSignalsPt: decisionSignals,
             summaryPt: this.interestComparisonSummaryPt(entry.player.nickname, {
               playerClass: player?.class ?? 'UNKNOWN',
               dimensionalLayer: player?.dimensionalLayer ?? entry.player.dimensionalLayer,

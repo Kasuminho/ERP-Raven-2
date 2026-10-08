@@ -64,17 +64,17 @@ export default function DashboardPage() {
       <section className="rounded-xl border border-primary/25 bg-card/60 p-5 shadow-rune backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="page-kicker">G3X &bull; ERP Raven 2</p>
-            <h1 className="page-title mt-1 text-2xl sm:text-3xl font-bold">Comando & Operação do Dia</h1>
+            <p className="page-kicker">{t(locale, 'dashboardDeckKicker')}</p>
+            <h1 className="page-title mt-1 text-2xl sm:text-3xl font-bold">{t(locale, 'dashboardDeckTitle')}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Tudo o que você precisa saber para a jornada de hoje: próximos bosses, leilões ativos e status de presença.
+              {t(locale, 'dashboardDeckDescription')}
             </p>
           </div>
           {isStaff && (
             <Link href="/dashboard/staff">
               <Button variant="secondary" className="gap-2 border border-primary/40 bg-primary/10 text-primary">
                 <ShieldAlert className="h-4 w-4" />
-                Painel Staff
+                {t(locale, 'staffPanel')}
               </Button>
             </Link>
           )}
@@ -88,15 +88,15 @@ export default function DashboardPage() {
             className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Guerra & Bosses</span>
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">{t(locale, 'hubWarBosses')}</span>
               <Swords className="h-4 w-4 text-primary" />
             </div>
             <div className="mt-3">
               <p className="truncate text-base font-bold text-foreground group-hover:text-primary">
-                {nextEvent ? nextEvent.name : 'Sem boss hoje'}
+                {nextEvent ? nextEvent.name : t(locale, 'noBossToday')}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {nextEvent ? new Date(nextEvent.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ver cronograma'}
+                {nextEvent ? new Date(nextEvent.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t(locale, 'viewSchedule')}
               </p>
             </div>
           </Link>
@@ -107,14 +107,14 @@ export default function DashboardPage() {
             className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Loot & Cofre</span>
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">{t(locale, 'hubLootVault')}</span>
               <Gem className="h-4 w-4 text-amber-400" />
             </div>
             <div className="mt-3">
               <p className="font-tabular text-xl font-bold text-foreground group-hover:text-primary">
-                {activeAuctions.length} <span className="text-xs font-normal text-muted-foreground">leilões</span>
+                {activeAuctions.length} <span className="text-xs font-normal text-muted-foreground">{t(locale, 'activeAuctionsCount')}</span>
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Lances silenciosos</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(locale, 'silentBids')}</p>
             </div>
           </Link>
 
@@ -124,28 +124,28 @@ export default function DashboardPage() {
             className="group flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4 transition-all hover:border-primary/40 hover:bg-primary/5"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Guilda & Roster</span>
+              <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">{t(locale, 'hubGuildRoster')}</span>
               <UsersRound className="h-4 w-4 text-blue-400" />
             </div>
             <div className="mt-3">
               <p className="font-tabular text-xl font-bold text-foreground group-hover:text-primary">
-                {players.data?.length ?? 0} <span className="text-xs font-normal text-muted-foreground">membros</span>
+                {players.data?.length ?? 0} <span className="text-xs font-normal text-muted-foreground">{t(locale, 'guildMembersCount')}</span>
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Ver classes e CP</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(locale, 'viewClassesAndCp')}</p>
             </div>
           </Link>
 
           {/* Hub 4: DKP */}
           <div className="flex flex-col justify-between rounded-lg border border-white/10 bg-background/50 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground">Meu Saldo</span>
+              <span className="text-xs font-semibold text-muted-foreground">{t(locale, 'myBalance')}</span>
               <Sparkles className="h-4 w-4 text-emerald-400" />
             </div>
             <div className="mt-3">
               <p className="font-tabular text-xl font-bold text-emerald-400">
                 {dkp.data?.total ?? 0} <span className="text-xs font-normal text-muted-foreground">DKP</span>
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Pontuação de presença</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(locale, 'attendanceScoreDesc')}</p>
             </div>
           </div>
         </div>
@@ -169,11 +169,11 @@ export default function DashboardPage() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="page-kicker">Loot de Guilda</p>
-            <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">Leilões Ativos</h2>
+            <p className="page-kicker">{t(locale, 'guildLootKicker')}</p>
+            <h2 className="font-[var(--font-cinzel)] text-2xl font-bold">{t(locale, 'activeAuctionsTitle')}</h2>
           </div>
           <Link href="/dashboard/loot" className="text-xs text-primary hover:underline">
-            Ver central de loot completa &rarr;
+            {t(locale, 'viewFullLootCenter')} &rarr;
           </Link>
         </div>
 
@@ -184,8 +184,8 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <EmptyState title="Nenhum leilão em andamento">
-            Itens dropados de bosses de campo e masmorras aparecerão aqui para lances da guilda.
+          <EmptyState title={t(locale, 'noAuctionsRunning')}>
+            {t(locale, 'noAuctionsRunningDesc')}
           </EmptyState>
         )}
       </section>
@@ -194,9 +194,9 @@ export default function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-white/10 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-bold">Top DKP da Guilda</CardTitle>
+            <CardTitle className="text-base font-bold">{t(locale, 'topGuildDkp')}</CardTitle>
             <Link href="/dashboard/members" className="text-xs text-muted-foreground hover:text-primary">
-              Ver todos &rarr;
+              {t(locale, 'viewAll')} &rarr;
             </Link>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -213,16 +213,16 @@ export default function DashboardPage() {
               </div>
             ))}
             {!leaderboard.isLoading && (leaderboard.data ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum registro de DKP encontrado.</p>
+              <p className="text-sm text-muted-foreground">{t(locale, 'noDkpRecordsFound')}</p>
             )}
           </CardContent>
         </Card>
 
         <Card className="border-white/10 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-bold">Próximos Eventos</CardTitle>
+            <CardTitle className="text-base font-bold">{t(locale, 'upcomingEventsTitle')}</CardTitle>
             <Link href="/dashboard/events" className="text-xs text-muted-foreground hover:text-primary">
-              Ver agenda &rarr;
+              {t(locale, 'viewCalendar')} &rarr;
             </Link>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -246,7 +246,7 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">Nenhum evento agendado no momento.</p>
+              <p className="text-sm text-muted-foreground">{t(locale, 'noScheduledEvents')}</p>
             )}
           </CardContent>
         </Card>

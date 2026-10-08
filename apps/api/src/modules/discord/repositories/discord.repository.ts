@@ -148,22 +148,29 @@ export class DiscordRepository {
     });
   }
 
-  async getPrimaryPlayerSession(userId: string): Promise<{ playerId?: string; roles: string[]; membershipStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING_REACTIVATION'; reactivationRequestedAt?: Date }> {
-    const player = await this.prisma.player.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        roles: {
-          include: { role: true },
+  async getPrimaryPlayerSession(userId: string): Promise<{ playerId?: string; roles: string[]; membershipStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING_REACTIVATION'; reactivationRequestedAt?: Date; preferredLocale?: string }> {
+    const [player, user] = await Promise.all([
+      this.prisma.player.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          roles: {
+            include: { role: true },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { preferredLocale: true },
+      }),
+    ]);
 
     return {
       playerId: player?.id,
       roles: player?.roles.map((row) => row.role.name) ?? [],
       membershipStatus: !player || player.isActive ? 'ACTIVE' : player.reactivationRequestedAt ? 'PENDING_REACTIVATION' : 'INACTIVE',
       reactivationRequestedAt: player?.reactivationRequestedAt ?? undefined,
+      preferredLocale: user?.preferredLocale ?? 'pt',
     };
   }
 

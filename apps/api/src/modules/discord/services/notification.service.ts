@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventType, Prisma } from '@prisma/client';
-import type { MessageCreateOptions } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type MessageCreateOptions } from 'discord.js';
 import { AuditService } from '../../audit/services/audit.service';
 import { buildAttendanceStartedEmbed, buildEventFinalizedEmbed } from '../bot/embeds/attendance.embeds';
 import { buildAuctionCreatedEmbed, buildAuctionDeliveryEmbed, buildAuctionWinnerEmbed } from '../bot/embeds/auction.embeds';
@@ -283,12 +283,44 @@ export class NotificationService {
     closesAt: Date;
     imageUrl?: string | null;
   }): Promise<void> {
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`interest:toggle:${data.postId}`)
+        .setLabel('🎯 Manifestar Interesse')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setLabel('🌐 Abrir no Site')
+        .setStyle(ButtonStyle.Link)
+        .setURL(this.dashboardUrl('/dashboard/interests')),
+    );
+
+    const embed = buildItemInterestCreatedEmbed({
+      ...data,
+      url: this.dashboardUrl('/dashboard/interests'),
+      imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
+    }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn));
+
+    const channelId = this.config.get<string>('discord.channels.interests');
+    if (channelId) {
+      try {
+        await this.bot.sendChannelMessage(channelId, {
+          embeds: [embed],
+          components: [actionRow],
+        });
+        await this.audit('DISCORD_NOTIFY_ITEM_INTEREST_CREATED', data.postId, {
+          channelId,
+          itemName: data.itemName,
+          mode: data.mode,
+          closesAt: data.closesAt.toISOString(),
+        });
+        return;
+      } catch (error) {
+        await this.auditFailure('DISCORD_NOTIFY_ITEM_INTEREST_CREATED_FAILED', data.postId, error, { channelId });
+      }
+    }
+
     await this.sendWebhookChannel('interests', {
-      embeds: [buildItemInterestCreatedEmbed({
-        ...data,
-        url: this.dashboardUrl('/dashboard/interests'),
-        imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
-      }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn))],
+      embeds: [embed],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_CREATED', data.postId, {
       itemName: data.itemName,
       mode: data.mode,
@@ -302,6 +334,7 @@ export class NotificationService {
     itemName: string;
     playerNames: string[];
     proofImageUrl?: string | null;
+    selectionReason?: string | null;
   }): Promise<void> {
     await this.sendChannel('drops', {
       embeds: [buildItemInterestDeliveredEmbed({
@@ -309,6 +342,7 @@ export class NotificationService {
         itemName: data.itemName,
         playerNames: data.playerNames,
         proofImageUrl: this.publicImageUrl(data.proofImageUrl ?? undefined),
+        selectionReason: data.selectionReason ?? undefined,
       }, this.localeFor('drops', data.title, data.itemName))],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_DELIVERED', data.postId);
   }
@@ -640,8 +674,9 @@ export class NotificationService {
       return undefined;
     }
 
-    const baseUrl = this.config.get<string>('discord.publicUrl') ?? '';
-    return baseUrl ? `${baseUrl.replace(/\/$/, '')}${url}` : undefined;
+    const apiBaseUrl = process.env.API_PUBLIC_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.guild-alcatraz.site';
+    const baseUrl = this.config.get<string>('discord.publicUrl') || apiBaseUrl;
+    return `${baseUrl.replace(/\/$/, '')}${url}`;
   }
 
   private webhookChannelLabel(webhookKey: string): string {

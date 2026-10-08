@@ -309,6 +309,8 @@ export type ItemInterestEntry = SharedItemInterestEntryRecord<
   {
     id: string;
     nickname: string;
+    class?: PlayerClass;
+    combatPower?: number;
     dimensionalLayer: number;
     attendancePercentage: number;
   },
@@ -323,6 +325,7 @@ export type ItemInterestPost = SharedItemInterestPostRecord<
     | "id"
     | "kind"
     | "category"
+    | "itemTier"
     | "itemType"
     | "namePt"
     | "nameEn"

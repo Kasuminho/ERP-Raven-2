@@ -26,9 +26,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (get().initialized && !force) return get().authenticated;
 
     try {
-      const { data } = await api.get<{ userId: string; playerId?: string; roles?: UserRole[]; membershipStatus?: AuthState['membershipStatus'] }>('/auth/me', {
+      const { data } = await api.get<{
+        userId: string;
+        playerId?: string;
+        roles?: UserRole[];
+        membershipStatus?: AuthState['membershipStatus'];
+        preferredLocale?: string;
+      }>('/auth/me', {
         headers: { 'X-Suppress-Session-Toast': 'true' },
       });
+
+      if (data.preferredLocale && (data.preferredLocale === 'pt' || data.preferredLocale === 'en' || data.preferredLocale === 'es')) {
+        const { useLocaleStore } = await import('@/store/locale-store');
+        useLocaleStore.getState().setLocale(data.preferredLocale);
+      }
+
       set({
         authenticated: true,
         initialized: true,

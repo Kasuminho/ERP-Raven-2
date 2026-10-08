@@ -32,6 +32,9 @@ export type ItemInterestStaffComparison<TDate = string | Date, TItemTier = strin
     authorName: string;
   } | null;
   recentLoot: ItemInterestLootStats<TDate>;
+  combatPower?: number;
+  hasSuperiorOrSameTier?: boolean;
+  tierWarning?: string | null;
   decisionSignalsPt: string[];
   summaryPt: string;
 };
@@ -114,6 +117,7 @@ export type ItemInterestPostRecord<
   votingRound: number;
   votingCandidateEntryIds?: string[];
   selectedEntryId?: string | null;
+  selectionReason?: string | null;
   deliveryEnabledAt?: TDate | null;
   closesAt: TDate;
   closedAt?: TDate | null;

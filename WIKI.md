@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-10-05 (Modo Gamer AlcatraZ)
+**Ultima revisao:** 2026-10-08 (Interesses Omnichannel Discord/Web por CP e i18n Global)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -189,7 +189,12 @@ Automacao ativa:
 - Declarar interesse exige presenca D-30 minima conforme `attendanceEligibilityRules.participationMinimumPercent` (default 50%).
 - Ao fechar um interesse em que todas as declaracoes sao de transmutar, o sistema pula a votacao da Staff e sorteia automaticamente. Quem recebeu item de transmutar do mesmo `ItemType` nas ultimas 24h fica fora enquanto houver ao menos um interessado livre. Se todos os interessados estiverem nesse bloqueio de 24h, o post nao fecha vazio: o sistema faz fallback ponderado com base nos recebimentos de transmutar dos ultimos 30 dias, dando menos peso a quem recebeu mais.
 - As regras de sorteio/transmutar de interesses pertencem ao dominio `ItemInterestTransmuteRaffleService`; `ItemInterestsService` apenas coordena fechamento, status, auditoria e persistencia.
-- A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, camada, presenca, DKP total/travado/disponivel, requests ativos, ultima nota Staff, historico de loot e sinais operacionais. O endpoint normal dos players nao recebe esse comparador sensivel.
+- A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, combatPower, camada, presenca, DKP total/travado/disponivel, alerta automatico de item superior/mesmo tier no mesmo slot (`hasSuperiorOrSameTier`), requests ativos, ultima nota Staff, historico de loot e sinais operacionais.
+- O fluxo de interesse opera de forma Omnichannel (Discord + Web): posts abertos enviam mensagem para o Discord com botao interativo `[🎯 Manifestar Interesse]` via gateway bot `interactionCreate` e link `🌐 Abrir no Site`. O bot valida perfil ativo, calcula CP registrado e alterna o interesse em resposta efemera.
+- No painel da Staff, os candidatos sao ordenados por Combat Power decrescente (`combatPower DESC`), com destaque dourado para o Top 1, switch manual de presenca no boss por participante e decisao agil de 1 clique (`POST /item-interests/:id/decide`) sem necessidade de quorum de 3 votos.
+- Se a lideranca selecionar um candidato que nao seja o Top 1 de CP (ou caso o Top 1 esteja ausente no boss/ja possua item superior), um modal rapido registra a justificativa transparente (`selectionReason`), persistida no post e no audit log.
+- Na entrega (`POST /item-interests/:id/deliver`), o Staff anexa o print do jogo, que e publicado com imagem aberta no Discord (`embed.setImage`) acompanhado do criterio e justificativa adotados.
+- Internacionalizacao (i18n): seletor de idiomas `LocaleSwitcher` disponivel na barra de navegacao e menu mobile, sincronizacao imediata de `preferredLocale` em `/auth/me` e no Perfil do jogador, e dashboard traduzido dinamicamente (PT/EN/ES).
 - A implementacao Web de `/dashboard/staff/interests` fica em componentes locais da rota (`_components/staff-interests-page-content.tsx` e filtros), mantendo a pagina fina e o estado/mutacoes no nivel da experiencia Staff.
 - A implementacao Web de `/dashboard/admin/items` fica em componentes locais da rota (`_components/item-create-form-card.tsx`, `item-catalog-controls-card.tsx` e `item-catalog-card.tsx`), mantendo estado e mutacoes na pagina para preservar contratos e comportamento de leilao/interesse.
 - A central Staff em `/dashboard/staff` abre com o resumo matinal Staff de `GET /operations/staff/morning-briefing`, reunindo urgencias, leiloes vencidos/proximos, reviews, entregas, integridade, saude e secoes acionaveis com Markdown copiavel. Abaixo ficam abas de jornada (`Resolver agora`, `Auditar`, `Configurar`, `Comunicar`, `Operar deploy`) com contadores, cards filtrados e proximas acoes por grupo, alem de pendencias, saude e auditoria.
@@ -627,6 +632,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
+| 2026-10-08 | Interesses Omnichannel (Discord + Web) com botao interativo, ordenacao da Staff por CP, alertas de tier/slot, presenca manual no boss, decisao agil de 1 clique com justificativa anti-panelinha, print aberto no Discord na entrega e seletor global de idiomas (i18n). | interesses/discord/i18n |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
 | 2026-09-19 | Listagem de eventos ajustada para ordem cronologica (proximos primeiro); Painel Staff ganhou customizacao de visibilidade com preset Server Zero; Onboarding obrigatorio bloqueia players com nick padrao do Discord ate informarem nick real do Raven 2, classe e idioma; Piadas do Aristolfo rotacionadas. | UX/Staff/Onboarding |
 | 2026-07-01 | Guias funcionais atuais foram recriados com Staff PT-BR, players PT-BR/EN, identidade Aristolfo correta e guias antigos marcados como historicos. | docs/guias |

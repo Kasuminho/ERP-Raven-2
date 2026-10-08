@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { GlobalSearch } from "@/components/dashboard/global-search";
 import { ProfileLocaleSync } from "@/components/dashboard/profile-locale-sync";
+import { LocaleSwitcher } from "@/components/dashboard/locale-switcher";
 import { CharacterSetupGate } from "@/components/dashboard/character-setup-gate";
 import { AuthGuard } from "@/components/guards/auth-guard";
 import { Button } from "@/components/ui/button";
@@ -230,14 +231,17 @@ export default function DashboardLayout({
               )}
             </div>
 
-            <Button
-              variant="ghost"
-              className="mt-4 justify-start gap-3 text-muted-foreground hover:text-foreground"
-              onClick={logout}
-            >
-              <LogOut className="h-4 w-4" />
-              <span>{t(locale, "signOut")}</span>
-            </Button>
+            <div className="mt-4 space-y-2">
+              <LocaleSwitcher />
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+                onClick={logout}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>{t(locale, "signOut")}</span>
+              </Button>
+            </div>
           </nav>
         </aside>
 
@@ -434,14 +438,17 @@ export default function DashboardLayout({
                   </Link>
                 )}
 
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center gap-2 border border-white/10 text-muted-foreground hover:text-foreground"
-                  onClick={logout}
-                >
-                  <LogOut className="h-4 w-4" />
-                  {t(locale, "signOut")}
-                </Button>
+                <div className="space-y-2">
+                  <LocaleSwitcher />
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center gap-2 border border-white/10 text-muted-foreground hover:text-foreground"
+                    onClick={logout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t(locale, "signOut")}
+                  </Button>
+                </div>
               </div>
             </section>
           </div>

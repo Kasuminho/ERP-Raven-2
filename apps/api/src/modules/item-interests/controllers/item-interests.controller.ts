@@ -80,7 +80,7 @@ export class ItemInterestsController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   async decide(@Param('id') id: string, @Body() dto: VoteItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestDetails> {
-    return this.service.decideWinner(id, dto.entryId, req.user.userId);
+    return this.service.decideWinner(id, dto.entryId, req.user.userId, dto.reason);
   }
 
   @Post(':id/tie-break')

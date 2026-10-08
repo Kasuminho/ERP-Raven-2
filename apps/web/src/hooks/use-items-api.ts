@@ -266,6 +266,15 @@ export function useVoteItemInterest() {
   });
 }
 
+export function useDecideItemInterest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { postId: string; entryId: string; reason?: string }) =>
+      (await api.post<ItemInterestPost>(`/item-interests/${data.postId}/decide`, { entryId: data.entryId, reason: data.reason })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+  });
+}
+
 export function useStartItemInterestTieBreak() {
   const queryClient = useQueryClient();
   return useMutation({

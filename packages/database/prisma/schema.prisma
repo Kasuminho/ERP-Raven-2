@@ -2228,6 +2228,7 @@ model ItemInterestPost {
   votingRound             Int                 @default(1)
   votingCandidateEntryIds Json                @default("[]")
   selectedEntryId         String?
+  selectionReason         String?
   deliveryEnabledAt       DateTime?
   closesAt                DateTime
   closedAt                DateTime?
