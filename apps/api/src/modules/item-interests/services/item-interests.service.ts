@@ -1183,35 +1183,6 @@ export class ItemInterestsService {
         return updated;
       }
 
-      // Se ha apenas 1 candidato querendo equipar (Equip > Transmute), auto-seleciona ele diretamente sem burocracia de votacao
-      const equipEntries = post.entries.filter((entry) => !entry.isTransmuteRequest);
-      if (equipEntries.length === 1 || post.entries.length === 1) {
-        const winner = equipEntries.length === 1 ? equipEntries[0] : post.entries[0];
-        const updated = await tx.itemInterestPost.update({
-          where: { id },
-          data: {
-            status: ItemInterestStatus.READY_FOR_DELIVERY,
-            closedAt: now,
-            votingRound: 1,
-            votingCandidateEntryIds: [],
-            selectedEntryId: winner.id,
-            deliveryEnabledAt: now,
-          },
-        });
-
-        await this.auditWithinTransaction(tx, 'ITEM_INTEREST_AUTO_SELECTED_DIRECT', id, actorId, {
-          automatic,
-          previousStatus: post.status,
-          nextStatus: ItemInterestStatus.READY_FOR_DELIVERY,
-          entriesCount: post.entries.length,
-          selectedEntryId: winner.id,
-          selectedPlayerId: winner.playerId,
-          closesAt: post.closesAt.toISOString(),
-        });
-
-        return updated;
-      }
-
       const nextStatus = ItemInterestStatus.VOTING;
       const updated = await tx.itemInterestPost.update({
         where: { id },
