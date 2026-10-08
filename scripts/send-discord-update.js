@@ -8,7 +8,7 @@ const colors = {
 };
 
 const webhookUsername = 'Aristolfo, 570 anos de webhook';
-const webhookAvatarUrl = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
+const webhookAvatarUrl = process.env.DISCORD_WEBHOOK_AVATAR_URL || 'https://app.guild-alcatraz.site/aristolfo-webhooks.png';
 const punchlines = {
   'PT-BR': [
     '*Aristolfo carimbou o changelog. O deploy subiu; se o seu boneco continuar errando rota no auto-hunt, a culpa e da build, nao do servidor.*',

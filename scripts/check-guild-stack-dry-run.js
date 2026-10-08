@@ -29,6 +29,7 @@ const G3X_MARKERS = [
   'container_name: guild-web',
   'container_name: guild-watchtower',
   'app.guild-g3x.com.br',
+  'app.guild-alcatraz.site',
   '/srv/guild/uploads',
   '/srv/guild/backups',
   'guild_platform',

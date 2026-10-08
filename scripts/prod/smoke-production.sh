@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-BASE_URL="${PRODUCTION_BASE_URL:-https://app.guild-g3x.com.br}"
+BASE_URL="${PRODUCTION_BASE_URL:-https://app.guild-alcatraz.site}"
 EXPECTED_VERSION="${EXPECTED_VERSION:-}"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT INT TERM

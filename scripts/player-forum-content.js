@@ -1,4 +1,4 @@
-const APP_URL = 'https://app.guild-g3x.com.br';
+const APP_URL = process.env.PUBLIC_APP_URL || 'https://app.guild-alcatraz.site';
 
 function route(path) {
   return `${APP_URL}${path}`;
@@ -57,7 +57,7 @@ Start with the [Player checklist](${route('/dashboard/onboarding')}). Tutorials 
     visualPt: ['Use sua conta da guild', 'Sessão segura no navegador', 'Retorno pode exigir revisão'],
     visualEn: ['Use your guild account', 'Secure browser session', 'Return may need review'],
     pt: `## 🔐 Login e conta
-1. Acesse [app.guild-g3x.com.br](${APP_URL}).
+1. Acesse [app.guild-alcatraz.site](${APP_URL}).
 2. Clique para entrar com Discord.
 3. Autorize usando a mesma conta que está no servidor da guild.
 4. Depois do login, você será levado ao ERP ou à revisão de acesso.
@@ -68,7 +68,7 @@ Start with the [Player checklist](${route('/dashboard/onboarding')}). Tutorials 
 
 Se o login voltar para a tela inicial, tente uma janela comum sem bloqueio de cookies, confirme que está na conta Discord correta e mande à Staff apenas o horário aproximado e o texto do erro.`,
     en: `## 🔐 Login and account
-1. Open [app.guild-g3x.com.br](${APP_URL}).
+1. Open [app.guild-alcatraz.site](${APP_URL}).
 2. Choose Discord login.
 3. Authorize with the same account that belongs to the guild server.
 4. After login, you will enter the ERP or see an access review screen.
@@ -267,33 +267,41 @@ Wishlist shows demand to Staff. **It does not create a bid, submit an interest, 
   },
   {
     slug: 'requests-codex',
-    title: '07 · Item Requests, Baú da Guilda e Codex',
+    title: '07 · Metas de Craft, Baú da Guilda e Codex',
     tag: 'loot',
     route: '/dashboard/item-requests',
-    visualPt: ['Até 5 itens no Baú', 'Entre na fila correta', 'Codex pausado temporariamente'],
-    visualEn: ['Up to 5 vault items', 'Join the right queue', 'Codex paused temporarily'],
-    pt: `## 📦 Baú da Guilda (Novo)
-Em [Baú da Guilda](${route('/dashboard/storage')}) você pode consultar todos os itens disponíveis no tesouro da guilda e solicitar os equipamentos ou materiais que precisa:
+    visualPt: ['Metas de craft e insumos', 'Baú com distribuição livre', 'Pedidos para Codex'],
+    visualEn: ['Craft goals and inputs', 'Vault free distribution', 'Requests for Codex'],
+    pt: `## 📦 Baú da Guilda & Distribuição Livre
+Em [Baú da Guilda](${route('/dashboard/storage')}) você consulta todos os itens disponíveis no tesouro da guilda e solicita equipamentos ou materiais para sua evolução:
+- **Distribuição livre:** a guilda opera focada em distribuir para o avanço dos membros — nenhuma entrega é bloqueada por falta de saldo da guilda;
+- **Finalidade do pedido:** você pode solicitar para uso normal, insumo de craft ou diretamente para **completar entradas de Codex**;
 - **Cota ativa:** cada jogador pode manter até **5 solicitações pendentes simultâneas**;
-- **Envio pela Staff:** ao despachar o item no jogo, a Staff dá baixa no estoque e sua vaga na cota é liberada imediatamente;
-- **Rejeição ou cancelamento:** se a Staff rejeitar ou se você cancelar uma solicitação pendente, a vaga também é liberada na hora.
+- **Envio pela Staff:** ao despachar o item no jogo, a vaga na sua cota é liberada imediatamente e o drop entra no seu histórico.
 
-## 📋 Item Requests
-Use [Item Requests](${route('/dashboard/item-requests')}) para entrar na fila de itens requestáveis do catálogo. Escolha o item, envie a prova exigida e acompanhe posição estimada, unidades à frente, idade do update e alternativas com fila menor. Materiais de craft T3 podem ter prioridade sobre Quintessência do mesmo material.
+## 📋 Item Requests & Metas de Craft
+Use [Item Requests](${route('/dashboard/item-requests')}) para cadastrar sua meta de craft e entrar na fila de insumos:
+- **Tipos de insumo:** escolha se precisa de **Equipamento Normal / Craft Direto**, **Fragmento de Receita (Chance de 30%)**, **Material de Craft Roxo** ou **Quintessência**;
+- **Quantidades:** informe a quantidade que já possui hoje no inventário e a quantidade total que precisa para o craft;
+- **Prioridade operacional:** pedidos de craft de equipamento normal têm prioridade sobre Quintessência do mesmo material; pedidos com Quintessência entram atrás na fila operacional.
 
-## 📖 Codex (Pausado Temporariamente)
-O envio de novas requisições de Codex está temporariamente suspenso nesta fase do servidor para priorizar a distribuição direta pelo Baú da Guilda. Registros históricos anteriores permanecem visíveis em [Codex](${route('/dashboard/codex')}).`,
-    en: `## 📦 Guild Storage (New)
-In [Guild Storage](${route('/dashboard/storage')}) you can view all items available in the guild vault and request what you need for progression:
+## 📖 Codex Integrado
+Para preencher Codex, solicite o item diretamente pelo [Baú da Guilda](${route('/dashboard/storage')}) marcando a finalidade **Codex** e o nome da entrada. Histórico e acompanhamento continuam em [Codex](${route('/dashboard/codex')}).`,
+    en: `## 📦 Guild Vault & Free Distribution
+In [Guild Storage](${route('/dashboard/storage')}) you can view all items available in the guild treasure and request progression equipment or materials:
+- **Free distribution:** the guild prioritizes distributing gear for member progression — deliveries are never blocked by zero vault stock;
+- **Request purpose:** choose between normal use, craft materials, or directly to **complete Codex entries**;
 - **Active quota:** each member can hold up to **5 concurrent pending requests**;
-- **Staff dispatch:** when Staff sends the item in game, vault stock is deducted and your quota slot is freed immediately;
-- **Rejection or cancellation:** if Staff rejects or if you cancel a pending request, the quota slot is freed right away.
+- **Staff dispatch:** when Staff sends the item in game, your quota slot is freed immediately and recorded in your drop history.
 
-## 📋 Item Requests
-Use [Item Requests](${route('/dashboard/item-requests')}) to join a queue for catalog items. Choose the item, provide required proof, and track estimated position, units ahead, update age, and shorter-queue alternatives. T3 craft materials may take priority over Quintessence of the same material.
+## 📋 Item Requests & Craft Goals
+Use [Item Requests](${route('/dashboard/item-requests')}) to register your crafting goals and queue for inputs:
+- **Input types:** choose between **Standard Equipment / Direct Craft**, **Recipe Fragment (30% success chance)**, **Purple Craft Material**, or **Quintessence**;
+- **Quantities:** state your current inventory count and total amount needed;
+- **Operational priority:** normal equipment craft requests take priority over Quintessence of the same material; Quintessence requests sit behind in queue order.
 
-## 📖 Codex (Temporarily Paused)
-Submitting new Codex requests is temporarily paused for this server phase to prioritize direct distribution from the Guild Storage. Past historical records remain accessible at [Codex](${route('/dashboard/codex')}).`,
+## 📖 Integrated Codex
+To complete your Codex, request the item directly through [Guild Storage](${route('/dashboard/storage')}) setting purpose to **Codex** with the entry name. Track past history at [Codex](${route('/dashboard/codex')}).`,
   },
   {
     slug: 'drops-resultados',

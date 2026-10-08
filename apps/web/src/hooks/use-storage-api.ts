@@ -160,6 +160,8 @@ export function useCreateStorageRequest() {
       storageItemId: string;
       quantity?: number;
       playerNote?: string;
+      purpose?: 'USE' | 'CODEX' | 'CRAFT';
+      codexEntryName?: string;
     }) => {
       const response = await api.post<import('@/types/api').GuildStorageRequest>('/storage/requests', data);
       return response.data;

@@ -774,7 +774,7 @@ export class StaffSummaryService {
   }
 
   private publicApiBaseUrl(): string {
-    const publicUrl = this.config.get<string>('discord.publicUrl') || process.env.PUBLIC_APP_URL || 'https://app.guild-g3x.com.br';
+    const publicUrl = this.config.get<string>('discord.publicUrl') || process.env.PUBLIC_APP_URL || 'https://app.guild-alcatraz.site';
     return `${publicUrl.replace(/\/+$/, '')}/api/v1`;
   }
 

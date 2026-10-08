@@ -48,21 +48,30 @@ export class CodexService {
   }
 
   async createForCurrentUser(userId: string, data: CreateCodexRequestDto): Promise<CodexRequest> {
-    if (!data.imageUrl?.trim()) {
-      throw new BadRequestException('imageUrl is required.');
+    const imageUrl = data.imageUrl?.trim();
+    if (!imageUrl && !data.storageItemId && !data.itemCatalogId) {
+      throw new BadRequestException('Provide an image proof or select an item from storage.');
     }
 
     const player = await this.getPrimaryPlayer(userId);
     const created = await this.prisma.codexRequest.create({
       data: {
         playerId: player.id,
-        imageUrl: data.imageUrl.trim(),
+        imageUrl: imageUrl || undefined,
+        storageItemId: data.storageItemId || undefined,
+        itemCatalogId: data.itemCatalogId || undefined,
+        quantity: data.quantity ?? 1,
         note: data.note?.trim() || undefined,
         queuedAt: new Date(),
       },
     });
 
-    await this.audit('CODEX_REQUEST_CREATED', created.id, userId, { playerId: player.id });
+    await this.audit('CODEX_REQUEST_CREATED', created.id, userId, {
+      playerId: player.id,
+      storageItemId: data.storageItemId,
+      itemCatalogId: data.itemCatalogId,
+      quantity: data.quantity,
+    });
     return created;
   }
 

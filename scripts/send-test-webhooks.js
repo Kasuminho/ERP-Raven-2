@@ -22,7 +22,7 @@ function loadEnv(cwd) {
 loadEnv(process.cwd());
 
 const username = 'Aristolfo, 570 anos de webhook';
-const avatar_url = 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
+const avatar_url = process.env.DISCORD_WEBHOOK_AVATAR_URL || 'https://app.guild-alcatraz.site/aristolfo-webhooks.png';
 
 const testPayloads = [
   {
@@ -167,7 +167,7 @@ const testPayloads = [
       fields: [
         { name: '✨ Última Novidade', value: 'Reformulação em 4 Macro Hubs (Hoje, Guerra, Loot, Membros)', inline: true },
         { name: '📱 Plataforma', value: 'Totalmente responsivo e sem burocracias corporativas', inline: true },
-        { name: '🌐 Acesso Direto', value: 'https://app.guild-g3x.com.br', inline: false },
+        { name: '🌐 Acesso Direto', value: 'https://app.guild-alcatraz.site', inline: false },
       ],
       footer: { text: '🗑️ Mensagem de teste e identificação de canal — Pode apagar!' },
       timestamp: new Date().toISOString(),

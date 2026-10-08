@@ -1,5 +1,6 @@
+import { ItemRequestCraftType } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateItemRequestDto {
   @IsUUID()
@@ -18,6 +19,32 @@ export class CreateItemRequestDto {
   @MinLength(1)
   @MaxLength(2048)
   imageUrl?: string;
+
+  @IsOptional()
+  @IsEnum(ItemRequestCraftType)
+  craftType?: ItemRequestCraftType;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  currentQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  targetQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  quintessenceQuantity?: number;
+
+  @IsOptional()
+  @IsUUID()
+  targetItemCatalogId?: string;
 
   @IsOptional()
   @IsString()
@@ -44,4 +71,30 @@ export class CreateSelfItemRequestDto {
   @MinLength(1)
   @MaxLength(2048)
   imageUrl?: string;
+
+  @IsOptional()
+  @IsEnum(ItemRequestCraftType)
+  craftType?: ItemRequestCraftType;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  currentQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  targetQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  quintessenceQuantity?: number;
+
+  @IsOptional()
+  @IsUUID()
+  targetItemCatalogId?: string;
 }

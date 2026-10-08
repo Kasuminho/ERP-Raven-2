@@ -13,7 +13,7 @@ const colors = {
 };
 
 const WEBHOOK_USERNAME = process.env.DISCORD_WEBHOOK_USERNAME || 'Aristolfo, 570 anos de webhook';
-const WEBHOOK_AVATAR_URL = process.env.DISCORD_WEBHOOK_AVATAR_URL || 'https://app.guild-g3x.com.br/aristolfo-webhooks.png';
+const WEBHOOK_AVATAR_URL = process.env.DISCORD_WEBHOOK_AVATAR_URL || 'https://app.guild-alcatraz.site/aristolfo-webhooks.png';
 
 const PUNCHLINES = [
   '*Aristolfo compilou o resumo. Quem ignorar 10M de gold grátis no correio vai farmar mob no soco.*',

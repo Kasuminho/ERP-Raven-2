@@ -136,13 +136,13 @@ export function buildEventReminderEmbed(data: EventReminderEmbedData): EmbedBuil
 }
 
 function announcementStageLabel(label: string, locale: DiscordLocale): string {
-  const stages: Record<string, Record<DiscordLocale, string>> = {
-    'Novo anuncio cadastrado': { 'pt-BR': 'Novo anuncio cadastrado', en: 'New announcement' },
-    'Lembrete diario': { 'pt-BR': 'Lembrete diario', en: 'Daily reminder' },
-    'Faltam 4 horas': { 'pt-BR': 'Faltam 4 horas', en: '4 hours left' },
-    'Falta 1 hora': { 'pt-BR': 'Falta 1 hora', en: '1 hour left' },
-    'Faltam 30 minutos': { 'pt-BR': 'Faltam 30 minutos', en: '30 minutes left' },
-    Agora: { 'pt-BR': 'Agora', en: 'Starting now' },
+  const stages: Record<string, Record<string, string>> = {
+    'Novo anuncio cadastrado': { 'pt-BR': 'Novo anuncio cadastrado', en: 'New announcement', es: 'Nuevo anuncio registrado' },
+    'Lembrete diario': { 'pt-BR': 'Lembrete diario', en: 'Daily reminder', es: 'Recordatorio diario' },
+    'Faltam 4 horas': { 'pt-BR': 'Faltam 4 horas', en: '4 hours left', es: 'Faltan 4 horas' },
+    'Falta 1 hora': { 'pt-BR': 'Falta 1 hora', en: '1 hour left', es: 'Falta 1 hora' },
+    'Faltam 30 minutos': { 'pt-BR': 'Faltam 30 minutos', en: '30 minutes left', es: 'Faltan 30 minutos' },
+    Agora: { 'pt-BR': 'Agora', en: 'Starting now', es: 'Ahora' },
   };
   const stage = stages[label];
   return stage ? localeCopy(locale, stage) : label;
@@ -178,7 +178,7 @@ export function buildAnnouncementEmbed(data: AnnouncementEmbedData, locale: Disc
 }
 
 export function buildRequestReminderEmbed(data: RequestReminderEmbedData, locale: DiscordLocale = 'pt-BR', staffOnly = false): EmbedBuilder {
-  const copy = (values: Record<DiscordLocale, string>) => staffOnly ? values['pt-BR'] : localeCopy(locale, values);
+  const copy = (values: Record<string, string>) => staffOnly ? (values['pt-BR'] || '') : localeCopy(locale, values);
   const description = staffOnly
     ? pickStaffVoice([
       '**Fila com teia de aranha.** Da uma cutucada no player antes que o pedido vire fossil arqueologico.',

@@ -53,7 +53,14 @@ function PlayerItemRequestsPanel() {
   const createRequest = useCreateMyItemRequest();
   const updateRequest = usePlayerUpdateItemRequest();
   const uploadImage = useUploadImage();
-  const [form, setForm] = useState({ itemCatalogId: '', quantity: 1, imageUrl: '' });
+  const [form, setForm] = useState({
+    itemCatalogId: '',
+    quantity: 1,
+    imageUrl: '',
+    craftType: 'STANDARD' as 'STANDARD' | 'RECIPE' | 'PURPLE_MATERIAL' | 'QUINTESSENCE',
+    currentQuantity: 0,
+    quintessenceQuantity: 0,
+  });
   const [updateProofs, setUpdateProofs] = useState<Record<string, string>>({});
   const selectedItem = (items.data ?? []).find((item) => item.id === form.itemCatalogId);
   const groupedRankings = useMemo(() => groupRequestsByItem(rankings.data ?? []), [rankings.data]);
@@ -77,17 +84,67 @@ function PlayerItemRequestsPanel() {
       <Card>
         <CardHeader><CardTitle>{t(locale, 'newItemRequest')}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_120px]">
-            <Select value={form.itemCatalogId} onChange={(event) => setForm((current) => ({ ...current, itemCatalogId: event.target.value }))}>
-              <option value="">{t(locale, 'selectRequestableItem')}</option>
-              {(items.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {itemName(item, locale)} - {categoryLabel(locale, item.category)}
-                </option>
-              ))}
-            </Select>
-            <Input type="number" min={1} value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: Number(event.target.value) }))} />
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Item / Meta de Craft</label>
+              <Select value={form.itemCatalogId} onChange={(event) => setForm((current) => ({ ...current, itemCatalogId: event.target.value }))}>
+                <option value="">{t(locale, 'selectRequestableItem')}</option>
+                {(items.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {itemName(item, locale)} - {categoryLabel(locale, item.category)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Tipo de Pedido / Insumo</label>
+              <Select
+                value={form.craftType}
+                onChange={(event) => setForm((current) => ({ ...current, craftType: event.target.value as any }))}
+              >
+                <option value="STANDARD">Equipamento Normal / Craft Direto</option>
+                <option value="RECIPE">Fragmento de Receita (Chance 30%)</option>
+                <option value="PURPLE_MATERIAL">Material de Craft Roxo</option>
+                <option value="QUINTESSENCE">Quintessencia (Prioridade Baixa)</option>
+              </Select>
+            </div>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Quantidade que ja tem</label>
+              <Input
+                type="number"
+                min={0}
+                value={form.currentQuantity}
+                onChange={(event) => setForm((current) => ({ ...current, currentQuantity: Math.max(0, Number(event.target.value)) }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Quantidade que precisa</label>
+              <Input
+                type="number"
+                min={1}
+                value={form.quantity}
+                onChange={(event) => setForm((current) => ({ ...current, quantity: Math.max(1, Number(event.target.value)) }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Quintessencia necessaria</label>
+              <Input
+                type="number"
+                min={0}
+                value={form.quintessenceQuantity}
+                onChange={(event) => setForm((current) => ({ ...current, quintessenceQuantity: Math.max(0, Number(event.target.value)) }))}
+              />
+            </div>
+          </div>
+
+          {(form.craftType === 'QUINTESSENCE' || form.quintessenceQuantity > 0) && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+              Prioridade Operacional: Pedidos de Quintessencia entram atras de pedidos de craft de equipamento normal do mesmo material na fila da guilda.
+            </div>
+          )}
           <FileUploadButton
             label={t(locale, 'attachImage')}
             onFileSelect={(files) => {
@@ -98,10 +155,25 @@ function PlayerItemRequestsPanel() {
           {form.imageUrl && <p className="text-center text-xs text-primary">{t(locale, 'printAttached')}</p>}
           <Button
             onClick={() => createRequest.mutate(
-              { itemCatalogId: form.itemCatalogId, quantity: Number(form.quantity), imageUrl: form.imageUrl },
+              {
+                itemCatalogId: form.itemCatalogId,
+                quantity: Number(form.quantity),
+                imageUrl: form.imageUrl,
+                craftType: form.craftType,
+                currentQuantity: Number(form.currentQuantity),
+                targetQuantity: Number(form.quantity),
+                quintessenceQuantity: Number(form.quintessenceQuantity),
+              },
               {
                 onSuccess: () => {
-                  setForm({ itemCatalogId: '', quantity: 1, imageUrl: '' });
+                  setForm({
+                    itemCatalogId: '',
+                    quantity: 1,
+                    imageUrl: '',
+                    craftType: 'STANDARD',
+                    currentQuantity: 0,
+                    quintessenceQuantity: 0,
+                  });
                   notifyToast({ title: t(locale, 'itemRequestSent'), tone: 'success' });
                 },
               },
@@ -128,8 +200,19 @@ function PlayerItemRequestsPanel() {
                 <div className="flex min-w-0 gap-3">
                   {request.imageUrl && <img className="h-16 w-16 rounded-md border object-cover" src={displayImageUrl(request.imageUrl)} alt={request.itemName} />}
                   <div>
-                    <p className="font-semibold">{itemName(request.itemCatalog ?? undefined, locale, request.itemName)}</p>
-                    <p className="text-sm text-muted-foreground">{t(locale, 'rank')} #{request.rankPosition} - {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{itemName(request.itemCatalog ?? undefined, locale, request.itemName)}</p>
+                      {request.craftType && request.craftType !== 'STANDARD' && (
+                        <Badge tone={request.craftType === 'QUINTESSENCE' ? 'gold' : 'blue'}>
+                          {request.craftType === 'RECIPE' ? 'Receita (30%)' : request.craftType === 'PURPLE_MATERIAL' ? 'Material Roxo' : 'Quintessência'}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t(locale, 'rank')} #{request.rankPosition} - {t(locale, 'remaining')} {request.remainingQuantity}/{request.totalQuantity}
+                      {request.currentQuantity ? ` (Inventário: ${request.currentQuantity})` : ''}
+                      {request.quintessenceQuantity ? ` • Quintessência: ${request.quintessenceQuantity}` : ''}
+                    </p>
                     <p className="text-xs text-muted-foreground">{t(locale, 'lastUpdate')}: {request.legacyUpdatedAt ? new Date(request.legacyUpdatedAt).toLocaleString() : new Date(request.updatedAt).toLocaleString()}</p>
                   </div>
                 </div>

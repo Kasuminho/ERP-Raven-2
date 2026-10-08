@@ -342,20 +342,6 @@ export class NotificationService {
     rankPosition: number;
   }): Promise<void> {
     const locale = this.localeFor('itemRequests', data.itemName);
-    const stageText = {
-      '3d': bilingualBlocks({
-        'pt-BR': 'Seu request precisa de print atualizado.',
-        en: 'Your request needs an updated screenshot.',
-      }),
-      '4d': bilingualBlocks({
-        'pt-BR': 'Ultimo aviso para atualizar o print do request.',
-        en: 'Final warning to update the request screenshot.',
-      }),
-      dropped: bilingualBlocks({
-        'pt-BR': 'Seu request caiu uma posicao na fila por falta de atualizacao.',
-        en: 'Your request dropped one queue position because it was not updated.',
-      }),
-    }[data.stage];
     const url = this.dashboardUrl('/item-requests');
     const actionText = data.stage === 'dropped'
       ? bilingualBlocks({
@@ -368,7 +354,6 @@ export class NotificationService {
       });
 
     await this.sendWebhookChannel('itemRequests', {
-      content: `<@${data.discordId}>\n${stageText}`,
       embeds: [buildRequestReminderEmbed({
         title: localeCopy(locale, { 'pt-BR': 'Atualizacao de Item Request', en: 'Item Request Update' }),
         playerName: data.playerName,

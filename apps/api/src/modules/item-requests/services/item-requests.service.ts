@@ -5,7 +5,7 @@ import { BusinessRulesService } from '../../business-rules/business-rules.servic
 import { NotificationService } from '../../discord/services/notification.service';
 import { getRequestableCatalogKey, requestableItemCategories, requestableItemKeys } from '../../items/requestable-items';
 import { ImageStorageService } from '../../uploads/image-storage.service';
-import { ApproveItemRequestUpdateDto, CreateItemRequestDto, DeliverItemRequestDto, UpdateItemRequestProofDto } from '../dto';
+import { ApproveItemRequestUpdateDto, CreateItemRequestDto, CreateSelfItemRequestDto, DeliverItemRequestDto, UpdateItemRequestProofDto } from '../dto';
 import { ItemRequestDetails, ItemRequestsRepository } from '../repositories/item-requests.repository';
 import { ItemRequestDetailsWithForecast, ItemRequestQueueService } from './item-request-queue.service';
 
@@ -84,6 +84,11 @@ export class ItemRequestsService {
             imageUrl,
             warned3d: false,
             warned4d: false,
+            craftType: data.craftType ?? existing.craftType ?? 'STANDARD',
+            currentQuantity: data.currentQuantity !== undefined ? Number(data.currentQuantity) : existing.currentQuantity,
+            targetQuantity: data.targetQuantity !== undefined ? Number(data.targetQuantity) : existing.targetQuantity,
+            quintessenceQuantity: data.quintessenceQuantity !== undefined ? Number(data.quintessenceQuantity) : existing.quintessenceQuantity,
+            targetItemCatalog: data.targetItemCatalogId ? { connect: { id: data.targetItemCatalogId } } : undefined,
             legacyUpdatedAt: new Date(),
             threadId: data.threadId?.trim() || existing.threadId,
             threadChannelId: data.threadChannelId?.trim() || existing.threadChannelId,
@@ -107,6 +112,11 @@ export class ItemRequestsService {
           totalQuantity: quantity,
           remainingQuantity: quantity,
           rankPosition,
+          craftType: data.craftType ?? 'STANDARD',
+          currentQuantity: data.currentQuantity !== undefined ? Number(data.currentQuantity) : 0,
+          targetQuantity: data.targetQuantity !== undefined ? Number(data.targetQuantity) : quantity,
+          quintessenceQuantity: data.quintessenceQuantity !== undefined ? Number(data.quintessenceQuantity) : 0,
+          targetItemCatalog: data.targetItemCatalogId ? { connect: { id: data.targetItemCatalogId } } : undefined,
           threadId: data.threadId?.trim() || undefined,
           threadChannelId: data.threadChannelId?.trim() || undefined,
           legacyCreatedAt: new Date(),
@@ -130,7 +140,7 @@ export class ItemRequestsService {
     return request;
   }
 
-  async createSelfRequest(userId: string, data: { itemCatalogId: string; quantity: number; imageUrl?: string }): Promise<ItemRequest> {
+  async createSelfRequest(userId: string, data: CreateSelfItemRequestDto): Promise<ItemRequest> {
     const user = await this.repository.client.user.findUnique({
       where: { id: userId },
       include: { players: true },
@@ -151,6 +161,11 @@ export class ItemRequestsService {
         itemCatalogId: data.itemCatalogId,
         quantity: data.quantity,
         imageUrl: data.imageUrl,
+        craftType: data.craftType,
+        currentQuantity: data.currentQuantity,
+        targetQuantity: data.targetQuantity,
+        quintessenceQuantity: data.quintessenceQuantity,
+        targetItemCatalogId: data.targetItemCatalogId,
         playerId: player.id,
       },
       userId,

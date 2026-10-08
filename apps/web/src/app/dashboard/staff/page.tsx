@@ -73,6 +73,12 @@ const SERVER_ZERO_HIDDEN_TOOLS = [
   "/dashboard/staff/deploy",
   "/dashboard/staff/roadmap",
   "/dashboard/staff/bid-cancellations",
+  "/dashboard/staff/cases",
+  "/dashboard/staff/mentorship",
+  "/dashboard/staff/onboarding",
+  "/dashboard/staff/trials",
+  "/dashboard/staff/dossier",
+  "/dashboard/staff/meeting",
 ];
 
 type StaffTool = {

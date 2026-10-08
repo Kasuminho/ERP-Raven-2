@@ -1,4 +1,4 @@
-export type DiscordLocale = 'pt-BR' | 'en';
+export type DiscordLocale = 'pt-BR' | 'en' | 'es';
 
 const localeAliases: Record<string, DiscordLocale> = {
   pt: 'pt-BR',
@@ -7,11 +7,16 @@ const localeAliases: Record<string, DiscordLocale> = {
   en: 'en',
   'en-us': 'en',
   english: 'en',
+  es: 'es',
+  'es-es': 'es',
+  spanish: 'es',
+  espanol: 'es',
 };
 
 const languageHints: Record<DiscordLocale, string[]> = {
   'pt-BR': [' voce ', ' leilao', ' atualiza', ' faltam', ' agora', ' guilda'],
   en: [' the ', ' you ', ' auction', ' update', ' hours', ' now', ' guild'],
+  es: [' usted ', ' subasta', ' actualiza', ' faltan', ' ahora', ' gremio'],
 };
 
 export function normalizeDiscordLocale(value?: string | null): DiscordLocale | undefined {
@@ -32,13 +37,31 @@ export function resolveDiscordLocale(configured: string | undefined, ...context:
   return scores[0].score > 0 ? scores[0].locale : 'pt-BR';
 }
 
-export function localeCopy(_locale: DiscordLocale, copy: Record<DiscordLocale, string>): string {
-  const shortCopy = copy['pt-BR'].length <= 60 && copy.en.length <= 60
-    && !copy['pt-BR'].includes('\n') && !copy.en.includes('\n');
+export function localeCopy(_locale: DiscordLocale, copy: Record<string, string>): string {
+  const pt = copy['pt-BR'] || '';
+  const en = copy.en || '';
+  const es = copy.es;
 
-  if (shortCopy) {
-    return `${copy['pt-BR']} / ${copy.en}`;
+  if (es) {
+    const shortCopy = pt.length <= 40 && en.length <= 40 && es.length <= 40
+      && !pt.includes('\n') && !en.includes('\n') && !es.includes('\n');
+
+    if (shortCopy) {
+      return `${pt} / ${en} / ${es}`;
+    }
+
+    const total = pt.length + en.length + es.length;
+    if (total <= 1800) {
+      return `**PT-BR**\n${pt}\n\n**EN**\n${en}\n\n**ES**\n${es}`;
+    }
   }
 
-  return `**PT-BR**\n${copy['pt-BR']}\n\n**EN**\n${copy.en}`;
+  const shortCopy = pt.length <= 60 && en.length <= 60
+    && !pt.includes('\n') && !en.includes('\n');
+
+  if (shortCopy) {
+    return `${pt} / ${en}`;
+  }
+
+  return `**PT-BR**\n${pt}\n\n**EN**\n${en}`;
 }

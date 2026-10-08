@@ -76,6 +76,13 @@ export class ItemInterestsController {
     return this.service.vote(id, dto.entryId, req.user.userId);
   }
 
+  @Post(':id/decide')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async decide(@Param('id') id: string, @Body() dto: VoteItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestDetails> {
+    return this.service.decideWinner(id, dto.entryId, req.user.userId);
+  }
+
   @Post(':id/tie-break')
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')

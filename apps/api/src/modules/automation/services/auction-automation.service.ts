@@ -16,6 +16,8 @@ import {
 export class AuctionAutomationService {
   private readonly logger = new Logger(AuctionAutomationService.name);
   private readonly relistDelayDays = 7;
+  private readonly warnedEndingSoon = new Set<string>();
+  private readonly warnedPendingReviews = new Set<string>();
 
   constructor(
     private readonly repository: AutomationRepository,
@@ -177,11 +179,17 @@ export class AuctionAutomationService {
     const result = this.createResult('processPendingReviews', auctions);
 
     for (const auction of auctions) {
+      if (this.warnedPendingReviews.has(auction.id)) {
+        this.skip(result, auction.id, 'Staff review notification already sent once.');
+        continue;
+      }
+
       try {
         await this.notificationService.notifyStaffReviewRequired({
           auctionId: auction.id,
           itemName: auction.itemName,
         });
+        this.warnedPendingReviews.add(auction.id);
         this.succeed(result, auction.id, 'Staff review notification sent.');
         await this.audit('AUTOMATION_REVIEW_REQUIRED_NOTIFIED', 'Auction', auction.id, {
           itemName: auction.itemName,
@@ -295,16 +303,22 @@ export class AuctionAutomationService {
   }
 
   async notifyAuctionsEndingSoon(now = new Date()): Promise<AutomationJobResult> {
-    const until = new Date(now.getTime() + 60 * 60 * 1000);
+    const until = new Date(now.getTime() + 15 * 60 * 1000);
     const auctions = await this.repository.findOpenAuctionsEndingSoon(until, now);
     const result = this.createResult('notifyAuctionsEndingSoon', auctions);
 
     for (const auction of auctions) {
+      if (this.warnedEndingSoon.has(auction.id)) {
+        this.skip(result, auction.id, 'Ending soon notification already sent once.');
+        continue;
+      }
+
       try {
         await this.notificationService.notifyAuctionEndingSoon({
           auctionId: auction.id,
           itemName: auction.itemName,
         });
+        this.warnedEndingSoon.add(auction.id);
         this.succeed(result, auction.id, 'Ending soon notification sent.');
       } catch (error) {
         await this.recordFailure(result, auction.id, 'AUTOMATION_ENDING_SOON_NOTIFICATION_FAILED', error);

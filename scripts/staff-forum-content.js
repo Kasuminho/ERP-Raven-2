@@ -1,4 +1,4 @@
-const APP_URL = 'https://app.guild-g3x.com.br';
+const APP_URL = process.env.PUBLIC_APP_URL || 'https://app.guild-alcatraz.site';
 
 function route(path) {
   return `${APP_URL}${path}`;
@@ -166,39 +166,45 @@ Duplicar clique não duplica loot no jogo; só cria um belo incidente.`,
   {
     slug: 'staff-interesses', title: '08 · Interesses, comparação e transmutar', tag: 'loot', route: '/dashboard/staff/interests',
     visual: ['Leia critério e interessados', 'Compare sinais operacionais', 'Entregue ao selecionado com prova'],
-    body: `## 💎 Operação de interesses
-Em [Interesses Staff](${route('/dashboard/staff/interests')}) acompanhe posts, declarações, votos, status e entrega. O comparador interno mostra classe, camada, presença, DKP, requests ativos, nota Staff, histórico de loot e sinais operacionais.
+    body: `## 💎 Operação de interesses e decisão rápida
+Em [Interesses Staff](https://app.guild-alcatraz.site/dashboard/staff/interests) acompanhe posts, declarações, votos, status e entrega. O comparador interno mostra classe, camada, presença, DKP, requests ativos, nota Staff, histórico de loot e sinais operacionais.
 
-Use esses dados como suporte à regra do post; não invente critério depois de ver os nomes. O player não recebe o comparador nem a disputa interna.
+**Regra de Ouro (Equipar vs Transmutar):**
+- Candidatos declarados para **Equipar** têm prioridade absoluta sobre **Transmutar**.
+- **Auto-seleção e Decisão em 1 clique:** quando há apenas 1 jogador disputando para equipar, o sistema o pré-seleciona automaticamente e disponibiliza o botão de **Decisão Rápida**, agilizando o despacho da Staff sem burocracia desnecessária.
+- **Disputa entre múltiplos jogadores para Equipar:** a liderança avalia o comparador interno (presença, impacto na build e mérito) e confirma a escolha.
+- **Transmutar:** quando todos os interessados forem transmutar, a votação Staff é dispensada e o sistema sorteia entre elegíveis (1 vencedor por dia operacional).
 
-**Transmutar:** quando todas as declarações do post usam transmutar, a votação Staff é dispensada e o sistema sorteia entre elegíveis, respeitando um vencedor por dia operacional de São Paulo.
-
-Ao concluir, selecione o candidato permitido, anexe o comprovante e registre a entrega. A imagem prova a entrega; não prova retroativamente uma decisão mal fundamentada.`,
+Ao concluir, selecione o candidato permitido, anexe o comprovante se houver e registre a entrega. Decisões ágeis mantêm o foco na progressão da guilda!`,
   },
   {
     slug: 'staff-requests-codex-progresso', title: '09 · Baú da Guilda, Requests e progresso', tag: 'routine', route: '/dashboard/staff/storage',
-    visual: ['Despache itens do Baú', 'Importe com OCR seguro', 'Codex pausado temporariamente'],
-    body: `## 📦 Baú da Guilda (Novo Fluxo de Atendimento)
-Em [Baú da Guilda Staff](${route('/dashboard/staff/storage')}) a liderança gerencia o estoque e as solicitações de itens:
-- **Importação com OCR em Lote:** importe prints do histórico do jogo; a deduplicação automática por Data de Coleta (\`acquisitionDate\` e \`acquisitionInfo\`) impede somar o mesmo drop duas vezes se o print for reenviado.
-- **Aba Solicitações do Baú:** veja pedidos pendentes de cada player (com classe, presença recente e nota).
-- **Ação Enviar (Baixar Estoque):** deduz o saldo do item no baú, marca como entregue, gera registro de drop, dispara anúncio no Discord (\`#drops-entregues\`) e libera imediatamente a vaga do jogador na cota de 5 pedidos.
-- **Ação Rejeitar:** recusa o pedido com justificativa opcional, notifica o jogador no ERP e também libera o slot da cota.
+    visual: ['Distribuição Livre do Baú', 'Metas de Craft e Insumos', 'Codex e Pedidos Integrados'],
+    body: `## 📦 Baú da Guilda (Distribuição Livre)
+Em [Baú da Guilda Staff](https://app.guild-alcatraz.site/dashboard/staff/storage) a liderança gerencia as solicitações com fluxo simplificado:
+- **Distribuição Livre (Sem trava de saldo):** nesta fase, o foco da guilda é distribuir e impulsionar os membros. Nenhuma entrega é barrada por falta de saldo no sistema, permitindo atendimento imediato pela Staff.
+- **Finalidades Suportadas:**
+  - **Uso Geral:** itens para consumo e progressão imediata.
+  - **Codex:** itens solicitados para completar registros do Codex (o membro informa o nome do verbete).
+  - **Craft:** materiais para metas de fabricação.
+- **Ação Enviar:** marca o pedido como entregue, gera registro de drop, dispara anúncio no Discord (#drops-cofre-vault-cofre) e libera o slot de solicitação do jogador.
+- **Ação Rejeitar:** recusa o pedido com justificativa opcional, avisando o jogador no ERP.
 
-## 📋 Requests de Catálogo
-Requests aparecem nas tarefas operacionais e no perfil do player. Revise criação/atualização, posição, unidades restantes, prazo do print e prioridade de material. Craft T3 pode bloquear entrega de Quintessência do mesmo material; o bloqueio é regra auditada, não preferência improvisada.
+## 📋 Requests de Craft e Filas de Insumos
+Em [Requests](https://app.guild-alcatraz.site/dashboard/staff/requests) a Staff acompanha as filas organizadas automaticamente:
+- **Metas de Craft:** membros registram o item final que desejam fabricar, informando a quantidade que já possuem e a quantidade necessária.
+- **Receita (30%) e Material Roxo:** formam as filas prioritárias de confecção de equipamentos reais.
+- **Prioridade de Quintessência:** requisições de quintessência recebem prioridade menor que quem está confeccionando itens normais de progressão, ordenando a fila de distribuição de forma justa e automática.
 
-## 📖 Codex (Pausado Temporariamente)
-O sistema de Codex está temporariamente inativo nesta fase do servidor. Novos envios foram suspensos e substituídos pelo Baú da Guilda. Registros e históricos antigos podem ser consultados em [Codex Staff](${route('/dashboard/staff/codex')}).
+## 📖 Codex Integrado
+Os pedidos de Codex são atendidos de forma unificada pelo Baú da Guilda. Registros históricos e consultas detalhadas continuam disponíveis em [Codex Staff](https://app.guild-alcatraz.site/dashboard/staff/codex).
 
 ## 📈 Progresso
-Em [Progresso](${route('/dashboard/staff/progress')}) revise prints:
+Em [Progresso](https://app.guild-alcatraz.site/dashboard/staff/progress) revise prints:
 - STATUS aprovado atualiza CP/level operacional;
 - Fenda aprovada atualiza camada/andar;
-- outras categorias alimentam o histórico;
-- rejeição precisa de nota objetiva sobre o que faltou.
-
-Print bonito não basta; ele precisa provar o campo que será alterado.`,
+- Outras categorias alimentam o histórico;
+- Rejeição precisa de nota objetiva sobre o que faltou.`,
   },
   {
     slug: 'staff-daoshi', title: '10 · Daoshi — recibos, meta, cupons e sorteio', tag: 'guild', route: '/dashboard/staff/daoshi',

@@ -35,6 +35,13 @@ export class EventReminderService {
         nickname: true,
         timezone: true,
         eventReminderChannel: true,
+        communicationPreference: {
+          select: {
+            eventChannel: true,
+            discordEnabled: true,
+            discordDirectMessageEnabled: true,
+          },
+        },
         user: { select: { discordId: true } },
         eventRsvps: { where: { eventId: { in: events.map((event) => event.id) } }, select: { eventId: true, status: true } },
         absences: { where: { startsAt: { lte: events[events.length - 1].startsAt }, endsAt: { gt: events[0].startsAt } }, select: { startsAt: true, endsAt: true } },
@@ -62,14 +69,15 @@ export class EventReminderService {
           create: { eventId: event.id, playerId: player.id, rsvpStatus: rsvp?.status ?? null },
           update: { rsvpStatus: rsvp?.status ?? null },
         });
-        const channel = player.eventReminderChannel;
-        if ((channel === EventReminderChannel.WEB || channel === EventReminderChannel.BOTH) && !delivery.webNotifiedAt) {
+
+        // Always prioritize Web notifications
+        if (!delivery.webNotifiedAt) {
           await this.notifications.createForPlayer({
             playerId: player.id,
             type: 'EVENT_REMINDER',
-            title: requiresRsvp ? 'RSVP pendente / RSVP required' : 'Evento confirmado / Confirmed event',
+            title: requiresRsvp ? 'Compromisso em breve / Upcoming event' : 'Evento confirmado / Confirmed event',
             body: requiresRsvp
-              ? `${event.name} comeca em ate 24h. Responda seu RSVP. / ${event.name} starts within 24h. Answer your RSVP.`
+              ? `${event.name} comeca em ate 24h. / ${event.name} starts within 24h.`
               : `${event.name} comeca em ate 24h. Voce confirmou presenca. / ${event.name} starts within 24h. You confirmed attendance.`,
             href: '/dashboard/attendance',
             metadata: { eventId: event.id, startsAt: event.startsAt.toISOString(), requiresRsvp },
@@ -78,7 +86,17 @@ export class EventReminderService {
           await this.prisma.eventReminderDelivery.update({ where: { id: delivery.id }, data: { webNotifiedAt: new Date() } });
           web += 1;
         }
-        if (channel !== EventReminderChannel.DISCORD && channel !== EventReminderChannel.BOTH) continue;
+
+        // Never send Discord DMs nagging for RSVP. Only send confirmed event reminders if Discord is explicitly opted-in.
+        if (requiresRsvp) continue;
+
+        const pref = player.communicationPreference;
+        const allowDiscordDm = pref?.discordEnabled === true
+          && pref?.discordDirectMessageEnabled === true
+          && (pref?.eventChannel === 'DISCORD' || pref?.eventChannel === 'BOTH');
+
+        if (!allowDiscordDm) continue;
+
         const claimed = await this.prisma.eventReminderDelivery.updateMany({
           where: {
             id: delivery.id,

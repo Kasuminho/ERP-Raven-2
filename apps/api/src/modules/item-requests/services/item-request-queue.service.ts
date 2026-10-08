@@ -107,7 +107,14 @@ export class ItemRequestQueueService {
     const now = new Date();
 
     for (const [itemName, rows] of groups.entries()) {
-      const sorted = [...rows].sort((left, right) => left.rankPosition - right.rankPosition);
+      const sorted = [...rows].sort((left, right) => {
+        const leftIsQuint = this.isQuintessenceRequest(left);
+        const rightIsQuint = this.isQuintessenceRequest(right);
+        if (leftIsQuint !== rightIsQuint) {
+          return leftIsQuint ? 1 : -1;
+        }
+        return left.rankPosition - right.rankPosition;
+      });
 
       for (const request of sorted) {
         const aheadRows = sorted.filter((candidate) => candidate.rankPosition < request.rankPosition);
@@ -243,7 +250,11 @@ export class ItemRequestQueueService {
     return this.itemKey(current) !== this.itemKey(candidate);
   }
 
-  private isT3CraftPriorityRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): boolean {
+  private isT3CraftPriorityRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog' | 'craftType'>): boolean {
+    if (request.craftType === 'RECIPE' || request.craftType === 'PURPLE_MATERIAL') {
+      return true;
+    }
+
     const item = request.itemCatalog;
 
     if (item?.itemTier === ItemTier.T3) {
@@ -259,7 +270,13 @@ export class ItemRequestQueueService {
       || text.includes('fragmento');
   }
 
-  private isQuintessenceRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog'>): boolean {
+  private isQuintessenceRequest(request: Pick<ItemRequestDetails, 'itemName' | 'itemCatalog' | 'craftType' | 'quintessenceQuantity'>): boolean {
+    if (request.craftType === 'QUINTESSENCE') {
+      return true;
+    }
+    if ((request.quintessenceQuantity ?? 0) > 0 && request.craftType !== 'RECIPE' && request.craftType !== 'PURPLE_MATERIAL') {
+      return true;
+    }
     return this.prioritySearchText(request).includes('quintess');
   }
 

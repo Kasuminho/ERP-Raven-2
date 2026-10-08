@@ -2,12 +2,24 @@ import { blocks } from './discord-formatting';
 
 export type VoiceSeed = string | number | Date | undefined | null | false;
 
-export function bilingualBlocks(copy: { 'pt-BR': string; en: string }): string {
+export function bilingualBlocks(copy: { 'pt-BR': string; en: string; es?: string }): string {
+  if (copy.es) {
+    const total = copy['pt-BR'].length + copy.en.length + copy.es.length;
+    if (total <= 1800) {
+      return blocks(
+        `**PT-BR**\n${copy['pt-BR']}`,
+        `**EN**\n${copy.en}`,
+        `**ES**\n${copy.es}`,
+      );
+    }
+  }
   return blocks(
     `**PT-BR**\n${copy['pt-BR']}`,
     `**EN**\n${copy.en}`,
   );
 }
+
+export const multilingualBlocks = bilingualBlocks;
 
 function buildVoiceSeed(seedParts: readonly VoiceSeed[]): string {
   return seedParts

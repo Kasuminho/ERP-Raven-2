@@ -24,7 +24,7 @@ export class DiscordOperationsService {
     const now = new Date();
     const closesAt = new Date(now.getTime() + 6 * 60 * 60 * 1000);
     const eventTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const publicUrl = this.config.get<string>('discord.publicUrl')?.replace(/\/$/, '') || 'https://app.guild-g3x.com.br';
+    const publicUrl = this.config.get<string>('discord.publicUrl')?.replace(/\/$/, '') || 'https://app.guild-alcatraz.site';
     const makePreviews = (
       playerFacing: boolean,
       build: (locale: 'pt-BR' | 'en') => DiscordPreviewPayload,

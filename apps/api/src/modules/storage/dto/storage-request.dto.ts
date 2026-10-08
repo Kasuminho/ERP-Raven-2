@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { StorageRequestPurpose } from '@prisma/client';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -17,6 +18,16 @@ export class CreateStorageRequestDto {
   @IsString()
   @MaxLength(500)
   playerNote?: string;
+
+  @IsOptional()
+  @IsEnum(StorageRequestPurpose)
+  purpose?: StorageRequestPurpose;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  codexEntryName?: string;
 }
 
 export class DispatchStorageRequestActionDto {

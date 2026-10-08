@@ -1,16 +1,16 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-09-20
+**Ultima revisao:** 2026-10-05 (Modo Gamer AlcatraZ)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
 ## Visao geral
 
-Plataforma da guilda G3X para operacao de players e Staff: DKP, presencas, eventos, leiloes, drops, interesses, pedidos de item, progresso, Daoshi, auditoria, notificacoes e integracao com Discord.
+Plataforma da guilda AlcatraZ (Raven Zero) para operacao de players e Staff: DKP, presencas, eventos, leiloes, drops, interesses, pedidos de item, progresso, Daoshi, auditoria, notificacoes e integracao com Discord.
 
 Producao:
 
-- Aplicacao: `https://app.guild-g3x.com.br`
+- Aplicacao: `https://app.guild-alcatraz.site`
 - API publica: `/api/v1`
 - Repositorio: `Kasuminho/ERP-Raven-2`
 - Branch de deploy: `master`
@@ -111,8 +111,8 @@ Fonte detalhada: `docs/DISCORD_WEBHOOK_VOICE.md`.
 - Avisos extraordinarios para players podem ser redigidos/revisados no chat Codex e publicados com `npm.cmd run discord:update -- ARQUIVO --announcements`; fazer `--dry-run` antes, manter PT-BR/EN em blocos separados e exigir confirmacao humana antes do envio.
 - A tela Staff `/dashboard/staff/discord-templates` consome `GET /operations/staff/discord-templates` e mostra preview real sanitizado de webhooks para anuncios, leiloes, interesses, drops, presenca, requests e review Staff. O payload inclui `username`, `avatar_url`, `content`, `embeds` e `allowed_mentions`, nunca a URL do webhook. Templates player-facing exibem PT-BR e EN; Staff-only fica PT-BR.
 - A tela Staff `/dashboard/staff/discord-webhooks` consome `GET /operations/staff/discord-webhooks` e lista entregas persistidas em `DiscordWebhookDelivery`: alvo logico, canal, action, target, status, tentativas, erro resumido e payload sanitizado. `POST /operations/staff/discord-webhooks/:deliveryId/retry` reenvia apenas entregas `FAILED` e `retryable`, buscando a URL pelo `webhookKey` no servidor sem expor segredo.
-- O forum Discord `📚・central-do-player` fica na categoria `1431340101052530829` e possui 20 tutoriais oficiais de player em PT-BR/EN, imagens 1600x900, rotas clicaveis e respostas abertas; players respondem nas threads, enquanto a criacao de novos posts fica com Staff/bots administrativos. O conteudo canonico fica em `scripts/player-forum-content.js`; `npm.cmd run discord:player-forum:assets` regenera as imagens e `npm.cmd run discord:player-forum` cria ou sincroniza forum, tags e posts sem duplicar. O publicador usa `DISCORD_BOT_TOKEN` e `DISCORD_GUILD_ID`, limita a operacao ao forum nomeado dentro da categoria configurada e nao remove canais ou posts extras.
-- O forum Discord Staff-only `🛡️・central-da-staff` fica na categoria `1528829674166423552` e possui 30 tutoriais internos em PT-BR, imagens 1600x900, 12 tags, indice clicavel e threads para duvidas. `@everyone` e bloqueado explicitamente, e o cargo de `DISCORD_STAFF_ROLE_ID` recebe acesso. O conteudo canonico fica em `scripts/staff-forum-content.js`; `npm.cmd run discord:staff-forum:assets` regenera imagens e `npm.cmd run discord:staff-forum` cria ou sincroniza forum, tags, permissoes e posts sem duplicar nem remover conteudo extra.
+- O forum Discord `📚・central-do-player` (ID `1556615199908298803`) fica na categoria `1556615036502286369` (`🔒 ERP RAVEN - OPERAÇÃO`) e possui tutoriais oficiais de player em PT-BR/EN, imagens 1600x900, rotas clicaveis e respostas abertas; players respondem nas threads, enquanto a criacao de novos posts fica com Staff/bots administrativos. O conteudo canonico fica em `scripts/player-forum-content.js`; `npm.cmd run discord:player-forum:assets` regenera as imagens e `npm.cmd run discord:player-forum` cria ou sincroniza forum, tags e posts sem duplicar. O publicador usa `DISCORD_BOT_TOKEN` e `DISCORD_GUILD_ID`, limita a operacao ao forum nomeado dentro da categoria configurada e nao remove canais ou posts extras.
+- O forum Discord Staff-only `🛡️・central-da-staff` (ID `1556615252928503859`) fica na categoria `1556615041317605437` (`🔒 ERP RAVEN - STAFF`) e possui 31 tutoriais internos em PT-BR, imagens 1600x900, 12 tags, indice clicavel e threads para duvidas. `@everyone` e bloqueado explicitamente, e o cargo `ADMINS` (`DISCORD_STAFF_ROLE_ID`) recebe acesso. O conteudo canonico fica em `scripts/staff-forum-content.js`; `npm.cmd run discord:staff-forum:assets` regenera imagens e `npm.cmd run discord:staff-forum` cria ou sincroniza forum, tags, permissoes e posts sem duplicar nem remover conteudo extra.
 - O protocolo Codex exige classificar o impacto de toda implementacao ou alteracao de fluxo como player, Staff, ambos ou sem impacto de tutorial. Fluxo visivel alterado deve atualizar o conteudo canonico e os assets da Central correspondente no mesmo trabalho; o `--dry-run` ocorre antes do commit e a sincronizacao live somente depois da verificacao em producao, antes do changelog final.
 - Nunca documentar URLs completas de webhook.
 
@@ -302,33 +302,38 @@ Migration: `20260620143000_add_event_attendance_batches`.
 - Estado persistido em `DiscordDkpLogState`.
 - Configuracao usa `DISCORD_DKP_WEBHOOK_URL`; nunca registrar o valor.
 
-## Pedidos de craft
+## Pedidos de craft e Metas de Crafting
 
-- Materiais solicitados para concluir itens T3 possuem prioridade sobre pedidos do mesmo material destinados a Quintessencia.
-- Um pedido de Quintessencia continua valido, mas so deve ser atendido quando nao houver player aguardando aquele material para fabricar um item T3.
-- A regra existe para elevar primeiro quem ainda esta abaixo na progressao e melhorar o resultado coletivo da guilda.
-- Requests em `/dashboard/item-requests` recebem `queueForecast` nos endpoints existentes. A previsao e calculada por `ItemRequestQueueService` a partir da fila atual e `DropHistory`, mostrando posicao/tamanho da fila, pedidos e unidades antes, idade do update, ultima entrega conhecida, estagio do update e resumo PT-BR/EN. Nao muda a ordenacao, nao promete entrega automatica e nao exige migration.
-- Requests tambem podem receber `swapSuggestions`: ate tres itens requestaveis ativos da mesma categoria e, quando aplicavel, mesmo tier/tipo, com fila menor. A UI mostra posicao estimada, unidades na fila e trade-off PT-BR/EN; a troca continua manual/controlada pela Staff.
-- Requests tambem recebem `materialPriority`: requests de craft T3 mostram selo de prioridade operacional, e requests de Quintessencia afetados por craft T3 do mesmo material inferido mostram aviso simplificado para player e texto operacional para Staff.
-- Criar Item Request exige presenca D-30 minima conforme `attendanceEligibilityRules.participationMinimumPercent` (default 50%).
-- A entrega Staff de Quintessencia bloqueada por prioridade T3 e impedida e gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED` com material inferido e requests de craft que bloquearam.
-- A rota Web `/dashboard/item-requests` usa componentes locais em `_components`: `page.tsx` fica como guard/entrada, `item-request-panels.tsx` concentra os paineis player/Staff e `item-request-common.tsx` guarda paineis reutilizados de forecast, sugestoes e prioridade.
+- **Arquitetura de Metas de Craft**:
+  - O membro registra o item-alvo e especifica o tipo de insumo/pedido (`craftType`: `STANDARD`, `RECIPE`, `PURPLE_MATERIAL`, `QUINTESSENCE`).
+  - Permite declarar a quantidade atual em inventário (`currentQuantity`), meta total necessária (`targetQuantity`) e quantidade de quintessência associada (`quintessenceQuantity`).
+  - Fragmentos de receita operam conceitualmente com a chance de sucesso de 30% do jogo.
+- **Prioridade Operacional (Equipamento > Quintessência)**:
+  - Materiais solicitados para fabricação de itens de equipamento normal possuem prioridade operacional sobre pedidos de Quintessência.
+  - Pedidos marcados como Quintessência são automaticamente ordenados atrás dos pedidos de equipamento do mesmo material e sinalizados na fila.
+  - A entrega de Quintessência bloqueada por prioridade gera auditoria `ITEM_REQUEST_T3_PRIORITY_DELIVERY_BLOCKED`.
+- **Previsão e Alternativas**:
+  - `queueForecast`: calcula posição, pedidos/unidades à frente, idade do update e resumo bilíngue.
+  - `swapSuggestions`: sugere até 3 itens compatíveis com menor tempo de espera na fila.
+- **Componentes**:
+  - Rota `/dashboard/item-requests` com formulário gamer expandido em `item-request-panels.tsx` e badges de tipo de craft.
 
 ## Baú da Guilda, Deduplicação por Data de Coleta e Solicitações de Itens
 
 - **Inventário e Coletas Idempotentes**:
   - Inventário consolidado em `GuildStorageItem`.
   - Coletas rastreadas via `GuildStorageEntry` com `@@unique([storageItemId, acquisitionDate, acquisitionInfo])`. Quando prints com as mesmas datas/horas de coleta e informações de drop são reenviados no OCR em lote, o sistema ignora as duplicatas sem inflar o estoque (`skippedDuplicatesCount`).
-- **Módulo Backend (`StorageModule`)**:
+- **Módulo Backend (`StorageModule`) e Distribuição Livre**:
   - `POST /storage/scan-ocr`: processamento multimodal Vision via Gemini (`gemini-2.0-flash` com fallback), extraindo tipografia, nome, quantidade, raridade, `acquisitionDate` e `acquisitionInfo`.
   - `POST /storage/import`: adiciona novos registros ou incrementa estoque apenas para entradas não duplicadas.
   - `GET /storage`: inventário consolidado com paginação, filtros e busca.
-  - `POST /storage/requests`: jogadores solicitam itens diretamente do baú. Validação bloqueia se o jogador já possuir 5 solicitações com status `PENDING`. Alerta imediato disparado para a liderança em `staffRequests` (`DISCORD_STAFF_REQUESTS_WEBHOOK_URL`).
+  - `POST /storage/requests`: jogadores solicitam itens do baú informando finalidade (`purpose`: `USE`, `CODEX`, `CRAFT`) e opcionalmente `codexEntryName`.
+  - **Modo Distribuição Livre (Sem Bloqueio de Estoque)**: o cofre suporta `distributionMode = FREE_DISTRIBUTION`. Nenhuma entrega é barrada por saldo insuficiente da guilda; ao despachar item com saldo zerado, o sistema preserva o registro com quantidade 0 sem deletar a linha do catálogo do baú.
   - `GET /storage/requests/me`: lista solicitações do jogador logado com resumo de cota `{ activeCount, maxAllowed: 5, canRequestMore }`.
   - `DELETE /storage/requests/:id`: cancelamento de pedido pendente pelo jogador, liberando a vaga na cota de 5 pedidos imediatamente.
   - `GET /storage/requests/staff`: fila de pedidos pendentes para análise da Staff, com dados do item, player, presença e notas.
-  - `POST /storage/requests/:id/dispatch`: Staff despacha o item. O estoque é reduzido atômica e imediatamente, o pedido passa a `DELIVERED`, gera histórico de drops, dispara notificação de entrega no Discord `drops` (`DISCORD_DROPS_WEBHOOK_URL`) com voz do Aristolfo, envia notificação in-app ao player e libera sua vaga na cota.
-  - `POST /storage/requests/:id/reject`: Staff rejeita o pedido com nota explicativa. O pedido passa a `REJECTED`, notifica o player e libera sua vaga na cota sem alterar estoque.
+  - `POST /storage/requests/:id/dispatch`: Staff despacha o item. O pedido passa a `DELIVERED`, gera histórico de drops (`DropHistory`), dispara notificação de entrega no Discord `drops` com voz do Aristolfo, envia notificação in-app ao player e libera sua vaga na cota.
+  - `POST /storage/requests/:id/reject`: Staff rejeita o pedido com nota explicativa. O pedido passa a `REJECTED`, notifica o player e libera sua vaga na cota.
 - **Desativação Temporária do Codex**:
   - `POST /codex/me` bloqueado amigavelmente via `BadRequestException`.
   - Frontend `/dashboard/codex` exibe banner informativo direcionando os membros para o Baú da Guilda (`/dashboard/storage`).
@@ -632,9 +637,12 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-01 | Eventos Staff ganharam painel visual de lote por `attendanceBatchId`, com trilha de bosses, proximo boss ativo, presenca, DKP e acao direta. | eventos/Staff |
 | 2026-06-29 | Finalizacao de evento ganhou checklist Staff com presentes, ausentes, DKP, proximo boss do lote, previsao de copia e alertas antes de confirmar. | eventos/Staff |
 | 2026-06-29 | Player pode declarar interesse em lote, mantendo print/nota/transmutar por post e uma confirmacao unica antes de enviar. | interesses/player |
+| 2026-10-05 | Modo Gamer/AlcatraZ: metas de craft nos requests (receita 30%, material roxo, quintessencia com menor prioridade), bau/storage com suporte a Codex e modo distribuicao livre sem bloqueio de estoque, decisao rapida Staff em interesses (Equip > Transmute) e notificacoes padrao 100% no site com Discord DM estritamente opt-in. | gamer/craft/storage/interesses |
+| 2026-10-05 | Discord AlcatraZ trilingue (PT-BR/EN/ES): 15 canais renomeados com suporte trilingue, historicos purgados, e 51 tutoriais publicados nas centrais (20 no forum de players, 31 no forum da Staff). | discord/tutoriais/trilingue |
 | 2026-06-29 | Interesses Staff ganharam comparador por interessado com classe, camada, presenca, DKP, requests ativos, nota Staff e historico de loot em endpoint Staff-only. | interesses/Staff |
 | 2026-06-29 | Requests ganharam transparencia da prioridade de material T3 sobre Quintessencia, com badge, texto Staff/player e bloqueio auditado de entrega quando aplicavel. | requests/craft |
 | 2026-06-29 | Requests passaram a sugerir alternativas comparaveis com fila menor, mostrando trade-off sem trocar automaticamente. | requests/UX |
+| 2026-10-05 | Migracao Discord para Servidor Zero (Guild AlcatraZ): canais e categorias criados ocultos para ADMINS, 13 webhooks sincronizados e dominio atualizado para app.guild-alcatraz.site. | discord/alcatraz |
 | 2026-06-29 | Requests ganharam previsao operacional de fila com pedidos/unidades antes, idade do update, ultima entrega e resumo PT-BR/EN. | requests/UX |
 | 2026-06-29 | Timeline do player ganhou historico narrado PT-BR/EN com filtros por tipo/periodo, links de acao e sigilo preservado em leiloes. | player/UX |
 | 2026-06-29 | Pagina de leilao passou a explicar elegibilidade antes do bid com camada, DKP, attendance, modo e review Staff sem expor concorrentes. | leiloes/player |

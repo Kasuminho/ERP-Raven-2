@@ -40,6 +40,13 @@ export class PlayerReminderService {
           joinedAt: true,
           user: { select: { discordId: true } },
           combatProfile: { select: { declaredBuild: true, preferredRole: true, availability: true } },
+          communicationPreference: {
+            select: {
+              reminderChannel: true,
+              discordEnabled: true,
+              discordDirectMessageEnabled: true,
+            },
+          },
           codexRequests: {
             where: { status: CodexRequestStatus.SENT },
             select: { id: true },
@@ -109,6 +116,15 @@ export class PlayerReminderService {
         });
         await this.prisma.playerReminderDelivery.update({ where: { id: delivery.id }, data: { webNotifiedAt: new Date() } });
         web += 1;
+      }
+
+      const pref = player.communicationPreference;
+      const allowDiscordDm = pref?.discordEnabled === true
+        && pref?.discordDirectMessageEnabled === true
+        && (pref?.reminderChannel === 'DISCORD' || pref?.reminderChannel === 'BOTH');
+
+      if (!allowDiscordDm) {
+        continue;
       }
 
       const claimCutoff = new Date(now.getTime() - DISCORD_CLAIM_TTL_MS);

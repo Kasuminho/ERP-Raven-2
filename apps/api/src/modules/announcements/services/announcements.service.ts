@@ -127,7 +127,6 @@ export class AnnouncementsService {
   private getDueStages(announcement: Announcement, now: Date): AnnouncementStage[] {
     const eventMs = announcement.eventTime.getTime();
     const nowMs = now.getTime();
-    const todayKey = this.getDayKey(now, announcement.timezone || this.brtTimeZone);
 
     if (!announcement.warnedNow && nowMs >= eventMs) {
       return ['now'];
@@ -135,18 +134,6 @@ export class AnnouncementsService {
 
     if (!announcement.warned30m && nowMs >= eventMs - 30 * 60 * 1000 && nowMs < eventMs) {
       return ['30m'];
-    }
-
-    if (!announcement.warned1h && nowMs >= eventMs - 60 * 60 * 1000 && nowMs < eventMs) {
-      return ['1h'];
-    }
-
-    if (!announcement.warned4h && nowMs >= eventMs - 4 * 60 * 60 * 1000 && nowMs < eventMs) {
-      return ['4h'];
-    }
-
-    if (nowMs < eventMs && this.isPastLocalNoon(now, announcement.timezone || this.brtTimeZone) && announcement.warnedDailyDay !== todayKey) {
-      return ['daily'];
     }
 
     return [];

@@ -1,12 +1,12 @@
 import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { GuildStorageItem, StorageRequestStatus } from '@prisma/client';
+import { GuildStorageItem, StorageDistributionMode, StorageRequestPurpose, StorageRequestStatus } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationService } from '../../discord/services/notification.service';
 import { ItemRequestsService } from '../../item-requests/services/item-requests.service';
 import { ItemsService } from '../../items/services/items.service';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { DispatchStorageItemDto, ImportStorageItemsDto, ScanOcrDto, UpdateStorageItemDto } from '../dto';
+import { CreateStorageRequestDto, DispatchStorageItemDto, ImportStorageItemsDto, ScanOcrDto, UpdateStorageItemDto } from '../dto';
 import { StorageRepository } from '../repositories/storage.repository';
 import { GeminiOcrService, ScannedItemResult } from './gemini-ocr.service';
 
@@ -356,7 +356,8 @@ export class StorageService {
       throw new NotFoundException('Item do baú não encontrado.');
     }
 
-    if (storageItem.quantity < dto.quantity) {
+    const isFree = storageItem.distributionMode === StorageDistributionMode.FREE_DISTRIBUTION;
+    if (!isFree && storageItem.quantity < dto.quantity) {
       throw new BadRequestException(
         `Estoque insuficiente no baú. Disponível: ${storageItem.quantity}, solicitado: ${dto.quantity}.`,
       );
@@ -372,7 +373,7 @@ export class StorageService {
     }
 
     const quantityToDeliver = Math.min(dto.quantity, request.remainingQuantity);
-    const newStock = storageItem.quantity - quantityToDeliver;
+    const newStock = Math.max(0, storageItem.quantity - quantityToDeliver);
 
     // Execute delivery through ItemRequestsService
     const deliveryResult = await this.itemRequestsService.deliver(
@@ -384,12 +385,8 @@ export class StorageService {
       actorId,
     );
 
-    // Update storage stock
-    if (newStock <= 0) {
-      await this.repository.delete(storageItem.id);
-    } else {
-      await this.repository.update(storageItem.id, { quantity: newStock });
-    }
+    // Update storage stock without deleting the item record
+    await this.repository.update(storageItem.id, { quantity: newStock });
 
     await this.auditService.log({
       actorId,
@@ -469,7 +466,7 @@ export class StorageService {
 
   async createStorageRequest(
     userId: string,
-    data: { storageItemId: string; quantity: number; playerNote?: string },
+    data: CreateStorageRequestDto,
   ) {
     const player = await this.prisma.player.findFirst({
       where: { userId, isActive: true },
@@ -508,7 +505,8 @@ export class StorageService {
       throw new NotFoundException('Item do baú não encontrado.');
     }
 
-    if (storageItem.quantity <= 0) {
+    const isFree = storageItem.distributionMode === StorageDistributionMode.FREE_DISTRIBUTION;
+    if (!isFree && storageItem.quantity <= 0) {
       throw new BadRequestException('Item sem estoque disponível no Baú da Guilda.');
     }
 
@@ -521,6 +519,9 @@ export class StorageService {
         storageItemId: storageItem.id,
         playerId: player.id,
         quantity: data.quantity,
+        purpose: data.purpose ?? StorageRequestPurpose.USE,
+        codexEntryName: data.codexEntryName?.trim() || null,
+        isFreeDistribution: isFree,
         playerNote: data.playerNote?.trim() || null,
         status: StorageRequestStatus.PENDING,
       },
@@ -670,13 +671,14 @@ export class StorageService {
         throw new BadRequestException('Apenas solicitações pendentes podem ser despachadas.');
       }
 
-      if (request.storageItem.quantity < request.quantity) {
+      const isFree = request.storageItem.distributionMode === StorageDistributionMode.FREE_DISTRIBUTION;
+      if (!isFree && request.storageItem.quantity < request.quantity) {
         throw new BadRequestException(
           `Estoque insuficiente no baú. Disponível: ${request.storageItem.quantity}, solicitado: ${request.quantity}.`,
         );
       }
 
-      const updatedStock = request.storageItem.quantity - request.quantity;
+      const updatedStock = Math.max(0, request.storageItem.quantity - request.quantity);
       await tx.guildStorageItem.update({
         where: { id: request.storageItemId },
         data: { quantity: updatedStock },
@@ -688,11 +690,22 @@ export class StorageService {
           status: StorageRequestStatus.DELIVERED,
           deliveredAt: new Date(),
           deliveredById: actorId,
+          stockCheckBypassed: isFree,
           staffNote: staffNote?.trim() || null,
         },
         include: {
           storageItem: true,
           player: true,
+        },
+      });
+
+      await tx.dropHistory.create({
+        data: {
+          playerId: request.playerId,
+          itemName: request.storageItem.itemName,
+          itemCatalogId: request.storageItem.itemCatalogId,
+          staffDiscordId: actorId,
+          deliveredAt: new Date(),
         },
       });
 

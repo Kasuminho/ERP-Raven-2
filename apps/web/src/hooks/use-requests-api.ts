@@ -133,7 +133,16 @@ export function useDeleteItemRequest() {
 export function useCreateMyItemRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { itemCatalogId: string; quantity: number; imageUrl?: string }) => (await api.post<ItemRequest>('/item-requests/me', data)).data,
+    mutationFn: async (data: {
+      itemCatalogId: string;
+      quantity: number;
+      imageUrl?: string;
+      craftType?: 'RECIPE' | 'PURPLE_MATERIAL' | 'QUINTESSENCE' | 'STANDARD';
+      currentQuantity?: number;
+      targetQuantity?: number;
+      quintessenceQuantity?: number;
+      targetItemCatalogId?: string;
+    }) => (await api.post<ItemRequest>('/item-requests/me', data)).data,
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['my-history'] }),

@@ -39,7 +39,7 @@ function validateContent() {
 function embedFor(post, indexLinks = '') {
   return new EmbedBuilder()
     .setColor(0xb53d5f)
-    .setAuthor({ name: 'Aristolfo, 570 anos de webhook', iconURL: 'https://app.guild-g3x.com.br/aristolfo-webhooks.png' })
+    .setAuthor({ name: 'Aristolfo, 570 anos de webhook', iconURL: process.env.DISCORD_WEBHOOK_AVATAR_URL || 'https://app.guild-alcatraz.site/aristolfo-webhooks.png' })
     .setDescription(`${post.body}${indexLinks}`)
     .setImage(`attachment://${post.slug}.png`)
     .setFooter({ text: `STAFF-ONLY · PT-BR · ${post.route}` });

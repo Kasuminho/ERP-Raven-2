@@ -87,6 +87,11 @@ export type ItemRequestRecord<
   lastReminderAt?: TDate | null;
   legacyCreatedAt?: TDate | null;
   legacyUpdatedAt?: TDate | null;
+  craftType?: 'RECIPE' | 'PURPLE_MATERIAL' | 'QUINTESSENCE' | 'STANDARD' | null;
+  currentQuantity?: number;
+  targetQuantity?: number | null;
+  quintessenceQuantity?: number;
+  targetItemCatalogId?: string | null;
   createdAt: TDate;
   updatedAt: TDate;
   itemCatalog?: TItemCatalog | null;

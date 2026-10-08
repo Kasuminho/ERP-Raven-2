@@ -116,6 +116,24 @@ enum StorageRequestStatus {
   CANCELLED
 }
 
+enum StorageRequestPurpose {
+  USE
+  CODEX
+  CRAFT
+}
+
+enum StorageDistributionMode {
+  CONTROLLED
+  FREE_DISTRIBUTION
+}
+
+enum ItemRequestCraftType {
+  RECIPE
+  PURPLE_MATERIAL
+  QUINTESSENCE
+  STANDARD
+}
+
 enum CodexRequestStatus {
   PENDING
   SENT
@@ -1351,6 +1369,11 @@ model PlayerCommunicationPreference {
   progressChannel            CommunicationChannel @default(WEB)
   announcementChannel        CommunicationChannel @default(WEB)
   reminderChannel            CommunicationChannel @default(WEB)
+  storageChannel             CommunicationChannel @default(WEB)
+  codexChannel               CommunicationChannel @default(WEB)
+  auctionChannel             CommunicationChannel @default(WEB)
+  discordEnabled             Boolean              @default(false)
+  discordDirectMessageEnabled Boolean             @default(false)
   quietStartsAt              String?
   quietEndsAt                String?
   timezone                   String               @default("America/Sao_Paulo")
@@ -2018,6 +2041,7 @@ model ItemCatalog {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   itemRequests       ItemRequest[]
+  targetCraftRequests ItemRequest[]        @relation("ItemRequestTargetCatalog")
   dropHistories      DropHistory[]
   auctions           Auction[]
   interestPosts      ItemInterestPost[]
@@ -2038,6 +2062,8 @@ model ItemRequest {
   id                      String                   @id @default(uuid())
   legacyId                Int?                     @unique
   itemCatalogId           String?
+  targetItemCatalogId     String?
+  craftType               ItemRequestCraftType     @default(STANDARD)
   playerId                String?
   discordId               String
   playerName              String
@@ -2045,6 +2071,9 @@ model ItemRequest {
   imageUrl                String?
   totalQuantity           Int
   remainingQuantity       Int
+  currentQuantity         Int                      @default(0)
+  targetQuantity          Int?
+  quintessenceQuantity    Int?
   rankPosition            Int
   threadId                String?
   threadChannelId         String?
@@ -2063,9 +2092,12 @@ model ItemRequest {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   itemCatalog             ItemCatalog?             @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  targetItemCatalog       ItemCatalog?             @relation("ItemRequestTargetCatalog", fields: [targetItemCatalogId], references: [id], onDelete: SetNull)
   player                  Player?                  @relation(fields: [playerId], references: [id], onDelete: SetNull)
 
   @@index([itemCatalogId])
+  @@index([targetItemCatalogId])
+  @@index([craftType])
   @@index([playerId])
   @@index([discordId])
   @@index([itemName])
@@ -2106,27 +2138,33 @@ model DropHistory {
 }
 
 model GuildStorageItem {
-  id            String       @id @default(uuid())
-  itemCatalogId String?
-  itemName      String
-  category      String       @default("common")
-  itemTier      ItemTier?
-  itemType      ItemType?
-  kind          String       @default("equipment")
-  quantity      Int          @default(1)
-  source        String?
-  lastImportAt  DateTime     @default(now())
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  itemCatalog   ItemCatalog? @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
-  entries       GuildStorageEntry[]
-  requests      GuildStorageRequest[]
+  id                 String                  @id @default(uuid())
+  itemCatalogId      String?
+  itemName           String
+  category           String                  @default("common")
+  itemTier           ItemTier?
+  itemType           ItemType?
+  kind               String                  @default("equipment")
+  quantity           Int                     @default(1)
+  distributionMode   StorageDistributionMode @default(CONTROLLED)
+  isCodex            Boolean                 @default(false)
+  allowNegativeStock Boolean                 @default(false)
+  source             String?
+  lastImportAt       DateTime                @default(now())
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  itemCatalog        ItemCatalog?            @relation(fields: [itemCatalogId], references: [id], onDelete: SetNull)
+  entries            GuildStorageEntry[]
+  requests           GuildStorageRequest[]
+  codexRequests      CodexRequest[]
 
   @@index([itemName])
   @@index([itemCatalogId])
   @@index([category])
   @@index([itemTier])
   @@index([itemType])
+  @@index([distributionMode])
+  @@index([isCodex])
 }
 
 model GuildStorageEntry {
@@ -2146,28 +2184,36 @@ model GuildStorageEntry {
 }
 
 model GuildStorageRequest {
-  id            String               @id @default(uuid())
-  storageItemId String
-  playerId      String
-  quantity      Int                  @default(1)
-  status        StorageRequestStatus @default(PENDING)
-  playerNote    String?
-  staffNote     String?
-  deliveredAt   DateTime?
-  deliveredById String?
-  rejectedAt    DateTime?
-  rejectedById  String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id                 String                @id @default(uuid())
+  storageItemId      String
+  playerId           String
+  quantity           Int                   @default(1)
+  purpose            StorageRequestPurpose @default(USE)
+  codexEntryName     String?
+  codexRequestId     String?               @unique
+  isFreeDistribution Boolean               @default(false)
+  stockCheckBypassed Boolean               @default(false)
+  status             StorageRequestStatus  @default(PENDING)
+  playerNote         String?
+  staffNote          String?
+  deliveredAt        DateTime?
+  deliveredById      String?
+  rejectedAt         DateTime?
+  rejectedById       String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   storageItem   GuildStorageItem     @relation(fields: [storageItemId], references: [id], onDelete: Cascade)
   player        Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  codexRequest  CodexRequest?        @relation(fields: [codexRequestId], references: [id], onDelete: SetNull)
   deliveredBy   User?                @relation("StorageRequestDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
   rejectedBy    User?                @relation("StorageRequestRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
 
   @@index([storageItemId])
   @@index([playerId])
   @@index([status])
+  @@index([purpose])
+  @@index([isFreeDistribution])
   @@index([createdAt])
 }
 
@@ -2336,23 +2382,30 @@ model ItemInterestVote {
 }
 
 model CodexRequest {
-  id               String             @id @default(uuid())
+  id               String               @id @default(uuid())
   playerId         String
-  imageUrl         String
+  storageItemId    String?
+  itemCatalogId    String?
+  quantity         Int                  @default(1)
+  imageUrl         String?
   note             String?
-  status           CodexRequestStatus @default(PENDING)
+  status           CodexRequestStatus   @default(PENDING)
   proofImageUrl    String?
   sentById         String?
   sentAt           DateTime?
   confirmedAt      DateTime?
   retryRequestedAt DateTime?
-  queuedAt         DateTime           @default(now())
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  player           Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  sentBy           User?              @relation("CodexRequestSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+  queuedAt         DateTime             @default(now())
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  player           Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  storageItem      GuildStorageItem?    @relation(fields: [storageItemId], references: [id], onDelete: SetNull)
+  storageRequest   GuildStorageRequest?
+  sentBy           User?                @relation("CodexRequestSentBy", fields: [sentById], references: [id], onDelete: SetNull)
 
   @@index([playerId])
+  @@index([storageItemId])
+  @@index([itemCatalogId])
   @@index([status])
   @@index([queuedAt])
   @@index([sentById])

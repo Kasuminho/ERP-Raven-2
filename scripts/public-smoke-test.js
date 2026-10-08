@@ -2,7 +2,7 @@ const dns = require('node:dns');
 const http = require('node:http');
 const https = require('node:https');
 
-const baseUrl = (process.env.SMOKE_BASE_URL ?? 'https://app.guild-g3x.com.br/api/v1').replace(/\/$/, '');
+const baseUrl = (process.env.SMOKE_BASE_URL ?? 'https://app.guild-alcatraz.site/api/v1').replace(/\/$/, '');
 const attempts = Number(process.env.SMOKE_ATTEMPTS ?? 6);
 const delayMs = Number(process.env.SMOKE_DELAY_MS ?? 10_000);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS ?? 10_000);

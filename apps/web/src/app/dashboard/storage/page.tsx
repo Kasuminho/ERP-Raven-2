@@ -60,6 +60,8 @@ export default function PlayerStoragePage() {
   const [requestItem, setRequestItem] = useState<GuildStorageItem | null>(null);
   const [requestQty, setRequestQty] = useState(1);
   const [playerNote, setPlayerNote] = useState('');
+  const [purpose, setPurpose] = useState<'USE' | 'CODEX' | 'CRAFT'>('USE');
+  const [codexEntryName, setCodexEntryName] = useState('');
 
   // Cancel Confirmation State
   const [cancelRequestId, setCancelRequestId] = useState<string | null>(null);
@@ -78,7 +80,6 @@ export default function PlayerStoragePage() {
   const filteredItems = useMemo(() => {
     const items = storageData?.items ?? [];
     return items.filter((item) => {
-      if (item.quantity <= 0) return false;
       const matchesSearch = !search.trim() || item.itemName.toLowerCase().includes(search.toLowerCase().trim());
       const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
       return matchesSearch && matchesCategory;
@@ -97,6 +98,8 @@ export default function PlayerStoragePage() {
     setRequestItem(item);
     setRequestQty(1);
     setPlayerNote('');
+    setPurpose('USE');
+    setCodexEntryName('');
   }
 
   function handleConfirmRequest() {
@@ -115,6 +118,8 @@ export default function PlayerStoragePage() {
         storageItemId: requestItem.id,
         quantity: requestQty,
         playerNote: playerNote.trim() || undefined,
+        purpose,
+        codexEntryName: purpose === 'CODEX' ? codexEntryName.trim() || undefined : undefined,
       },
       {
         onSuccess: () => {
@@ -406,13 +411,39 @@ export default function PlayerStoragePage() {
 
             <div className="space-y-3">
               <div>
+                <label className="text-xs font-semibold text-muted-foreground">Finalidade do Pedido</label>
+                <Select
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value as any)}
+                  className="mt-1"
+                >
+                  <option value="USE">Uso Geral / Progressão de Build</option>
+                  <option value="CODEX">Completar Entrada de Codex</option>
+                  <option value="CRAFT">Material / Insumo para Craft</option>
+                </Select>
+              </div>
+
+              {purpose === 'CODEX' && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Entrada do Codex (opcional)
+                  </label>
+                  <Input
+                    placeholder="Ex: Livro das Sombras III, Armas Antigas..."
+                    value={codexEntryName}
+                    onChange={(e) => setCodexEntryName(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+
+              <div>
                 <label className="text-xs font-semibold text-muted-foreground">Quantidade</label>
                 <Input
                   type="number"
                   min={1}
-                  max={requestItem.quantity}
                   value={requestQty}
-                  onChange={(e) => setRequestQty(Math.max(1, Math.min(requestItem.quantity, Number(e.target.value))))}
+                  onChange={(e) => setRequestQty(Math.max(1, Number(e.target.value)))}
                   className="mt-1"
                 />
               </div>

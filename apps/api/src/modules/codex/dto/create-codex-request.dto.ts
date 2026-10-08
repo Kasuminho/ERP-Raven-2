@@ -1,10 +1,25 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateCodexRequestDto {
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(2048)
-  imageUrl!: string;
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsUUID()
+  storageItemId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  itemCatalogId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantity?: number;
 
   @IsOptional()
   @IsString()

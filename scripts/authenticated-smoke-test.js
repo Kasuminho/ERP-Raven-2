@@ -1,7 +1,7 @@
 const { mkdir, writeFile } = require('node:fs/promises');
 const { dirname, resolve } = require('node:path');
 
-const baseUrl = (process.env.SMOKE_BASE_URL ?? process.env.SMOKE_API_URL ?? 'https://app.guild-g3x.com.br/api/v1').replace(/\/$/, '');
+const baseUrl = (process.env.SMOKE_BASE_URL ?? process.env.SMOKE_API_URL ?? 'https://app.guild-alcatraz.site/api/v1').replace(/\/$/, '');
 const token = process.env.SMOKE_AUTH_TOKEN ?? process.env.SMOKE_BEARER_TOKEN ?? '';
 const allowEmptyAuctions = process.env.SMOKE_ALLOW_EMPTY_AUCTIONS === 'true';
 const outputPath = resolve(process.env.SMOKE_RESULT_PATH ?? 'artifacts/authenticated-smoke.json');
