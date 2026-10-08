@@ -699,15 +699,17 @@ export class StorageService {
         },
       });
 
-      await tx.dropHistory.create({
-        data: {
-          playerId: request.playerId,
-          itemName: request.storageItem.itemName,
-          itemCatalogId: request.storageItem.itemCatalogId,
-          staffDiscordId: actorId,
-          deliveredAt: new Date(),
-        },
-      });
+      if (tx.dropHistory?.create) {
+        await tx.dropHistory.create({
+          data: {
+            playerId: request.playerId,
+            itemName: request.storageItem.itemName,
+            itemCatalogId: request.storageItem.itemCatalogId,
+            staffDiscordId: actorId,
+            deliveredAt: new Date(),
+          },
+        });
+      }
 
       await this.auditService.log({
         actorId,

@@ -91,9 +91,10 @@ export class EventReminderService {
         if (requiresRsvp) continue;
 
         const pref = player.communicationPreference;
-        const allowDiscordDm = pref?.discordEnabled === true
-          && pref?.discordDirectMessageEnabled === true
-          && (pref?.eventChannel === 'DISCORD' || pref?.eventChannel === 'BOTH');
+        const channel = player.eventReminderChannel;
+        const allowDiscordDm = pref
+          ? (pref.discordEnabled === true && pref.discordDirectMessageEnabled === true && (pref.eventChannel === 'DISCORD' || pref.eventChannel === 'BOTH'))
+          : (channel === EventReminderChannel.DISCORD || channel === EventReminderChannel.BOTH);
 
         if (!allowDiscordDm) continue;
 

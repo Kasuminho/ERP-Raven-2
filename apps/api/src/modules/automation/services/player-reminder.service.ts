@@ -119,9 +119,9 @@ export class PlayerReminderService {
       }
 
       const pref = player.communicationPreference;
-      const allowDiscordDm = pref?.discordEnabled === true
-        && pref?.discordDirectMessageEnabled === true
-        && (pref?.reminderChannel === 'DISCORD' || pref?.reminderChannel === 'BOTH');
+      const allowDiscordDm = pref
+        ? (pref.discordEnabled === true && pref.discordDirectMessageEnabled === true && (pref.reminderChannel === 'DISCORD' || pref.reminderChannel === 'BOTH'))
+        : Boolean(player.user?.discordId);
 
       if (!allowDiscordDm) {
         continue;
