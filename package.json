@@ -38,5 +38,8 @@
     "@nestjs/cli": "^10.4.5",
     "globals": "^16.5.0",
     "typescript-eslint": "^8.59.4"
+  },
+  "overrides": {
+    "proxy-addr": "^2.0.8"
   }
 }

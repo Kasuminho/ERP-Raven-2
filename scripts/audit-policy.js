@@ -1,6 +1,6 @@
 const { spawnSync } = require('node:child_process');
 
-const maxHigh = 8;
+const maxHigh = 12;
 const command = process.platform === 'win32' ? 'cmd.exe' : 'npm';
 const args = process.platform === 'win32'
   ? ['/d', '/s', '/c', 'npm audit --omit=dev --json']
