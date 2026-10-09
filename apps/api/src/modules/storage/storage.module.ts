@@ -6,9 +6,9 @@ import { ItemRequestsModule } from '../item-requests/item-requests.module';
 import { ItemsModule } from '../items/items.module';
 import { DiscordModule } from '../discord/discord.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { OcrModule } from '../ocr/ocr.module';
 import { StorageController } from './controllers/storage.controller';
 import { StorageRepository } from './repositories/storage.repository';
-import { GeminiOcrService } from './services/gemini-ocr.service';
 import { StorageService } from './services/storage.service';
 
 @Module({
@@ -19,9 +19,10 @@ import { StorageService } from './services/storage.service';
     forwardRef(() => ItemsModule),
     DiscordModule,
     NotificationsModule,
+    OcrModule,
   ],
   controllers: [StorageController],
-  providers: [StorageService, GeminiOcrService, StorageRepository, RolesGuard],
-  exports: [StorageService, GeminiOcrService],
+  providers: [StorageService, StorageRepository, RolesGuard],
+  exports: [StorageService, OcrModule],
 })
 export class StorageModule {}
