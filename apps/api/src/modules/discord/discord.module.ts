@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AuditModule } from '../audit/audit.module';
+import { PlayersModule } from '../players/players.module';
+import { UploadsModule } from '../uploads/uploads.module';
 import { DiscordBotService } from './bot/services/discord-bot.service';
 import { DiscordApiService } from './bot/services/discord-api.service';
 import { DiscordCommandHandler } from './bot/handlers/command-handler.service';
@@ -13,7 +15,7 @@ import { NotificationService } from './services/notification.service';
 import { DkpLogPublisherService } from './services/dkp-log-publisher.service';
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, UploadsModule, forwardRef(() => PlayersModule)],
   controllers: [DiscordController],
   providers: [
     DiscordApiService,

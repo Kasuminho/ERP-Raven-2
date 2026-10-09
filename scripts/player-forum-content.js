@@ -117,14 +117,14 @@ O ERP envia uma cobrança diária privada enquanto faltar build, função ou dis
 
 Em **Preferências**, escolha Web, Discord, ambos ou nenhum para lembretes não críticos de evento. Essa escolha não desliga cobranças obrigatórias de perfil/Codex nem alertas críticos.
 
-**CP não é editado diretamente.** Publique progresso na categoria **STATUS** com print legível. Para validar camada, envie **Fenda Dimensional**. A Staff analisa e, quando aprovar, atualiza os dados operacionais.
+**CP não é editado diretamente.** Publique progresso na categoria **STATUS** com print legível pelo site ou direto no Discord via comando **/status** ou **/cp** anexando o print. O sistema lê por OCR os 3 atributos da HUD (Ataque, Defesa, Precisão), soma o CP sugerido e submete à Staff. Para validar camada, envie **Fenda Dimensional**. A Staff confere a conformidade dos buffs da sua classe e, ao aprovar, homologa seu CP operacional.
 
 Também existem categorias como Stellas, equipamentos, relíquias, estigma, coleção, habilidade, Pedra do Paraíso e runas.
 
 **Como enviar bem:**
-1. escolha a categoria correta;
-2. anexe a tela inteira e legível;
-3. adicione uma nota quando algo não estiver óbvio;
+1. escolha a categoria correta (ou use **/status** no Discord para CP);
+2. anexe a tela inteira e legível contendo a barra de MP, atributos e barra de buffs;
+3. certifique-se de não possuir buffs proibidos de outras classes no print;
 4. acompanhe o status e os comentários da Staff;
 5. responda pelo próprio fluxo quando pedirem ajuste.
 
@@ -136,14 +136,14 @@ The ERP sends one private daily reminder while build, role, or availability is m
 
 Under **Preferences**, choose Web, Discord, both, or neither for non-critical event reminders. This choice does not disable required profile/Codex reminders or critical alerts.
 
-**CP is not edited directly.** Submit progress under **STATUS** with readable proof. Use **Dimensional Rift** to validate your layer. Staff reviews the submission and updates operational data after approval.
+**CP is not edited directly.** Submit progress under **STATUS** with readable proof on the website or directly on Discord via **/status** or **/cp** slash command with screenshot attached. The OCR system reads the 3 HUD attributes (Attack, Defense, Accuracy), calculates the suggested CP, and sends it to Staff. Use **Dimensional Rift** to validate your layer. Staff verifies class buff compliance and approves your official CP.
 
 Other categories include Stellas, equipment, relics, stigma, collection, skill, Heaven Stone, and runes.
 
 **Good submission checklist:**
-1. choose the correct category;
-2. attach a full readable screen;
-3. add a note when context is not obvious;
+1. choose the correct category (or use **/status** in Discord for CP);
+2. attach a full readable screen showing MP bar, attributes, and buff bar;
+3. make sure you don't have prohibited external buffs from other classes in the screenshot;
 4. track status and Staff comments;
 5. reply through the same flow when changes are requested.
 

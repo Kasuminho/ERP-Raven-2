@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-10-08 (Interesses Omnichannel Discord/Web por CP e i18n Global)
+**Ultima revisao:** 2026-10-09 (Leitura de Print de Status com OCR Raven 2, Comandos Slash /status e /cp no Discord, e Revisao Staff com Inspecao de Buffs)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -632,6 +632,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
 | 2026-07-01 | Staff ganhou painel de deploy com versao atual/esperada, health publico/privado, smoke publico, changelog documentado e checklist operacional sem expor tokens. | deploy/Staff |
 | 2026-07-01 | Modo manutencao passou a bloquear mutacoes sensiveis por regra `maintenanceMode`, com banner na Web e auditoria ao ligar/desligar. | seguranca/operacao |
+| 2026-10-09 | Envio de status via Discord (/status e /cp) com attachment, motor de OCR Raven 2 para soma automatica de CP (Ataque + Defesa + Precisao), pre-digitacao no painel Staff, lightbox de zoom e inspecao de buffs da classe. | progresso/ocr/discord/staff |
 | 2026-10-08 | Interesses Omnichannel (Discord + Web) com botao interativo, ordenacao da Staff por CP, alertas de tier/slot, presenca manual no boss, decisao agil de 1 clique com justificativa anti-panelinha, print aberto no Discord na entrega e seletor global de idiomas (i18n). | interesses/discord/i18n |
 | 2026-07-01 | Staff ganhou dossie universal para player, leilao, request, interesse, drop e evento com resumo, links, audit logs e Markdown copiavel. | auditoria/Staff |
 | 2026-09-19 | Listagem de eventos ajustada para ordem cronologica (proximos primeiro); Painel Staff ganhou customizacao de visibilidade com preset Server Zero; Onboarding obrigatorio bloqueia players com nick padrao do Discord ate informarem nick real do Raven 2, classe e idioma; Piadas do Aristolfo rotacionadas. | UX/Staff/Onboarding |

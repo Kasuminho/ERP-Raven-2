@@ -199,9 +199,12 @@ Em [Requests](https://app.guild-alcatraz.site/dashboard/staff/requests) a Staff 
 ## 📖 Codex Integrado
 Os pedidos de Codex são atendidos de forma unificada pelo Baú da Guilda. Registros históricos e consultas detalhadas continuam disponíveis em [Codex Staff](https://app.guild-alcatraz.site/dashboard/staff/codex).
 
-## 📈 Progresso
+## 📈 Progresso e Revisão de CP
 Em [Progresso](https://app.guild-alcatraz.site/dashboard/staff/progress) revise prints:
-- STATUS aprovado atualiza CP/level operacional;
+- **OCR Raven 2 Integrado:** a HUD do print é lida automaticamente. Os 3 valores abaixo da barra de MP (Ataque + Defesa + Precisão) são somados e o CP já vem pré-digitado;
+- **Inspeção de Buffs da Classe:** o card renderiza a imagem aberta com lightbox/zoom e destaca a classe do jogador. Valide se não há buffs de suporte de outra classe (ex: Dagger com buff de Healer) ou consumíveis indevidos;
+- **Aprovação em 1 clique:** com os buffs verificados, homologue com 1 clique; se houver irregularidade, ajuste o CP no input ou rejeite com nota;
+- STATUS aprovado atualiza CP/level operacional imediatamente no perfil, ranking e leilões;
 - Fenda aprovada atualiza camada/andar;
 - Outras categorias alimentam o histórico;
 - Rejeição precisa de nota objetiva sobre o que faltou.`,

@@ -1745,6 +1745,21 @@ export type PlayerProgress = {
   reviewedAt?: string;
   reviewNote?: string;
   playerReadCommentsAt?: string;
+  metadata?: {
+    attack?: number;
+    defense?: number;
+    accuracy?: number;
+    calculatedCp?: number;
+    buffCount?: number;
+    buffsDescription?: string;
+    suspectedBuffsWarning?: string | null;
+    level?: number;
+    hp?: string;
+    mp?: string;
+    source?: string;
+    discordCommand?: string;
+    [key: string]: any;
+  };
   createdAt: string;
   comments?: PlayerProgressComment[];
   player?: PlayerProfile & {

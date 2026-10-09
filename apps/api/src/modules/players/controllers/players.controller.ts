@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { CombatProfileChangeRequestParamDto, PlayerCombatProfileParamDto, PlayerMembershipParamDto, RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto, UpdatePlayerPreferencesDto } from '../dto';
 import { PlayersService } from '../services/players.service';
+import { RavenStatusOcrService } from '../services/raven-status-ocr.service';
 
 type AuthRequest = {
   user: {
@@ -15,7 +16,20 @@ type AuthRequest = {
 @Controller('players')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
 export class PlayersController {
-  constructor(private readonly service: PlayersService) {}
+  constructor(
+    private readonly service: PlayersService,
+    private readonly statusOcrService: RavenStatusOcrService,
+  ) {}
+
+  @Post('scan-status-print')
+  @UseGuards(JwtAuthGuard)
+  async scanStatusPrint(@Body() dto: { imageUrl?: string; base64?: string }) {
+    const target = dto.base64 || dto.imageUrl;
+    if (!target) {
+      return { success: false, rawError: 'Informe o imageUrl ou base64 do print.' };
+    }
+    return this.statusOcrService.scanStatusPrint(target);
+  }
 
   @Get('health')
   health(): { module: string; ready: boolean } {
@@ -146,6 +160,7 @@ export class PlayersController {
       imageUrls?: string[];
       combatPower?: number;
       dimensionalLayer?: number;
+      metadata?: Record<string, any>;
     },
   ) {
     return this.service.createProgress(req.user.userId, dto);

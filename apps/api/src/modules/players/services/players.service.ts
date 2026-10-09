@@ -5,6 +5,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { RequestCombatProfileChangeDto, ReviewCombatProfileChangeDto, UpdateCombatProfileDto, UpdatePlayerMembershipDto, UpdatePlayerPreferencesDto } from '../dto';
 import { PlayersRepository } from '../repositories/players.repository';
 import { buildRosterSignals, PLAYER_ATTENDANCE_WINDOW_DAYS, PLAYER_STATUS_MAX_AGE_DAYS, RosterSignal } from './player-reminder-policy';
+import { RavenStatusOcrService } from './raven-status-ocr.service';
 
 const reviewRequiredCategories = new Set<ProgressCategory>([
   ProgressCategory.STATUS,
@@ -45,6 +46,7 @@ export class PlayersService {
     private readonly repository: PlayersRepository,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly statusOcrService: RavenStatusOcrService,
   ) {}
 
   health(): { module: string; ready: boolean } {
@@ -739,6 +741,7 @@ export class PlayersService {
     imageUrls?: string[];
     combatPower?: number;
     dimensionalLayer?: number;
+    metadata?: Record<string, any>;
   }) {
     const player = await this.getPrimaryPlayerByUser(userId);
 
@@ -749,8 +752,9 @@ export class PlayersService {
     const category = this.normalizeProgressCategory(data.category);
     const imageUrls = this.normalizeImageUrls(data.imageUrls, data.imageUrl);
     const requiresStaffReview = reviewRequiredCategories.has(category);
-    const combatPower = this.normalizeOptionalPositiveInteger(data.combatPower, 'Combat power must be a positive integer.');
+    let combatPower = this.normalizeOptionalPositiveInteger(data.combatPower, 'Combat power must be a positive integer.');
     const dimensionalLayer = this.normalizeOptionalLayer(data.dimensionalLayer);
+    let metadata: Record<string, any> = data.metadata ? { ...data.metadata } : {};
 
     if (imageUrls.length === 0) {
       throw new BadRequestException('At least one progress image is required.');
@@ -760,6 +764,34 @@ export class PlayersService {
 
     if (imageUrls.length > maxImages) {
       throw new BadRequestException(`${category} accepts up to ${maxImages} progress image(s).`);
+    }
+
+    // Se for categoria STATUS e ainda não tem metadados de OCR, tenta escanear o print
+    if (category === ProgressCategory.STATUS && imageUrls[0] && !metadata.attack) {
+      try {
+        const ocr = await this.statusOcrService.scanStatusPrint(imageUrls[0]);
+        if (ocr.success && ocr.calculatedCp) {
+          metadata = {
+            ...metadata,
+            attack: ocr.attack,
+            defense: ocr.defense,
+            accuracy: ocr.accuracy,
+            calculatedCp: ocr.calculatedCp,
+            buffCount: ocr.buffCount,
+            buffsDescription: ocr.buffsDescription,
+            suspectedBuffsWarning: ocr.suspectedBuffsWarning,
+            level: ocr.level,
+            hp: ocr.hp,
+            mp: ocr.mp,
+            source: metadata.source || 'gemini_ocr',
+          };
+          if (!combatPower) {
+            combatPower = ocr.calculatedCp;
+          }
+        }
+      } catch (ocrErr: any) {
+        metadata = { ...metadata, ocrError: ocrErr.message };
+      }
     }
 
     const progress = await this.repository.client.$transaction(async (tx) => {
@@ -782,6 +814,7 @@ export class PlayersService {
           reviewStatus: requiresStaffReview ? ProgressReviewStatus.PENDING : ProgressReviewStatus.NOT_REQUIRED,
           combatPower,
           dimensionalLayer,
+          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
         },
         include: this.progressInclude(),
       });

@@ -1451,6 +1451,7 @@ model PlayerProgress {
   reviewedAt           DateTime?
   reviewNote           String?
   playerReadCommentsAt DateTime?
+  metadata             Json?                   @default("{}")
   createdAt            DateTime                @default(now())
   player               Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
   reviewedBy           User?                   @relation("PlayerProgressReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)

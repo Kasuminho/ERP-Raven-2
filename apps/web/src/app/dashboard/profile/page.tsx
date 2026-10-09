@@ -156,8 +156,27 @@ export default function ProfilePage() {
         uploadedUrls.push(response.data.url);
       }
 
+      let detectedCp: number | undefined;
+      if (isStatusProgress && uploadedUrls[0]) {
+        try {
+          const ocrRes = await api.post<{ success: boolean; calculatedCp?: number; attack?: number; defense?: number; accuracy?: number }>('/players/scan-status-print', {
+            imageUrl: uploadedUrls[0],
+          });
+          if (ocrRes.data?.success && ocrRes.data?.calculatedCp) {
+            detectedCp = ocrRes.data.calculatedCp;
+            notifyToast({
+              title: `CP Detectado via OCR: ${detectedCp.toLocaleString('pt-BR')} (⚔️ ${ocrRes.data.attack ?? '?'} + 🛡️ ${ocrRes.data.defense ?? '?'} + 🎯 ${ocrRes.data.accuracy ?? '?'})`,
+              tone: 'success',
+            });
+          }
+        } catch {
+          // Segue normalmente sem quebrar o upload
+        }
+      }
+
       setProgress((current) => ({
         ...current,
+        combatPower: detectedCp ? String(detectedCp) : current.combatPower,
         imageUrls: [...current.imageUrls, ...uploadedUrls].slice(0, progressImageLimit),
       }));
       notifyToast({ title: t(currentLocale, 'imagesAttached'), tone: 'success' });
