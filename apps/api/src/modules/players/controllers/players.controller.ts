@@ -36,6 +36,11 @@ export class PlayersController {
     return this.service.health();
   }
 
+  @Get('ranking')
+  async getRanking() {
+    return this.service.getGuildRanking();
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('STAFF', 'ADMIN')

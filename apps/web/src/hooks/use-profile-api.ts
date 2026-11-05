@@ -116,8 +116,12 @@ export function useCreateProgress() {
       imageUrls: string[];
       combatPower?: number;
       dimensionalLayer?: number;
+      metadata?: Record<string, any>;
     }) => (await api.post('/players/me/progress', data)).data,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-history'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-history'] });
+      queryClient.invalidateQueries({ queryKey: ['guild-ranking'] });
+    },
   });
 }
 

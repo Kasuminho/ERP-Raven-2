@@ -85,6 +85,60 @@ export class PlayersService {
     });
   }
 
+  async getGuildRanking() {
+    const players = await this.repository.client.player.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        nickname: true,
+        class: true,
+        combatPower: true,
+        dimensionalLayer: true,
+        updatedAt: true,
+        user: {
+          select: {
+            discordId: true,
+            discordUsername: true,
+            discordNickname: true,
+          },
+        },
+        progressUpdates: {
+          where: { category: ProgressCategory.STATUS, reviewStatus: ProgressReviewStatus.APPROVED },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            imageUrl: true,
+            combatPower: true,
+            metadata: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: [{ combatPower: 'desc' }, { nickname: 'asc' }],
+    });
+
+    return players.map((p, index) => {
+      const latestApproved = p.progressUpdates[0];
+      const meta = (latestApproved?.metadata ?? {}) as Record<string, any>;
+      return {
+        rank: index + 1,
+        id: p.id,
+        nickname: p.nickname,
+        class: p.class,
+        combatPower: p.combatPower,
+        dimensionalLayer: p.dimensionalLayer,
+        attack: Number(meta.attack) || undefined,
+        defense: Number(meta.defense) || undefined,
+        accuracy: Number(meta.accuracy) || undefined,
+        buffCount: Number(meta.buffCount) || undefined,
+        lastProofUrl: latestApproved?.imageUrl || undefined,
+        lastVerifiedAt: latestApproved?.createdAt || p.updatedAt,
+        discordUser: p.user?.discordNickname || p.user?.discordUsername,
+      };
+    });
+  }
+
   async updateMembership(playerId: string, actorId: string, dto: UpdatePlayerMembershipDto) {
     const player = await this.repository.client.player.findUnique({ where: { id: playerId } });
     if (!player) throw new NotFoundException('Player not found.');
