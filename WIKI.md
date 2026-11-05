@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-10-09 (Leitura de Print de Status com OCR Raven 2, Comandos Slash /status e /cp no Discord, e Revisao Staff com Inspecao de Buffs)
+**Ultima revisao:** 2026-11-05 (Simplificacao Radical do ERP para Foco em Ranking de CP, Envio Simplificado de Print com OCR, e Atualizacao de Seguranca Next.js)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -627,6 +627,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
 | 2026-09-20 | Body parser do NestJS expandido para 50MB e envio de OCR desacoplado para processamento sequencial print a print com progresso na Web, eliminando HTTP 413. | OCR/Gemini/Performance |
 | 2026-09-20 | OCR do Gemini ganhou parser robusto para respostas envelopadas ({ items: [] }), suporte nativo a prints em PT-BR do Raven 2 e compatibilidade de chaves items/scannedItems entre API e Web. | OCR/Gemini/Storage |
+| 2026-11-05 | Simplificacao radical do ERP para focar em Ranking de CP da Guilda e envio simples de print com OCR; savepoint total anterior versionado na branch `backup/full-erp-savepoint` e tag `v1-full-erp-backup`; Next.js atualizado para 15.5.29 corrigindo GHSA-2464-fhr4-w9xw no CI/CD. | produto/UX/simplificacao |
 | 2026-07-01 | `operations` iniciou separacao por dominio com servicos para Staff summary, briefing, weekly, integridade, meeting e diagnostico de leilao; integridade/legacy audit ja sairam para `IntegrityService`. | arquitetura/API |
 | 2026-07-01 | Health privado e painel de saude Staff passaram a mostrar idade do ultimo backup verificado a partir do marcador gerado por `verify-backup.sh`. | backup/health |
 | 2026-07-01 | Deploy ganhou smoke autenticado pos-Watchtower para validar auth/me, Staff, diagnostico de leilao, entregas, health privado e painel de deploy com token de automacao. | deploy/smoke |
