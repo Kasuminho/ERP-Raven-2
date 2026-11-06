@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { PlayerClass, PlayerStaffNoteSeverity, ProgressCategory } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -37,8 +37,11 @@ export class PlayersController {
   }
 
   @Get('ranking')
-  async getRanking() {
-    return this.service.getGuildRanking();
+  async getRanking(
+    @Query('guild') guild?: string,
+    @Query('includeInactive') includeInactive?: string,
+  ) {
+    return this.service.getGuildRanking(guild, includeInactive === 'true');
   }
 
   @Get()
@@ -57,6 +60,16 @@ export class PlayersController {
     @Body() dto: UpdatePlayerMembershipDto,
   ) {
     return this.service.updateMembership(params.playerId, req.user.userId, dto);
+  }
+
+  @Delete(':playerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async deletePlayer(
+    @Param() params: PlayerMembershipParamDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.service.deletePlayer(params.playerId, req.user.userId);
   }
 
   @Get('audit/identities')
@@ -148,7 +161,7 @@ export class PlayersController {
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @Req() req: AuthRequest,
-    @Body() dto: { nickname?: string; class?: PlayerClass; dimensionalLayer?: number; timezone?: string; locale?: string },
+    @Body() dto: { nickname?: string; class?: PlayerClass; dimensionalLayer?: number; timezone?: string; locale?: string; guildName?: string },
   ) {
     return this.service.updatePrimaryPlayerProfile(req.user.userId, dto);
   }

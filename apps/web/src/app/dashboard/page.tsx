@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, CheckCircle2, ChevronDown, Flame, Shield, Sparkles, Swords, Trophy, Upload, User, Users, X, ZoomIn } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronDown, Flame, Shield, Sparkles, Swords, Trophy, Upload, User, UserCheck, UserMinus, Users, X, ZoomIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { notifyToast } from '@/components/ui/toaster';
 import { useGuildRanking, type GuildRankingMember } from '@/hooks/use-ranking-api';
-import { useCreateProgress, useMyHistory, useUpdatePlayerProfile } from '@/hooks/use-profile-api';
+import { useCreateProgress, useMyHistory, useUpdatePlayerMembership, useUpdatePlayerProfile } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -28,21 +28,29 @@ const RAVEN2_CLASSES: PlayerClass[] = [
 ];
 
 export default function SimplifiedDashboardPage() {
-  const ranking = useGuildRanking();
   const profileHistory = useMyHistory();
   const updateProfile = useUpdatePlayerProfile();
   const createProgress = useCreateProgress();
+  const updateMembership = useUpdatePlayerMembership();
   const locale = useLocaleStore((state) => state.locale);
-  const authenticated = useAuthStore((state) => state.authenticated);
+  const isStaff = useAuthStore((state) => state.hasRole(['STAFF', 'ADMIN']));
 
+  const [selectedGuild, setSelectedGuild] = useState<'ALL' | 'AlcatraZ' | 'AlcatraZ2'>('ALL');
   const [selectedClass, setSelectedClass] = useState<string>('ALL');
+  const [showInactive, setShowInactive] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [zoomProofUrl, setZoomProofUrl] = useState<string | null>(null);
+
+  // Staff Removal State
+  const [removeTarget, setRemoveTarget] = useState<GuildRankingMember | null>(null);
+  const [removeReason, setRemoveReason] = useState('Saiu da guilda');
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Form State
   const myPlayer = profileHistory.data?.player;
   const [nickname, setNickname] = useState('');
   const [charClass, setCharClass] = useState<PlayerClass>('BERSERKER');
+  const [guild, setGuild] = useState<'AlcatraZ' | 'AlcatraZ2'>('AlcatraZ');
   const [attack, setAttack] = useState('');
   const [defense, setDefense] = useState('');
   const [accuracy, setAccuracy] = useState('');
@@ -50,10 +58,15 @@ export default function SimplifiedDashboardPage() {
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const ranking = useGuildRanking(selectedGuild, showInactive);
+
   function openSubmitModal() {
     if (myPlayer) {
       setNickname(myPlayer.nickname || '');
       setCharClass(myPlayer.class || 'BERSERKER');
+      if (myPlayer.guildName === 'AlcatraZ2' || myPlayer.guildName === 'AlcatraZ') {
+        setGuild(myPlayer.guildName as 'AlcatraZ' | 'AlcatraZ2');
+      }
     }
     setModalOpen(true);
   }
@@ -119,11 +132,12 @@ export default function SimplifiedDashboardPage() {
       return;
     }
 
-    // 1. Atualizar nick/classe se mudou
-    if (myPlayer && (myPlayer.nickname !== nickname || myPlayer.class !== charClass)) {
+    // 1. Atualizar nick/classe/guilda se mudou
+    if (myPlayer && (myPlayer.nickname !== nickname || myPlayer.class !== charClass || myPlayer.guildName !== guild)) {
       await updateProfile.mutateAsync({
         nickname: nickname.trim(),
         class: charClass,
+        guildName: guild,
       });
     }
 
@@ -138,6 +152,7 @@ export default function SimplifiedDashboardPage() {
           defense: def,
           accuracy: acc,
           calculatedCp: totalCp,
+          guild,
           source: 'web_simple_form',
         },
       },
@@ -145,7 +160,7 @@ export default function SimplifiedDashboardPage() {
         onSuccess: () => {
           notifyToast({
             title: 'Status enviado com sucesso!',
-            description: 'A Staff irá conferir os buffs do print e aprovar para o ranking.',
+            description: `A Staff irá conferir o print e aprovar para o ranking da guilda ${guild}.`,
             tone: 'success',
           });
           setModalOpen(false);
@@ -158,10 +173,62 @@ export default function SimplifiedDashboardPage() {
     );
   }
 
+  async function handleConfirmRemove() {
+    if (!removeTarget) return;
+    setIsRemoving(true);
+    try {
+      await updateMembership.mutateAsync({
+        playerId: removeTarget.id,
+        action: 'DEACTIVATE',
+        reason: removeReason.trim() || 'Saiu da guilda',
+      });
+      notifyToast({
+        title: `${removeTarget.nickname} removido da guilda.`,
+        description: 'O jogador foi desativado e não aparece mais no ranking ativo.',
+        tone: 'success',
+      });
+      setRemoveTarget(null);
+    } catch (err: any) {
+      notifyToast({
+        title: 'Erro ao remover membro',
+        description: err?.response?.data?.message || err.message,
+        tone: 'error',
+      });
+    } finally {
+      setIsRemoving(false);
+    }
+  }
+
+  async function handleReactivate(member: GuildRankingMember) {
+    try {
+      await updateMembership.mutateAsync({
+        playerId: member.id,
+        action: 'ACTIVATE',
+      });
+      notifyToast({
+        title: `${member.nickname} reativado!`,
+        description: 'O jogador retornou para a lista ativa da guilda.',
+        tone: 'success',
+      });
+    } catch (err: any) {
+      notifyToast({
+        title: 'Erro ao reativar membro',
+        description: err?.response?.data?.message || err.message,
+        tone: 'error',
+      });
+    }
+  }
+
   const members = ranking.data ?? [];
-  const filtered = selectedClass === 'ALL'
-    ? members
-    : members.filter((m) => m.class === selectedClass);
+  const filtered = members.filter((m) => {
+    const matchClass = selectedClass === 'ALL' || m.class === selectedClass;
+    const matchGuild = selectedGuild === 'ALL' || m.guildName === selectedGuild;
+    return matchClass && matchGuild;
+  });
+
+  const alcatrazCount = members.filter((m) => (m.guildName ?? 'AlcatraZ') === 'AlcatraZ').length;
+  const alcatraz2Count = members.filter((m) => m.guildName === 'AlcatraZ2').length;
+  const inactiveCount = members.filter((m) => m.isActive === false).length;
 
   const calculatedTotal = (Number(attack) || 0) + (Number(defense) || 0) + (Number(accuracy) || 0);
 
@@ -173,7 +240,7 @@ export default function SimplifiedDashboardPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
               <Trophy className="h-3.5 w-3.5" />
-              Guild AlcatraZ • Raven 2
+              AlcatraZ & AlcatraZ2 • Raven 2
             </div>
             <h1 className="font-[var(--font-cinzel)] text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               Ranking de Poder (CP)
@@ -207,6 +274,9 @@ export default function SimplifiedDashboardPage() {
                 <span className="text-muted-foreground">Meu Personagem: </span>
                 <strong className="text-foreground text-sm">{myPlayer.nickname}</strong>
                 <span className="ml-2 text-primary font-semibold">({playerClassLabel(myPlayer.class, locale)})</span>
+                <Badge tone={myPlayer.guildName === 'AlcatraZ2' ? 'blue' : 'gold'} className="ml-2 text-[10px]">
+                  🏰 {myPlayer.guildName ?? 'AlcatraZ'}
+                </Badge>
               </div>
             </div>
 
@@ -218,6 +288,61 @@ export default function SimplifiedDashboardPage() {
                 </strong>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Seletor de Guildas (AlcatraZ vs AlcatraZ2) + Alternador Staff */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 p-1 bg-card/80 border border-white/10 rounded-xl backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setSelectedGuild('ALL')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              selectedGuild === 'ALL'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+            }`}
+          >
+            🏰 Todas as Guildas ({members.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedGuild('AlcatraZ')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              selectedGuild === 'AlcatraZ'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-md'
+                : 'text-amber-400/80 hover:text-amber-300 hover:bg-white/5'
+            }`}
+          >
+            ⚔️ AlcatraZ ({alcatrazCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedGuild('AlcatraZ2')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              selectedGuild === 'AlcatraZ2'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                : 'text-purple-300/80 hover:text-purple-200 hover:bg-white/5'
+            }`}
+          >
+            🛡️ AlcatraZ2 ({alcatraz2Count})
+          </button>
+        </div>
+
+        {/* Filtro Staff para ver membros inativos/removidos */}
+        {isStaff && (
+          <div className="flex items-center gap-2 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer bg-card/60 border border-white/10 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded border-border text-primary focus:ring-primary"
+              />
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Ver membros que saíram ({inactiveCount})</span>
+            </label>
           </div>
         )}
       </div>
@@ -263,26 +388,34 @@ export default function SimplifiedDashboardPage() {
               <tr>
                 <th className="py-3 px-4 w-16 text-center">#</th>
                 <th className="py-3 px-4">Personagem</th>
+                <th className="py-3 px-4 text-center">Guilda</th>
                 <th className="py-3 px-4">Classe</th>
                 <th className="py-3 px-4 text-center">⚔️ Ataque</th>
                 <th className="py-3 px-4 text-center">🛡️ Defesa</th>
                 <th className="py-3 px-4 text-center">🎯 Precisão</th>
                 <th className="py-3 px-4 text-center font-extrabold text-foreground">🔥 CP Total</th>
                 <th className="py-3 px-4 text-right">Comprovante</th>
+                {isStaff && <th className="py-3 px-4 text-center">Ações Staff</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-medium">
               {filtered.map((member) => {
-                const isTop1 = member.rank === 1;
-                const isTop3 = member.rank <= 3;
+                const isTop1 = member.rank === 1 && member.isActive !== false;
+                const isTop3 = member.rank <= 3 && member.isActive !== false;
+                const isInactive = member.isActive === false;
+
                 return (
                   <tr
                     key={member.id}
-                    className="transition-colors hover:bg-white/[0.03] group"
+                    className={`transition-colors hover:bg-white/[0.03] group ${
+                      isInactive ? 'opacity-50 bg-red-950/10' : ''
+                    }`}
                   >
                     {/* Rank */}
                     <td className="py-3.5 px-4 text-center">
-                      {isTop1 ? (
+                      {isInactive ? (
+                        <span className="text-red-400 text-xs font-semibold">✕</span>
+                      ) : isTop1 ? (
                         <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 font-extrabold text-xs shadow-md">
                           👑
                         </span>
@@ -306,7 +439,22 @@ export default function SimplifiedDashboardPage() {
                             ({member.discordUser})
                           </span>
                         )}
+                        {isInactive && (
+                          <Badge tone="red" className="text-[9px] py-0">
+                            Saiu da guilda
+                          </Badge>
+                        )}
                       </div>
+                    </td>
+
+                    {/* Guilda */}
+                    <td className="py-3.5 px-4 text-center">
+                      <Badge
+                        tone={member.guildName === 'AlcatraZ2' ? 'blue' : 'gold'}
+                        className="text-[10px] font-bold py-0.5"
+                      >
+                        {member.guildName === 'AlcatraZ2' ? '🛡️ AlcatraZ2' : '⚔️ AlcatraZ'}
+                      </Badge>
                     </td>
 
                     {/* Classe */}
@@ -349,13 +497,43 @@ export default function SimplifiedDashboardPage() {
                         <span className="text-xs text-muted-foreground/40">-</span>
                       )}
                     </td>
+
+                    {/* Ações da Staff */}
+                    {isStaff && (
+                      <td className="py-3.5 px-4 text-center">
+                        {isInactive ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 h-7 px-2 text-xs gap-1"
+                            onClick={() => handleReactivate(member)}
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                            Reativar
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2 text-xs gap-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setRemoveTarget(member);
+                              setRemoveReason('Saiu da guilda');
+                            }}
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                            Remover
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
 
               {!ranking.isLoading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
+                  <td colSpan={isStaff ? 10 : 9} className="py-12 text-center text-muted-foreground text-sm">
                     Nenhum jogador encontrado com os filtros atuais.
                   </td>
                 </tr>
@@ -365,6 +543,55 @@ export default function SimplifiedDashboardPage() {
         </div>
       </div>
 
+      {/* Modal / Popup de Confirmação de Remoção de Membro (Staff) */}
+      {removeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-500/40 bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2 text-red-400">
+                <UserMinus className="h-5 w-5" />
+                <h3 className="text-lg font-bold text-foreground">Remover Membro da Guilda</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRemoveTarget(null)}
+                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja remover <strong className="text-foreground">{removeTarget.nickname}</strong> da guilda?
+              O jogador será desativado e deixará de aparecer no ranking oficial de CP.
+            </p>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground">Motivo da Saída</label>
+              <Input
+                value={removeReason}
+                onChange={(e) => setRemoveReason(e.target.value)}
+                placeholder="Ex: Saiu da guilda, mudou de servidor..."
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={isRemoving}>
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                className="bg-red-600 hover:bg-red-500 text-white font-bold"
+                onClick={handleConfirmRemove}
+                disabled={isRemoving}
+              >
+                {isRemoving ? 'Removendo...' : 'Confirmar Remoção'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal / Popup Simples de Envio de Status */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
@@ -372,7 +599,7 @@ export default function SimplifiedDashboardPage() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <h3 className="text-lg font-bold text-foreground">Atualizar Meu Status</h3>
-                <p className="text-xs text-muted-foreground">Preencha seus dados ou anexe o print para preencher automático.</p>
+                <p className="text-xs text-muted-foreground">Selecione sua guilda, anexe o print e confira os atributos.</p>
               </div>
               <button
                 type="button"
@@ -384,6 +611,35 @@ export default function SimplifiedDashboardPage() {
             </div>
 
             <div className="space-y-4">
+              {/* Seleção de Guilda (AlcatraZ vs AlcatraZ2) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground block">Em qual divisão da guilda você está?</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setGuild('AlcatraZ')}
+                    className={`flex items-center justify-center gap-2 h-11 rounded-xl border text-xs font-bold transition-all ${
+                      guild === 'AlcatraZ'
+                        ? 'border-amber-500/80 bg-amber-500/20 text-amber-300 shadow-md ring-1 ring-amber-500/50'
+                        : 'border-white/10 bg-card/60 hover:bg-white/5 text-muted-foreground'
+                    }`}
+                  >
+                    ⚔️ AlcatraZ (Principal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGuild('AlcatraZ2')}
+                    className={`flex items-center justify-center gap-2 h-11 rounded-xl border text-xs font-bold transition-all ${
+                      guild === 'AlcatraZ2'
+                        ? 'border-purple-500/80 bg-purple-500/20 text-purple-300 shadow-md ring-1 ring-purple-500/50'
+                        : 'border-white/10 bg-card/60 hover:bg-white/5 text-muted-foreground'
+                    }`}
+                  >
+                    🛡️ AlcatraZ2 (Secundária)
+                  </button>
+                </div>
+              </div>
+
               {/* Nick & Classe */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">

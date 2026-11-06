@@ -85,15 +85,22 @@ export class PlayersService {
     });
   }
 
-  async getGuildRanking() {
+  async getGuildRanking(guild?: string, includeInactive = false) {
+    const where: Prisma.PlayerWhereInput = {
+      ...(includeInactive ? {} : { isActive: true }),
+      ...(guild && guild !== 'ALL' ? { guildName: guild } : {}),
+    };
     const players = await this.repository.client.player.findMany({
-      where: { isActive: true },
+      where,
       select: {
         id: true,
         nickname: true,
         class: true,
         combatPower: true,
+        guildName: true,
         dimensionalLayer: true,
+        isActive: true,
+        deactivationReason: true,
         updatedAt: true,
         user: {
           select: {
@@ -127,7 +134,10 @@ export class PlayersService {
         nickname: p.nickname,
         class: p.class,
         combatPower: p.combatPower,
+        guildName: p.guildName || 'AlcatraZ',
         dimensionalLayer: p.dimensionalLayer,
+        isActive: p.isActive,
+        deactivationReason: p.deactivationReason || undefined,
         attack: Number(meta.attack) || undefined,
         defense: Number(meta.defense) || undefined,
         accuracy: Number(meta.accuracy) || undefined,
@@ -183,6 +193,38 @@ export class PlayersService {
       metadata: { reason: dto.reason?.trim() ?? null, previousIsActive: player.isActive },
     });
     return updated;
+  }
+
+  async deletePlayer(playerId: string, actorId: string) {
+    const player = await this.repository.client.player.findUnique({ where: { id: playerId } });
+    if (!player) throw new NotFoundException('Player not found.');
+    if (player.userId === actorId) {
+      throw new BadRequestException('Voce nao pode excluir o proprio cadastro.');
+    }
+
+    try {
+      await this.repository.client.player.delete({ where: { id: playerId } });
+    } catch {
+      await this.repository.client.player.update({
+        where: { id: playerId },
+        data: {
+          isActive: false,
+          deactivatedAt: new Date(),
+          deactivatedById: actorId,
+          deactivationReason: 'Removido da guilda',
+        },
+      });
+    }
+
+    await this.auditService.log({
+      action: 'PLAYER_REMOVED',
+      targetType: 'Player',
+      targetId: playerId,
+      actorId,
+      metadata: { nickname: player.nickname },
+    });
+
+    return { success: true };
   }
 
   async getCombatRosterMatrix() {
@@ -752,6 +794,7 @@ export class PlayersService {
       dimensionalLayer?: number;
       timezone?: string;
       locale?: string;
+      guildName?: string;
     },
   ) {
     const player = await this.getPrimaryPlayerByUser(userId);
@@ -763,8 +806,9 @@ export class PlayersService {
     const nickname = this.normalizeOptionalNickname(data.nickname);
     const playerClass = this.normalizeOptionalPlayerClass(data.class);
     const dimensionalLayer = this.normalizeOptionalLayer(data.dimensionalLayer);
+    const guildName = data.guildName && ['AlcatraZ', 'AlcatraZ2'].includes(data.guildName) ? data.guildName : undefined;
 
-    this.assertProfileUpdateHasChanges({ nickname, class: playerClass, dimensionalLayer, timezone: data.timezone, locale: data.locale });
+    this.assertProfileUpdateHasChanges({ nickname, class: playerClass, dimensionalLayer, timezone: data.timezone, locale: data.locale, guildName });
 
     return this.repository.client.$transaction(async (tx) => {
       if (data.locale && ['pt', 'en', 'es'].includes(data.locale)) {
@@ -778,6 +822,7 @@ export class PlayersService {
           class: playerClass,
           dimensionalLayer,
           timezone: data.timezone?.trim() || undefined,
+          ...(guildName ? { guildName } : {}),
         },
         include: {
           user: true,
@@ -855,6 +900,13 @@ export class PlayersService {
           category,
         },
       });
+
+      if (metadata.guild && (metadata.guild === 'AlcatraZ' || metadata.guild === 'AlcatraZ2')) {
+        await tx.player.update({
+          where: { id: player.id },
+          data: { guildName: metadata.guild },
+        });
+      }
 
       return tx.playerProgress.create({
         data: {
@@ -1033,6 +1085,11 @@ export class PlayersService {
 
       if (dimensionalLayer !== undefined) {
         updatePlayer.dimensionalLayer = dimensionalLayer;
+      }
+
+      const meta = (existing.metadata ?? {}) as Record<string, any>;
+      if (meta.guild && (meta.guild === 'AlcatraZ' || meta.guild === 'AlcatraZ2')) {
+        updatePlayer.guildName = meta.guild;
       }
 
       if (Object.keys(updatePlayer).length > 0) {
@@ -1939,6 +1996,7 @@ export class PlayersService {
     dimensionalLayer?: number;
     timezone?: string;
     locale?: string;
+    guildName?: string;
   }): void {
     if (
       data.nickname === undefined
@@ -1946,6 +2004,7 @@ export class PlayersService {
       && data.dimensionalLayer === undefined
       && !data.timezone?.trim()
       && !data.locale
+      && !data.guildName
     ) {
       throw new BadRequestException('At least one profile field must be provided.');
     }

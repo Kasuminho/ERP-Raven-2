@@ -95,12 +95,13 @@ export function useUpdatePreferences() {
 export function useUpdatePlayerProfile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { nickname?: string; class?: PlayerClass; dimensionalLayer?: number; timezone?: string; locale?: string }) =>
+    mutationFn: async (data: { nickname?: string; class?: PlayerClass; dimensionalLayer?: number; timezone?: string; locale?: string; guildName?: string }) =>
       (await api.patch('/players/me/profile', data)).data,
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['my-history'] }),
         queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['guild-ranking'] }),
       ]);
     },
   });
@@ -198,6 +199,23 @@ export function useUpdatePlayerMembership() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['players'] }),
         queryClient.invalidateQueries({ queryKey: ['combat-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['guild-ranking'] }),
+      ]);
+    },
+  });
+}
+
+export function useDeletePlayer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (playerId: string) => {
+      return (await api.delete<{ success: boolean }>(`/players/${playerId}`)).data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['combat-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['guild-ranking'] }),
       ]);
     },
   });

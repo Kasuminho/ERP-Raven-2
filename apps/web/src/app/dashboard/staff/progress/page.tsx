@@ -70,6 +70,11 @@ export default function StaffProgressReviewPage() {
                             {playerClassLabel(review.player.class, locale)}
                           </Badge>
                         ) : null}
+                        {(review.metadata?.guild || (review.player as any)?.guildName) ? (
+                          <Badge tone={((review.metadata?.guild || (review.player as any)?.guildName) === 'AlcatraZ2') ? 'blue' : 'gold'}>
+                            🏰 {review.metadata?.guild || (review.player as any)?.guildName}
+                          </Badge>
+                        ) : null}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {progressCategoryLabel(review.category, locale)} • Enviado em {new Date(review.createdAt).toLocaleString(locale === 'en' ? 'en-US' : 'pt-BR')}

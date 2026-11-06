@@ -1633,6 +1633,7 @@ export type PlayerProfile = {
   userId?: string;
   nickname: string;
   class: PlayerClass;
+  guildName?: string;
   dimensionalLayer: number;
   combatPower?: number;
   timezone?: string;

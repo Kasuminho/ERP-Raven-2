@@ -616,6 +616,7 @@ model Player {
   class                           PlayerClass
   dimensionalLayer                Int                                @db.SmallInt
   combatPower                     Int                                @default(0)
+  guildName                       String                             @default("AlcatraZ")
   timezone                        String?
   attendancePercentage            Float                              @default(0)
   eventReminderChannel            EventReminderChannel               @default(WEB)
@@ -674,6 +675,7 @@ model Player {
 
   @@index([userId])
   @@index([class])
+  @@index([guildName])
   @@index([dimensionalLayer])
   @@index([attendancePercentage])
   @@index([isActive])

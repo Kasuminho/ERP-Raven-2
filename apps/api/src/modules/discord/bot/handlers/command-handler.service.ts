@@ -42,6 +42,16 @@ export class DiscordCommandHandler implements OnModuleInit {
       )
       .addStringOption((opt) =>
         opt
+          .setName('guilda')
+          .setDescription('Divisão da guilda')
+          .setRequired(false)
+          .addChoices(
+            { name: 'AlcatraZ (Principal)', value: 'AlcatraZ' },
+            { name: 'AlcatraZ2 (Secundária)', value: 'AlcatraZ2' },
+          ),
+      )
+      .addStringOption((opt) =>
+        opt
           .setName('nota')
           .setDescription('Observação opcional para a Staff')
           .setRequired(false),
@@ -64,6 +74,16 @@ export class DiscordCommandHandler implements OnModuleInit {
       )
       .addStringOption((opt) =>
         opt
+          .setName('guilda')
+          .setDescription('Divisão da guilda')
+          .setRequired(false)
+          .addChoices(
+            { name: 'AlcatraZ (Principal)', value: 'AlcatraZ' },
+            { name: 'AlcatraZ2 (Secundária)', value: 'AlcatraZ2' },
+          ),
+      )
+      .addStringOption((opt) =>
+        opt
           .setName('nota')
           .setDescription('Observação opcional para a Staff')
           .setRequired(false),
@@ -82,6 +102,7 @@ export class DiscordCommandHandler implements OnModuleInit {
 
       const attachment = interaction.options.getAttachment('print', true);
       const dimensionalLayer = interaction.options.getInteger('camada') ?? undefined;
+      const guildChoice = interaction.options.getString('guilda') ?? undefined;
       const note = interaction.options.getString('nota') ?? undefined;
 
       // 1. Validar jogador vinculado
@@ -138,6 +159,7 @@ export class DiscordCommandHandler implements OnModuleInit {
         discordUserId: interaction.user.id,
         discordUsername: interaction.user.username,
         fileName: attachment.name,
+        guild: guildChoice || player.guildName || 'AlcatraZ',
       };
 
       let combatPower: number | undefined;
@@ -171,6 +193,7 @@ export class DiscordCommandHandler implements OnModuleInit {
           content: [
             `📸 **Print de Status recebido com sucesso, ${player.nickname}!**`,
             '',
+            `• 🏰 **Guilda:** \`${guildChoice || player.guildName || 'AlcatraZ'}\``,
             `• ⚔️ **Ataque:** \`${ocr.attack ?? '?'}\``,
             `• 🛡️ **Defesa:** \`${ocr.defense ?? '?'}\``,
             `• 🎯 **Precisão:** \`${ocr.accuracy ?? '?'}\``,
