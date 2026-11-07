@@ -81,7 +81,7 @@ export function FileUploadButton({ className, label, onFileSelect, accept = 'ima
 
       const enabledTargets = Array.from(pasteTargets.values()).filter((target) => !target.disabled);
       const activeTarget = activePasteTargetId ? pasteTargets.get(activePasteTargetId) : undefined;
-      const target = activeTarget && !activeTarget.disabled ? activeTarget : enabledTargets.length === 1 ? enabledTargets[0] : undefined;
+      const target = activeTarget && !activeTarget.disabled ? activeTarget : enabledTargets.length > 0 ? enabledTargets[enabledTargets.length - 1] : undefined;
 
       if (!target || target.id !== id) {
         return;

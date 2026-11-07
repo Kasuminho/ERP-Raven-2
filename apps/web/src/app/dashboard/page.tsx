@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Camera, CheckCircle2, ChevronDown, Flame, Shield, Sparkles, Swords, Trophy, Upload, User, UserCheck, UserMinus, Users, X, ZoomIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,7 @@ export default function SimplifiedDashboardPage() {
   const [proofUrl, setProofUrl] = useState('');
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const ranking = useGuildRanking(selectedGuild, showInactive);
 
@@ -115,6 +116,62 @@ export default function SimplifiedDashboardPage() {
       setUploading(false);
     }
   }
+
+  const handleFileUploadRef = useRef(handleFileUpload);
+  handleFileUploadRef.current = handleFileUpload;
+
+  const openSubmitModalRef = useRef(openSubmitModal);
+  openSubmitModalRef.current = openSubmitModal;
+
+  const modalOpenRef = useRef(modalOpen);
+  modalOpenRef.current = modalOpen;
+
+  // Interceptar CTRL+V globalmente na página
+  useEffect(() => {
+    function handleGlobalPaste(e: ClipboardEvent) {
+      let foundFile: File | null = null;
+
+      // 1. Verificar e.clipboardData.items
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.startsWith('image/')) {
+            foundFile = item.getAsFile();
+            if (foundFile) break;
+          }
+        }
+      }
+
+      // 2. Fallback para e.clipboardData.files
+      if (!foundFile && e.clipboardData?.files?.length) {
+        for (let i = 0; i < e.clipboardData.files.length; i++) {
+          const file = e.clipboardData.files[i];
+          if (file.type.startsWith('image/')) {
+            foundFile = file;
+            break;
+          }
+        }
+      }
+
+      // 3. Se encontrou print colado
+      if (foundFile) {
+        e.preventDefault();
+        if (!modalOpenRef.current) {
+          openSubmitModalRef.current();
+        }
+        notifyToast({
+          title: 'Print detectado via CTRL+V!',
+          description: 'Enviando imagem e lendo atributos com OCR...',
+          tone: 'success',
+        });
+        handleFileUploadRef.current(foundFile);
+      }
+    }
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, []);
 
   async function handleSubmit() {
     const atk = Number(attack) || 0;
@@ -261,6 +318,16 @@ export default function SimplifiedDashboardPage() {
               Enviar Meu Print / Atualizar CP
             </Button>
           </div>
+        </div>
+
+        {/* Dica de CTRL+V */}
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2 text-xs text-muted-foreground backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1 rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-[11px] font-bold text-primary">
+            ⚡ CTRL + V
+          </span>
+          <span>
+            Tirou print do jogo? Você pode colar com <strong className="text-foreground">CTRL + V</strong> a qualquer momento em qualquer lugar desta página para abrir e preencher automático!
+          </span>
         </div>
 
         {/* Info do Usuário Conectado */}
@@ -673,12 +740,43 @@ export default function SimplifiedDashboardPage() {
                   Print da HUD do Jogo (Barras de Vida/Mana + 3 Atributos + Buffs)
                 </label>
                 <div className="flex items-center gap-3">
-                  <label className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-primary/30 rounded-xl cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-all">
-                    <Camera className="h-6 w-6 text-primary mb-1" />
-                    <span className="text-xs font-semibold text-foreground">
-                      {uploading ? 'Enviando imagem...' : scanning ? 'Lendo status com OCR...' : proofUrl ? 'Trocar Print' : 'Clique para Anexar o Print'}
+                  <label
+                    className={`flex-1 flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                      isDragging
+                        ? 'border-primary bg-primary/20 scale-[1.01]'
+                        : 'border-primary/35 hover:border-primary/70 hover:bg-primary/5 bg-background/30'
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
+                      if (file) {
+                        notifyToast({ title: 'Print recebido!', description: 'Enviando e executando OCR...', tone: 'success' });
+                        handleFileUpload(file);
+                      }
+                    }}
+                  >
+                    <Camera className="h-6 w-6 text-primary mb-1.5" />
+                    <span className="text-xs font-semibold text-foreground text-center">
+                      {uploading
+                        ? 'Enviando imagem...'
+                        : scanning
+                        ? 'Lendo status com OCR...'
+                        : proofUrl
+                        ? 'Trocar Print'
+                        : 'Clique para selecionar o arquivo ou cole com CTRL+V'}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">PNG, JPEG ou WEBP</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="inline-flex items-center gap-1 rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        ⚡ CTRL + V
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">Cole de qualquer lugar ou arraste</span>
+                    </div>
                     <input
                       type="file"
                       accept="image/*"
