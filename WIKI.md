@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-11-07 (Correcao e Captura Global de Anexo com CTRL+V e Drag-and-Drop de Prints no Dashboard)
+**Ultima revisao:** 2026-11-07 (Otimizacao e Compressao Client-side de Prints + Expansao do Limite de Upload da API para 25MB)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -140,7 +140,7 @@ Automacao ativa:
 - `events` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao de evento, registro de presenca e cancelamento antes da rotina Staff de presenca/DKP.
 - `search` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida a query `q`, rejeita parametros extras e limita o termo antes da busca global/player Staff.
 - `item-requests` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam criacao Staff/player, comprovante de update, aprovacao de update, entrega e UUIDs de mutacoes antes do fluxo de fila/entrega.
-- Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. SVG e conteudo disfarçado sao rejeitados.
+- Upload aceita somente PNG, JPEG e WebP confirmados por magic bytes, usa UUID/extensao controlada e remove temporarios. Limite do Multer expandido para 25MB (alinhado ao proxy reverso e prints 4K). O frontend realiza compressao e redimensionamento client-side via canvas para JPEG 90% (max 2560px), reduzindo prints pesados de 15MB para <600KB instantaneamente e eliminando erros de timeout e conexao cancelada. SVG e conteudo disfarçado sao rejeitados.
 - `notifications` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seu DTO valida UUID de notificacao antes de marcar leitura, preservando as rotas de listagem e marcar todas como lidas.
 - `audit` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam `targetType`, `targetId`, `page` e `limit` na timeline Staff, mantendo `/audit/health` publico.
 - `business-rules` ja usa `ValidationPipe` local com `whitelist` e `forbidNonWhitelisted`; seus DTOs validam chaves conhecidas e exigem body `{ value }` nas atualizacoes sem tipar rigidamente o JSON de cada regra.
@@ -627,6 +627,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
 | 2026-09-20 | Body parser do NestJS expandido para 50MB e envio de OCR desacoplado para processamento sequencial print a print com progresso na Web, eliminando HTTP 413. | OCR/Gemini/Performance |
 | 2026-09-20 | OCR do Gemini ganhou parser robusto para respostas envelopadas ({ items: [] }), suporte nativo a prints em PT-BR do Raven 2 e compatibilidade de chaves items/scannedItems entre API e Web. | OCR/Gemini/Storage |
+| 2026-11-07 | Compressao client-side inteligente de prints (canvas JPEG 90%, max 2560px) adicionada no frontend e limite do Multer na API aumentado de 5MB para 25MB com timeout estendido de 60s, resolvendo falhas de upload cancelado por arquivos grandes. | uploads/performance/resiliencia |
 | 2026-11-07 | Captura global de CTRL+V no Dashboard para upload e OCR automatico de prints de status de qualquer lugar da pagina ou modal; resolvida falha de multiplos alvos de clipboard no `FileUploadButton`; suporte a drag-and-drop adicionado. | UX/clipboard/status |
 | 2026-11-06 | Suporte as divisoes AlcatraZ e AlcatraZ2 no envio de status (Web e Discord slash commands) e filtro no Ranking de CP com contadores; Staff ganhou remocao de membros que sairam da guilda com auditoria e visualizacao/reativacao de ex-membros. | players/ranking/guildas/staff |
 | 2026-11-05 | Simplificacao radical do ERP para focar em Ranking de CP da Guilda e envio simples de print com OCR; savepoint total anterior versionado na branch `backup/full-erp-savepoint` e tag `v1-full-erp-backup`; Next.js atualizado para 15.5.29 corrigindo GHSA-2464-fhr4-w9xw no CI/CD. | produto/UX/simplificacao |

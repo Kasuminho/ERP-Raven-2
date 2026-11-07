@@ -13,7 +13,7 @@ export class UploadsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB (alinhado com proxy e prints 4K)
     }),
   )
   async uploadImage(@UploadedFile() file?: { buffer: Buffer; size: number }): Promise<{ url: string; fileId?: string; mimetype: string; size: number }> {

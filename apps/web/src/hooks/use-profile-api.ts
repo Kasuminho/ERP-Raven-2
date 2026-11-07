@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { optimizeImageForUpload } from '@/lib/image-compression';
 import { useAuthStore } from '@/store/auth-store';
 import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventReminderChannel, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerCombatAvailability, PlayerCombatProfileChangeRequest, PlayerCombatRole, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, RosterCompositionMatrix, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
@@ -364,9 +365,15 @@ export function useCreatePlayerStaffNote() {
 export function useUploadImage() {
   return useMutation({
     mutationFn: async (file: File) => {
+      const fileToUpload = await optimizeImageForUpload(file);
       const formData = new FormData();
-      formData.append('file', file);
-      return (await api.post<{ url: string; fileId?: string; mimetype: string; size: number }>('/uploads/image', formData)).data;
+      formData.append('file', fileToUpload);
+      return (
+        await api.post<{ url: string; fileId?: string; mimetype: string; size: number }>('/uploads/image', formData, {
+          timeout: 60000,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      ).data;
     },
   });
 }

@@ -17,6 +17,7 @@ import { useCreateMyItemRequest } from '@/hooks/use-requests-api';
 import { useDkpSummary } from '@/hooks/use-dkp-api';
 import { useRequestableItems } from '@/hooks/use-items-api';
 import { api } from '@/lib/api';
+import { optimizeImageForUpload } from '@/lib/image-compression';
 import { combatAvailabilityLabel, combatRoleLabel, itemName, playerClassLabel, progressCategoryLabel } from '@/lib/game-labels';
 import { t } from '@/lib/i18n';
 import { Locale, useLocaleStore } from '@/store/locale-store';
@@ -150,9 +151,13 @@ export default function ProfilePage() {
       const uploadedUrls: string[] = [];
 
       for (const file of filesToUpload) {
+        const fileToUpload = await optimizeImageForUpload(file);
         const formData = new FormData();
-        formData.append('file', file);
-        const response = await api.post<{ url: string }>('/uploads/image', formData);
+        formData.append('file', fileToUpload);
+        const response = await api.post<{ url: string }>('/uploads/image', formData, {
+          timeout: 60000,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         uploadedUrls.push(response.data.url);
       }
 

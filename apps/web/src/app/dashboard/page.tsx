@@ -10,6 +10,7 @@ import { useGuildRanking, type GuildRankingMember } from '@/hooks/use-ranking-ap
 import { useCreateProgress, useMyHistory, useUpdatePlayerMembership, useUpdatePlayerProfile } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { api } from '@/lib/api';
+import { optimizeImageForUpload } from '@/lib/image-compression';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
 import type { PlayerClass } from '@/types/api';
@@ -72,17 +73,23 @@ export default function SimplifiedDashboardPage() {
     setModalOpen(true);
   }
 
-  // Upload e auto-OCR
+  // Upload e auto-OCR com compressão prévia no cliente
   async function handleFileUpload(file: File) {
     if (!file) return;
     setUploading(true);
     try {
+      // Otimiza prints pesados (PNG/JPG > 1.5MB ou 4K) para JPEG leve, evitando timeout e cancelamento
+      const fileToUpload = await optimizeImageForUpload(file);
       const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.post<{ url: string }>('/uploads/image', formData);
+      formData.append('file', fileToUpload);
+
+      const res = await api.post<{ url: string }>('/uploads/image', formData, {
+        timeout: 60000,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       const url = res.data.url;
       setProofUrl(url);
-      notifyToast({ title: 'Print anexado!', tone: 'success' });
+      notifyToast({ title: 'Print anexado com sucesso!', tone: 'success' });
 
       // Disparar OCR
       setScanning(true);
@@ -106,12 +113,21 @@ export default function SimplifiedDashboardPage() {
           });
         }
       } catch {
-        // OCR opcional
+        // OCR opcional - o usuário pode conferir e digitar manualmente
       } finally {
         setScanning(false);
       }
-    } catch {
-      notifyToast({ title: 'Erro ao subir print', tone: 'error' });
+    } catch (err: unknown) {
+      const axiosErr = err as { code?: string; response?: { status?: number; data?: { message?: string } } };
+      let message = 'Não foi possível enviar a imagem. Tente novamente.';
+      if (axiosErr?.code === 'ECONNABORTED') {
+        message = 'Tempo limite de upload esgotado. Verifique sua conexão.';
+      } else if (axiosErr?.response?.status === 413) {
+        message = 'Imagem muito pesada (máximo 25 MB).';
+      } else if (axiosErr?.response?.data?.message) {
+        message = String(axiosErr.response.data.message);
+      }
+      notifyToast({ title: 'Erro ao subir print', description: message, tone: 'error' });
     } finally {
       setUploading(false);
     }
@@ -778,11 +794,18 @@ export default function SimplifiedDashboardPage() {
                       <span className="text-[10px] text-muted-foreground">Cole de qualquer lugar ou arraste</span>
                     </div>
                     <input
+                      id="status-print-file-input"
                       type="file"
                       accept="image/*"
                       className="hidden"
                       disabled={uploading || scanning}
-                      onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload(file);
+                        }
+                        e.target.value = '';
+                      }}
                     />
                   </label>
 
