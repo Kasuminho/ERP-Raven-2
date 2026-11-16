@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   AlertCircle,
   Award,
@@ -11,11 +12,13 @@ import {
   Gavel,
   History,
   Package,
+  PlusCircle,
   RefreshCw,
   Shield,
   Sparkles,
   Swords,
   Trophy,
+  Upload,
   User,
   Users,
   X,
@@ -32,8 +35,11 @@ import {
   useExpressLootInterest,
   useMyDrops,
   usePublishedAuctionResults,
+  usePublishDrop,
   type LiveDropItem,
 } from '@/hooks/use-drops-api';
+import { useItems } from '@/hooks/use-items-api';
+import { useUploadImage } from '@/hooks/use-profile-api';
 import { playerClassLabel } from '@/lib/game-labels';
 import { displayImageUrl } from '@/lib/images';
 import { useAuthStore } from '@/store/auth-store';
@@ -54,12 +60,82 @@ export default function DropsDistributionPage() {
   } | null>(null);
   const [winnerNote, setWinnerNote] = useState('');
 
+  // Modal de Publicar Novo Drop (Staff)
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [selectedCatalogItemId, setSelectedCatalogItemId] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const [dropRestriction, setDropRestriction] = useState<'ALL' | 'RANGED' | 'MELEE' | 'DIVINE_CASTER'>('ALL');
+  const [dropImageUrl, setDropImageUrl] = useState('');
+  const [isUploadingDropImage, setIsUploadingDropImage] = useState(false);
+
   // Queries e Mutações
   const liveDrops = useDiscordLiveDrops();
+  const catalogItems = useItems();
+  const publishDropMutation = usePublishDrop();
+  const uploadImageMutation = useUploadImage();
   const declareWinnerMutation = useDeclareLootWinner();
   const expressInterestMutation = useExpressLootInterest();
   const historyDrops = useMyDrops();
   const publishedResults = usePublishedAuctionResults();
+
+  const catalog = useMemo(() => catalogItems.data ?? [], [catalogItems.data]);
+
+  async function handleUploadDropImage(file: File) {
+    try {
+      setIsUploadingDropImage(true);
+      const res = await uploadImageMutation.mutateAsync(file);
+      setDropImageUrl(res.url);
+      notifyToast({
+        title: locale === 'en' ? 'Image uploaded!' : 'Print carregado com sucesso!',
+        tone: 'success',
+      });
+    } catch {
+      notifyToast({
+        title: locale === 'en' ? 'Upload failed' : 'Erro ao subir print',
+        tone: 'error',
+      });
+    } finally {
+      setIsUploadingDropImage(false);
+    }
+  }
+
+  async function handlePublishDropSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const item = catalog.find((i) => i.id === selectedCatalogItemId);
+    const finalTitle = customTitle.trim() || item?.namePt || item?.nameEn || 'Novo Item';
+    const finalImage = dropImageUrl || item?.image1Url;
+
+    try {
+      await publishDropMutation.mutateAsync({
+        itemCatalogId: selectedCatalogItemId || undefined,
+        title: finalTitle,
+        restriction: dropRestriction,
+        imageUrl: finalImage || undefined,
+      });
+
+      notifyToast({
+        title: locale === 'en' ? 'Drop published to Discord!' : 'Drop publicado no Discord com sucesso!',
+        description:
+          locale === 'en'
+            ? 'The drop is now live in #loot-distribution-cp with automatic reactions.'
+            : 'O item foi enviado para o canal #loot-distribution-cp com reações e pool de CP prontos.',
+        tone: 'success',
+      });
+
+      setIsPublishModalOpen(false);
+      setSelectedCatalogItemId('');
+      setCustomTitle('');
+      setDropImageUrl('');
+      setDropRestriction('ALL');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao publicar drop.';
+      notifyToast({
+        title: locale === 'en' ? 'Error publishing' : 'Erro ao publicar',
+        description: msg,
+        tone: 'error',
+      });
+    }
+  }
 
   async function handleExpressInterest(drop: LiveDropItem) {
     try {
@@ -134,7 +210,31 @@ export default function DropsDistributionPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {isStaff && (
+              <>
+                <Button
+                  size="sm"
+                  className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold shadow-lg"
+                  onClick={() => setIsPublishModalOpen(true)}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>{locale === 'en' ? '+ Post New Drop' : '+ Lançar Novo Drop'}</span>
+                </Button>
+
+                <Link href="/dashboard/admin/items">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 border border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Package className="h-4 w-4" />
+                    <span>{locale === 'en' ? 'Item Catalog' : 'Catálogo de Itens'}</span>
+                  </Button>
+                </Link>
+              </>
+            )}
+
             <Button
               variant="ghost"
               size="sm"
@@ -575,6 +675,155 @@ export default function DropsDistributionPage() {
                 {declareWinnerMutation.isPending ? 'Anunciando...' : 'Confirmar e Postar no Discord'}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Lançar Novo Drop (Staff) */}
+      {isPublishModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-card p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2 text-amber-400">
+                <PlusCircle className="h-5 w-5" />
+                <h3 className="font-[var(--font-cinzel)] text-lg font-bold text-foreground">
+                  {locale === 'en' ? 'Post New Drop to Discord' : 'Lançar Novo Drop da Guilda'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePublishDropSubmit} className="space-y-4">
+              {/* Seleção do Catálogo */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {locale === 'en' ? 'Select from Item Catalog (Optional)' : 'Selecionar do Catálogo de Itens (Opcional)'}
+                </label>
+                <select
+                  value={selectedCatalogItemId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedCatalogItemId(id);
+                    const it = catalog.find((i) => i.id === id);
+                    if (it) {
+                      setCustomTitle(it.namePt || it.nameEn);
+                      if (it.image1Url) setDropImageUrl(it.image1Url);
+                    }
+                  }}
+                  className="w-full rounded-lg border border-white/10 bg-background/80 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                >
+                  <option value="">{locale === 'en' ? '-- Choose item from catalog --' : '-- Escolha um item do catálogo --'}</option>
+                  {catalog.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      [{item.itemTier}] {item.namePt || item.nameEn} ({item.itemType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Título / Nome Customizado */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {locale === 'en' ? 'Item Name / Description' : 'Nome do Item / Descrição do Drop'}
+                </label>
+                <Input
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder={locale === 'en' ? 'Ex: Raven Boots T4' : 'Ex: Bota de Corvo T4'}
+                  required
+                />
+              </div>
+
+              {/* Restrição de Classe */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {locale === 'en' ? 'Class Restriction' : 'Restrição de Classe'}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'ALL', label: '🛡️ Livre para Todos / Open' },
+                    { value: 'RANGED', label: '🏹 Ranged Only' },
+                    { value: 'MELEE', label: '⚔️ Melee Only' },
+                    { value: 'DIVINE_CASTER', label: '✨ Divine Caster Only' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDropRestriction(opt.value as typeof dropRestriction)}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all text-left ${
+                        dropRestriction === opt.value
+                          ? 'border-primary bg-primary/20 text-primary'
+                          : 'border-white/10 bg-background/50 text-muted-foreground hover:bg-white/5'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Imagem do Item ou Print */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {locale === 'en' ? 'Item Image / Screenshot' : 'Imagem do Item / Print do Drop'}
+                </label>
+                <div className="flex items-center gap-3">
+                  {dropImageUrl && (
+                    <div className="h-12 w-12 rounded-lg border border-white/20 bg-black/40 overflow-hidden shrink-0">
+                      <img src={displayImageUrl(dropImageUrl)} alt="Drop preview" className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <label className="flex-1 cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/20 bg-background/40 py-2.5 px-3 text-xs text-muted-foreground hover:border-primary hover:text-foreground transition-all">
+                      <Upload className="h-4 w-4" />
+                      <span>
+                        {isUploadingDropImage
+                          ? (locale === 'en' ? 'Uploading...' : 'Enviando...')
+                          : (locale === 'en' ? 'Upload new screenshot' : 'Subir novo print')}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleUploadDropImage(file);
+                      }}
+                      disabled={isUploadingDropImage}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Botões Ação */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsPublishModalOpen(false)}
+                >
+                  {locale === 'en' ? 'Cancel' : 'Cancelar'}
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold"
+                  disabled={publishDropMutation.isPending || isUploadingDropImage}
+                >
+                  {publishDropMutation.isPending
+                    ? (locale === 'en' ? 'Publishing...' : 'Publicando...')
+                    : (locale === 'en' ? 'Post to Discord & ERP' : 'Publicar no Discord e ERP')}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

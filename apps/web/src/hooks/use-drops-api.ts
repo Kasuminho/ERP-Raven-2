@@ -104,3 +104,20 @@ export function useExpressLootInterest() {
     },
   });
 }
+
+export function usePublishDrop() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      channelId?: string;
+      itemCatalogId?: string;
+      title: string;
+      restriction: 'ALL' | 'RANGED' | 'MELEE' | 'DIVINE_CASTER';
+      imageUrl?: string;
+    }) =>
+      (await api.post<{ success: boolean; messageId: string }>('/discord/loot/publish', data)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['discord-live-drops'] });
+    },
+  });
+}

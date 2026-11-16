@@ -81,17 +81,31 @@ export default function DashboardLayout({
               </Link>
 
               {isStaff && (
-                <Link
-                  href="/dashboard/staff/progress"
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                    pathname.startsWith("/dashboard/staff")
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                  }`}
-                >
-                  <CheckSquare className="h-4 w-4 text-amber-400" />
-                  {t(locale, "navApprovePrints")}
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard/admin/items"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      pathname.startsWith("/dashboard/admin/items")
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    }`}
+                  >
+                    <Package className="h-4 w-4" />
+                    {t(locale, "navItemCatalog")}
+                  </Link>
+
+                  <Link
+                    href="/dashboard/staff/progress"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      pathname.startsWith("/dashboard/staff")
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    }`}
+                  >
+                    <CheckSquare className="h-4 w-4 text-amber-400" />
+                    {t(locale, "navApprovePrints")}
+                  </Link>
+                </>
               )}
             </nav>
 
@@ -152,14 +166,29 @@ export default function DashboardLayout({
               </Link>
 
               {isStaff && (
-                <Link
-                  href="/dashboard/staff/progress"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  {t(locale, "navApprovePrints")}
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard/admin/items"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold ${
+                      pathname.startsWith("/dashboard/admin/items")
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    <Package className="h-4 w-4" />
+                    {t(locale, "navItemCatalog")}
+                  </Link>
+
+                  <Link
+                    href="/dashboard/staff/progress"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                    {t(locale, "navApprovePrints")}
+                  </Link>
+                </>
               )}
 
               <Button

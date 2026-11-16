@@ -58,4 +58,28 @@ export class DiscordLootController {
   ) {
     return this.lootService.toggleUserInterest(dto.channelId, dto.messageId, req.user.userId);
   }
+
+  @Post('publish')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async publishDrop(
+    @Body()
+    dto: {
+      channelId?: string;
+      itemCatalogId?: string;
+      title: string;
+      restriction: 'ALL' | 'RANGED' | 'MELEE' | 'DIVINE_CASTER';
+      imageUrl?: string;
+    },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.lootService.publishDropFromWeb({
+      channelId: dto.channelId,
+      itemCatalogId: dto.itemCatalogId,
+      title: dto.title,
+      restriction: dto.restriction,
+      imageUrl: dto.imageUrl,
+      createdByUserId: req.user.userId,
+    });
+  }
 }
