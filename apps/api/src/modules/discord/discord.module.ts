@@ -9,15 +9,17 @@ import { DiscordApiService } from './bot/services/discord-api.service';
 import { DiscordCommandHandler } from './bot/handlers/command-handler.service';
 import { DiscordEventHandler } from './bot/handlers/event-handler.service';
 import { DiscordController } from './controllers/discord.controller';
+import { DiscordLootController } from './controllers/discord-loot.controller';
 import { DiscordRepository } from './repositories/discord.repository';
 import { DiscordSyncService } from './services/discord-sync.service';
 import { DiscordWebhookQueueService } from './services/discord-webhook-queue.service';
 import { NotificationService } from './services/notification.service';
 import { DkpLogPublisherService } from './services/dkp-log-publisher.service';
+import { DiscordLootService } from './services/discord-loot.service';
 
 @Module({
   imports: [AuditModule, UploadsModule, OcrModule, forwardRef(() => PlayersModule)],
-  controllers: [DiscordController],
+  controllers: [DiscordController, DiscordLootController],
   providers: [
     DiscordApiService,
     DiscordBotService,
@@ -28,8 +30,9 @@ import { DkpLogPublisherService } from './services/dkp-log-publisher.service';
     DiscordWebhookQueueService,
     NotificationService,
     DkpLogPublisherService,
+    DiscordLootService,
     RolesGuard,
   ],
-  exports: [DiscordSyncService, DiscordWebhookQueueService, NotificationService, DiscordBotService],
+  exports: [DiscordSyncService, DiscordWebhookQueueService, NotificationService, DiscordBotService, DiscordLootService],
 })
 export class DiscordModule {}

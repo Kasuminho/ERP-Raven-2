@@ -8,6 +8,7 @@ import {
   Crown,
   LogOut,
   Menu,
+  Package,
   ShieldAlert,
   Trophy,
   User,
@@ -17,12 +18,15 @@ import { LocaleSwitcher } from "@/components/dashboard/locale-switcher";
 import { AuthGuard } from "@/components/guards/auth-guard";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
+import { useLocaleStore } from "@/store/locale-store";
+import { t } from "@/lib/i18n";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = useLocaleStore((state) => state.locale);
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
   const hasRole = useAuthStore((state) => state.hasRole);
@@ -61,7 +65,19 @@ export default function DashboardLayout({
                 }`}
               >
                 <Trophy className="h-4 w-4" />
-                Ranking de CP
+                {t(locale, "navCpRanking")}
+              </Link>
+
+              <Link
+                href="/dashboard/drops"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  pathname.startsWith("/dashboard/drops") || pathname.startsWith("/dashboard/interests")
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                <Package className="h-4 w-4" />
+                {t(locale, "navLootDistribution")}
               </Link>
 
               {isStaff && (
@@ -74,7 +90,7 @@ export default function DashboardLayout({
                   }`}
                 >
                   <CheckSquare className="h-4 w-4 text-amber-400" />
-                  Aprovar Prints (Staff)
+                  {t(locale, "navApprovePrints")}
                 </Link>
               )}
             </nav>
@@ -89,7 +105,7 @@ export default function DashboardLayout({
                 onClick={logout}
               >
                 <LogOut className="h-4 w-4" />
-                <span>Sair</span>
+                <span>{t(locale, "navLogout")}</span>
               </Button>
             </div>
 
@@ -119,7 +135,20 @@ export default function DashboardLayout({
                 }`}
               >
                 <Trophy className="h-4 w-4" />
-                Ranking de CP
+                {t(locale, "navCpRanking")}
+              </Link>
+
+              <Link
+                href="/dashboard/drops"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold ${
+                  pathname.startsWith("/dashboard/drops") || pathname.startsWith("/dashboard/interests")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-white/5"
+                }`}
+              >
+                <Package className="h-4 w-4" />
+                {t(locale, "navLootDistribution")}
               </Link>
 
               {isStaff && (
@@ -129,7 +158,7 @@ export default function DashboardLayout({
                   className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30"
                 >
                   <CheckSquare className="h-4 w-4" />
-                  Aprovar Prints (Staff)
+                  {t(locale, "navApprovePrints")}
                 </Link>
               )}
 
@@ -140,7 +169,7 @@ export default function DashboardLayout({
                 onClick={logout}
               >
                 <LogOut className="h-4 w-4" />
-                <span>Sair da Conta</span>
+                <span>{t(locale, "navLogout")}</span>
               </Button>
             </div>
           )}

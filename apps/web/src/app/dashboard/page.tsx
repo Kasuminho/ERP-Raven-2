@@ -11,6 +11,7 @@ import { useCreateProgress, useMyHistory, useUpdatePlayerMembership, useUpdatePl
 import { playerClassLabel } from '@/lib/game-labels';
 import { api } from '@/lib/api';
 import { optimizeImageForUpload } from '@/lib/image-compression';
+import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
 import type { PlayerClass } from '@/types/api';
@@ -89,7 +90,7 @@ export default function SimplifiedDashboardPage() {
       });
       const url = res.data.url;
       setProofUrl(url);
-      notifyToast({ title: 'Print anexado com sucesso!', tone: 'success' });
+      notifyToast({ title: t(locale, 'toastPrintAttachedTitle'), tone: 'success' });
 
       // Disparar OCR
       setScanning(true);
@@ -108,7 +109,7 @@ export default function SimplifiedDashboardPage() {
           if (ocrRes.data.defense) setDefense(String(ocrRes.data.defense));
           if (ocrRes.data.accuracy) setAccuracy(String(ocrRes.data.accuracy));
           notifyToast({
-            title: `OCR detectou: ⚔️ ${ocrRes.data.attack} | 🛡️ ${ocrRes.data.defense} | 🎯 ${ocrRes.data.accuracy}`,
+            title: `${t(locale, 'toastOcrDetectedTitle')} ⚔️ ${ocrRes.data.attack} | 🛡️ ${ocrRes.data.defense} | 🎯 ${ocrRes.data.accuracy}`,
             tone: 'success',
           });
         }
@@ -177,8 +178,8 @@ export default function SimplifiedDashboardPage() {
           openSubmitModalRef.current();
         }
         notifyToast({
-          title: 'Print detectado via CTRL+V!',
-          description: 'Enviando imagem e lendo atributos com OCR...',
+          title: t(locale, 'toastPrintPastedTitle'),
+          description: t(locale, 'toastPrintPastedDesc'),
           tone: 'success',
         });
         handleFileUploadRef.current(foundFile);
@@ -187,7 +188,7 @@ export default function SimplifiedDashboardPage() {
 
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, []);
+  }, [locale]);
 
   async function handleSubmit() {
     const atk = Number(attack) || 0;
@@ -196,12 +197,12 @@ export default function SimplifiedDashboardPage() {
     const totalCp = atk + def + acc;
 
     if (!proofUrl) {
-      notifyToast({ title: 'Anexe o print da tela do jogo com seus status!', tone: 'error' });
+      notifyToast({ title: t(locale, 'toastAttachProofError'), tone: 'error' });
       return;
     }
 
     if (totalCp <= 0) {
-      notifyToast({ title: 'Preencha os valores de Ataque, Defesa e Precisão.', tone: 'error' });
+      notifyToast({ title: t(locale, 'toastFillStatsError'), tone: 'error' });
       return;
     }
 
@@ -232,8 +233,8 @@ export default function SimplifiedDashboardPage() {
       {
         onSuccess: () => {
           notifyToast({
-            title: 'Status enviado com sucesso!',
-            description: `A Staff irá conferir o print e aprovar para o ranking da guilda ${guild}.`,
+            title: t(locale, 'toastStatusSubmittedTitle'),
+            description: t(locale, 'toastStatusSubmittedDesc').replace('{guild}', guild),
             tone: 'success',
           });
           setModalOpen(false);
@@ -316,11 +317,10 @@ export default function SimplifiedDashboardPage() {
               AlcatraZ & AlcatraZ2 • Raven 2
             </div>
             <h1 className="font-[var(--font-cinzel)] text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-              Ranking de Poder (CP)
+              {t(locale, 'cpRankingTitle')}
             </h1>
             <p className="text-sm text-muted-foreground max-w-xl">
-              Simples e direto: envie o print do seu boneco com os 3 atributos (Ataque, Defesa e Precisão).
-              A Staff valida os buffs e seu char entra direto no ranking oficial da guilda!
+              {t(locale, 'cpRankingSubtitle')}
             </p>
           </div>
 
@@ -331,7 +331,7 @@ export default function SimplifiedDashboardPage() {
               onClick={openSubmitModal}
             >
               <Upload className="h-5 w-5" />
-              Enviar Meu Print / Atualizar CP
+              {t(locale, 'sendMyPrintBtn')}
             </Button>
           </div>
         </div>
@@ -339,10 +339,10 @@ export default function SimplifiedDashboardPage() {
         {/* Dica de CTRL+V */}
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2 text-xs text-muted-foreground backdrop-blur-sm">
           <span className="inline-flex items-center gap-1 rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-[11px] font-bold text-primary">
-            ⚡ CTRL + V
+            {t(locale, 'ctrlVBadge')}
           </span>
           <span>
-            Tirou print do jogo? Você pode colar com <strong className="text-foreground">CTRL + V</strong> a qualquer momento em qualquer lugar desta página para abrir e preencher automático!
+            {t(locale, 'ctrlVPasteTip')}
           </span>
         </div>
 
@@ -354,7 +354,7 @@ export default function SimplifiedDashboardPage() {
                 {myPlayer.nickname?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <span className="text-muted-foreground">Meu Personagem: </span>
+                <span className="text-muted-foreground">{t(locale, 'myCharacter')} </span>
                 <strong className="text-foreground text-sm">{myPlayer.nickname}</strong>
                 <span className="ml-2 text-primary font-semibold">({playerClassLabel(myPlayer.class, locale)})</span>
                 <Badge tone={myPlayer.guildName === 'AlcatraZ2' ? 'blue' : 'gold'} className="ml-2 text-[10px]">
@@ -365,9 +365,9 @@ export default function SimplifiedDashboardPage() {
 
             <div className="flex items-center gap-4">
               <div>
-                <span className="text-muted-foreground">Meu CP Oficial: </span>
+                <span className="text-muted-foreground">{t(locale, 'myOfficialCp')} </span>
                 <strong className="text-emerald-400 text-sm">
-                  {(myPlayer.combatPower ?? 0) > 0 ? (myPlayer.combatPower ?? 0).toLocaleString('pt-BR') : 'Aguardando Print'}
+                  {(myPlayer.combatPower ?? 0) > 0 ? (myPlayer.combatPower ?? 0).toLocaleString('pt-BR') : t(locale, 'waitingPrint')}
                 </strong>
               </div>
             </div>
@@ -387,7 +387,7 @@ export default function SimplifiedDashboardPage() {
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
             }`}
           >
-            🏰 Todas as Guildas ({members.length})
+            🏰 {t(locale, 'allGuilds')} ({members.length})
           </button>
           <button
             type="button"
@@ -424,7 +424,7 @@ export default function SimplifiedDashboardPage() {
                 className="rounded border-border text-primary focus:ring-primary"
               />
               <Users className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Ver membros que saíram ({inactiveCount})</span>
+              <span>{t(locale, 'viewInactiveMembers')} ({inactiveCount})</span>
             </label>
           </div>
         )}
@@ -439,7 +439,7 @@ export default function SimplifiedDashboardPage() {
             className="text-xs font-semibold h-8"
             onClick={() => setSelectedClass('ALL')}
           >
-            Todas ({members.length})
+            {t(locale, 'allClasses')} ({members.length})
           </Button>
           {RAVEN2_CLASSES.map((cls) => {
             const count = members.filter((m) => m.class === cls).length;
@@ -459,7 +459,7 @@ export default function SimplifiedDashboardPage() {
         </div>
 
         <span className="text-xs text-muted-foreground">
-          Mostrando <strong>{filtered.length}</strong> jogadores
+          {t(locale, 'showingPlayersPrefix')} <strong>{filtered.length}</strong> {t(locale, 'showingPlayersSuffix')}
         </span>
       </div>
 
@@ -469,16 +469,16 @@ export default function SimplifiedDashboardPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-white/10 bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="py-3 px-4 w-16 text-center">#</th>
-                <th className="py-3 px-4">Personagem</th>
-                <th className="py-3 px-4 text-center">Guilda</th>
-                <th className="py-3 px-4">Classe</th>
-                <th className="py-3 px-4 text-center">⚔️ Ataque</th>
-                <th className="py-3 px-4 text-center">🛡️ Defesa</th>
-                <th className="py-3 px-4 text-center">🎯 Precisão</th>
-                <th className="py-3 px-4 text-center font-extrabold text-foreground">🔥 CP Total</th>
-                <th className="py-3 px-4 text-right">Comprovante</th>
-                {isStaff && <th className="py-3 px-4 text-center">Ações Staff</th>}
+                <th className="py-3 px-4 w-16 text-center">{t(locale, 'tableRank')}</th>
+                <th className="py-3 px-4">{t(locale, 'tableCharacter')}</th>
+                <th className="py-3 px-4 text-center">{t(locale, 'tableGuild')}</th>
+                <th className="py-3 px-4">{t(locale, 'tableClass')}</th>
+                <th className="py-3 px-4 text-center">{t(locale, 'tableAttack')}</th>
+                <th className="py-3 px-4 text-center">{t(locale, 'tableDefense')}</th>
+                <th className="py-3 px-4 text-center">{t(locale, 'tableAccuracy')}</th>
+                <th className="py-3 px-4 text-center font-extrabold text-foreground">{t(locale, 'tableTotalCp')}</th>
+                <th className="py-3 px-4 text-right">{t(locale, 'tableProof')}</th>
+                {isStaff && <th className="py-3 px-4 text-center">{t(locale, 'tableStaffActions')}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-medium">
@@ -524,7 +524,7 @@ export default function SimplifiedDashboardPage() {
                         )}
                         {isInactive && (
                           <Badge tone="red" className="text-[9px] py-0">
-                            Saiu da guilda
+                            {t(locale, 'leftGuildBadge')}
                           </Badge>
                         )}
                       </div>
@@ -574,7 +574,7 @@ export default function SimplifiedDashboardPage() {
                           className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline hover:text-primary/80 font-semibold"
                         >
                           <ZoomIn className="h-3.5 w-3.5" />
-                          Ver Print
+                          {t(locale, 'viewProof')}
                         </button>
                       ) : (
                         <span className="text-xs text-muted-foreground/40">-</span>
@@ -592,7 +592,7 @@ export default function SimplifiedDashboardPage() {
                             onClick={() => handleReactivate(member)}
                           >
                             <UserCheck className="h-3.5 w-3.5" />
-                            Reativar
+                            {t(locale, 'reactivateMember')}
                           </Button>
                         ) : (
                           <Button
@@ -605,7 +605,7 @@ export default function SimplifiedDashboardPage() {
                             }}
                           >
                             <UserMinus className="h-3.5 w-3.5" />
-                            Remover
+                            {t(locale, 'removeMember')}
                           </Button>
                         )}
                       </td>
@@ -617,7 +617,7 @@ export default function SimplifiedDashboardPage() {
               {!ranking.isLoading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={isStaff ? 10 : 9} className="py-12 text-center text-muted-foreground text-sm">
-                    Nenhum jogador encontrado com os filtros atuais.
+                    {t(locale, 'noPlayersFound')}
                   </td>
                 </tr>
               )}
@@ -633,7 +633,7 @@ export default function SimplifiedDashboardPage() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2 text-red-400">
                 <UserMinus className="h-5 w-5" />
-                <h3 className="text-lg font-bold text-foreground">Remover Membro da Guilda</h3>
+                <h3 className="text-lg font-bold text-foreground">{t(locale, 'removeMemberModalTitle')}</h3>
               </div>
               <button
                 type="button"
@@ -645,22 +645,21 @@ export default function SimplifiedDashboardPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Tem certeza que deseja remover <strong className="text-foreground">{removeTarget.nickname}</strong> da guilda?
-              O jogador será desativado e deixará de aparecer no ranking oficial de CP.
+              {t(locale, 'removeMemberModalDesc').replace('{name}', removeTarget.nickname)}
             </p>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Motivo da Saída</label>
+              <label className="text-xs font-semibold text-muted-foreground">{t(locale, 'removeReasonLabel')}</label>
               <Input
                 value={removeReason}
                 onChange={(e) => setRemoveReason(e.target.value)}
-                placeholder="Ex: Saiu da guilda, mudou de servidor..."
+                placeholder={t(locale, 'removeReasonPlaceholder')}
               />
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
               <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={isRemoving}>
-                Cancelar
+                {t(locale, 'cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -668,7 +667,7 @@ export default function SimplifiedDashboardPage() {
                 onClick={handleConfirmRemove}
                 disabled={isRemoving}
               >
-                {isRemoving ? 'Removendo...' : 'Confirmar Remoção'}
+                {isRemoving ? t(locale, 'removingBtn') : t(locale, 'confirmRemovalBtn')}
               </Button>
             </div>
           </div>
@@ -681,8 +680,8 @@ export default function SimplifiedDashboardPage() {
           <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-primary/30 bg-card p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-foreground">Atualizar Meu Status</h3>
-                <p className="text-xs text-muted-foreground">Selecione sua guilda, anexe o print e confira os atributos.</p>
+                <h3 className="text-lg font-bold text-foreground">{t(locale, 'modalUpdateStatusTitle')}</h3>
+                <p className="text-xs text-muted-foreground">{t(locale, 'modalUpdateStatusDesc')}</p>
               </div>
               <button
                 type="button"
@@ -696,7 +695,7 @@ export default function SimplifiedDashboardPage() {
             <div className="space-y-4">
               {/* Seleção de Guilda (AlcatraZ vs AlcatraZ2) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground block">Em qual divisão da guilda você está?</label>
+                <label className="text-xs font-semibold text-muted-foreground block">{t(locale, 'guildDivisionLabel')}</label>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
@@ -707,7 +706,7 @@ export default function SimplifiedDashboardPage() {
                         : 'border-white/10 bg-card/60 hover:bg-white/5 text-muted-foreground'
                     }`}
                   >
-                    ⚔️ AlcatraZ (Principal)
+                    {t(locale, 'guildAlcatrazMain')}
                   </button>
                   <button
                     type="button"
@@ -718,7 +717,7 @@ export default function SimplifiedDashboardPage() {
                         : 'border-white/10 bg-card/60 hover:bg-white/5 text-muted-foreground'
                     }`}
                   >
-                    🛡️ AlcatraZ2 (Secundária)
+                    {t(locale, 'guildAlcatrazSecondary')}
                   </button>
                 </div>
               </div>
@@ -726,16 +725,16 @@ export default function SimplifiedDashboardPage() {
               {/* Nick & Classe */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Nome do Char (Jogo)</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t(locale, 'charNameLabel')}</label>
                   <Input
-                    placeholder="Ex: RavenSniper"
+                    placeholder={t(locale, 'charNamePlaceholder')}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     className="font-medium"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Classe</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t(locale, 'charClassLabel')}</label>
                   <select
                     value={charClass}
                     onChange={(e) => setCharClass(e.target.value as PlayerClass)}
@@ -753,7 +752,7 @@ export default function SimplifiedDashboardPage() {
               {/* Upload do Print com OCR */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-muted-foreground block">
-                  Print da HUD do Jogo (Barras de Vida/Mana + 3 Atributos + Buffs)
+                  {t(locale, 'hudPrintLabel')}
                 </label>
                 <div className="flex items-center gap-3">
                   <label
@@ -772,7 +771,7 @@ export default function SimplifiedDashboardPage() {
                       setIsDragging(false);
                       const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
                       if (file) {
-                        notifyToast({ title: 'Print recebido!', description: 'Enviando e executando OCR...', tone: 'success' });
+                        notifyToast({ title: t(locale, 'toastPrintDroppedTitle'), description: t(locale, 'toastPrintDroppedDesc'), tone: 'success' });
                         handleFileUpload(file);
                       }
                     }}
@@ -780,18 +779,18 @@ export default function SimplifiedDashboardPage() {
                     <Camera className="h-6 w-6 text-primary mb-1.5" />
                     <span className="text-xs font-semibold text-foreground text-center">
                       {uploading
-                        ? 'Enviando imagem...'
+                        ? t(locale, 'uploadingImg')
                         : scanning
-                        ? 'Lendo status com OCR...'
+                        ? t(locale, 'readingOcr')
                         : proofUrl
-                        ? 'Trocar Print'
-                        : 'Clique para selecionar o arquivo ou cole com CTRL+V'}
+                        ? t(locale, 'changePrint')
+                        : t(locale, 'clickToSelectOrPaste')}
                     </span>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="inline-flex items-center gap-1 rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-[10px] font-bold text-primary">
-                        ⚡ CTRL + V
+                        {t(locale, 'ctrlVBadge')}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">Cole de qualquer lugar ou arraste</span>
+                      <span className="text-[10px] text-muted-foreground">{t(locale, 'pasteOrDrag')}</span>
                     </div>
                     <input
                       id="status-print-file-input"
@@ -820,11 +819,11 @@ export default function SimplifiedDashboardPage() {
               {/* 3 Atributos (Ataque, Defesa, Precisão) */}
               <div className="rounded-xl border border-white/10 bg-muted/20 p-3 space-y-3">
                 <p className="text-xs font-bold text-primary uppercase tracking-wide">
-                  Atributos (Lidos pelo OCR ou Manuais)
+                  {t(locale, 'statsBoxTitle')}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">⚔️ Ataque</label>
+                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">{t(locale, 'attrAttackLabel')}</label>
                     <Input
                       type="number"
                       placeholder="Ex: 303"
@@ -834,7 +833,7 @@ export default function SimplifiedDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">🛡️ Defesa</label>
+                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">{t(locale, 'attrDefenseLabel')}</label>
                     <Input
                       type="number"
                       placeholder="Ex: 313"
@@ -844,7 +843,7 @@ export default function SimplifiedDashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">🎯 Precisão</label>
+                    <label className="text-[11px] text-muted-foreground font-semibold block mb-1">{t(locale, 'attrAccuracyLabel')}</label>
                     <Input
                       type="number"
                       placeholder="Ex: 456"
@@ -856,7 +855,7 @@ export default function SimplifiedDashboardPage() {
                 </div>
 
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Soma de CP Calculada:</span>
+                  <span className="text-muted-foreground font-medium">{t(locale, 'calculatedCpSum')}</span>
                   <strong className="text-emerald-400 font-extrabold text-base">
                     {calculatedTotal.toLocaleString('pt-BR')} CP
                   </strong>
@@ -866,14 +865,14 @@ export default function SimplifiedDashboardPage() {
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
-                Cancelar
+                {t(locale, 'cancel')}
               </Button>
               <Button
                 className="bg-primary text-primary-foreground font-bold px-6"
                 disabled={uploading || scanning || createProgress.isPending || !proofUrl}
                 onClick={handleSubmit}
               >
-                {createProgress.isPending ? 'Enviando...' : 'Salvar e Enviar para Staff'}
+                {createProgress.isPending ? t(locale, 'submitting') : t(locale, 'saveAndSubmitToStaff')}
               </Button>
             </div>
           </div>

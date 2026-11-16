@@ -46,3 +46,61 @@ export function useDeliverAuctionDrop() {
     },
   });
 }
+
+
+export type LiveDropItem = {
+  messageId: string;
+  channelId: string;
+  authorUsername: string;
+  content: string;
+  restriction: 'ALL' | 'RANGED' | 'MELEE' | 'DIVINE_CASTER';
+  restrictionLabel: string;
+  postedAt: string;
+  images: Array<{ url: string; filename: string }>;
+  totalReactions: number;
+  interestedPlayers: Array<{
+    discordId: string;
+    discordUsername: string;
+    registered: boolean;
+    playerId?: string;
+    nickname?: string;
+    charClass?: PlayerClass;
+    guildName?: string;
+    combatPower?: number;
+    attack?: number;
+    defense?: number;
+    accuracy?: number;
+    isClassEligible: boolean;
+    rank: number;
+  }>;
+};
+
+export function useDiscordLiveDrops(channelId = '1550143905742327878') {
+  return useQuery({
+    queryKey: ['discord-live-drops', channelId],
+    queryFn: async () => (await api.get<LiveDropItem[]>('/discord/loot/drops', { params: { channelId } })).data,
+    refetchInterval: 30000,
+  });
+}
+
+export function useDeclareLootWinner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { channelId: string; messageId: string; playerId: string; note?: string }) =>
+      (await api.post<{ success: boolean; winnerNickname: string; combatPower: number }>('/discord/loot/declare-winner', data)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['discord-live-drops'] });
+    },
+  });
+}
+
+export function useExpressLootInterest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { channelId: string; messageId: string }) =>
+      (await api.post<{ success: boolean }>('/discord/loot/interest', data)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['discord-live-drops'] });
+    },
+  });
+}

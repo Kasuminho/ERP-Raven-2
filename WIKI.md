@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-11-07 (Otimizacao e Compressao Client-side de Prints + Expansao do Limite de Upload da API para 25MB)
+**Ultima revisao:** 2026-11-16 (Drops ao Vivo do Discord #loot-distribution-cp com Ranking CP + Cobertura Total i18n EN/ES/PT)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -627,6 +627,7 @@ npm.cmd run discord:configure-webhooks
 | 2026-07-02 | Resumos semanal e mensal de `operations` sairam da delegacao e passaram a ser calculados em `WeeklySummaryService`, preservando contratos e webhook operacional. | arquitetura/API |
 | 2026-09-20 | Body parser do NestJS expandido para 50MB e envio de OCR desacoplado para processamento sequencial print a print com progresso na Web, eliminando HTTP 413. | OCR/Gemini/Performance |
 | 2026-09-20 | OCR do Gemini ganhou parser robusto para respostas envelopadas ({ items: [] }), suporte nativo a prints em PT-BR do Raven 2 e compatibilidade de chaves items/scannedItems entre API e Web. | OCR/Gemini/Storage |
+| 2026-11-16 | Integracao de drops em tempo real do canal Discord `#loot-distribution-cp`: leitura automatica de posts do Vagner, deteccao de restricoes (Ranged, Melee, etc.), cruzamento de reacoes ✅ com o banco de membros e ordenacao instantanea por Combat Power (CP) no ERP para agilizar distribuicao; i18n 100% corrigido e traduzido para ingles e espanhol no dashboard/ranking. | loot/discord/cp/i18n |
 | 2026-11-07 | Compressao client-side inteligente de prints (canvas JPEG 90%, max 2560px) adicionada no frontend e limite do Multer na API aumentado de 5MB para 25MB com timeout estendido de 60s, resolvendo falhas de upload cancelado por arquivos grandes. | uploads/performance/resiliencia |
 | 2026-11-07 | Captura global de CTRL+V no Dashboard para upload e OCR automatico de prints de status de qualquer lugar da pagina ou modal; resolvida falha de multiplos alvos de clipboard no `FileUploadButton`; suporte a drag-and-drop adicionado. | UX/clipboard/status |
 | 2026-11-06 | Suporte as divisoes AlcatraZ e AlcatraZ2 no envio de status (Web e Discord slash commands) e filtro no Ranking de CP com contadores; Staff ganhou remocao de membros que sairam da guilda com auditoria e visualizacao/reativacao de ex-membros. | players/ranking/guildas/staff |
