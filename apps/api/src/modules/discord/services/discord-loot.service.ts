@@ -161,7 +161,7 @@ export class DiscordLootService {
 
       let reactors: Array<{ id: string; username: string }> = [];
       try {
-        const reactRes = await fetch(`${this.apiBase}/channels/${channelId}/messages/${msg.id}/reactions/${emojiParam}?limit=100`, {
+        const reactRes = await fetch(`${this.apiBase}/channels/${channelId}/messages/${msg.id}/reactions/${emojiParam}`, {
           headers: { Authorization: `Bot ${token}` },
         });
         if (reactRes.ok) {
