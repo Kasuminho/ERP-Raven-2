@@ -105,10 +105,15 @@ export class ItemInterestsService implements OnApplicationBootstrap {
       await this.prisma.itemInterestPost.deleteMany({
         where: {
           OR: [
-            { title: { contains: 'Greaves of the Holy King', mode: 'insensitive' } },
-            { title: { contains: 'TEST ENTRY', mode: 'insensitive' } },
-            { title: { contains: 'TESTE AUTOMATICO', mode: 'insensitive' } },
+            { title: { contains: 'Greaves', mode: 'insensitive' } },
+            { title: { contains: 'Calça', mode: 'insensitive' } },
+            { title: { contains: 'Pants', mode: 'insensitive' } },
+            { title: { contains: 'TEST', mode: 'insensitive' } },
+            { itemCatalog: { namePt: { contains: 'Greaves', mode: 'insensitive' } } },
+            { itemCatalog: { namePt: { contains: 'Calça', mode: 'insensitive' } } },
+            { itemCatalog: { nameEn: { contains: 'Greaves', mode: 'insensitive' } } },
           ],
+          status: ItemInterestStatus.OPEN,
         },
       }).catch(() => undefined);
 
@@ -452,6 +457,11 @@ export class ItemInterestsService implements OnApplicationBootstrap {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     await this.cleanupCancelledInterestImages(id, actorId, result.imageUrls);
+
+    if (result.updated.discordMessageId && result.updated.discordChannelId) {
+      void this.notificationService.deleteDiscordMessage(result.updated.discordChannelId, result.updated.discordMessageId).catch(() => undefined);
+    }
+
     return result.updated;
   }
 

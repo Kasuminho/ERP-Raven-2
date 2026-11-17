@@ -441,4 +441,19 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`failed_to_sync_discord_message post=${postId}`, error instanceof Error ? error.stack : undefined);
     }
   }
+
+  async deleteMessage(channelId: string, messageId: string): Promise<void> {
+    try {
+      if (!this.ready) return;
+      const channel = await this.client.channels.fetch(channelId);
+      if (!channel || !('messages' in channel)) return;
+      const textChannel = channel as TextChannel;
+      const message = await textChannel.messages.fetch(messageId).catch(() => null);
+      if (message) {
+        await message.delete();
+      }
+    } catch {
+      // Ignora falhas de delecao
+    }
+  }
 }

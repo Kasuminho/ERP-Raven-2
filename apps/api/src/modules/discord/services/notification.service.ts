@@ -346,6 +346,10 @@ export class NotificationService {
     await this.bot.syncDiscordMessagePost(postId);
   }
 
+  async deleteDiscordMessage(channelId: string, messageId: string): Promise<void> {
+    await this.bot.deleteMessage(channelId, messageId);
+  }
+
   async notifyItemInterestDelivered(data: {
     postId: string;
     title: string;

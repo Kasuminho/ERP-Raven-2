@@ -19,6 +19,7 @@ import {
   Shield,
   Sparkles,
   Swords,
+  Trash2,
   Trophy,
   Upload,
   User,
@@ -38,6 +39,7 @@ import {
   usePlayerDrops,
 } from '@/hooks/use-drops-api';
 import {
+  useCancelItemInterest,
   useCreateItemInterest,
   useDeclareItemInterest,
   useDecideItemInterest,
@@ -77,6 +79,7 @@ export default function DropsDistributionPage() {
   const undeclareInterestMutation = useUndeclareItemInterest();
   const decideMutation = useDecideItemInterest();
   const deliverMutation = useDeliverItemInterest();
+  const cancelDropMutation = useCancelItemInterest();
   const uploadImageMutation = useUploadImage();
   const manualDropMutation = useCreateManualDrop();
 
@@ -261,6 +264,25 @@ export default function DropsDistributionPage() {
       setDeliveryProofUrl('');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao entregar drop.';
+      notifyToast({ title: 'Erro', description: msg, tone: 'error' });
+    }
+  }
+
+  // Cancelar Drop (Staff)
+  async function handleCancelDrop(post: ItemInterestPost) {
+    if (!confirm(`Tem certeza que deseja cancelar e remover o drop de "${post.title}"?`)) return;
+    try {
+      await cancelDropMutation.mutateAsync({
+        id: post.id,
+        reason: 'Drop cancelado pela Staff',
+      });
+      notifyToast({
+        title: 'Drop Cancelado',
+        description: `O drop "${post.title}" foi removido com sucesso.`,
+        tone: 'info',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao cancelar drop.';
       notifyToast({ title: 'Erro', description: msg, tone: 'error' });
     }
   }
@@ -536,6 +558,21 @@ export default function DropsDistributionPage() {
                                     ? 'Declare Interest'
                                     : 'Manifestar Interesse'}
                               </Button>
+                            )}
+
+                            {isStaff && (
+                              <div className="pt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCancelDrop(post)}
+                                  disabled={cancelDropMutation.isPending}
+                                  className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1.5 w-full sm:w-auto"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Cancelar / Remover Drop
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </div>
