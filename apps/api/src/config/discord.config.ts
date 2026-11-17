@@ -31,7 +31,9 @@ export default registerAs('discord', () => ({
     staffReview: process.env.DISCORD_STAFF_REVIEW_CHANNEL_ID ?? '',
     dkp: process.env.DISCORD_DKP_CHANNEL_ID ?? '',
     announcements: process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID ?? process.env.DISCORD_ATTENDANCE_CHANNEL_ID ?? '',
-    interests: process.env.DISCORD_INTERESTS_CHANNEL_ID ?? '1550143905742327878',
+    interests: (!process.env.DISCORD_INTERESTS_CHANNEL_ID || process.env.DISCORD_INTERESTS_CHANNEL_ID === '1556615157566935154')
+      ? '1550143905742327878'
+      : process.env.DISCORD_INTERESTS_CHANNEL_ID,
   },
   webhooks: {
     events: process.env.DISCORD_EVENTS_WEBHOOK_URL ?? '',

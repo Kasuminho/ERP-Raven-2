@@ -300,7 +300,10 @@ export class NotificationService {
       imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
     }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn));
 
-    const channelId = this.config.get<string>('discord.channels.interests');
+    let channelId = this.config.get<string>('discord.channels.interests');
+    if (!channelId || channelId === '1556615157566935154') {
+      channelId = '1550143905742327878';
+    }
     if (channelId) {
       try {
         const sentMessage = await this.bot.sendChannelMessage(channelId, {

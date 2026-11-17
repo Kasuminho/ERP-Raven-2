@@ -45,6 +45,13 @@ export class ItemInterestsController {
     return this.service.createBulkPosts(dto, req.user.userId);
   }
 
+  @Post('sync-discord')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async syncDiscord(@Req() req: AuthRequest): Promise<{ syncedCount: number; message: string }> {
+    return this.service.syncUnpublishedOpenPosts(req.user.userId);
+  }
+
   @Post(':id/declare')
   async declare(@Param('id') id: string, @Body() dto: DeclareItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestEntry> {
     return this.service.declareInterest(id, req.user.userId, dto);

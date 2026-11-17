@@ -220,6 +220,14 @@ export function useCreateBulkItemInterests() {
   });
 }
 
+export function useSyncDiscordDrops() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<{ syncedCount: number; message: string }>('/item-interests/sync-discord')).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+  });
+}
+
 export function useDeclareItemInterest() {
   const queryClient = useQueryClient();
   return useMutation({

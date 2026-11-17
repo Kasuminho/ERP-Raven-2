@@ -45,6 +45,7 @@ import {
   useItemInterests,
   useItems,
   useStaffItemInterests,
+  useSyncDiscordDrops,
   useUndeclareItemInterest,
 } from '@/hooks/use-items-api';
 import { useUploadImage } from '@/hooks/use-profile-api';
@@ -71,6 +72,7 @@ export default function DropsDistributionPage() {
 
   // Mutations
   const createDropMutation = useCreateItemInterest();
+  const syncDiscordMutation = useSyncDiscordDrops();
   const declareInterestMutation = useDeclareItemInterest();
   const undeclareInterestMutation = useUndeclareItemInterest();
   const decideMutation = useDecideItemInterest();
@@ -345,13 +347,39 @@ export default function DropsDistributionPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {isStaff && (
-              <Button
-                onClick={() => setIsNewDropModalOpen(true)}
-                className="gap-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold shadow-lg shadow-amber-900/30"
-              >
-                <Plus className="h-4 w-4" />
-                Lançar Novo Drop
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      const res = await syncDiscordMutation.mutateAsync();
+                      notifyToast({
+                        title: 'Sincronização Discord',
+                        description: res.message || 'Drops sincronizados com sucesso!',
+                        tone: 'success',
+                      });
+                    } catch (err: unknown) {
+                      notifyToast({
+                        title: 'Erro de sincronização',
+                        description: err instanceof Error ? err.message : 'Falha ao sincronizar com o Discord.',
+                        tone: 'error',
+                      });
+                    }
+                  }}
+                  disabled={syncDiscordMutation.isPending}
+                  className="gap-2 border-primary/40 hover:bg-primary/10 text-foreground text-xs"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncDiscordMutation.isPending ? 'animate-spin' : ''}`} />
+                  Sincronizar no Discord
+                </Button>
+                <Button
+                  onClick={() => setIsNewDropModalOpen(true)}
+                  className="gap-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold shadow-lg shadow-amber-900/30"
+                >
+                  <Plus className="h-4 w-4" />
+                  Lançar Novo Drop
+                </Button>
+              </>
             )}
           </div>
         </div>

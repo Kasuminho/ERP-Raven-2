@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { ItemCatalog, ItemInterestEntry, ItemInterestPost, ItemInterestStatus, ItemTier, ItemType, Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import type {
@@ -88,7 +88,7 @@ const criteriaTexts: Record<string, { pt: string; en: string }> = {
 const TRANSMUTE_IMAGE_URL = '/transmutar.png';
 
 @Injectable()
-export class ItemInterestsService {
+export class ItemInterestsService implements OnApplicationBootstrap {
   private readonly staffVoteThreshold = 3;
 
   constructor(
@@ -99,6 +99,39 @@ export class ItemInterestsService {
     private readonly transmuteRaffle: ItemInterestTransmuteRaffleService,
     private readonly businessRules: BusinessRulesService,
   ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      setTimeout(() => {
+        void this.syncUnpublishedOpenPosts().catch(() => undefined);
+      }, 5000);
+    } catch {
+      // Ignora erro no bootstrap
+    }
+  }
+
+  async syncUnpublishedOpenPosts(actorId?: string): Promise<{ syncedCount: number; message: string }> {
+    const unposted = await this.prisma.itemInterestPost.findMany({
+      where: {
+        status: ItemInterestStatus.OPEN,
+        discordMessageId: null,
+      },
+      include: {
+        itemCatalog: true,
+      },
+    });
+
+    let count = 0;
+    for (const post of unposted) {
+      await this.notifyCreatedPost(post, post.itemCatalog, post.mode, actorId || post.createdById);
+      count++;
+    }
+
+    return {
+      syncedCount: count,
+      message: `${count} drop(s) sincronizado(s) no Discord com sucesso.`,
+    };
+  }
 
   async listPosts(status?: ItemInterestStatus, userId?: string): Promise<ItemInterestDetails[]> {
     const viewerPlayer = userId

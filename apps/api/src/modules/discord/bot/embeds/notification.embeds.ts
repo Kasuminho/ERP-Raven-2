@@ -225,18 +225,13 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
     .setColor(0x27ae60)
     .setDescription(pickBilingualVoice({
       'pt-BR': [
-        '**Interesse aberto no cofre.** Clica no site com print legivel; print torta de celular e ban imediato da retina.',
-        '**Drop disponivel.** Marca interesse no ERP; negociar no privado com oficial nao cola aqui.',
-        '**Item na vitrine.** Declara interesse dentro das regras; quem inventa moda vai pro fim da fila.',
-        '**Janela de interesses.** Registra seu nome; na hora do sorteio, quem nao marcou so chora.',
-        '**Loot na mesa.** Marca se realmente for usar; pegar pra deixar mofando na bag da carma ruim.',
+        '**Drop liberado no ERP AlcatraZ.** Reaja com 🎯 ou clique no botão para manifestar interesse. A Staff avaliará os participantes estritamente por **Ranking de CP** e presença no boss.',
+        '**Loot aberto para a guilda.** Reaja ou acesse o site para registrar interesse. A distribuição segue a ordem de prioridade transparente por Combat Power (CP).',
+        '**Item disponível no baú/drop.** Manifeste interesse pelo botão ou reação; entrega decidida pela liderança com base em CP e histórico de drops.',
       ],
       en: [
-        '**Vault interest open.** Click on the site with a readable shot; phone camera photos hurt our retinas.',
-        '**Drop available.** Mark interest on the ERP; private DM bartering with officers does not fly here.',
-        '**Gear on display.** Declare interest by the book; improvisers get sent to the back of the line.',
-        '**Interest window live.** Put your name in; when raffle rolls, unlisted players only get tears.',
-        '**Loot on the table.** Claim only what you will actually equip; vault hoarding breeds bad karma.',
+        '**Drop available in AlcatraZ ERP.** React with 🎯 or click below to declare interest. Staff will evaluate participants strictly by **CP Ranking** and boss attendance.',
+        '**Guild loot open.** React or access the website to register interest. Distribution follows transparent Combat Power (CP) priority.',
       ],
     }, data.title, data.itemName, data.mode, data.closesAt))
     .addFields(
