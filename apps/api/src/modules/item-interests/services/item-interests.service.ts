@@ -228,13 +228,9 @@ export class ItemInterestsService {
   }
 
   async declareInterest(postId: string, userId: string, data: DeclareItemInterestDto): Promise<ItemInterestEntry> {
-    const normalizedImageUrl = data.imageUrl?.trim();
-    const isTransmuteRequest = data.isTransmuteRequest === true || normalizedImageUrl === TRANSMUTE_IMAGE_URL;
-    const imageUrl = isTransmuteRequest ? TRANSMUTE_IMAGE_URL : normalizedImageUrl;
-
-    if (!imageUrl) {
-      throw new BadRequestException('Interest declaration print is required.');
-    }
+    const normalizedImageUrl = data.imageUrl?.trim() || null;
+    const isTransmuteRequest = data.isTransmuteRequest === true || (normalizedImageUrl === TRANSMUTE_IMAGE_URL && data.isTransmuteRequest !== false);
+    const imageUrl = isTransmuteRequest ? TRANSMUTE_IMAGE_URL : (normalizedImageUrl ?? undefined);
 
     return this.prisma.$transaction(async (tx) => {
       const post = await tx.itemInterestPost.findUnique({ where: { id: postId } });
@@ -259,7 +255,7 @@ export class ItemInterestsService {
           postId,
           playerId: player.id,
           note: data.note?.trim() || undefined,
-          imageUrl,
+          imageUrl: imageUrl || undefined,
           isTransmuteRequest,
         },
       });
@@ -276,6 +272,45 @@ export class ItemInterestsService {
         throw new BadRequestException('Player already declared interest for this post.');
       }
       throw error;
+    });
+  }
+
+  async undeclareInterest(postId: string, userId: string): Promise<{ success: boolean }> {
+    return this.prisma.$transaction(async (tx) => {
+      const post = await tx.itemInterestPost.findUnique({ where: { id: postId } });
+
+      if (!post) {
+        throw new NotFoundException(`Interest post ${postId} was not found.`);
+      }
+
+      if (post.status !== 'OPEN' || post.closesAt <= new Date()) {
+        throw new BadRequestException('This interest post is closed.');
+      }
+
+      const player = await this.getPrimaryPlayer(userId, tx);
+      const entry = await tx.itemInterestEntry.findUnique({
+        where: {
+          postId_playerId: {
+            postId,
+            playerId: player.id,
+          },
+        },
+      });
+
+      if (!entry) {
+        return { success: true };
+      }
+
+      await tx.itemInterestEntry.delete({
+        where: { id: entry.id },
+      });
+
+      await this.auditWithinTransaction(tx, 'ITEM_INTEREST_UNDECLARED', entry.id, userId, {
+        postId,
+        playerId: player.id,
+      });
+
+      return { success: true };
     });
   }
 
@@ -590,12 +625,27 @@ export class ItemInterestsService {
         throw new BadRequestException('This interest post is already resolved.');
       }
 
-      if (post.status !== ItemInterestStatus.READY_FOR_DELIVERY || !post.selectedEntryId) {
-        throw new BadRequestException('Interest delivery requires a completed Staff vote.');
+      let selectedEntryId = post.selectedEntryId;
+      if (post.status !== ItemInterestStatus.READY_FOR_DELIVERY || !selectedEntryId) {
+        if (entryIds.length === 1 && (post.status === ItemInterestStatus.OPEN || post.status === ItemInterestStatus.VOTING)) {
+          selectedEntryId = entryIds[0];
+          await tx.itemInterestPost.update({
+            where: { id },
+            data: {
+              status: ItemInterestStatus.READY_FOR_DELIVERY,
+              closedAt: post.closedAt ?? new Date(),
+              selectedEntryId,
+              selectionReason: 'Entrega direta decidida pela Staff',
+              deliveryEnabledAt: new Date(),
+            },
+          });
+        } else {
+          throw new BadRequestException('Interest delivery requires a selected winner or completed Staff vote.');
+        }
       }
 
-      if (entryIds.length !== 1 || entryIds[0] !== post.selectedEntryId) {
-        throw new BadRequestException('Only the Staff vote winner can receive this item.');
+      if (entryIds.length !== 1 || entryIds[0] !== selectedEntryId) {
+        throw new BadRequestException('Only the selected winner can receive this item.');
       }
 
       const entries = await tx.itemInterestEntry.findMany({

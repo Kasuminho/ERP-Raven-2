@@ -18,8 +18,7 @@ export class DropsController {
   constructor(private readonly service: DropsService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('STAFF', 'ADMIN')
+  @UseGuards(JwtAuthGuard)
   async delivered(@Query('page') page?: string, @Query('limit') limit?: string) {
     return this.service.getDeliveredDrops({ page: Number(page), limit: Number(limit) });
   }

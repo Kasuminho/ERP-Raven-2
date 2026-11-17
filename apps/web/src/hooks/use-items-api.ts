@@ -3,10 +3,11 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import type { Announcement, AttendanceStats, Auction, AuctionBid, AuctionBidCancellationRequest, AuctionDiagnosticOption, AuctionDiagnosticSummary, AuctionDossier, AuctionFinalizationPreview, AuctionTimelineEvent, AuditIdentity, AuditLog, BusinessRule, CodexRequest, DaoshiCashReceipt, DaoshiMonthlySummary, DaoshiPlayerSummary, DaoshiRaffle, DaoshiReceiptStatus, DeploymentPanelSummary, DiscordTemplateSummary, DiscordWebhookQueueSummary, DkpEconomySummary, DkpLeaderboardRow, DropHistory, EligibilityResponse, EligibilityRow, EventBatchPanel, EventDetails, EventFinalizationChecklist, EventReadinessReport, EventRecord, EventType, FinalizeEventResult, GuildRulesSummary, IntegritySummary, InternalNotification, ItemAuditDrop, ItemAuditFull, ItemAuditSummary, ItemCatalog, ItemInterestPost, ItemInterestStatus, ItemRequest, ItemTier, ItemType, LegacyAuditSummary, LootFairnessSummary, MaintenanceModeSummary, NoticeBoardItem, OperationalHealthSummary, PendingAuctionDelivery, PlayerActionPlan, PlayerAttendanceHistoryRow, PlayerClass, PlayerComparisonSummary, PlayerHistory, PlayerOperationsSummary, PlayerProgress, PlayerStaffNote, ProgressCategory, SeasonMonthlySummary, StaffDayViewSummary, StaffDkpPlayerRow, StaffHealthSummary, StaffMeetingSummary, StaffMorningBriefing, StaffOperationsSummary, StaffPlayer, Transaction, UniversalDossier, UniversalDossierType, WeeklyGuildSummary } from '@/types/api';
 
-export function useItems() {
+export function useItems(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['items'],
     queryFn: async () => (await api.get<ItemCatalog[]>('/items', { params: { limit: 500 } })).data,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -193,10 +194,11 @@ export function useItemInterests(status?: ItemInterestStatus) {
   });
 }
 
-export function useStaffItemInterests(status?: ItemInterestStatus) {
+export function useStaffItemInterests(status?: ItemInterestStatus, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['item-interests', 'staff', status ?? 'all'],
     queryFn: async () => (await api.get<ItemInterestPost[]>('/item-interests/staff/list', { params: status ? { status } : undefined })).data,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -227,6 +229,15 @@ export function useDeclareItemInterest() {
         imageUrl: data.imageUrl,
         isTransmuteRequest: data.isTransmuteRequest,
       })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+  });
+}
+
+export function useUndeclareItemInterest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) =>
+      (await api.delete<{ success: boolean }>(`/item-interests/${postId}/declare`)).data,
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
   });
 }

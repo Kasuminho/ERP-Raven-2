@@ -40,10 +40,12 @@ import {
 import {
   useCreateItemInterest,
   useDeclareItemInterest,
+  useDecideItemInterest,
   useDeliverItemInterest,
   useItemInterests,
   useItems,
   useStaffItemInterests,
+  useUndeclareItemInterest,
 } from '@/hooks/use-items-api';
 import { useUploadImage } from '@/hooks/use-profile-api';
 import { displayImageUrl } from '@/lib/images';
@@ -63,13 +65,15 @@ export default function DropsDistributionPage() {
 
   // Queries
   const playerInterests = useItemInterests('OPEN');
-  const staffInterests = useStaffItemInterests('OPEN');
+  const staffInterests = useStaffItemInterests('OPEN', { enabled: isStaff });
   const allDeliveredDrops = useDeliveredDrops();
-  const catalog = useItems();
+  const catalog = useItems({ enabled: isStaff });
 
   // Mutations
   const createDropMutation = useCreateItemInterest();
   const declareInterestMutation = useDeclareItemInterest();
+  const undeclareInterestMutation = useUndeclareItemInterest();
+  const decideMutation = useDecideItemInterest();
   const deliverMutation = useDeliverItemInterest();
   const uploadImageMutation = useUploadImage();
   const manualDropMutation = useCreateManualDrop();
@@ -147,24 +151,35 @@ export default function DropsDistributionPage() {
     };
   }
 
-  // Declara interesse (Jogador)
-  async function handleToggleInterest(post: ItemInterestPost) {
+  // Declara ou cancela interesse (Jogador)
+  async function handleToggleInterest(post: ItemInterestPost, userHasDeclared: boolean) {
     try {
-      await declareInterestMutation.mutateAsync({
-        postId: post.id,
-        imageUrl: '/transmutar.png', // Identificador padrão de manifesto sem print avulso obrigatório
-        note: 'Manifestado via Web',
-      });
-      notifyToast({
-        title: locale === 'en' ? 'Interest saved!' : 'Interesse registrado!',
-        description:
-          locale === 'en'
-            ? 'Your interest is visible in the CP rank for this drop.'
-            : 'Seu interesse está registrado e visível no ranking deste drop.',
-        tone: 'success',
-      });
+      if (userHasDeclared) {
+        await undeclareInterestMutation.mutateAsync(post.id);
+        notifyToast({
+          title: locale === 'en' ? 'Interest cancelled' : 'Interesse cancelado',
+          description:
+            locale === 'en'
+              ? 'Your interest has been removed from this drop.'
+              : 'Seu interesse foi removido deste drop com sucesso.',
+          tone: 'info',
+        });
+      } else {
+        await declareInterestMutation.mutateAsync({
+          postId: post.id,
+          note: 'Manifestado via Web',
+        });
+        notifyToast({
+          title: locale === 'en' ? 'Interest saved!' : 'Interesse registrado!',
+          description:
+            locale === 'en'
+              ? 'Your interest is visible in the CP rank for this drop.'
+              : 'Seu interesse está registrado e visível no ranking deste drop.',
+          tone: 'success',
+        });
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Falha ao manifestar interesse.';
+      const msg = err instanceof Error ? err.message : 'Falha ao atualizar interesse.';
       notifyToast({
         title: locale === 'en' ? 'Error' : 'Erro',
         description: msg,
@@ -219,6 +234,14 @@ export default function DropsDistributionPage() {
     if (!deliveringPost || !selectedWinnerEntry) return;
 
     try {
+      if (deliveringPost.status !== 'READY_FOR_DELIVERY' || deliveringPost.selectedEntryId !== selectedWinnerEntry.id) {
+        await decideMutation.mutateAsync({
+          postId: deliveringPost.id,
+          entryId: selectedWinnerEntry.id,
+          reason: 'Decidido por CP via Web',
+        });
+      }
+
       await deliverMutation.mutateAsync({
         id: deliveringPost.id,
         entryIds: [selectedWinnerEntry.id],
@@ -462,7 +485,8 @@ export default function DropsDistributionPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleToggleInterest(post)}
+                                    onClick={() => handleToggleInterest(post, true)}
+                                    disabled={declareInterestMutation.isPending || undeclareInterestMutation.isPending}
                                     className="text-xs text-muted-foreground hover:text-red-400 block"
                                   >
                                     {locale === 'en' ? 'Remove Interest' : 'Cancelar Interesse'}
@@ -471,8 +495,8 @@ export default function DropsDistributionPage() {
                               </div>
                             ) : (
                               <Button
-                                onClick={() => handleToggleInterest(post)}
-                                disabled={isClosed || declareInterestMutation.isPending}
+                                onClick={() => handleToggleInterest(post, false)}
+                                disabled={isClosed || declareInterestMutation.isPending || undeclareInterestMutation.isPending}
                                 className="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md"
                               >
                                 <Award className="h-4 w-4" />

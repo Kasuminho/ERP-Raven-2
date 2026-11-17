@@ -291,12 +291,12 @@ export class NotificationService {
       new ButtonBuilder()
         .setLabel('🌐 Abrir no Site')
         .setStyle(ButtonStyle.Link)
-        .setURL(this.dashboardUrl('/dashboard/interests')),
+        .setURL(this.dashboardUrl('/dashboard/drops')),
     );
 
     const embed = buildItemInterestCreatedEmbed({
       ...data,
-      url: this.dashboardUrl('/dashboard/interests'),
+      url: this.dashboardUrl('/dashboard/drops'),
       imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
     }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn));
 
@@ -365,7 +365,7 @@ export class NotificationService {
     await this.sendWebhookChannel('interests', {
       embeds: [buildItemInterestSkillBatchEmbed({
         ...data,
-        url: this.dashboardUrl('/dashboard/interests'),
+        url: this.dashboardUrl('/dashboard/drops'),
       }, this.localeFor('interests', ...data.sampleTitles))],
     }, 'DISCORD_NOTIFY_ITEM_INTEREST_SKILL_BATCH_CREATED', data.batchId, {
       count: data.count,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ItemInterestEntry, ItemInterestPost, ItemInterestStatus } from '@prisma/client';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -48,6 +48,11 @@ export class ItemInterestsController {
   @Post(':id/declare')
   async declare(@Param('id') id: string, @Body() dto: DeclareItemInterestDto, @Req() req: AuthRequest): Promise<ItemInterestEntry> {
     return this.service.declareInterest(id, req.user.userId, dto);
+  }
+
+  @Delete(':id/declare')
+  async undeclare(@Param('id') id: string, @Req() req: AuthRequest): Promise<{ success: boolean }> {
+    return this.service.undeclareInterest(id, req.user.userId);
   }
 
   @Post(':id/seen')
