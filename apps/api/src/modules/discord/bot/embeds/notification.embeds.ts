@@ -28,6 +28,10 @@ export type ItemInterestCreatedEmbedData = {
   closesAt: Date;
   url: string;
   imageUrl?: string;
+  entries?: Array<{
+    nickname: string;
+    discordId?: string | null;
+  }>;
 };
 
 export type ItemInterestDeliveredEmbedData = {
@@ -233,11 +237,20 @@ export function buildItemInterestCreatedEmbed(data: ItemInterestCreatedEmbedData
         '**Drop available in AlcatraZ ERP.** React with 🎯 or click below to declare interest. Staff will evaluate participants strictly by **CP Ranking** and boss attendance.',
         '**Guild loot open.** React or access the website to register interest. Distribution follows transparent Combat Power (CP) priority.',
       ],
-    }, data.title, data.itemName, data.mode, data.closesAt))
+    }, data.title, data.itemName, data.mode, data.closesAt));
+
+  const recognizedEntries = data.entries && data.entries.length > 0
+    ? data.entries.map((e, idx) => `${idx + 1}. **${e.nickname}**${e.discordId ? ` (<@${e.discordId}>)` : ''}`).join('\n')
+    : (locale === 'en'
+        ? '_No participants yet. React with 🎯 to join the list!_'
+        : '_Nenhum jogador manifestou interesse ainda. Reaja com 🎯 ou use o botão para entrar!_');
+
+  embed
     .addFields(
       { name: 'Item', value: data.itemName, inline: false },
       { name: localeCopy(locale, { 'pt-BR': 'Modo', en: 'Mode' }), value: data.mode, inline: true },
       { name: localeCopy(locale, { 'pt-BR': 'Fecha', en: 'Closes' }), value: `${discordTimestamp(data.closesAt, 'F')}\n${discordTimestamp(data.closesAt, 'R')}`, inline: false },
+      { name: localeCopy(locale, { 'pt-BR': `🎯 Interessados Reconhecidos (${data.entries?.length ?? 0})`, en: `🎯 Recognized Participants (${data.entries?.length ?? 0})` }), value: recognizedEntries, inline: false },
       { name: 'Regras PT-BR', value: data.criteriaPt || 'Sem regras cadastradas.', inline: false },
       { name: 'Rules EN', value: data.criteriaEn || 'No rules configured.', inline: false },
       { name: 'Dashboard', value: data.url || 'Dashboard link unavailable', inline: false },

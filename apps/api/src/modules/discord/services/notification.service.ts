@@ -282,11 +282,13 @@ export class NotificationService {
     criteriaEn: string;
     closesAt: Date;
     imageUrl?: string | null;
+    entries?: Array<{ nickname: string; discordId?: string | null }>;
   }): Promise<{ messageId?: string; channelId?: string } | void> {
+    const entriesCount = data.entries?.length ?? 0;
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`interest:toggle:${data.postId}`)
-        .setLabel('🎯 Manifestar Interesse')
+        .setLabel(entriesCount > 0 ? `🎯 Manifestar Interesse (${entriesCount})` : '🎯 Manifestar Interesse')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setLabel('🌐 Abrir no Site')
@@ -298,6 +300,7 @@ export class NotificationService {
       ...data,
       url: this.dashboardUrl('/dashboard/drops'),
       imageUrl: this.publicImageUrl(data.imageUrl ?? undefined),
+      entries: data.entries,
     }, this.localeFor('interests', data.title, data.criteriaPt, data.criteriaEn));
 
     let channelId = this.config.get<string>('discord.channels.interests');
@@ -337,6 +340,10 @@ export class NotificationService {
       mode: data.mode,
       closesAt: data.closesAt.toISOString(),
     });
+  }
+
+  async refreshItemInterestDiscordMessage(postId: string): Promise<void> {
+    await this.bot.syncDiscordMessagePost(postId);
   }
 
   async notifyItemInterestDelivered(data: {

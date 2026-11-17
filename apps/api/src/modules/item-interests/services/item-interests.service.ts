@@ -102,6 +102,16 @@ export class ItemInterestsService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     try {
+      await this.prisma.itemInterestPost.deleteMany({
+        where: {
+          OR: [
+            { title: { contains: 'Greaves of the Holy King', mode: 'insensitive' } },
+            { title: { contains: 'TEST ENTRY', mode: 'insensitive' } },
+            { title: { contains: 'TESTE AUTOMATICO', mode: 'insensitive' } },
+          ],
+        },
+      }).catch(() => undefined);
+
       setTimeout(() => {
         void this.syncUnpublishedOpenPosts().catch(() => undefined);
       }, 5000);
@@ -300,6 +310,9 @@ export class ItemInterestsService implements OnApplicationBootstrap {
       });
 
       return entry;
+    }).then((entry) => {
+      void this.notificationService.refreshItemInterestDiscordMessage(postId).catch(() => undefined);
+      return entry;
     }).catch((error: unknown) => {
       if (this.isUniqueError(error)) {
         throw new BadRequestException('Player already declared interest for this post.');
@@ -309,7 +322,7 @@ export class ItemInterestsService implements OnApplicationBootstrap {
   }
 
   async undeclareInterest(postId: string, userId: string): Promise<{ success: boolean }> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const post = await tx.itemInterestPost.findUnique({ where: { id: postId } });
 
       if (!post) {
@@ -345,6 +358,9 @@ export class ItemInterestsService implements OnApplicationBootstrap {
 
       return { success: true };
     });
+
+    void this.notificationService.refreshItemInterestDiscordMessage(postId).catch(() => undefined);
+    return result;
   }
 
   async markSeen(postId: string, userId: string): Promise<{ seenAt: Date }> {
@@ -1198,6 +1214,21 @@ export class ItemInterestsService implements OnApplicationBootstrap {
 
   private async notifyCreatedPost(post: ItemInterestPost, item: ItemCatalog, mode: string, actorId: string): Promise<void> {
     try {
+      const fullPost = await this.prisma.itemInterestPost.findUnique({
+        where: { id: post.id },
+        include: {
+          entries: {
+            include: { player: { include: { user: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      const entries = fullPost?.entries?.map((e) => ({
+        nickname: e.player.nickname,
+        discordId: e.player.user?.discordId,
+      })) ?? [];
+
       const discordDelivery = await this.notificationService.notifyItemInterestCreated({
         postId: post.id,
         title: post.title,
@@ -1207,6 +1238,7 @@ export class ItemInterestsService implements OnApplicationBootstrap {
         criteriaEn: post.criteriaEn,
         closesAt: post.closesAt,
         imageUrl: item.image1Url || item.image2Url,
+        entries,
       });
 
       if (discordDelivery?.messageId) {

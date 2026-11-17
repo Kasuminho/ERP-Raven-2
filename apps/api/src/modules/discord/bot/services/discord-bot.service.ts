@@ -6,7 +6,10 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
   ButtonInteraction,
+  ButtonStyle,
   ChatInputCommandInteraction,
   Client,
   GatewayIntentBits,
@@ -20,6 +23,7 @@ import {
   TextChannel,
   User,
 } from "discord.js";
+import { buildItemInterestCreatedEmbed } from "../embeds/notification.embeds";
 import { DiscordRepository } from "../../repositories/discord.repository";
 
 @Injectable()
@@ -217,6 +221,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
         await this.repository.client.itemInterestEntry.delete({
           where: { id: existingEntry.id },
         });
+        void this.syncDiscordMessagePost(postId);
         await interaction.editReply({
           content: `❌ **Interesse removido com sucesso para ${player.nickname}.**\nCaso mude de ideia antes do encerramento, basta clicar no botão novamente.`,
         });
@@ -231,6 +236,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           note: 'Interesse manifestado via Discord',
         },
       });
+      void this.syncDiscordMessagePost(postId);
 
       const cpFormatted = player.combatPower ? player.combatPower.toLocaleString('pt-BR') : 'Não calculado';
       await interaction.editReply({
@@ -327,6 +333,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           });
 
           this.logger.log(`discord_reaction_interest_added post=${post.id} player=${player.nickname}`);
+          void this.syncDiscordMessagePost(post.id);
 
           try {
             const cpFormatted = player.combatPower ? player.combatPower.toLocaleString('pt-BR') : 'Não calculado';
@@ -348,6 +355,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           });
 
           this.logger.log(`discord_reaction_interest_removed post=${post.id} player=${player.nickname}`);
+          void this.syncDiscordMessagePost(post.id);
 
           try {
             await (resolvedUser as User).send(
@@ -363,6 +371,74 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
         `discord_handle_reaction_failed action=${action}`,
         error instanceof Error ? error.stack : undefined,
       );
+    }
+  }
+
+  async syncDiscordMessagePost(postId: string): Promise<void> {
+    try {
+      if (!this.ready) return;
+
+      const post = await this.repository.client.itemInterestPost.findUnique({
+        where: { id: postId },
+        include: {
+          itemCatalog: true,
+          entries: {
+            include: {
+              player: {
+                include: { user: true },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!post || !post.discordMessageId || !post.discordChannelId) {
+        return;
+      }
+
+      const channel = await this.client.channels.fetch(post.discordChannelId);
+      if (!channel || !('messages' in channel)) return;
+
+      const textChannel = channel as TextChannel;
+      const message = await textChannel.messages.fetch(post.discordMessageId).catch(() => null);
+      if (!message) return;
+
+      const entries = post.entries.map((e) => ({
+        nickname: e.player.nickname,
+        discordId: e.player.user?.discordId,
+      }));
+
+      const publicUrl = this.config.get<string>('discord.publicUrl') || 'https://app.guild-alcatraz.site';
+      const embed = buildItemInterestCreatedEmbed({
+        title: post.title,
+        itemName: post.itemCatalog ? (post.itemCatalog.namePt || post.itemCatalog.nameEn) : post.title,
+        mode: post.mode,
+        criteriaPt: post.criteriaPt,
+        criteriaEn: post.criteriaEn,
+        closesAt: post.closesAt,
+        url: `${publicUrl.replace(/\/$/, '')}/dashboard/drops`,
+        imageUrl: post.itemCatalog?.image1Url || post.itemCatalog?.image2Url || undefined,
+        entries,
+      });
+
+      const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`interest:toggle:${post.id}`)
+          .setLabel(`🎯 Manifestar Interesse (${entries.length})`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setLabel('🌐 Abrir no Site')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${publicUrl.replace(/\/$/, '')}/dashboard/drops`),
+      );
+
+      await message.edit({
+        embeds: [embed],
+        components: [actionRow],
+      });
+    } catch (error) {
+      this.logger.error(`failed_to_sync_discord_message post=${postId}`, error instanceof Error ? error.stack : undefined);
     }
   }
 }
