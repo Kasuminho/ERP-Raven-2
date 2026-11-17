@@ -13,6 +13,7 @@ COPY . .
 RUN npm run -w @guild/database prisma:generate
 
 FROM base AS api-build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run -w @guild/api build
 
 FROM node:20-alpine AS api
@@ -28,6 +29,7 @@ CMD ["sh", "-c", "npx prisma migrate deploy --schema packages/database/prisma/sc
 FROM base AS web-build
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run -w @guild/web build
 
 FROM node:20-alpine AS web
