@@ -68,18 +68,6 @@ export default function DashboardLayout({
                 {t(locale, "navCpRanking")}
               </Link>
 
-              <Link
-                href="/dashboard/drops"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                  pathname.startsWith("/dashboard/drops") || pathname.startsWith("/dashboard/interests")
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                }`}
-              >
-                <Package className="h-4 w-4" />
-                {t(locale, "navLootDistribution")}
-              </Link>
-
               {isStaff && (
                 <>
                   <Link
@@ -150,19 +138,6 @@ export default function DashboardLayout({
               >
                 <Trophy className="h-4 w-4" />
                 {t(locale, "navCpRanking")}
-              </Link>
-
-              <Link
-                href="/dashboard/drops"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold ${
-                  pathname.startsWith("/dashboard/drops") || pathname.startsWith("/dashboard/interests")
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-white/5"
-                }`}
-              >
-                <Package className="h-4 w-4" />
-                {t(locale, "navLootDistribution")}
               </Link>
 
               {isStaff && (
