@@ -10,6 +10,7 @@ import {
   Menu,
   Package,
   ShieldAlert,
+  Swords,
   Trophy,
   User,
   X,
@@ -66,6 +67,18 @@ export default function DashboardLayout({
               >
                 <Trophy className="h-4 w-4" />
                 {t(locale, "navCpRanking")}
+              </Link>
+
+              <Link
+                href="/dashboard/drops"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  pathname.startsWith("/dashboard/drops")
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                <Swords className="h-4 w-4" />
+                {t(locale, "navLootDistribution")}
               </Link>
 
               {isStaff && (
@@ -138,6 +151,19 @@ export default function DashboardLayout({
               >
                 <Trophy className="h-4 w-4" />
                 {t(locale, "navCpRanking")}
+              </Link>
+
+              <Link
+                href="/dashboard/drops"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold ${
+                  pathname.startsWith("/dashboard/drops")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-white/5"
+                }`}
+              >
+                <Swords className="h-4 w-4" />
+                {t(locale, "navLootDistribution")}
               </Link>
 
               {isStaff && (

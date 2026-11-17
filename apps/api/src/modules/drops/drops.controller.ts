@@ -3,6 +3,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { DeliverAuctionDropDto } from './dto/deliver-auction-drop.dto';
+import { CreateManualDropDto } from './dto/create-manual-drop.dto';
 import { DropsService } from './drops.service';
 
 type AuthRequest = {
@@ -72,5 +73,18 @@ export class DropsController {
   @UseGuards(JwtAuthGuard)
   async mine(@Req() req: AuthRequest) {
     return this.service.getMyDrops(req.user.userId);
+  }
+
+  @Post('manual')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  async createManualDrop(@Body() dto: CreateManualDropDto, @Req() req: AuthRequest) {
+    return this.service.createManualDrop(dto, req.user.userId);
+  }
+
+  @Get('player/:playerId')
+  @UseGuards(JwtAuthGuard)
+  async playerDrops(@Param('playerId') playerId: string) {
+    return this.service.getPlayerDrops(playerId);
   }
 }

@@ -553,6 +553,69 @@ export class DropsService {
     return drop;
   }
 
+  async createManualDrop(
+    data: {
+      playerId: string;
+      itemCatalogId?: string;
+      itemName: string;
+      deliveredAt?: string;
+      proofImageUrl?: string;
+    },
+    actorId: string,
+  ) {
+    const player = await this.prisma.player.findUnique({
+      where: { id: data.playerId },
+      include: { user: true },
+    });
+
+    if (!player) {
+      throw new NotFoundException(`Player ${data.playerId} was not found.`);
+    }
+
+    const deliveredAt = data.deliveredAt ? new Date(data.deliveredAt) : new Date();
+
+    const created = await this.prisma.dropHistory.create({
+      data: {
+        playerId: player.id,
+        itemCatalogId: data.itemCatalogId || null,
+        itemName: data.itemName.trim(),
+        nicknameIngame: player.nickname,
+        discordId: player.user?.discordId,
+        deliveredAt,
+        proofImageUrl: data.proofImageUrl?.trim() || null,
+        staffDiscordId: actorId,
+      },
+      include: {
+        itemCatalog: true,
+        player: true,
+      },
+    });
+
+    await this.auditService.log({
+      action: 'STAFF_MANUAL_DROP_CREATED',
+      targetType: 'DropHistory',
+      targetId: created.id,
+      actorId,
+      metadata: {
+        playerId: player.id,
+        itemName: created.itemName,
+        deliveredAt: created.deliveredAt,
+      },
+    });
+
+    return created;
+  }
+
+  async getPlayerDrops(playerId: string) {
+    return this.prisma.dropHistory.findMany({
+      where: { playerId },
+      include: {
+        itemCatalog: true,
+      },
+      orderBy: [{ deliveredAt: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
   private normalizePagination(
     pagination: { page?: number; limit?: number },
     defaultLimit: number,

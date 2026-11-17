@@ -308,34 +308,32 @@ To complete your Codex, request the item directly through [Guild Storage](${rout
     title: '08 · Drops, entregas e resultados públicos',
     tag: 'loot',
     route: '/dashboard/drops',
-    visualPt: ['Staff entrega com prova', 'Resultado aparece no mural', 'Dados secretos continuam ocultos'],
-    visualEn: ['Staff delivers with proof', 'Result appears on board', 'Secret data stays hidden'],
-    pt: `## 🎁 Entregas e comprovantes
-Abra [Drops](${route('/dashboard/drops')}) para consultar entregas relacionadas a você e o mural de resultados publicados.
+    visualPt: ['Drops abertos com 1 clique', 'Staff entrega com prova', 'Sincronizado com Discord'],
+    visualEn: ['Open drops with 1 click', 'Staff delivers with proof', 'Synced with Discord'],
+    pt: `## 🎁 Distribuição de Drops e Comprovantes
+Abra [Drops](${route('/dashboard/drops')}) para manifestar interesse nos itens de bosses abertos e consultar entregas realizadas com comprovante.
 
-O fluxo normal é:
-1. leilão, interesse ou request define uma entrega pendente;
-2. a Staff entrega o item no jogo;
-3. a Staff anexa o comprovante;
-4. o drop entra no histórico;
-5. se veio de leilão, o resultado seguro aparece no site e no Discord.
+### ⚔️ Drops Abertos (Distribuição por CP)
+1. Quando um boss é derrotado, a Staff cadastra o drop no site e ele é anunciado automaticamente no canal \`#loot-distribution-cp\` do Discord.
+2. Você pode manifestar interesse diretamente pelo site clicando em **Manifestar Interesse** (1 clique) ou reagindo com emoji no Discord — ambos sincronizam na hora.
+3. Ao encerrar o prazo estipulado, novas manifestações são bloqueadas e a Staff seleciona o vencedor no ranking de Combat Power (CP), priorizando quem precisa do item e esteve presente.
 
-O resultado público só existe **depois da entrega com prova** e mostra item, vencedor, horário e comprovante. Ranking, bids, locks e concorrentes continuam ocultos.
+### 📦 Entregas e Histórico
+Depois que a Staff entrega o item no jogo e anexa o print de confirmação:
+- O drop entra no seu histórico oficial.
+- Você pode consultar todos os comprovantes e entregas a qualquer momento pela aba de Histórico.`,
+    en: `## 🎁 Drop Distribution and Receipts
+Open [Drops](${route('/dashboard/drops')}) to declare interest in open boss loot and review completed deliveries with proof.
 
-Se você ganhou e a entrega não apareceu, confira o recibo do leilão e fale com a Staff informando item e link. Não publique detalhes de bids em respostas abertas.`,
-    en: `## 🎁 Deliveries and proof
-Open [Drops](${route('/dashboard/drops')}) to review deliveries related to you and the published results board.
+### ⚔️ Open Drops (CP Distribution)
+1. When a boss is defeated, Staff registers the drop on the site and it is automatically announced in Discord's \`#loot-distribution-cp\` channel.
+2. You can express interest directly on the site by clicking **Declare Interest** (1 click) or by reacting with an emoji on Discord — both sync immediately.
+3. When the time expires, new entries close and Staff selects the recipient on the Combat Power (CP) ranking, prioritizing presence and guild progression.
 
-The normal flow is:
-1. an auction, interest, or request creates a pending delivery;
-2. Staff delivers the item in game;
-3. Staff attaches proof;
-4. the drop enters history;
-5. for auctions, the safe result appears on the site and Discord.
-
-A public result exists **only after delivery with proof** and shows item, winner, time, and proof. Rankings, bids, locks, and competitors remain hidden.
-
-If you won and delivery is missing, check the auction receipt and contact Staff with the item and link. Do not publish bid details in open replies.`,
+### 📦 Deliveries and History
+Once Staff delivers the item in-game and attaches the confirmation screenshot:
+- The drop enters your official history.
+- You can review all proofs and deliveries at any time in the History tab.`,
   },
   {
     slug: 'war-room',

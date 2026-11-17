@@ -310,7 +310,11 @@ export type ItemInterestEntry = SharedItemInterestEntryRecord<
     id: string;
     nickname: string;
     class?: PlayerClass;
+    guildName?: string;
     combatPower?: number;
+    attackPower?: number;
+    defensePower?: number;
+    accuracy?: number;
     dimensionalLayer: number;
     attendancePercentage: number;
   },

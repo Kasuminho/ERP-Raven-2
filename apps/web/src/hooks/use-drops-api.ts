@@ -46,3 +46,31 @@ export function useDeliverAuctionDrop() {
     },
   });
 }
+
+export function usePlayerDrops(playerId?: string) {
+  return useQuery({
+    queryKey: ['player-drops', playerId],
+    queryFn: async () => (await api.get<DropHistory[]>(`/drops/player/${playerId}`)).data,
+    enabled: Boolean(playerId),
+  });
+}
+
+export function useCreateManualDrop() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      playerId: string;
+      itemCatalogId?: string;
+      itemName: string;
+      deliveredAt?: string;
+      proofImageUrl?: string;
+    }) => (await api.post<DropHistory>('/drops/manual', data)).data,
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['drops'] }),
+        queryClient.invalidateQueries({ queryKey: ['player-drops', variables.playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['item-interests'] }),
+      ]);
+    },
+  });
+}
