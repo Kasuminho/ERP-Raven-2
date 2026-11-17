@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-11-16 (Drops ao Vivo do Discord #loot-distribution-cp com Ranking CP + Cobertura Total i18n EN/ES/PT)
+**Ultima revisao:** 2026-11-16 (Handler de Reacoes Discord para Drops postados pelo site + Migracao discordMessageId)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -483,6 +483,7 @@ npm.cmd run discord:configure-webhooks
 
 ## Historico recente
 
+| 2026-11-16 | Adicionado handler de reacoes Discord e botoes interativos conectado ao ERP para drops/interesses postados pelo site; schema ItemInterestPost ganhou discordChannelId e discordMessageId versionado; intencao de reacao adiciona e remove interesse atomico com DM informativa e prioridade CP. | discord/loot/reactions/handler |
 | 2026-09-20 | Baú da Guilda ganhou solicitações diretas dos membros (limite de 5 pendentes), despacho Staff com baixa atômica de estoque, histórico de drop, alerta em #drops-entregues e cota liberada na hora; OCR com Gemini deduplica por acquisitionDate+acquisitionInfo em GuildStorageEntry; catálogo suporta multi-prints com destaque de já cadastrados; eventos ganharam periodicidade DAILY e notifyDaily; Codex temporariamente suspenso; 12 webhooks conectados integralmente a fluxos reais. | bau/storage/ocr/webhooks/eventos |
 | 2026-09-19 | Implementado DiscordAuthFilter para captura de exceções de OAuth (invalid_grant/code expirado/recarregamento) redirecionando graciosamente para /login com aviso explicativo e prevencao de duplo clique; headers no-store no callback. | auth/oauth/resilience |
 | 2026-09-19 | Tratamento gracioso de 404 na API do Discord no login OAuth de novatos ainda fora do servidor; ajuste no gate de onboarding e perfil para permitir nomes iguais ao apelido do Discord e bloquear apenas IDs numéricos brutos do Discord. | auth/discord/onboarding |

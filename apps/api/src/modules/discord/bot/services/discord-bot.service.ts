@@ -10,9 +10,15 @@ import {
   ChatInputCommandInteraction,
   Client,
   GatewayIntentBits,
+  Message,
   MessageCreateOptions,
+  MessageReaction,
+  PartialMessageReaction,
+  PartialUser,
+  Partials,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
   TextChannel,
+  User,
 } from "discord.js";
 import { DiscordRepository } from "../../repositories/discord.repository";
 
@@ -38,7 +44,14 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.DirectMessages,
+      ],
+      partials: [
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction,
+        Partials.User,
       ],
     });
   }
@@ -82,6 +95,14 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
+    this.client.on("messageReactionAdd", async (reaction, user) => {
+      await this.handleMessageReaction(reaction, user, "ADD");
+    });
+
+    this.client.on("messageReactionRemove", async (reaction, user) => {
+      await this.handleMessageReaction(reaction, user, "REMOVE");
+    });
+
     await this.client.login(token);
   }
 
@@ -94,18 +115,18 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
   async sendChannelMessage(
     channelId: string,
     payload: string | MessageCreateOptions,
-  ): Promise<void> {
+  ): Promise<Message | undefined> {
     if (!channelId || !this.ready) {
-      return;
+      return undefined;
     }
 
     const channel = await this.client.channels.fetch(channelId);
 
     if (!channel || !("send" in channel)) {
-      return;
+      return undefined;
     }
 
-    await (channel as TextChannel).send(payload);
+    return await (channel as TextChannel).send(payload);
   }
 
   async sendDirectMessage(
@@ -222,6 +243,126 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           content: '❌ Ocorreu um erro ao processar sua ação. Tente novamente ou use o site.',
         });
       }
+    }
+  }
+
+  private async handleMessageReaction(
+    reaction: MessageReaction | PartialMessageReaction,
+    user: User | PartialUser,
+    action: 'ADD' | 'REMOVE',
+  ): Promise<void> {
+    try {
+      if (user.bot) return;
+
+      let resolvedUser = user;
+      if (resolvedUser.partial) {
+        resolvedUser = await resolvedUser.fetch();
+      }
+
+      let resolvedReaction = reaction;
+      if (resolvedReaction.partial) {
+        resolvedReaction = await resolvedReaction.fetch();
+      }
+
+      if (resolvedReaction.message.partial) {
+        await resolvedReaction.message.fetch();
+      }
+
+      const messageId = resolvedReaction.message.id;
+      if (!messageId) return;
+
+      const post = await this.repository.client.itemInterestPost.findUnique({
+        where: { discordMessageId: messageId },
+        include: { itemCatalog: true },
+      });
+
+      if (!post) {
+        return;
+      }
+
+      if (post.status !== 'OPEN' || new Date() > post.closesAt) {
+        return;
+      }
+
+      const player = await this.repository.client.player.findFirst({
+        where: {
+          user: { discordId: resolvedUser.id },
+          isActive: true,
+        },
+        include: { user: true },
+      });
+
+      if (!player) {
+        if (action === 'ADD') {
+          try {
+            await (resolvedUser as User).send(
+              '⚠️ **Perfil não encontrado no ERP AlcatraZ.**\n' +
+              'Faça login no site do clã com seu Discord para que suas reações registrem automaticamente seu interesse nos drops!',
+            );
+          } catch {
+            // Se DM estiver bloqueada, ignora
+          }
+        }
+        return;
+      }
+
+      const existingEntry = await this.repository.client.itemInterestEntry.findUnique({
+        where: {
+          postId_playerId: {
+            postId: post.id,
+            playerId: player.id,
+          },
+        },
+      });
+
+      if (action === 'ADD') {
+        if (!existingEntry) {
+          await this.repository.client.itemInterestEntry.create({
+            data: {
+              postId: post.id,
+              playerId: player.id,
+              isTransmuteRequest: false,
+              note: 'Interesse manifestado via reação no Discord',
+            },
+          });
+
+          this.logger.log(`discord_reaction_interest_added post=${post.id} player=${player.nickname}`);
+
+          try {
+            const cpFormatted = player.combatPower ? player.combatPower.toLocaleString('pt-BR') : 'Não calculado';
+            await (resolvedUser as User).send(
+              `🎯 **Interesse registrado no ERP AlcatraZ!**\n\n` +
+              `• **Item:** ${post.itemCatalog.namePt}\n` +
+              `• **Jogador:** ${player.nickname} (${player.class})\n` +
+              `• **CP:** ${cpFormatted}\n\n` +
+              `*A Staff avaliará os participantes com prioridade por CP e presença no boss.*`,
+            );
+          } catch {
+            // Se DM estiver bloqueada, ignora
+          }
+        }
+      } else if (action === 'REMOVE') {
+        if (existingEntry) {
+          await this.repository.client.itemInterestEntry.delete({
+            where: { id: existingEntry.id },
+          });
+
+          this.logger.log(`discord_reaction_interest_removed post=${post.id} player=${player.nickname}`);
+
+          try {
+            await (resolvedUser as User).send(
+              `❌ **Interesse removido.**\nVocê removeu sua reação para o item **${post.itemCatalog.namePt}**.`,
+            );
+          } catch {
+            // Se DM estiver bloqueada, ignora
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `discord_handle_reaction_failed action=${action}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 }

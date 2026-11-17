@@ -1114,7 +1114,7 @@ export class ItemInterestsService {
 
   private async notifyCreatedPost(post: ItemInterestPost, item: ItemCatalog, mode: string, actorId: string): Promise<void> {
     try {
-      await this.notificationService.notifyItemInterestCreated({
+      const discordDelivery = await this.notificationService.notifyItemInterestCreated({
         postId: post.id,
         title: post.title,
         itemName: this.formatTitle(item.namePt, item.nameEn),
@@ -1124,6 +1124,16 @@ export class ItemInterestsService {
         closesAt: post.closesAt,
         imageUrl: item.image1Url || item.image2Url,
       });
+
+      if (discordDelivery?.messageId) {
+        await this.prisma.itemInterestPost.update({
+          where: { id: post.id },
+          data: {
+            discordMessageId: discordDelivery.messageId,
+            discordChannelId: discordDelivery.channelId,
+          },
+        });
+      }
     } catch (error) {
       await this.audit('ITEM_INTEREST_POST_NOTIFICATION_FAILED', post.id, actorId, {
         itemCatalogId: item.id,

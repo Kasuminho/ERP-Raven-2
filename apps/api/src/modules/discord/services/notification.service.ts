@@ -282,7 +282,7 @@ export class NotificationService {
     criteriaEn: string;
     closesAt: Date;
     imageUrl?: string | null;
-  }): Promise<void> {
+  }): Promise<{ messageId?: string; channelId?: string } | void> {
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`interest:toggle:${data.postId}`)
@@ -303,17 +303,25 @@ export class NotificationService {
     const channelId = this.config.get<string>('discord.channels.interests');
     if (channelId) {
       try {
-        await this.bot.sendChannelMessage(channelId, {
+        const sentMessage = await this.bot.sendChannelMessage(channelId, {
           embeds: [embed],
           components: [actionRow],
         });
-        await this.audit('DISCORD_NOTIFY_ITEM_INTEREST_CREATED', data.postId, {
-          channelId,
-          itemName: data.itemName,
-          mode: data.mode,
-          closesAt: data.closesAt.toISOString(),
-        });
-        return;
+        if (sentMessage) {
+          try {
+            await sentMessage.react('🎯');
+          } catch {
+            // falha de react nao bloqueia o fluxo principal
+          }
+          await this.audit('DISCORD_NOTIFY_ITEM_INTEREST_CREATED', data.postId, {
+            channelId,
+            messageId: sentMessage.id,
+            itemName: data.itemName,
+            mode: data.mode,
+            closesAt: data.closesAt.toISOString(),
+          });
+          return { messageId: sentMessage.id, channelId };
+        }
       } catch (error) {
         await this.auditFailure('DISCORD_NOTIFY_ITEM_INTEREST_CREATED_FAILED', data.postId, error, { channelId });
       }

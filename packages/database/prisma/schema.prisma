@@ -2237,6 +2237,8 @@ model ItemInterestPost {
   closedAt                DateTime?
   proofImageUrl           String?
   createdById             String
+  discordChannelId        String?
+  discordMessageId        String?             @unique
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   itemCatalog             ItemCatalog         @relation(fields: [itemCatalogId], references: [id], onDelete: Cascade)
@@ -2250,6 +2252,7 @@ model ItemInterestPost {
   @@index([selectedEntryId])
   @@index([closesAt])
   @@index([createdById])
+  @@index([discordMessageId])
 }
 
 model ItemInterestView {
