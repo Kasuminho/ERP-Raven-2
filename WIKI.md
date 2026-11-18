@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-11-17 (Auditoria de 20 subagentes: inventario completo de rotinas ativas vs desativadas, seguranca de schema e diretrizes de memoria)
+**Ultima revisao:** 2026-11-18 (Desativacao permanente de cobrancas de pendencias de players por DM e cron diario de checklist; pedido de desculpas enviado ao hidrate)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -162,7 +162,7 @@ Automacao ativa:
 - O shell possui skip-link, foco visivel global e respeito a `prefers-reduced-motion`.
 - A politica oficial esta em `/privacy`; a rota legada redireciona para ela.
 - O dashboard do player em `/dashboard` consulta `GET /operations/me/action-plan` e mostra cards acionaveis com proximo passo, motivo, impacto, prioridade e link direto para codex, progresso, requests, bids proprios, interesses, leiloes disponiveis e eventos proximos. O payload nao inclui ranking, bids nem concorrentes de outros players.
-- O cron `sendPlayerDailyReminders` roda todos os dias as 12:30 em `America/Sao_Paulo` e cobra cada player ativo por notificacao interna e DM bilingue consolidada. Os sinais diarios sao build ausente, role ausente, disponibilidade ausente, STATUS ausente/mais antigo que 21 dias e presenca abaixo de 50% nos eventos finalizados dos ultimos 15 dias posteriores ao ingresso do player; sem evento elegivel, nao ha sinal de presenca baixa. `CodexRequest` em `SENT` tambem entra ate confirmacao ou retry, alem da DM imediata ao envio pela Staff. `PlayerReminderDelivery` e `Notification.deduplicationKey` garantem idempotencia por player/dia e retry controlado de falha no Discord.
+- Cobrancas de pendencias de players (`sendPlayerDailyReminders` / checklist diario por DM e notificacao interna cobrando build, role, status e presenca) foram permanentemente desativadas por diretriz da guilda; o cron diario das 12:30 UTC / 09:30 BRT foi removido e `PlayerReminderService` permanece desativado por padrao, assegurando que jogadores nao sejam importunados por checklists automaticos no privado.
 - RSVP generico usa `EventRsvp`, unico por evento/player, com `CONFIRMED`, `TENTATIVE` ou `DECLINED`, nota opcional e visibilidade `STAFF_ONLY` por padrao ou `PLAYER_PUBLIC`. Players usam `GET /events/commitments/me` e `PUT /events/:id/rsvp` na tela `/dashboard/attendance`; a resposta pode mudar ate o inicio. Staff usa `GET /events/:id/rsvp/staff` no evento selecionado para contagens e composicao confirmada por classe, role e camada. Notas publicas aparecem a outros players; notas privadas ficam somente para autor e Staff. RSVP nao cria presenca, nao distribui DKP e permanece independente por boss.
 - Periodos de ausencia usam `PlayerAbsence`, com inicio/fim, motivo opcional e `reasonVisibility` Staff-only por padrao. O player lista/cria/edita/remove por `/events/absences/me` e gerencia na tela de Presenca. Eventos cujo `startsAt` cai no intervalo ficam `indisponiveis` sem exigir RSVP individual; o resumo Staff desconta esses players de confirmados/sem resposta, mostra `UNAVAILABLE_BY_ABSENCE`, identidade e motivo. Para outros players, a agenda expoe apenas a contagem agregada de indisponiveis e nome/motivo somente quando `PLAYER_PUBLIC`. O fluxo nao envia cobranca ou notificacao de ausencia.
 - Recorrencia de eventos usa `EventSeries`: primeira ocorrencia, duracao, intervalo semanal, timezone IANA, horizonte, excecoes, pausa e targets de composicao. `materializeEventSeries` roda diariamente as 02:15 em `America/Sao_Paulo`, cria instancias idempotentes por `eventSeriesId/seriesOccurrence` e amplia o horizonte. Pausar cancela instancias futuras da serie com marcador reversivel; retomar restaura apenas datas que nao continuam como excecao. Endpoints Staff ficam em `/events/series`.
@@ -483,6 +483,8 @@ npm.cmd run discord:configure-webhooks
 - `docs/discord-*.md`: historico de comunicacoes e mudancas.
 
 ## Historico recente
+
+| 2026-11-18 | Cobrancas de pendencias de players (sendPlayerDailyReminders / checklist diario por DM) foram permanentemente desativadas no cron e servico; pedido de desculpas formal e bem-humorado enviado via DM do Discord ao jogador hidrate (Temucleo). | automacao/discord/cobrancas/desativacao |
 
 | 2026-11-16 | Adicionado handler de reacoes Discord e botoes interativos conectado ao ERP para drops/interesses postados pelo site; schema ItemInterestPost ganhou discordChannelId e discordMessageId versionado; intencao de reacao adiciona e remove interesse atomico com DM informativa e prioridade CP. | discord/loot/reactions/handler |
 | 2026-09-20 | Baú da Guilda ganhou solicitações diretas dos membros (limite de 5 pendentes), despacho Staff com baixa atômica de estoque, histórico de drop, alerta em #drops-entregues e cota liberada na hora; OCR com Gemini deduplica por acquisitionDate+acquisitionInfo em GuildStorageEntry; catálogo suporta multi-prints com destaque de já cadastrados; eventos ganharam periodicidade DAILY e notifyDaily; Codex temporariamente suspenso; 12 webhooks conectados integralmente a fluxos reais. | bau/storage/ocr/webhooks/eventos |

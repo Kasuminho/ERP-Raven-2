@@ -28,6 +28,11 @@ export class PlayerReminderService {
   ) {}
 
   async sendDailyReminders(now = new Date()): Promise<{ eligible: number; web: number; discord: number; discordFailed: number }> {
+    if (process.env.ENABLE_PLAYER_REMINDERS !== 'true') {
+      this.logger.log('sendDailyReminders skipped: player daily reminders are permanently disabled per guild policy.');
+      return { eligible: 0, web: 0, discord: 0, discordFailed: 0 };
+    }
+
     const statusCutoff = new Date(now.getTime() - PLAYER_STATUS_MAX_AGE_DAYS * DAY_MS);
     const attendanceCutoff = new Date(now.getTime() - PLAYER_ATTENDANCE_WINDOW_DAYS * DAY_MS);
     const reminderDate = this.dateInAutomationTimezone(now);

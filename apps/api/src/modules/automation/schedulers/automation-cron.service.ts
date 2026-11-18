@@ -25,9 +25,10 @@ export class AutomationCronService {
     await this.runOnce('cleanupExpiredPulseText', () => this.guildPulseService.cleanupExpiredOpenText());
   }
 
-  @Cron('30 12 * * *', { timeZone: AUTOMATION_TIMEZONE })
+  // Cobrancas diarias de pendencias de players foram permanentemente desativadas por diretriz da guilda.
+  // Cron @Cron('30 12 * * *') removido para nao agendar execucao.
   async sendPlayerDailyReminders(): Promise<void> {
-    await this.runOnce('sendPlayerDailyReminders', () => this.playerReminderService.sendDailyReminders());
+    this.logger.log('sendPlayerDailyReminders is permanently disabled per guild policy.');
   }
 
   @Cron('15 2 * * *', { timeZone: AUTOMATION_TIMEZONE })

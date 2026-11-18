@@ -3,7 +3,15 @@ import { test } from 'node:test';
 import { PlayerCombatAvailability } from '@prisma/client';
 import { PlayerReminderService } from '../src/modules/automation/services/player-reminder.service';
 
-test('daily reminder is consolidated and delivered once per player and Sao Paulo day', async () => {
+test('daily reminder is disabled by default per guild policy', async () => {
+  const service = new PlayerReminderService({} as never, {} as never, {} as never);
+  const result = await service.sendDailyReminders();
+  assert.deepEqual(result, { eligible: 0, web: 0, discord: 0, discordFailed: 0 });
+});
+
+test('daily reminder is consolidated and delivered once per player and Sao Paulo day when enabled', async () => {
+  process.env.ENABLE_PLAYER_REMINDERS = 'true';
+  try {
   const webNotifications: unknown[] = [];
   const discordNotifications: unknown[] = [];
   const delivery = {
@@ -66,4 +74,7 @@ test('daily reminder is consolidated and delivered once per player and Sao Paulo
     roster: ['SEM_BUILD', 'SEM_ROLE', 'SEM_STATUS_RECENTE', 'SEM_DISPONIBILIDADE'],
     codexRequestIds: ['codex-1'],
   });
+  } finally {
+    delete process.env.ENABLE_PLAYER_REMINDERS;
+  }
 });
