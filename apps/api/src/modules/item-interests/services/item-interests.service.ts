@@ -294,7 +294,7 @@ export class ItemInterestsService implements OnApplicationBootstrap {
       const player = await this.getPrimaryPlayer(userId, tx);
       const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
 
-      if (player.attendancePercentage < attendanceRules.participationMinimumPercent) {
+      if (attendanceRules.participationMinimumPercent > 0 && player.attendancePercentage < attendanceRules.participationMinimumPercent) {
         throw new BadRequestException(`Minimum attendance to declare interest is ${attendanceRules.participationMinimumPercent}% in the last 30 days.`);
       }
 

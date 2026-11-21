@@ -175,7 +175,15 @@ export class BusinessRulesService {
   }
 
   async getAttendanceEligibilityRules(): Promise<AttendanceEligibilityRules> {
-    return this.mergeAttendanceEligibilityRules(await this.getRuleValue('attendanceEligibilityRules'), defaultAttendanceEligibilityRules);
+    const raw = await this.getRuleValue('attendanceEligibilityRules');
+    const rules = this.mergeAttendanceEligibilityRules(raw, defaultAttendanceEligibilityRules);
+
+    // Modo simples total: valores legados de 50% ou 65% sao convertidos para 0%
+    if (rules.participationMinimumPercent === 50 || rules.bidMinimumPercent === 65) {
+      return { bidMinimumPercent: 0, participationMinimumPercent: 0 };
+    }
+
+    return rules;
   }
 
   async getStaffPanelVisibility(): Promise<StaffPanelVisibilityRules> {

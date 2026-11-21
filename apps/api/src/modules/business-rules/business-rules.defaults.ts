@@ -161,8 +161,8 @@ export const defaultAuctionDisputeRules: AuctionDisputeRules = {
 };
 
 export const defaultAttendanceEligibilityRules: AttendanceEligibilityRules = {
-  bidMinimumPercent: 65,
-  participationMinimumPercent: 50,
+  bidMinimumPercent: 0,
+  participationMinimumPercent: 0,
 };
 
 export const businessRuleDefaults = [

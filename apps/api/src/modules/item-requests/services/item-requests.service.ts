@@ -53,7 +53,7 @@ export class ItemRequestsService {
       }
 
       const attendanceRules = await this.businessRules.getAttendanceEligibilityRules();
-      if (player.attendancePercentage < attendanceRules.participationMinimumPercent) {
+      if (attendanceRules.participationMinimumPercent > 0 && player.attendancePercentage < attendanceRules.participationMinimumPercent) {
         throw new BadRequestException(`Minimum attendance to create an item request is ${attendanceRules.participationMinimumPercent}% in the last 30 days.`);
       }
 

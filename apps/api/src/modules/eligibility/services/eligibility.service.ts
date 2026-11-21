@@ -115,7 +115,7 @@ export class EligibilityService {
       );
     }
 
-    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+    if (attendanceRules.bidMinimumPercent > 0 && player.attendancePercentage < attendanceRules.bidMinimumPercent) {
       return this.ineligible(
         playerId,
         auctionId,
@@ -199,7 +199,7 @@ export class EligibilityService {
       );
     }
 
-    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+    if (attendanceRules.bidMinimumPercent > 0 && player.attendancePercentage < attendanceRules.bidMinimumPercent) {
       return this.ineligible(
         playerId,
         auctionId,
@@ -449,7 +449,7 @@ export class EligibilityService {
       };
     }
 
-    if (player.attendancePercentage < attendanceRules.bidMinimumPercent) {
+    if (attendanceRules.bidMinimumPercent > 0 && player.attendancePercentage < attendanceRules.bidMinimumPercent) {
       return {
         eligibilityStatus: 'INELIGIBLE',
         eligibilityReason: `Player requires at least ${attendanceRules.bidMinimumPercent}% attendance in the last 30 days to bid.`,
