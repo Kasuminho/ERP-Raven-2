@@ -63,12 +63,12 @@ export default function DropsDistributionPage() {
   const currentPlayerId = useAuthStore((state) => state.playerId);
   const isStaff = hasRole(['STAFF', 'ADMIN']);
 
-  const [activeTab, setActiveTab] = useState<'open' | 'delivered'>('open');
+  const [activeTab, setActiveTab] = useState<'open' | 'pending' | 'delivered'>('open');
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   // Queries
-  const playerInterests = useItemInterests('OPEN');
-  const staffInterests = useStaffItemInterests('OPEN', { enabled: isStaff });
+  const playerInterests = useItemInterests();
+  const staffInterests = useStaffItemInterests(undefined, { enabled: isStaff });
   const allDeliveredDrops = useDeliveredDrops();
   const catalog = useItems({ enabled: isStaff });
 
@@ -108,21 +108,6 @@ export default function DropsDistributionPage() {
   const [manualDeliveredAt, setManualDeliveredAt] = useState('');
   const [manualProofUrl, setManualProofUrl] = useState('');
 
-  // Posts para exibir
-  const activePosts = useMemo(() => {
-    return isStaff ? (staffInterests.data ?? []) : (playerInterests.data ?? []);
-  }, [isStaff, staffInterests.data, playerInterests.data]);
-
-  // Itens filtrados do catálogo para o modal de novo drop
-  const filteredCatalogItems = useMemo(() => {
-    const list = catalog.data ?? [];
-    if (!catalogSearch.trim()) return list.slice(0, 30);
-    const s = catalogSearch.toLowerCase();
-    return list
-      .filter((i) => i.namePt.toLowerCase().includes(s) || i.nameEn.toLowerCase().includes(s))
-      .slice(0, 30);
-  }, [catalog.data, catalogSearch]);
-
   // Formata tempo restante
   function getRemainingTimeText(closesAtStr: string): { text: string; isClosed: boolean } {
     const closesAt = new Date(closesAtStr);
@@ -138,23 +123,59 @@ export default function DropsDistributionPage() {
 
     if (diffHours >= 24) {
       const days = Math.floor(diffHours / 24);
+      const remHours = diffHours % 24;
       return {
-        text: locale === 'en' ? `${days}d left` : `Encerra em ${days}d`,
+        text: locale === 'en' ? `${days}d ${remHours}h left` : `${days}d ${remHours}h restantes`,
         isClosed: false,
       };
     }
+
     if (diffHours > 0) {
-      const mins = diffMinutes % 60;
+      const remMinutes = diffMinutes % 60;
       return {
-        text: locale === 'en' ? `${diffHours}h ${mins}m left` : `Encerra em ${diffHours}h ${mins}m`,
+        text: locale === 'en' ? `${diffHours}h ${remMinutes}m left` : `${diffHours}h ${remMinutes}m restantes`,
         isClosed: false,
       };
     }
+
     return {
-      text: locale === 'en' ? `${diffMinutes}m left` : `Encerra em ${diffMinutes}m`,
+      text: locale === 'en' ? `${diffMinutes}m left` : `${diffMinutes}m restantes`,
       isClosed: false,
     };
   }
+
+  // Posts operacionais
+  const allOperationalPosts = useMemo(() => {
+    return isStaff ? (staffInterests.data ?? []) : (playerInterests.data ?? []);
+  }, [isStaff, staffInterests.data, playerInterests.data]);
+
+  // Drops com tempo correndo (abertos para manifestação)
+  const openPosts = useMemo(() => {
+    return allOperationalPosts.filter((post) => {
+      const { isClosed } = getRemainingTimeText(post.closesAt);
+      return post.status === 'OPEN' && !isClosed;
+    });
+  }, [allOperationalPosts, locale]);
+
+  // Drops com tempo encerrado ou em fase de entrega
+  const pendingDeliveryPosts = useMemo(() => {
+    return allOperationalPosts.filter((post) => {
+      const { isClosed } = getRemainingTimeText(post.closesAt);
+      return post.status !== 'OPEN' || isClosed;
+    });
+  }, [allOperationalPosts, locale]);
+
+  // Itens filtrados do catálogo para o modal de novo drop
+  const filteredCatalogItems = useMemo(() => {
+    const list = catalog.data ?? [];
+    if (!catalogSearch.trim()) return list.slice(0, 30);
+    const s = catalogSearch.toLowerCase();
+    return list
+      .filter((i) => i.namePt.toLowerCase().includes(s) || i.nameEn.toLowerCase().includes(s))
+      .slice(0, 30);
+  }, [catalog.data, catalogSearch]);
+
+
 
   // Declara ou cancela interesse (Jogador)
   async function handleToggleInterest(post: ItemInterestPost, userHasDeclared: boolean) {
@@ -347,6 +368,362 @@ export default function DropsDistributionPage() {
     }
   }
 
+  // Renderizador unificado do Card de Drop
+  function renderDropCard(post: ItemInterestPost, isPendingSection = false) {
+    const item = post.itemCatalog;
+    const { text: timeText, isClosed } = getRemainingTimeText(post.closesAt);
+    const imageUrl = displayImageUrl(item?.image1Url || item?.image2Url);
+
+    // Jogador logado já manifestou interesse?
+    const entriesList = post.entries ?? [];
+    const userHasDeclared = entriesList.some(
+      (e) => (currentPlayerId && e.playerId === currentPlayerId) || (e as any).viewerHasDeclared,
+    );
+
+    // Ordena participantes por Combat Power (CP) decrescente
+    const sortedEntries = [...entriesList].sort((a, b) => {
+      const cpA = a.player?.combatPower ?? 0;
+      const cpB = b.player?.combatPower ?? 0;
+      return cpB - cpA;
+    });
+
+    const isFinished = isPendingSection || isClosed || post.status !== 'OPEN';
+    const topWinner = sortedEntries[0];
+
+    return (
+      <Card
+        key={post.id}
+        className={`overflow-hidden border transition-all shadow-xl ${
+          isFinished
+            ? 'border-amber-500/30 bg-gradient-to-b from-amber-500/5 via-card to-card'
+            : 'border-white/10 bg-gradient-to-b from-card to-card/60'
+        }`}
+      >
+        {/* Banner Superior para Drops Encerrados / Aguardando Entrega */}
+        {isFinished && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-black shadow-md font-bold">
+                <Trophy className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <span>{locale === 'en' ? 'Drop Raffle Finished' : 'Sorteio Encerrado'}</span>
+                  <span className="text-white/40">•</span>
+                  <span className="text-amber-200/90">
+                    {isStaff
+                      ? (locale === 'en' ? 'Awaiting Staff Delivery' : 'Aguardando Entrega da Staff')
+                      : (locale === 'en' ? 'Awaiting Delivery' : 'Aguardando Entrega')}
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {topWinner ? (
+                    <>
+                      {locale === 'en' ? 'Winner by CP: ' : 'Vencedor por CP: '}
+                      <strong className="text-amber-300 font-bold">{topWinner.player?.nickname || 'Jogador'}</strong>
+                      {' '}({(topWinner.player?.combatPower ?? 0).toLocaleString('pt-BR')} CP)
+                    </>
+                  ) : (
+                    locale === 'en'
+                      ? 'No players declared interest before closing'
+                      : 'Nenhum jogador manifestou interesse até o encerramento'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isStaff && topWinner && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setDeliveringPost(post);
+                    setSelectedWinnerEntry(topWinner);
+                    setDeliveryProofUrl('');
+                  }}
+                  className="h-8 gap-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-extrabold shadow-md text-xs"
+                >
+                  <Award className="h-3.5 w-3.5" />
+                  {locale === 'en' ? `Deliver to ${topWinner.player?.nickname}` : `Entregar ao Vencedor (${topWinner.player?.nickname})`}
+                </Button>
+              )}
+
+              {isStaff && sortedEntries.length === 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCancelDrop(post)}
+                  disabled={cancelDropMutation.isPending}
+                  className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1.5 h-8"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remover Drop Vazio
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+          {/* Coluna do Item: Imagem e Dados (4 colunas) */}
+          <div className="lg:col-span-4 flex flex-col items-center sm:items-start text-center sm:text-left gap-4">
+            <div
+              className="relative h-44 w-44 rounded-xl border border-primary/30 bg-black/40 overflow-hidden flex items-center justify-center p-2 group cursor-zoom-in shadow-inner"
+              onClick={() => imageUrl && setZoomUrl(imageUrl || null)}
+            >
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={post.title}
+                  className="h-full w-full object-contain transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <Package className="h-16 w-16 text-muted-foreground/40" />
+              )}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <ZoomIn className="h-6 w-6 text-white" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 w-full">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                {item?.itemTier && (
+                  <Badge tone="gold" className="font-bold">
+                    {item.itemTier}
+                  </Badge>
+                )}
+                <Badge tone={post.mode === 'PvP' ? 'red' : 'blue'}>
+                  {post.mode}
+                </Badge>
+                <Badge tone={isFinished ? 'red' : 'green'} className="flex items-center gap-1 font-semibold">
+                  <Clock className="h-3 w-3" />
+                  {isFinished ? (locale === 'en' ? 'Closed' : 'Encerrado') : timeText}
+                </Badge>
+              </div>
+
+              <h3 className="font-[var(--font-cinzel)] text-xl font-bold text-foreground">
+                {item ? itemName(item, locale, post.title) : post.title}
+              </h3>
+
+              {item?.typePt && (
+                <p className="text-xs text-muted-foreground">
+                  {locale === 'en' ? item.typeEn : item.typePt}
+                </p>
+              )}
+
+              {/* Ação do Jogador: Manifestar / Cancelar */}
+              <div className="pt-3">
+                {userHasDeclared ? (
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {locale === 'en' ? 'Interest Registered' : 'Interesse Registrado'}
+                    </div>
+                    {!isFinished && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleInterest(post, true)}
+                        disabled={declareInterestMutation.isPending || undeclareInterestMutation.isPending}
+                        className="text-xs text-muted-foreground hover:text-red-400 block"
+                      >
+                        {locale === 'en' ? 'Remove Interest' : 'Cancelar Interesse'}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => handleToggleInterest(post, false)}
+                    disabled={isFinished || declareInterestMutation.isPending || undeclareInterestMutation.isPending}
+                    className="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md"
+                  >
+                    <Award className="h-4 w-4" />
+                    {isFinished
+                      ? locale === 'en'
+                        ? 'Raffle Closed'
+                        : 'Sorteio Encerrado'
+                      : locale === 'en'
+                        ? 'Declare Interest'
+                        : 'Manifestar Interesse'}
+                  </Button>
+                )}
+
+                {isStaff && (
+                  <div className="pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancelDrop(post)}
+                      disabled={cancelDropMutation.isPending}
+                      className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1.5 w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Cancelar / Remover Drop
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna dos Interessados / Ranking de CP (8 colunas) */}
+          <div className="lg:col-span-8 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-400" />
+                <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                  {isStaff
+                    ? 'Ranking de CP dos Interessados'
+                    : locale === 'en'
+                      ? 'Interested Players'
+                      : 'Jogadores Interessados'}
+                </h4>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {sortedEntries.length} {locale === 'en' ? 'participants' : 'participantes'}
+              </span>
+            </div>
+
+            {sortedEntries.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-8 text-center text-xs text-muted-foreground">
+                {locale === 'en'
+                  ? 'No players have reacted yet.'
+                  : 'Nenhum jogador manifestou interesse neste drop.'}
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                {sortedEntries.map((entry, index) => {
+                  const p = entry.player;
+                  const cp = p?.combatPower ?? 0;
+                  const stats = (entry as any).lootStats;
+                  const sameItemCount = stats?.sameItemDrops ?? 0;
+                  const sameTypeCount = stats?.sameTypeDrops ?? 0;
+                  const totalDropsCount = stats?.totalDrops ?? 0;
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3 transition-all ${
+                        index === 0
+                          ? 'border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-card to-card shadow-sm shadow-amber-500/10'
+                          : 'border-white/5 bg-black/20 hover:bg-black/30'
+                      }`}
+                    >
+                      {/* Info Jogador */}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            index === 0
+                              ? 'bg-amber-500 text-black font-extrabold shadow-md shadow-amber-500/50'
+                              : index === 1
+                                ? 'bg-slate-300 text-black'
+                                : index === 2
+                                  ? 'bg-amber-800 text-white'
+                                  : 'bg-white/10 text-muted-foreground'
+                          }`}
+                        >
+                          #{index + 1}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-foreground">
+                              {p?.nickname ?? 'Jogador'}
+                            </span>
+                            {index === 0 && (
+                              <Badge tone="gold" className="text-[10px] px-1.5 py-0 font-extrabold flex items-center gap-1">
+                                <Trophy className="h-3 w-3" />
+                                {locale === 'en' ? 'Winner (Top CP)' : 'Vencedor (Top CP)'}
+                              </Badge>
+                            )}
+                            {p?.guildName && (
+                              <Badge
+                                tone={p.guildName === 'AlcatraZ' ? 'gold' : 'blue'}
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {p.guildName}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span>{playerClassLabel(p?.class, locale)}</span>
+                            {/* Histórico badges */}
+                            {sameItemCount > 0 && (
+                              <Badge tone="red" className="text-[10px] px-1 py-0">
+                                Já tem ({sameItemCount}x)
+                              </Badge>
+                            )}
+                            {sameTypeCount > 0 && (
+                              <Badge tone="gold" className="text-[10px] px-1 py-0">
+                                Categoria ({sameTypeCount}x)
+                              </Badge>
+                            )}
+                            {totalDropsCount === 0 && (
+                              <Badge tone="green" className="text-[10px] px-1 py-0">
+                                1º Drop
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CP e Ações Staff */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="font-mono text-sm font-extrabold text-emerald-400">
+                            {cp > 0 ? `${cp.toLocaleString('pt-BR')} CP` : 'Sem CP'}
+                          </p>
+                        </div>
+
+                        {/* Botões da Staff */}
+                        {isStaff && (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Consultar Histórico de Drops deste Jogador"
+                              onClick={() => {
+                                if (p?.id) {
+                                  setInspectedPlayerId(p.id);
+                                  setInspectedPlayerName(p.nickname);
+                                }
+                              }}
+                              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setDeliveringPost(post);
+                                setSelectedWinnerEntry(entry);
+                                setDeliveryProofUrl('');
+                              }}
+                              className={`h-8 gap-1 font-bold text-xs ${
+                                index === 0
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-md shadow-amber-500/30'
+                                  : 'bg-amber-600/80 hover:bg-amber-500 text-white'
+                              }`}
+                            >
+                              <Award className="h-3.5 w-3.5" />
+                              {index === 0 ? 'Entregar Item' : 'Entregar'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Header */}
@@ -407,7 +784,7 @@ export default function DropsDistributionPage() {
         </div>
 
         {/* Abas */}
-        <div className="mt-6 flex gap-2 border-b border-white/10 pb-2">
+        <div className="mt-6 flex flex-wrap gap-2 border-b border-white/10 pb-2">
           <button
             type="button"
             onClick={() => setActiveTab('open')}
@@ -420,7 +797,29 @@ export default function DropsDistributionPage() {
             <Flame className="h-4 w-4" />
             {locale === 'en' ? 'Open Drops' : 'Drops Abertos'}
             <span className="ml-1.5 rounded-full bg-black/40 px-2 py-0.5 text-xs">
-              {activePosts.length}
+              {openPosts.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('pending')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'pending'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+            }`}
+          >
+            <Trophy className="h-4 w-4 text-amber-400" />
+            {locale === 'en' ? 'Awaiting Delivery' : 'Aguardando Entrega'}
+            <span
+              className={`ml-1.5 rounded-full px-2 py-0.5 text-xs font-bold ${
+                pendingDeliveryPosts.length > 0
+                  ? 'bg-amber-400 text-black shadow-sm font-extrabold animate-pulse'
+                  : 'bg-black/40 text-muted-foreground'
+              }`}
+            >
+              {pendingDeliveryPosts.length}
             </span>
           </button>
 
@@ -445,7 +844,7 @@ export default function DropsDistributionPage() {
       {/* Conteúdo da Aba 1: Drops Abertos */}
       {activeTab === 'open' && (
         <div className="space-y-6">
-          {activePosts.length === 0 ? (
+          {openPosts.length === 0 ? (
             <EmptyState title={locale === 'en' ? 'No active drops right now' : 'Nenhum drop aberto no momento'}>
               {locale === 'en'
                 ? 'When Staff opens new drops from bosses or vault, they will appear here and on Discord #loot-distribution-cp.'
@@ -453,278 +852,24 @@ export default function DropsDistributionPage() {
             </EmptyState>
           ) : (
             <div className="grid gap-6">
-              {activePosts.map((post) => {
-                const item = post.itemCatalog;
-                const { text: timeText, isClosed } = getRemainingTimeText(post.closesAt);
-                const imageUrl = displayImageUrl(item?.image1Url || item?.image2Url);
+              {openPosts.map((post) => renderDropCard(post, false))}
+            </div>
+          )}
+        </div>
+      )}
 
-                // Jogador logado já manifestou interesse?
-                const entriesList = post.entries ?? [];
-                const userHasDeclared = entriesList.some(
-                  (e) => (currentPlayerId && e.playerId === currentPlayerId) || (e as any).viewerHasDeclared,
-                );
-
-                // Ordena participantes por Combat Power (CP) decrescente para a Staff
-                const sortedEntries = [...entriesList].sort((a, b) => {
-                  const cpA = a.player?.combatPower ?? 0;
-                  const cpB = b.player?.combatPower ?? 0;
-                  return cpB - cpA;
-                });
-
-                return (
-                  <Card
-                    key={post.id}
-                    className="overflow-hidden border border-white/10 bg-gradient-to-b from-card to-card/60 shadow-xl"
-                  >
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
-                      {/* Coluna do Item: Imagem e Dados (4 colunas) */}
-                      <div className="lg:col-span-4 flex flex-col items-center sm:items-start text-center sm:text-left gap-4">
-                        <div
-                          className="relative h-44 w-44 rounded-xl border border-primary/30 bg-black/40 overflow-hidden flex items-center justify-center p-2 group cursor-zoom-in shadow-inner"
-                          onClick={() => imageUrl && setZoomUrl(imageUrl || null)}
-                        >
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={post.title}
-                              className="h-full w-full object-contain transition-transform group-hover:scale-105"
-                            />
-                          ) : (
-                            <Package className="h-16 w-16 text-muted-foreground/40" />
-                          )}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <ZoomIn className="h-6 w-6 text-white" />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5 w-full">
-                          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                            {item?.itemTier && (
-                              <Badge tone="gold" className="font-bold">
-                                {item.itemTier}
-                              </Badge>
-                            )}
-                            <Badge tone={post.mode === 'PvP' ? 'red' : 'blue'}>
-                              {post.mode}
-                            </Badge>
-                            <Badge tone={isClosed ? 'red' : 'green'} className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {timeText}
-                            </Badge>
-                          </div>
-
-                          <h3 className="font-[var(--font-cinzel)] text-xl font-bold text-foreground">
-                            {item ? itemName(item, locale, post.title) : post.title}
-                          </h3>
-
-                          {item?.typePt && (
-                            <p className="text-xs text-muted-foreground">
-                              {locale === 'en' ? item.typeEn : item.typePt}
-                            </p>
-                          )}
-
-                          {/* Ação do Jogador: Manifestar / Cancelar */}
-                          <div className="pt-3">
-                            {userHasDeclared ? (
-                              <div className="space-y-2">
-                                <div className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-400">
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  {locale === 'en' ? 'Interest Registered' : 'Interesse Registrado'}
-                                </div>
-                                {!isClosed && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleToggleInterest(post, true)}
-                                    disabled={declareInterestMutation.isPending || undeclareInterestMutation.isPending}
-                                    className="text-xs text-muted-foreground hover:text-red-400 block"
-                                  >
-                                    {locale === 'en' ? 'Remove Interest' : 'Cancelar Interesse'}
-                                  </Button>
-                                )}
-                              </div>
-                            ) : (
-                              <Button
-                                onClick={() => handleToggleInterest(post, false)}
-                                disabled={isClosed || declareInterestMutation.isPending || undeclareInterestMutation.isPending}
-                                className="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md"
-                              >
-                                <Award className="h-4 w-4" />
-                                {isClosed
-                                  ? locale === 'en'
-                                    ? 'Closed'
-                                    : 'Encerramento Expirado'
-                                  : locale === 'en'
-                                    ? 'Declare Interest'
-                                    : 'Manifestar Interesse'}
-                              </Button>
-                            )}
-
-                            {isStaff && (
-                              <div className="pt-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCancelDrop(post)}
-                                  disabled={cancelDropMutation.isPending}
-                                  className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1.5 w-full sm:w-auto"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  Cancelar / Remover Drop
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Coluna dos Interessados / Ranking de CP (8 colunas) */}
-                      <div className="lg:col-span-8 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Trophy className="h-4 w-4 text-amber-400" />
-                            <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                              {isStaff
-                                ? 'Ranking de CP dos Interessados'
-                                : locale === 'en'
-                                  ? 'Interested Players'
-                                  : 'Jogadores Interessados'}
-                            </h4>
-                          </div>
-                          <span className="text-xs font-semibold text-muted-foreground">
-                            {sortedEntries.length} {locale === 'en' ? 'participants' : 'participantes'}
-                          </span>
-                        </div>
-
-                        {sortedEntries.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-8 text-center text-xs text-muted-foreground">
-                            {locale === 'en'
-                              ? 'No players have reacted yet. Be the first to express interest!'
-                              : 'Nenhum jogador manifestou interesse ainda. Seja o primeiro a reagir no Discord ou clicar aqui!'}
-                          </div>
-                        ) : (
-                          <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-                            {sortedEntries.map((entry, index) => {
-                              const p = entry.player;
-                              const cp = p?.combatPower ?? 0;
-                              const stats = (entry as any).lootStats;
-                              const sameItemCount = stats?.sameItemDrops ?? 0;
-                              const sameTypeCount = stats?.sameTypeDrops ?? 0;
-                              const totalDropsCount = stats?.totalDrops ?? 0;
-
-                              return (
-                                <div
-                                  key={entry.id}
-                                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3 transition-all ${
-                                    index === 0
-                                      ? 'border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-card to-card'
-                                      : 'border-white/5 bg-black/20 hover:bg-black/30'
-                                  }`}
-                                >
-                                  {/* Info Jogador */}
-                                  <div className="flex items-center gap-3">
-                                    <div
-                                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                        index === 0
-                                          ? 'bg-amber-500 text-black font-extrabold shadow-md shadow-amber-500/50'
-                                          : index === 1
-                                            ? 'bg-slate-300 text-black'
-                                            : index === 2
-                                              ? 'bg-amber-800 text-white'
-                                              : 'bg-white/10 text-muted-foreground'
-                                      }`}
-                                    >
-                                      #{index + 1}
-                                    </div>
-
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-bold text-sm text-foreground">
-                                          {p?.nickname ?? 'Jogador'}
-                                        </span>
-                                        {p?.guildName && (
-                                          <Badge
-                                            tone={p.guildName === 'AlcatraZ' ? 'gold' : 'blue'}
-                                            className="text-[10px] px-1.5 py-0"
-                                          >
-                                            {p.guildName}
-                                          </Badge>
-                                        )}
-                                      </div>
-
-                                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                        <span>{playerClassLabel(p?.class, locale)}</span>
-                                        {/* Histórico badges */}
-                                        {sameItemCount > 0 && (
-                                          <Badge tone="red" className="text-[10px] px-1 py-0">
-                                            Já tem ({sameItemCount}x)
-                                          </Badge>
-                                        )}
-                                        {sameTypeCount > 0 && (
-                                          <Badge tone="gold" className="text-[10px] px-1 py-0">
-                                            Categoria ({sameTypeCount}x)
-                                          </Badge>
-                                        )}
-                                        {totalDropsCount === 0 && (
-                                          <Badge tone="green" className="text-[10px] px-1 py-0">
-                                            1º Drop
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* CP e Ações Staff */}
-                                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                                    <div className="text-right">
-                                      <p className="font-mono text-sm font-extrabold text-emerald-400">
-                                        {cp > 0 ? `${cp.toLocaleString('pt-BR')} CP` : 'Sem CP'}
-                                      </p>
-                                    </div>
-
-                                    {/* Botões da Staff */}
-                                    {isStaff && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          title="Consultar Histórico de Drops deste Jogador"
-                                          onClick={() => {
-                                            if (p?.id) {
-                                              setInspectedPlayerId(p.id);
-                                              setInspectedPlayerName(p.nickname);
-                                            }
-                                          }}
-                                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                        >
-                                          <History className="h-3.5 w-3.5" />
-                                        </Button>
-
-                                        <Button
-                                          size="sm"
-                                          onClick={() => {
-                                            setDeliveringPost(post);
-                                            setSelectedWinnerEntry(entry);
-                                            setDeliveryProofUrl('');
-                                          }}
-                                          className="h-8 gap-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs"
-                                        >
-                                          <Award className="h-3.5 w-3.5" />
-                                          Entregar
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+      {/* Conteúdo da Aba 2: Aguardando Entrega / Encerrados */}
+      {activeTab === 'pending' && (
+        <div className="space-y-6">
+          {pendingDeliveryPosts.length === 0 ? (
+            <EmptyState title={locale === 'en' ? 'No drops awaiting delivery' : 'Nenhum drop aguardando entrega'}>
+              {locale === 'en'
+                ? 'When drop raffle deadlines expire, items will appear here for winner confirmation and delivery.'
+                : 'Quando o prazo dos drops encerrar, eles aparecerão aqui com o ranking de CP final para entrega ao vencedor e anexo do comprovante.'}
+            </EmptyState>
+          ) : (
+            <div className="grid gap-6">
+              {pendingDeliveryPosts.map((post) => renderDropCard(post, true))}
             </div>
           )}
         </div>

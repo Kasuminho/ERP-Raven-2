@@ -157,7 +157,9 @@ export class ItemInterestsService implements OnApplicationBootstrap {
         })
       : null;
     const posts = await this.prisma.itemInterestPost.findMany({
-      where: status ? { status } : undefined,
+      where: status
+        ? { status }
+        : { status: { notIn: [ItemInterestStatus.DELIVERED, ItemInterestStatus.CANCELLED] } },
       include: this.includeDetails(viewerPlayer?.id),
       orderBy: [{ status: 'asc' }, { closesAt: 'asc' }],
     });
@@ -167,7 +169,9 @@ export class ItemInterestsService implements OnApplicationBootstrap {
 
   async listPostsForStaff(status?: ItemInterestStatus): Promise<ItemInterestDetails[]> {
     const posts = await this.prisma.itemInterestPost.findMany({
-      where: status ? { status } : undefined,
+      where: status
+        ? { status }
+        : { status: { notIn: [ItemInterestStatus.DELIVERED, ItemInterestStatus.CANCELLED] } },
       include: this.includeDetails(),
       orderBy: [{ status: 'asc' }, { closesAt: 'asc' }],
     });

@@ -1,6 +1,6 @@
 # ERP Raven 2 - Wiki operacional
 
-**Ultima revisao:** 2026-11-21 (Desativacao de cortes de presenca para manifestacao de interesse e leiloes no modo simples total da guilda)
+**Ultima revisao:** 2026-11-23 (Exibicao e persistencia de drops encerrados na aba 'Aguardando Entrega' com destaque do vencedor por CP)
 
 Memoria consolidada para novos chats e manutencao do projeto. Nao contem segredos.
 
@@ -191,8 +191,11 @@ Automacao ativa:
 - As regras de sorteio/transmutar de interesses pertencem ao dominio `ItemInterestTransmuteRaffleService`; `ItemInterestsService` apenas coordena fechamento, status, auditoria e persistencia.
 - A tela Staff de interesses em `/dashboard/staff/interests` consome `GET /item-interests/staff/list`, endpoint Staff-only que adiciona `staffComparison` por interessado: classe, combatPower, camada, presenca, DKP total/travado/disponivel, alerta automatico de item superior/mesmo tier no mesmo slot (`hasSuperiorOrSameTier`), requests ativos, ultima nota Staff, historico de loot e sinais operacionais.
 - O fluxo de interesse opera de forma Omnichannel (Discord + Web): posts abertos no site pela Staff sao publicados no canal do Discord (`#loot-distribution-cp`) com foto, prazo e reacao `🎯`. A sincronizacao e bidirecional: jogadores podem reagir no Discord com emoji ou clicar em "Manifestar Interesse" com 1 clique no site em `/dashboard/drops` (`Swords` no menu superior); o bot e a API mantem os registros sincronizados.
-- No Discord, a lista de reacoes exibe a ordem cronologica natural dos jogadores. No site, a visao da Staff exibe os interessados como um Ranking de CP decrescente (`combatPower DESC`), com destaque para guilda (AlcatraZ / AlcatraZ2), classe, estatisticas (Ataque, Defesa, Precisao) e badges de itens recebidos no historico.
-- Ao expirar o prazo (`closesAt`), novas reacoes no Discord e novas manifestacoes no site sao automaticamente bloqueadas.
+- A tela `/dashboard/drops` organiza os drops em 3 abas claras:
+  1. **Drops Abertos** (`open`): drops ativos em que o prazo (`closesAt`) ainda esta correndo, permitindo manifestacao e cancelamento de interesse.
+  2. **Aguardando Entrega / Encerrados** (`pending`): drops cujo prazo expirou ou que transitaram para votacao/decisao (`VOTING`, `READY_FOR_DELIVERY`, `CLOSED`). O card ganha faixa superior dourada/ambar identificando o encerramento e destacando o vencedor pelo maior CP (`👑 Vencedor (Top CP)`). Para a Staff, ha o botao direto "Entregar ao Vencedor" que ja abre o modal de entrega com o vencedor pre-selecionado para anexo do print e confirmacao. Drops encerrados sem participantes exibem aviso e opcao de "Remover Drop Vazio" para a Staff.
+  3. **Histórico de Entregas** (`delivered`): historico consolidado com comprovantes e recibos de drops entregues.
+- Persistência dos drops operacionais: `ItemInterestsService.listPosts` e `ItemInterestsService.listPostsForStaff`, quando chamados sem `status` fixo, trazem todos os posts operacionais (excluindo apenas `DELIVERED` e `CANCELLED`). Isso garante que os drops nunca sumam da visao da Staff ou dos jogadores ao encerrar o tempo.
 - Decisao e Entrega: apenas a Staff decide quem recebe o item, anexa o comprovante (print in-game) via upload ou URL e conclui a entrega com notificacao no Discord.
 - Historico de Drops e Lancamento Manual: Staff pode consultar todos os drops recebidos por um jogador pelo modal de historico ou em `/dashboard/staff/players/[id]` e lancar entregas passadas retroativamente (`POST /drops/manual`) para manter o historico do ERP completo.
 - Internacionalizacao (i18n): seletor de idiomas `LocaleSwitcher` disponivel na barra de navegacao e menu mobile, sincronizacao imediata de `preferredLocale` em `/auth/me` e no Perfil do jogador, e dashboard traduzido dinamicamente (PT/EN/ES).
@@ -484,6 +487,7 @@ npm.cmd run discord:configure-webhooks
 
 ## Historico recente
 
+| 2026-11-23 | Drops encerrados deixaram de sumir da tela: endpoints de listagem trazem todos os posts operacionais (excluindo apenas entregues e cancelados), /dashboard/drops ganhou aba dedicada 'Aguardando Entrega' e destaque visual do vencedor por CP (#1) com acao direta de entrega para a Staff. | drops/interesses/staff |
 | 2026-11-21 | Cortes de presenca (attendanceEligibilityRules) foram zerados (0%) para alinhar com o modo simples total da guilda; checagens de presenca em manifestacao de interesse (drops), pedidos de item e bids agora so atuam se > 0%, eliminando erro 400 por presenca nao lancada. | regras/elegibilidade/drops/presenca |
 
 | 2026-11-18 | Cobrancas de pendencias de players (sendPlayerDailyReminders / checklist diario por DM) foram permanentemente desativadas no cron e servico; pedido de desculpas formal e bem-humorado enviado via DM do Discord ao jogador hidrate (Temucleo). | automacao/discord/cobrancas/desativacao |
